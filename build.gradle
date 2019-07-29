@@ -1,0 +1,102 @@
+
+apply plugin: 'scala'
+apply plugin: 'idea'
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: "com.github.johnrengelman.shadow"
+
+group = 'io.qross'
+version = '0.5.9-10-SNAPSHOT'
+sourceCompatibility = 1.8
+
+archivesBaseName = "qross-psql"
+
+// jar {
+//     manifest {
+//         attributes 'Main-Class': 'io.qross.worker.Worker'
+//     }
+// }
+
+buildscript {
+    repositories {
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath "com.github.jengelman.gradle.plugins:shadow:1.2.3"
+    }
+}
+
+repositories {
+	maven {
+        url "http://maven.aliyun.com/nexus/content/groups/public/"
+    }
+	mavenCentral()
+    jcenter()
+    maven{
+        url "https://nexus-bigdata.zichan360.com/repository/maven-public/"
+    }
+}
+
+dependencies {
+	compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.4'
+
+    //compile group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.12'
+    //compile group: 'com.typesafe.akka', name: 'akka-remote_2.12', version: '2.5.12'
+
+    // compile (group: 'org.apache.hive', name: 'hive-jdbc', version: '2.0.0') {
+    //     exclude(group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl')
+    // }
+
+    compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.6'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.4'
+    compile group: 'org.json4s', name: 'json4s-jackson_2.12', version: '3.6.2'
+    //compile group: 'commons-configuration', name: 'commons-configuration', version: '1.10'
+    runtime group: 'mysql', name: 'mysql-connector-java', version: '5.1.47'
+    //runtime group: 'mysql', name: 'mysql-connector-java', version: '8.0.16'
+    //runtime('mysql:mysql-connector-java')
+    runtime group: 'org.xerial', name: 'sqlite-jdbc', version: '3.20.0'
+    //compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.4'
+
+    //runtime group: 'com.alibaba.cloud.analyticdb', name: 'adbclient', version: '1.0.3'
+
+    //compile group: 'org.apache.hadoop', name: 'hadoop-common', version: '2.7.1'
+    //compile group: 'org.apache.hadoop', name: 'hadoop-hdfs', version: '2.7.1'
+    //compile group: 'org.apache.hadoop', name: 'hadoop-auth', version: '2.7.1'
+
+    compile group: 'javax.mail', name: 'mail', version: '1.4.7'
+    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '3.17'
+}
+
+//打包上传
+uploadArchives {
+    repositories {
+        mavenDeployer {
+             repository(url: "https://repo.rdc.aliyun.com/repository/75742-snapshot-Xkjz8l/") {
+                authentication(userName: 'zRjGml', password: 'aqGluc43el')
+            }
+//            repository(url: "https://repo.rdc.aliyun.com/repository/75742-release-biEMxs/") {
+//                authentication(userName: 'zRjGml', password: 'aqGluc43el')
+//            }
+            //构造项目的Pom文件
+            pom.project {
+                name = project.name
+                packaging = 'jar'
+                description = 'qross PSQL and development toolkit v0.5.9'
+            }
+        }
+    }
+}
+
+shadowJar {
+    zip64 true
+    //mergeServiceFiles('META-INF/spring.*')
+    archiveName = "qross-psql-0.5.9.jar"
+}
+
+artifacts {
+    shadowJar
+}
+
+build.dependsOn(shadowJar)
+
+
