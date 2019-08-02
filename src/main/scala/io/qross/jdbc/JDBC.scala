@@ -24,6 +24,13 @@ object DBType {
 object JDBC {
 
     val QROSS = "mysql.qross"
+    val DEFAULT =   if (Properties.contains("jdbc.default")) {
+                        Properties.get("jdbc.default")
+                    }
+                    else {
+                        QROSS
+                    }
+
     private var QrossExists = false
     private var QrossConnectable = false
 
@@ -67,7 +74,7 @@ object JDBC {
             else {
                 var version: String = ""
                 try {
-                    version = DataSource.querySingleValue("SELECT conf_value FROM qross_conf WHERE conf_key='QROSS_VERSION'").getOrElse("").toString
+                    version = DataSource.querySingleValue("SELECT conf_value FROM qross_conf WHERE conf_key='QROSS_VERSION'").asText
                     QrossConnectable = true
                 }
                 catch {

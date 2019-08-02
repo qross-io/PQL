@@ -4,11 +4,13 @@ import io.qross.ext.TypeExt._
 import io.qross.setting.Properties
 
 /*
-OPEN connectionName;
-OPEN connectionName USE databaseName;
+OPEN "connectionName";
+OPEN "connectionName" USE "databaseName";
 OPEN CACHE;
 OPEN TEMP;
-OPEN DEFAULT;
+OPEN DEFAULT USE "databaseName";
+OPEN abbrName;
+OPEN abbrName USE "databaseName";
 */
 
 class OPEN(val sections: String*) {
@@ -21,28 +23,12 @@ class OPEN(val sections: String*) {
         case "CACHE" => sourceType = "CACHE"
         case "TEMP" => sourceType = "TEMP"
         case "DEFAULT" => sourceType = "DEFAULT"
-        case _ =>
-            connectionName = sections(0)
-            if (sections.length > 2) {
-                if (sections(1).equalsIgnoreCase("USE")) {
-                    databaseName = sections(2)
-                }
-            }
+        case _ => connectionName = sections(0)
     }
 
-    /*
-    sourceType = sourceType.$replace("""\s\s""", " ")
-    if (use == null) {
-        use = ""
-    }
-
-    if (source.matches("(?i)^(CACHE|TEMP|DEFAULT)$")) {
-        source = source.toUpperCase()
-    }
-    else {
-        if (!Properties.contains(source)) {
-            throw new SQLParseException("Wrong connection name: " + source)
+    if (sections.length > 2) {
+        if (sections(1).equalsIgnoreCase("USE")) {
+            databaseName = sections(2)
         }
     }
-    */
 }

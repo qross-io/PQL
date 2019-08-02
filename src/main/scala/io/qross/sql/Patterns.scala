@@ -19,6 +19,7 @@ object Patterns {
     val $END_LOOP: Pattern = Pattern.compile("""^END\s+LOOP""", Pattern.CASE_INSENSITIVE)
 
     val $BLANK: Regex = """\s""".r
+    val $BLANKS: String = """\s+"""
 
     val CONDITION: String = "~condition["
     val N: String = "]"
@@ -43,8 +44,8 @@ object Patterns {
 
     //v0.5.9
     val $FOR: Pattern = Pattern.compile("""^FOR\s+([\s\S]+?)\s+IN\s+([\s\S]+?)\s+LOOP""", Pattern.CASE_INSENSITIVE)
-    val $EXIT: Pattern = Pattern.compile("""^EXIT$(\s|$)""", Pattern.CASE_INSENSITIVE)
-    val $CONTINUE: Pattern = Pattern.compile("""^CONTINUE(\s|$)""", Pattern.CASE_INSENSITIVE)
+    val $EXIT: Pattern = Pattern.compile("""^EXIT(\s+WHEN\s([\s\S]+))?$""", Pattern.CASE_INSENSITIVE)
+    val $CONTINUE: Pattern = Pattern.compile("""^CONTINUE(\s+WHEN\s([\s\S]+))?$""", Pattern.CASE_INSENSITIVE)
     val $SET: Pattern = Pattern.compile("""^SET\s+([\s\S]+?):=([\s\S]+)$""", Pattern.CASE_INSENSITIVE)
     val $DATATYPE: Pattern = Pattern.compile("""^(INTEGER|DECIMAL|BOOLEAN|TEXT|DATETIME|MAP|OBJECT|ROW|TABLE|ARRAY|LIST|JSON|REGEX)\s+""", Pattern.CASE_INSENSITIVE)
     val $OPEN: Pattern = Pattern.compile("""^OPEN\s+([\s\S]+?)(:\s+|$)""", Pattern.CASE_INSENSITIVE)
@@ -70,7 +71,10 @@ object Patterns {
     val $VARIABLE: Regex = """^(\$|@)\(?[a-z0-9_]+\)?$""".r
     val $INTERMEDIATE$N: Regex = """^~value\[(\d+)\]$""".r
     val FUNCTION_NAMES: Set[String] = Function.getClass.getDeclaredMethods.map(m => m.getName).filter(n => "^[A-Z]".r.test(n)).toSet
+    val $RESERVAR: Regex = """[_A-Za-z0-9\.]+""".r
 
     val SHARP_LINKS: Set[String] = SHARP.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z]$""".r.test(n)).toSet
+    val ARROW: String = "->"
+
     //val SHARP_RESERVED: Set[String] = SHARP.getClass.getDeclaredMethods.flatMap(m => m.getName.split("\\$")).filter(n => "^[A-Z]+$".r.test(n)).toSet
 }

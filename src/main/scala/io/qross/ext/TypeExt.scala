@@ -85,14 +85,11 @@ object TypeExt {
             if (string.bracketsWith("{", "}")) {
                 DataCell(Json(string).parseRow("/"), DataType.ROW)
             }
+            else if (Json.OBJECT$ARRAY.test(string)) {
+                DataCell(Json(string).parseTable("/"), DataType.TABLE)
+            }
             else if (string.bracketsWith("[", "]")) {
-                val table = Json(string).parseTable("/")
-                if (table.columnCount == 1 && table.getFieldNames.head == "_array") {
-                    DataCell(table.toJavaList, DataType.ARRAY)
-                }
-                else {
-                    DataCell(table, DataType.TABLE)
-                }
+                DataCell(Json(string).parseJavaList("/"), DataType.ARRAY)
             }
             else {
                 val jse: ScriptEngine = new ScriptEngineManager().getEngineByName("JavaScript")
@@ -135,6 +132,10 @@ object TypeExt {
             string.replace("$", "").replace("{", "").replace("}", "").trim
         }
 
+        def quotesWith(quote: String): Boolean = {
+            string.bracketsWith(quote, quote)
+        }
+
         //为计算值添加引号
         def useQuotes(quote: String): String = {
             if (quote == "\"") {
@@ -156,8 +157,11 @@ object TypeExt {
 
         //去掉常量中的双引号，用于PSQL计算结果
         def removeQuotes(): String = {
-            if (string.bracketsWith("\"", "\"") || string.bracketsWith("'", "'")) {
+            if (string.bracketsWith("\"", "\"")) {
                 string.substring(1, string.length - 1).replace("\\\"", "\"")
+            }
+            else if (string.bracketsWith("'", "'")) {
+                string.substring(1, string.length - 1).replace("\\'", "'")
             }
             else {
                 string
@@ -173,17 +177,6 @@ object TypeExt {
             if (string.endsWith(sfx)) {
                 string = string.dropRight(sfx.length)
             }
-            string
-        }
-
-        def $quote(char: String): String = {
-            if (!string.startsWith(char)) {
-                string = char + string
-            }
-            else if (!string.endsWith(char)) {
-                string += char
-            }
-
             string
         }
 
@@ -262,6 +255,10 @@ object TypeExt {
 
         def bracketsWith(left: String, right: String): Boolean = {
             string.startsWith(left) && string.endsWith(right)
+        }
+
+        def bracket(left: String, right: String): String = {
+            left + string + right
         }
 
         def $startsWith(strings: String*): Boolean = {
@@ -517,6 +514,16 @@ object TypeExt {
             }
         }
 
+        def toRow: DataRow = {
+            any match {
+                case row: DataRow => row
+                case JavaMap(map) => map.asScala.toMap.toRow()
+                case ScalaMap(map) => map.toRow()
+                case str: String => str.toJson.parseRow("/")
+                case other => DataRow("value" -> other)
+            }
+        }
+
         def toJavaList: java.util.List[Any] = {
             any match {
                 case str: String =>
@@ -554,7 +561,7 @@ object TypeExt {
                         Json.fromURL(str)
                     }
                     else {
-                        Json.fromText(str.removeQuotes())
+                        Json(str.removeQuotes())
                     }
                 case json: Json => json
                 case _ => throw new ConvertFailureException("Can't recognize as or convert to Json: " + any)
@@ -599,7 +606,7 @@ object TypeExt {
             table
         }
 
-        def toRow: DataRow = {
+        def toRow(): DataRow = {
             val row = new DataRow()
             for (item <- map) {
                 row.set(item._1.toString, item._2)

@@ -1,7 +1,7 @@
 package io.qross.ext
 
 import io.qross.core.{DataCell, DataRow, DataTable}
-import io.qross.jdbc.DataSource
+import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.core.DataType.DataType
 import io.qross.net.Json
 
@@ -9,7 +9,7 @@ import scala.collection.mutable
 
 // DataSet = DataHub Lite
 
-class DataSet(defaultSourceName: String = DataSource.DEFAULT) {
+class DataSet(defaultSourceName: String = JDBC.DEFAULT) {
 
     private val SOURCES = mutable.HashMap[String, DataSource](
         "DEFAULT" -> DataSource.openDefault()
@@ -415,7 +415,7 @@ class DataSet(defaultSourceName: String = DataSource.DEFAULT) {
     
     def findDataTable(jsonPath: String): DataTable = JSON.parseTable(jsonPath)
     def findDataRow(jsonPath: String): DataRow = JSON.parseRow(jsonPath)
-    def findList(jsonPath: String): java.util.List[Any] = JSON.parseList(jsonPath)
+    def findList(jsonPath: String): java.util.List[Any] = JSON.parseJavaList(jsonPath)
     def findValue(jsonPath: String): DataCell = JSON.parseValue(jsonPath)
 
     // ---------- other ----------

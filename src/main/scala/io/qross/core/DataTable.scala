@@ -2,7 +2,7 @@ package io.qross.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import DataType.DataType
-import io.qross.jdbc.DataSource
+import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.ext.Output
 
 import scala.collection.JavaConverters._
@@ -100,7 +100,7 @@ case class DataTable(private val items: DataRow*) {
     }
 
     //直接添加一个新行, 自动判断数据结构
-    def addRow(row: DataRow): Unit = {
+    def addRow(row: DataRow): DataTable = {
         for (field <- row.getFields) {
             if (!contains(field)) {
                 row.getDataType(field) match {
@@ -110,6 +110,8 @@ case class DataTable(private val items: DataRow*) {
             }
         }
         rows += row
+
+        this
     }
 
     def par: ParArray[DataRow] = {
@@ -489,7 +491,7 @@ case class DataTable(private val items: DataRow*) {
     }
     
     def updateSource(SQL: String): DataTable = {
-        updateSource(DataSource.DEFAULT, SQL)
+        updateSource(JDBC.DEFAULT, SQL)
         this
     }
     
@@ -585,6 +587,9 @@ case class DataTable(private val items: DataRow*) {
 
     def firstRow: Option[DataRow] = if (rows.nonEmpty) Some(rows(0)) else None
     def lastRow: Option[DataRow] = if (rows.nonEmpty) Some(rows(rows.size - 1)) else None
+
+    def firstColumn: Option[List[Any]] = if (fields.nonEmpty) Option(rows.map(r => r.columns.head._2).toList) else None
+    def lastColumn: Option[List[Any]] = if (fields.nonEmpty) Option(rows.map(r => r.columns.last._2).toList) else None
 
     def getFirstCellStringValue(defaultValue: String = ""): String = {
         firstRow match {

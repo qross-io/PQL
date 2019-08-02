@@ -1,6 +1,6 @@
 package io.qross.sql
 
-import io.qross.core.DataCell
+import io.qross.core.{DataCell, DataType}
 import io.qross.sql.Solver._
 import io.qross.ext.TypeExt._
 
@@ -11,43 +11,62 @@ object Function {
         "IFNULL", "NVL",
         "REGEX_LIKE", "REGEX_INSTR", "REGEX_SUBSTR", "REGEX_REPLACE") */
 
-    def CONCAT(args: String*): String = {
-        args.mkString("")//.useSingleQuotes()
+    def CONCAT(args: List[DataCell]): DataCell = {
+        DataCell(args.map(s => s.asText).mkString(""), DataType.TEXT)
     }
 
-    def POSITION(args: String*): String = {
-        val $in = """\sIN\s""".r
-        if ($in.test(args(0))) {
-            (args(0).takeBefore($in).trim().indexOf(args(0).takeAfter($in)) + 1).toString
+    def POSITION(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            val $in = """\sIN\s""".r
+            val string = args.head.asText
+            if ($in.test(string)) {
+                DataCell(string.takeBefore($in).trim().indexOf(string.takeAfter($in)) + 1, DataType.INTEGER)
+            }
+            else {
+                throw new SQLParseException(s"Wrong or empty arguments, correct format is POSITION(strA IN strB) , actual POSITION(${args.map(s => s.asText).mkString("")})")
+            }
         }
         else {
-            throw new SQLParseException("Wrong arguments, correct format is POSITION(strA IN strB) , actual " + args(0))
+            throw new SQLParseException(s"Eempty arguments at @POSITION method")
         }
     }
 
-    def INSTR(args: String*): DataCell = {
-        //String.valueOf(args(0).indexOf(args(1)) + 1)
-        DataCell("")
+    def INSTR(args: List[DataCell]): DataCell = {
+        if (args.size >= 2) {
+            DataCell(args.head.asText.indexOf(args(1).asText) + 1, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at INSTR, expect 2, actual ${args.size}")
+        }
     }
 
-    def CHARINDEX(args: String*): DataCell = {
-        //""
-        DataCell("")
+    //CHARINDEX(stringToFind, stringToSearch, startLocation)
+    def CHARINDEX(args: List[DataCell]): DataCell = {
+        if (args.size == 2) {
+            DataCell("")
+        }
+        else if (args.size == 3) {
+            DataCell("")
+        }
+        else {
+            DataCell("")
+        }
     }
 
-    def REPLACE(args: String*): DataCell = {
-        //args(0).replace(args(1), args(2))//.useSingleQuotes()
-        DataCell("")
-    }
-
-    def main(args: Array[String]): Unit = {
-
+    //REPLACE(stringToReplace, oldString, newString)
+    def REPLACE(args: List[DataCell]): DataCell = {
+        if (args.size == 3) {
+            DataCell(args.head.asText.replace(args(1).asText, args(2).asText), DataType.TEXT)
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at REPLACE, expect 2, actual ${args.size}")
+        }
     }
 }
 
 case class Function(functionName: String) {
-    def call(args: Array[String], PSQL: PSQL): DataCell = {
-        Function.getClass.getDeclaredMethod(functionName).invoke(null, args.map(arg => arg.popStash(PSQL)): _*).asInstanceOf[DataCell]
+    def call(args: List[DataCell]): DataCell = {
+        Function.getClass.getDeclaredMethod(functionName).invoke(null, args).asInstanceOf[DataCell]
     }
 }
 

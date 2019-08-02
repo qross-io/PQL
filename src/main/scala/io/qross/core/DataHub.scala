@@ -1580,7 +1580,7 @@ class DataHub () {
     
     def parseTable(jsonPath: String): DataTable = JSON.parseTable(jsonPath)
     def parseRow(jsonPath: String): DataRow = JSON.parseRow(jsonPath)
-    def parseList(jsonPath: String): java.util.List[Any] = JSON.parseList(jsonPath)
+    def parseList(jsonPath: String): java.util.List[Any] = JSON.parseJavaList(jsonPath)
     def parseValue(jsonPath: String): DataCell = JSON.parseValue(jsonPath)
     def parseNode(jsonPath: String): JsonNode = JSON.findNode(jsonPath)
     

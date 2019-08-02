@@ -12,11 +12,8 @@ import scala.collection.mutable
 
 object DataSource {
     
-    val DEFAULT = JDBC.QROSS
-    val DEFAULT_DATABASE = ""
-
     def openDefault() : DataSource = {
-        new DataSource(DEFAULT, DEFAULT_DATABASE)
+        new DataSource(JDBC.DEFAULT)
     }
 
     def createMemoryDatabase: DataSource = {
@@ -64,7 +61,7 @@ object DataSource {
         exists
     }
 
-    def queryTest(connectionName: String = DEFAULT): Boolean = {
+    def queryTest(connectionName: String = JDBC.DEFAULT): Boolean = {
         val ds = new DataSource(connectionName)
         ds.open()
         val connected = ds.connection != null
@@ -73,12 +70,8 @@ object DataSource {
     }
 }
 
-class DataSource (val connectionName: String = DataSource.DEFAULT, var databaseName: String = "") {
+class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: String = "") {
 
-    if (connectionName == DataSource.DEFAULT && databaseName == "") {
-        databaseName = DataSource.DEFAULT_DATABASE
-    }
-    
     private val batchSQLs = new mutable.ArrayBuffer[String]()
     private val batchValues = new mutable.ArrayBuffer[Vector[Any]]()
 

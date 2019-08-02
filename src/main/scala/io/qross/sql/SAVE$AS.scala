@@ -63,9 +63,6 @@ class SAVE$AS(sections: String*) {
             }
             else {
                 targetName = sections(0)
-                if (!Properties.contains(targetName)) {
-                    throw new SQLParseException("Wrong connection name: " + targetName)
-                }
             }
 
             if (sections.length > 2 && sections(1).equalsIgnoreCase("USE")) {

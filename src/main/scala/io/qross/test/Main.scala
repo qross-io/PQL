@@ -50,11 +50,7 @@ object Main {
 
 //        println("HELLO/WORLD")
 
-        """(?i)(\s[a-z]+(\s+[a-z]+)*(\s|$))""".r.findAllIn("""@S DROP 1 HIDE 20 TO INT NUMBER""").foreach(println)
-
         System.exit(0)
-
-        println("""{"a":1}""".eval().dataType)
 
         val m = $EXIT.matcher("exit when true")
         if (m.find()) {

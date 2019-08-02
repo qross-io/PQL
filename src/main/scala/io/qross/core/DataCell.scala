@@ -20,11 +20,12 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         dataType = DataType.ofValue(value)
     }
 
+//    def isNull: Boolean = value == null && dataType == DataType.NULL
+//    def isNotNull: Boolean = value != null || dataType != DataType.NULL
     def isNull: Boolean = value == null
-    def isNotNull: Boolean = value != null
+    def isNotNull: Boolean = value == null
     def isEmpty: Boolean = value == ""
     def isNotEmpty: Boolean = value != ""
-
     def invalid: Boolean = dataType == DataType.EXCEPTION && value == "NOT_FOUND"
     def valid: Boolean = !invalid
 
@@ -81,7 +82,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         this
     }
 
-     def to(dataType: DataType): DataCell = {
+    def replace(cell: DataCell): DataCell = {
+        this.value = cell.value
+        this.dataType = cell.dataType
+
+        this
+    }
+
+    def to(dataType: DataType): DataCell = {
         dataType match {
             case DataType.AUTO => this
             case DataType.TEXT => this.toText
@@ -167,6 +175,17 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     def toTable: DataCell = {
         if (!this.isTable) {
             DataCell(this.asTable, DataType.TABLE)
+        }
+        else {
+            this
+        }
+    }
+
+    def isRow: Boolean = this.dataType == DataType.ROW
+    def asRow: DataRow = this.value.toRow
+    def toRow: DataCell = {
+        if (!this.isRow) {
+            DataCell(this.asRow, DataType.ROW)
         }
         else {
             this

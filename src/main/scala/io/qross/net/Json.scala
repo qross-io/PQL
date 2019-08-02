@@ -10,6 +10,7 @@ import org.json4s.jackson.Serialization
 import io.qross.core.{DataCell, DataRow, DataTable, DataType}
 
 import scala.collection.mutable
+import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 
@@ -34,6 +35,8 @@ object Json {
         implicit val formats: Formats = Serialization.formats(NoTypeHints)
         Serialization.write(obj)
     }
+
+    val OBJECT$ARRAY: Regex = """^\[\s*\{.*\}\s*\]$""".r
 }
 
 case class Json(text: String = "") {
@@ -80,9 +83,6 @@ case class Json(text: String = "") {
         root = mapper.readTree(inputStream)
         this
     }
-
-    //set("", Json)
-    //getJson("").findValue()
 
     def parseTable(path: String): DataTable = {
         val table = new DataTable
@@ -149,7 +149,7 @@ case class Json(text: String = "") {
         row
     }
     
-    def parseList(path: String): java.util.List[Any] = {
+    def parseJavaList(path: String): java.util.List[Any] = {
         val list = new java.util.ArrayList[Any]()
         
         val node = findNode(path)
@@ -159,10 +159,26 @@ case class Json(text: String = "") {
             })
         }
         else {
-            list.add(node.toString)
+            list.add(getCell(node).value)
         }
         
         list
+    }
+
+    def parseDataCellList(path: String): List[DataCell] = {
+        val list = new mutable.ListBuffer[DataCell]()
+
+        val node = findNode(path)
+        if (node.isArray) {
+            node.elements().forEachRemaining(child => {
+                list += getCell(child)
+            })
+        }
+        else {
+            list += getCell(node)
+        }
+
+        list.toList
     }
 
     def parseValue(path: String): DataCell = {

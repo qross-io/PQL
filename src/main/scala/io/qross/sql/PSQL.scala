@@ -9,6 +9,7 @@ import io.qross.ext.{ArgumentMap, Output, ParameterMap}
 import io.qross.fs.FilePath._
 import io.qross.fs.ResourceFile
 import io.qross.net.{Http, Json}
+import io.qross.setting.Properties
 import io.qross.sql.Patterns._
 import io.qross.sql.Solver._
 
@@ -88,6 +89,8 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
     //FOR语句循环项变量值
     private val FOR_VARIABLES = new mutable.ArrayStack[ForVariables]
 
+    private var breakCurrentLoop = false
+
     //解析器
     private val PARSER = Map[String, String => Unit](
         "IF" ->  parseIF,
@@ -110,7 +113,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         "PREP" -> parsePREP,
         "OUTPUT" -> parseOUTPUT,
         "PRINT" -> parsePRINT,
-        "LIST" -> parseLIST,
+        "SHOW" -> parseSHOW,
         "RUN" -> parseRUN,
         "SELECT" -> parseSELECT,
         "REQUEST" -> parseREQUEST,
@@ -125,7 +128,6 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         "END_IF" -> executeEND_IF,
         "FOR" -> executeFOR,
         "WHILE" -> executeWHILE,
-        "EXIT" -> executeEXIT,
         "END_LOOP" -> executeEND_LOOP,
         "SET" -> executeSET,
         "USE" -> executeUSE,
@@ -139,7 +141,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         "PREP" -> executePREP,
         "OUTPUT" -> executeOUTPUT,
         "PRINT" -> executePRINT,
-        "LIST" -> executeLIST,
+        "SHOW" -> executeSHOW,
         "RUN" -> executeRUN,
         "SELECT" -> executeSELECT,
         "REQUEST" -> executeREQUEST,
@@ -348,11 +350,23 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
     }
 
     private def parseEXIT(sentence: String): Unit = {
-
+        if ({m = $EXIT.matcher(sentence); m}.find) {
+            val $exit: Statement = new Statement("EXIT", m.group(0), if (m.group(1) != null) new ConditionGroup(m.group(2).trim()) else null)
+            PARSING.head.addStatement($exit)
+        }
+        else {
+            throw new SQLParseException("Incorrect EXIT sentence: " + sentence)
+        }
     }
 
     private def parseCONTINUE(sentence: String): Unit = {
-
+        if ({m = $CONTINUE.matcher(sentence); m}.find) {
+            val $continue: Statement = new Statement("CONTINUE", m.group(0), if (m.group(1) != null) new ConditionGroup(m.group(2).trim()) else null)
+            PARSING.head.addStatement($continue)
+        }
+        else {
+            throw new SQLParseException("Incorrect CONTINUE sentence: " + sentence)
+        }
     }
 
     private def parseSET(sentence: String): Unit = {
@@ -367,7 +381,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     private def parseOPEN(sentence: String): Unit = {
         if ({m = $OPEN.matcher(sentence); m}.find) {
-            PARSING.head.addStatement(new Statement("OPEN", sentence, new OPEN(m.group(1).trim.split(" ").filter(_ != ""): _*)))
+            PARSING.head.addStatement(new Statement("OPEN", sentence, new OPEN(m.group(1).trim.split($BLANKS): _*)))
             if (m.group(2).trim == ":") {
                 parseStatement(sentence.takeAfter(m.group(2)).trim)
             }
@@ -379,7 +393,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     private def parseUSE(sentence: String): Unit = {
         if ({m = $USE.matcher(sentence); m}.find) {
-            PARSING.head.addStatement(new Statement("USE", sentence, new USE(sentence.substring(4).trim)))
+            PARSING.head.addStatement(new Statement("USE", sentence, new USE(sentence.takeAfter($BLANK).trim)))
         }
         else {
             throw new SQLParseException("Incorrect USE sentence: " + sentence)
@@ -389,7 +403,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
     private def parseSAVE(sentence: String): Unit = {
         //save as
         if ({m = $SAVE$AS.matcher(sentence); m}.find) {
-            PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE$AS(m.group(1).trim.split(" ").filter(_ != ""): _*)))
+            PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE$AS(m.group(1).trim.split($BLANKS): _*)))
             if (m.group(2).trim == ":") {
                 parseStatement(sentence.takeAfter(":").trim)
             }
@@ -473,9 +487,9 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         }
     }
 
-    private def parseLIST(sentence: String): Unit = {
+    private def parseSHOW(sentence: String): Unit = {
         if ({m = $LIST.matcher(sentence); m}.find) {
-            PARSING.head.addStatement(new Statement("LIST", sentence, new LIST(m.group(1))))
+            PARSING.head.addStatement(new Statement("SHOW", sentence, new SHOW(m.group(1))))
         }
         else {
             throw new SQLParseException("Incorrect LIST sentence: " + sentence)
@@ -563,32 +577,58 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         FOR_VARIABLES.push(vars)
         EXECUTING.push(statement)
         //根据loopMap遍历/
-        while (vars.hasNext) {
-            this.execute(statement.statements)
+        breakable {
+            while (vars.hasNext) {
+                if (!breakCurrentLoop) {
+                    this.execute(statement.statements)
+                }
+                else {
+                    break
+                }
+            }
         }
     }
 
+    //continue属于exit的子集
     private def executeCONTINUE(statement: Statement): Boolean = {
-        true
+        if (statement.instance == null) {
+            true
+        }
+        else {
+            statement.instance.asInstanceOf[ConditionGroup].evalAll(this)
+        }
     }
 
-    private def executeEXIT(statement: Statement): Unit = {
-
+    private def executeEXIT(statement: Statement): Boolean = {
+        breakCurrentLoop = executeCONTINUE(statement)
+        breakCurrentLoop
     }
 
     private def executeWHILE(statement: Statement): Unit = {
         val whileCondition: ConditionGroup = statement.instance.asInstanceOf[ConditionGroup]
         EXECUTING.push(statement)
-        while (whileCondition.evalAll(this)) {
-            this.execute(statement.statements)
+        breakable {
+            while (whileCondition.evalAll(this)) {
+                if (!breakCurrentLoop) {
+                    this.execute(statement.statements)
+                }
+                else {
+                    break
+                }
+            }
         }
     }
 
     private def executeEND_LOOP(statement: Statement): Unit = {
+        //除了FOR以外还是WHILE循环
         if (EXECUTING.head.caption == "FOR") {
             FOR_VARIABLES.pop()
         }
         EXECUTING.pop()
+        //重置break变量
+        if (breakCurrentLoop) {
+            breakCurrentLoop = false
+        }
     }
 
     private def executeSET(statement: Statement): Unit = {
@@ -601,26 +641,61 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
             case "CACHE" => dh.openCache()
             case "TEMP" => dh.openTemp()
             case "DEFAULT" => dh.openDefault()
-            case _ => dh.open($open.connectionName.$eval(this), $open.databaseName.$eval(this))
+            case _ =>
+                val connectionName =
+                    if ($RESERVAR.test($open.connectionName)) {
+                        if (!Properties.contains($open.connectionName)) {
+                            throw new SQLExecuteException("Wrong connection name: " + $open.connectionName)
+                        }
+                        $open.connectionName
+                    }
+                    else {
+                        $open.connectionName.$eval(this).asText
+                    }
+
+
+                if ($open.databaseName == "") {
+                    dh.open(connectionName)
+                }
+                else {
+                    dh.open(connectionName, $open.databaseName.$eval(this).asText)
+                }
         }
     }
 
     private def executeUSE(statement: Statement): Unit = {
         val $use = statement.instance.asInstanceOf[USE]
-        dh.use($use.databaseName.$eval(this))
+        dh.use($use.databaseName.$eval(this).asText)
     }
 
     private def executeSAVE(statement: Statement): Unit = {
         val $save = statement.instance.asInstanceOf[SAVE$AS]
         $save.targetType match {
-            case "CACHE TABLE" => dh.cache($save.targetName.$eval(this))
-            case "TEMP TABLE" => dh.temp($save.targetName.$eval(this))
+            case "CACHE TABLE" => dh.cache($save.targetName.$eval(this).asText)
+            case "TEMP TABLE" => dh.temp($save.targetName.$eval(this).asText)
             case "CACHE" => dh.saveAsCache()
             case "TEMP" => dh.saveAsTemp()
             case "JDBC" =>
                 $save.targetName match {
                     case "DEFAULT" => dh.saveAsDefault()
-                    case _ => dh.saveAs($save.targetName.$eval(this), $save.databaseName.$eval(this))
+                    case _ =>
+                        val connectionName =
+                            if ($RESERVAR.test($save.targetName)) {
+                                if (!Properties.contains($save.targetName)) {
+                                    throw new SQLExecuteException("Wrong connection name: " + $save.targetName)
+                                }
+                                $save.targetName
+                            }
+                            else {
+                                $save.targetName.$eval(this).asText
+                            }
+
+                        if ($save.databaseName == "") {
+                            dh.saveAs(connectionName)
+                        }
+                        else {
+                            dh.saveAs(connectionName, $save.databaseName.$eval(this).asText)
+                        }
                 }
             case _ =>
         }
@@ -628,12 +703,12 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     private def executeCACHE(statement: Statement): Unit = {
         val $cache = statement.instance.asInstanceOf[CACHE]
-        dh.get($cache.selectSQL.$restore(this)).cache($cache.tableName.$eval(this))
+        dh.get($cache.selectSQL.$restore(this)).cache($cache.tableName.$eval(this).asText)
     }
 
     private def executeTEMP(statement: Statement): Unit = {
         val $temp = statement.instance.asInstanceOf[TEMP]
-        dh.get($temp.selectSQL.$restore(this)).temp($temp.tableName.$eval(this))
+        dh.get($temp.selectSQL.$restore(this)).temp($temp.tableName.$eval(this).asText)
     }
 
     private def executeGET(statement: Statement): Unit = {
@@ -653,7 +728,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     private def executePREP(statement: Statement): Unit = {
         val $prep = statement.instance.asInstanceOf[PREP]
-        dh.prep($prep.nonQuerySQL)
+        dh.prep($prep.nonQuerySQL.$restore(this))
     }
 
     private def executeOUTPUT(statement: Statement): Unit = {
@@ -682,7 +757,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
                     case _ =>
                 }
             case "PARSE" =>
-                val path = $output.content.takeAfter("""^PARSE\s""".r).trim.$eval(this)
+                val path = $output.content.takeAfter("""^PARSE\s""".r).trim.$eval(this).asText
                 val table = dh.parseTable(path)
                 $output.outputType match {
                     case OUTPUT.TABLE =>
@@ -712,9 +787,6 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
                             }
                     case _ =>
                 }
-            case "SHARP" =>
-                //仅VALUE类型
-                RESULT = new SHARP($output.content.$restore(this)).execute()
             case cap =>
                 if (NON_QUERY_CAPTIONS.contains(cap)) {
                     //非查询语句仅返回受影响的行数, 输出类型即使设置也无效
@@ -724,12 +796,12 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
                     //JSON, 输出类型设置无效
                     if ($output.content.startsWith("[") || $output.content.startsWith("{")) {
                         //对象或数组类型不能eval
-                        RESULT = Json.fromText($output.content.$place1(this))
+                        RESULT = Json.fromText($output.content.$place(this))
                                     .findNode("/")
                     }
                     else {
-                        //数值类型可以eval
-                        RESULT = $output.content.$compute(this).value
+                        //仅VALUE类型
+                        RESULT = new SHARP($output.content.$clean(this)).execute(this).value
                     }
                 }
         }
@@ -737,7 +809,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     private def executePRINT(statement: Statement): Unit = {
         val $print = statement.instance.asInstanceOf[PRINT]
-        val message = $print.message.$eval(this)
+        val message = $print.message.$eval(this).asText
         $print.messageType match {
             case "WARN" => Output.writeWarning(message)
             case "ERROR" => Output.writeException(message)
@@ -749,13 +821,13 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         }
     }
 
-    private def executeLIST(statement: Statement): Unit = {
-        val $list = statement.instance.asInstanceOf[LIST]
-        dh.show(Try($list.rows.$eval(this).toInt).getOrElse(20))
+    private def executeSHOW(statement: Statement): Unit = {
+        val $list = statement.instance.asInstanceOf[SHOW]
+        dh.show($list.rows.$eval(this).asInteger(20).toInt)
     }
 
     private def executeRUN(statement: Statement): Unit = {
-        dh.runCommand(statement.instance.asInstanceOf[RUN].commandText)
+        dh.runCommand(statement.instance.asInstanceOf[RUN].commandText.$restore(this))
     }
 
     private def executeSELECT(statement: Statement): Unit = {
@@ -769,8 +841,8 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     private def executeREQUEST(statement: Statement): Unit = {
         val $request = statement.instance.asInstanceOf[REQUEST]
-        val url = $request.URL.$eval(this)
-        val data = $request.data.$eval(this)
+        val url = $request.URL.$eval(this).asText
+        val data = $request.data.$eval(this).asText
         val http: Http =
                         $request.method match {
                             case "POST" => Http.POST(url, data)
@@ -788,7 +860,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
     }
 
     private def executePARSE(statement: Statement): Unit = {
-        RESULT = dh.parseTable(statement.instance.asInstanceOf[PARSE].path.$eval(this))
+        RESULT = dh.parseTable(statement.instance.asInstanceOf[PARSE].path.$eval(this).asText)
         ROWS = RESULT.asInstanceOf[DataTable].size
 
         RESULT.asInstanceOf[DataTable].show()
@@ -798,12 +870,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
     private def execute(statements: ArrayBuffer[Statement]): Unit = {
         breakable {
             for (statement <- statements) {
-                if (statement.caption == "CONTINUE") {
-                    if (executeCONTINUE(statement)) {
-                        break
-                    }
-                }
-                else if (EXECUTOR.contains(statement.caption)) {
+                if (EXECUTOR.contains(statement.caption)) {
                     EXECUTOR(statement.caption)(statement)
                 }
                 else if (NON_QUERY_CAPTIONS.contains(statement.caption)) {
@@ -812,6 +879,16 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
                     Output.writeLine(statement.sentence.take(100))
                     Output.writeLine("------------------------------------------------------------")
                     Output.writeLine(s"$AFFECTED row(s) affected. ")
+                }
+                else if (statement.caption == "CONTINUE") {
+                    if (executeCONTINUE(statement)) {
+                        break
+                    }
+                }
+                else if (statement.caption == "EXIT") {
+                    if (executeEXIT(statement)) {
+                        break
+                    }
                 }
             }
         }

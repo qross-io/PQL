@@ -357,7 +357,9 @@ case class DateTime(private var dateTime: String = "", private var formatStyle: 
     //MINUTE=0-59,m/n
     //SECOND=0-59,m/n
     
-    def shape(FROM: String, TO: String, STEP: ChronoUnit = ChronoUnit.DAYS, FILTER: String = ""): List[DateTime] = {
+    def shape(FROM: String, TO: String, STEP: ChronoUnit = ChronoUnit.DAYS, FILTER: String = ""):
+
+    List[DateTime] = {
         
         val list = new mutable.LinkedHashSet[DateTime]()
         

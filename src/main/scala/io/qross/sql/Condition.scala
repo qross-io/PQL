@@ -83,10 +83,8 @@ class Condition(val expression: String) {
                 else {
                     false
                 }
-            case "=" =>
-            case "==" => field.asText.equalsIgnoreCase(value.asText)
-            case "!=" =>
-            case "<>" => !field.asText.equalsIgnoreCase(value.asText)
+            case "=" | "==" => field.asText.equalsIgnoreCase(value.asText)
+            case "!=" | "<>" => !field.asText.equalsIgnoreCase(value.asText)
             case "^=" => field.asText.toLowerCase.startsWith(value.asText.toLowerCase)
             case "=^" => !field.asText.toLowerCase.startsWith(value.asText.toLowerCase)
             case "$=" => field.asText.toLowerCase.endsWith(value.asText.toLowerCase)
