@@ -1,40 +1,54 @@
 package io.qross.core
 
-import com.fasterxml.jackson.databind.JsonNode
+import io.qross.core.DataType.DataType
 import io.qross.ext.Output
-import io.qross.core.Parameter._
-import io.qross.ext.TypeExt._
 import io.qross.fs.FilePath._
-import io.qross.fs._
-import DataType.DataType
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.net.{Email, Http, HttpClient, Json}
 import io.qross.setting.Global
-import io.qross.sql.{GlobalVariable, OUTPUT, PSQL}
 import io.qross.thread.Parallel
 import io.qross.time.{DateTime, Timer}
+import io.qross.core.Parameter._
 
 import scala.collection.mutable
 import scala.collection.parallel.mutable.ParArray
-import scala.io.Source
 
 
-class DataHub () {
+object DataHub {
+    def Qross: DataHub = new DataHub(JDBC.QROSS)
+}
+
+class DataHub (private val defaultConnectionName: String = "") {
     
-    private val SOURCES = mutable.HashMap[String, DataSource]()
+    private val SOURCES = mutable.HashMap[String, DataSource](
+        "DEFAULT" -> {
+                                if (defaultConnectionName == "") {
+                                    DataSource.DEFAULT
+                                }
+                                else {
+                                    new DataSource(defaultConnectionName)
+                                }
+                             }
+    )
 
     //temp database
-    private val holder = s"temp_${DateTime.now.getString("yyyyMMddHHmmssSSS")}_${Math.round(Math.random() * 10000000D)}.sqlite".locate()
+    private lazy val holder = s"temp_${DateTime.now.getString("yyyyMMddHHmmssSSS")}_${Math.round(Math.random() * 10000000D)}.sqlite".locate()
 
-    private var CURRENT: DataSource = _   //current dataSource - open
-    private var TARGET: DataSource = _    //current dataDestination - saveAs
+    private var CURRENT: DataSource = SOURCES("DEFAULT")   //current dataSource - open
+    private var TARGET: DataSource = SOURCES("DEFAULT")    //current dataDestination - saveAs
 
-    private var DEBUG = true
+    private var DEBUG = false
     
     private val TABLE = DataTable()  //current buffer
     private val BUFFER = new mutable.HashMap[String, DataTable]() //all buffer
 
     private var TO_BE_CLEAR: Boolean = false
+
+    //扩展插槽
+    private val SLOTS: mutable.HashMap[String, Any] = new mutable.HashMap[String, Any]()
+
+    //全局变量-最后一次get方法的结果集数量
+    private var $COUNT: Int = 0
+    private var $TOTAL: Int = 0
 
     //producers/consumers amount
     private var LINES: Int = Global.CORES
@@ -46,27 +60,6 @@ class DataHub () {
     //selectSQL
     private var processSQLs = new mutable.ArrayBuffer[String]()
 
-    private var EXCEL: Excel = _
-    private var EMAIL: Email = _
-
-    private var JSON: Json = _
-    private var READER: FileReader = _
-    private var HTTP: Http = _
-    private val ZIP = new Zip()
-
-    private var PSQL: PSQL = _
-
-    //全局变量-最后一次get方法的结果集数量
-    private var $COUNT: Int = 0
-    private var $TOTAL: Int = 0
-
-    var userId: Int = 0
-    var userName: String = "anonymous"
-    var roleName: String = "WORKER"
-
-    //打开默认数据库
-    openDefault()
-
     // ---------- system ----------
     
     def debug(enabled: Boolean = true): DataHub = {
@@ -74,28 +67,7 @@ class DataHub () {
         this
     }
 
-    def signIn(userId: Int, userName: String, roleName: String = "WORKER"): DataHub = {
-        this.userId = userId
-        this.userName = userName
-        this.roleName = roleName
-
-        //从数据库加载用户全局变量
-        if (JDBC.hasQrossSystem) {
-            DataSource.queryDataTable("SELECT var_name, var_type, var_value FROM qross_variables WHERE var_user=?", userId)
-                    .foreach(row => {
-                        GlobalVariable.USER.set(
-                            row.getString("var_name").toUpperCase(),
-                            row.getString("var_type") match {
-                                case "INTEGER" => row.getLong("var_value")
-                                case "DECIMAL" => row.getDouble("var_value")
-                                case _ => row.getString("var_value")
-                            })
-
-                    }).clear()
-        }
-
-        this
-    }
+    def debugging: Boolean = DEBUG
 
     // ---------- open ----------
     
@@ -119,10 +91,16 @@ class DataHub () {
     
     def openDefault(): DataHub = {
         reset()
-        if (!SOURCES.contains("DEFAULT")) {
-            SOURCES += "DEFAULT" -> DataSource.openDefault()
-        }
         CURRENT = SOURCES("DEFAULT")
+        this
+    }
+
+    def openQross(): DataHub = {
+        reset()
+        if (!SOURCES.contains("QROSS")) {
+            SOURCES += "QROSS" -> DataSource.QROSS
+        }
+        CURRENT = SOURCES("QROSS")
         this
     }
     
@@ -150,51 +128,6 @@ class DataHub () {
         this
     }
 
-    //文本文件相关
-
-    def openTextFile(path: String): DataHub = {
-        READER = FileReader(path)
-        this
-    }
-
-    def useDelimiter(delimiter: String): DataHub = {
-        READER.delimit(delimiter)
-        this
-    }
-
-    def asTable(tableName: String): DataHub = {
-        READER.asTable(tableName)
-        this
-    }
-
-    def withColumns(fields: String*): DataHub = {
-        READER.withColumns(fields: _*)
-        this
-    }
-
-    def etl(handler: DataTable => DataTable): DataHub = {
-        READER.etl(handler)
-        this
-    }
-
-    /*
-    openTextFile("")
-        .asTable("")
-        .withColumns("")
-        .etl(handler)
-        .page("SELECT * FROM tableName LIMIT @offset, 10000")
-
-        .get("")
-        .page("")
-        .block()
-    .saveAs("")
-        .put("")
-     */
-
-    def readAllAsTable(fields: String*): DataHub = {
-        TABLE.cut(READER.readAllAsTable(fields: _*))
-        this
-    }
     
     // ---------- save as ----------
     
@@ -215,10 +148,15 @@ class DataHub () {
     }
 
     def saveAsDefault(): DataHub = {
-        if (!SOURCES.contains("DEFAULT")) {
-            SOURCES += "DEFAULT" -> DataSource.openDefault()
-        }
         TARGET = SOURCES("DEFAULT")
+        this
+    }
+
+    def saveAsQross(): DataHub = {
+        if (!SOURCES.contains("QROSS")) {
+            SOURCES += "QROSS" -> DataSource.QROSS
+        }
+        TARGET = SOURCES("QROSS")
         this
     }
     
@@ -230,357 +168,14 @@ class DataHub () {
         this
     }
 
-    def saveAsNewTextFile(fileNameOrFullPath: String, delimiter: String = ","): DataHub = {
-        val path = fileNameOrFullPath.locate()
-        FileWriter(path, true).delimit(delimiter).writeTable(TABLE).close()
-        ZIP.addFile(path)
-        this
-    }
-    
-    def saveAsTextFile(fileNameOrFullPath: String, delimiter: String = ","): DataHub = {
-        val path = fileNameOrFullPath.locate()
-        FileWriter(path, false).delimit(delimiter).writeTable(TABLE).close()
-        ZIP.addFile(path)
-        this
-    }
-
-    def saveAsNewCsvFile(fileNameOrFullPath: String): DataHub = {
-        val path = fileNameOrFullPath.locate()
-        FileWriter(path, true).delimit(",").writeTable(TABLE).close()
-        ZIP.addFile(path)
-        this
-    }
-
-    def saveAsCsvFile(fileNameOrFullPath: String): DataHub = {
-        val path = fileNameOrFullPath.locate()
-        FileWriter(path, false).delimit(",").writeTable(TABLE).close()
-        ZIP.addFile(path)
-        this
-    }
-
-    def writeEmail(title: String): DataHub = {
-        EMAIL = new Email(title)
-        this
-    }
-
-    def fromResourceTemplate(resourceFile: String): DataHub = {
-        EMAIL.fromTemplate(resourceFile)
-        this
-    }
-
-    def withDefaultSignature(): DataHub = {
-        EMAIL.withDefaultSignature()
-        this
-    }
-
-    def withSignature(resourceFile: String): DataHub = {
-        EMAIL.withSignature(resourceFile)
-        this
-    }
-
-    def setEmailContent(content: String): DataHub = {
-        EMAIL.setContent(content)
-        this
-    }
-
-    def placeEmailTitle(title: String): DataHub = {
-        EMAIL.placeContent("${title}", title)
-        this
-    }
-
-    def placeEmailContent(content: String): DataHub = {
-        EMAIL.placeContent("${content}", content)
-        this
-    }
-
-    def placeEmailDataTable(placeHolder: String = ""): DataHub = {
-        if (placeHolder == "") {
-            EMAIL.placeContent("${data}", TABLE.toHtmlString)
-        }
-        else {
-            EMAIL.placeContent("${" + placeHolder + "}", TABLE.toHtmlString)
-        }
-
-        TO_BE_CLEAR = true
-
-        this
-    }
-
-    def placeEmailHolder(replacements: (String, String)*): DataHub = {
-        for ((placeHolder, replacement) <- replacements) {
-            EMAIL.placeContent(placeHolder, replacement)
-        }
-        this
-    }
-
-    def placeEmailContentWithRow(i: Int = 0): DataHub = {
-        TABLE.getRow(i) match {
-            case Some(row) => EMAIL.placeContentWidthDataRow(row)
-            case None =>
-        }
-
-        TO_BE_CLEAR = true
-        this
-    }
-
-    def placeEmailContentWithFirstRow(): DataHub = {
-        TABLE.firstRow match {
-            case Some(row) => EMAIL.placeContentWidthDataRow(row)
-            case _ =>
-        }
-
-        TO_BE_CLEAR = true
-
-        this
-    }
-
-    def to(receivers: String): DataHub = {
-        EMAIL.to(receivers)
-        this
-    }
-
-    def cc(receivers: String): DataHub = {
-        EMAIL.cc(receivers)
-        this
-    }
-
-    def bcc(receivers: String): DataHub = {
-        EMAIL.bcc(receivers)
-        this
-    }
-
-    def attach(path: String): DataHub = {
-        EMAIL.attach(path)
-        this
-    }
-
-    def send(): DataHub = {
-        EMAIL.placeContent("${title}", "")
-        EMAIL.placeContent("${content}", "")
-        EMAIL.placeContent("${data}", "")
-        EMAIL.send()
-        this
-    }
-
-    def saveAsExcel(fileNameOrPath: String): DataHub = {
-        EXCEL = new Excel(fileNameOrPath)
-        ZIP.addFile(EXCEL.path)
-        this
-    }
-
-    def saveAsNewExcel(fileNameOrPath: String): DataHub = {
-        deleteFile(fileNameOrPath)
-        EXCEL = new Excel(fileNameOrPath)
-        ZIP.addFile(EXCEL.path)
-        this
-    }
-
-    def fromExcelTemplate(templateName: String): DataHub = {
-        EXCEL.fromTemplate(templateName)
-        this
-    }
-
-    def appendSheet(sheetName: String = "sheet1", initialRow: Int = 0, initialColumn: Int = 0): DataHub = {
-
-        if (TABLE.nonEmptySchema) {
-            EXCEL
-                .setInitialRow(initialRow)
-                .setInitialColumn(0)
-                .openSheet(sheetName)
-                .withoutHeader()
-                .appendTable(TABLE)
-        }
-
-
-        if (pageSQLs.nonEmpty || blockSQLs.nonEmpty) {
-            stream(table => {
-                EXCEL
-                    .setInitialRow(initialRow)
-                    .setInitialColumn(0)
-                    .openSheet(sheetName)
-                    .withoutHeader()
-                    .appendTable(table)
-                table.clear()
-            })
-        }
-
-        TO_BE_CLEAR = true
-
-        this
-    }
-
-    def appendSheetWithHeader(sheetName: String = "sheet1", initialRow: Int = 0, initialColumn: Int = 0): DataHub = {
-
-        if (TABLE.nonEmptySchema) {
-            EXCEL
-                .setInitialRow(initialRow)
-                .setInitialColumn(0)
-                .openSheet(sheetName)
-                .withHeader()
-                .appendTable(TABLE)
-        }
-
-        if (pageSQLs.nonEmpty || blockSQLs.nonEmpty) {
-            stream(table => {
-                EXCEL
-                    .setInitialRow(initialRow)
-                    .setInitialColumn(0)
-                    .openSheet(sheetName)
-                    .withHeader()
-                    .appendTable(table)
-                table.clear()
-            })
-        }
-
-        TO_BE_CLEAR = true
-
-        this
-    }
-
-    def writeCellValue(value: Any, sheetName: String = "sheet1", rowIndex: Int = 0, colIndex: Int = 0): DataHub = {
-        EXCEL.openSheet(sheetName).setCellValue(value, rowIndex, colIndex).setInitialRow(rowIndex).setInitialColumn(colIndex)
-        this
-    }
-
-    def writeSheet(sheetName: String = "sheet1", initialRow: Int = 0, initialColumn: Int = 0): DataHub = {
-        EXCEL
-          .setInitialRow(initialRow)
-          .setInitialColumn(0)
-          .openSheet(sheetName)
-          .withoutHeader()
-          .writeTable(TABLE)
-
-        TO_BE_CLEAR = true
-
-        this
-    }
-
-    def writeSheetWithHeader(sheetName: String = "sheet1", initialRow: Int = 0, initialColumn: Int = 0): DataHub = {
-        EXCEL
-          .setInitialRow(initialRow)
-          .setInitialColumn(0)
-          .openSheet(sheetName)
-          .withHeader()
-          .writeTable(TABLE)
-
-        TO_BE_CLEAR = true
-
-        this
-    }
-
-    def setRegionStyle(rows: (Int, Int), cols: (Int, Int), styles: (String, Any)*): DataHub = {
-        EXCEL.setStyle(rows, cols, 1, styles: _*)
-        this
-    }
-
-    def withCellStyle(styles: (String, Any)*): DataHub = {
-        EXCEL.setCellStyle(EXCEL.getInitialRow, EXCEL.getInitialColumn, styles: _*)
-        this
-    }
-
-    def withHeaderStyle(styles: (String, Any)*): DataHub = {
-        EXCEL.setRowStyle(
-            EXCEL.getInitialRow,
-            EXCEL.getInitialColumn -> (EXCEL.getInitialColumn + TABLE.getFields.size - 1),
-            styles: _*)
-
-        this
-    }
-
-    def withRowStyle(styles: (String, Any)*): DataHub = {
-        EXCEL.setRowsStyle(
-            EXCEL.getActualInitialRow -> (EXCEL.getActualInitialRow + TABLE.count() - 1),
-            EXCEL.getInitialColumn -> (EXCEL.getInitialColumn + TABLE.getFields.size - 1),
-            styles: _*)
-
-        this
-    }
-
-    def withAlternateRowStyle(styles: (String, Any)*): DataHub = {
-        EXCEL.setAlternateRowsStyle(
-            EXCEL.getActualInitialRow -> (EXCEL.getActualInitialRow + TABLE.count() - 1),
-            EXCEL.getInitialColumn -> (EXCEL.getInitialColumn + TABLE.getFields.size - 1),
-            styles: _*
-        )
-        this
-    }
-
-    def mergeCells(rows: (Int, Int), cols: (Int, Int)): DataHub = {
-        EXCEL.mergeRegion(rows, cols)
-        this
-    }
-
-    def removeMergeRegion(firstRow: Int, firstColumn: Int): DataHub = {
-        EXCEL.removeMergedRegion(firstRow, firstColumn)
-        this
-    }
-
-    def postExcelTo(url: String, data: String = ""): DataHub = {
-        JSON = new Json(HttpClient.postFile(url, EXCEL.path, data))
-        this
-    }
-
-    //actualInitialRow - append
-    //def withStyle - initialRow + 1, TABLE.rows.size, initialColumn, TABLE.columns.size
-    //def withAlternateStyle - initialRow + 2, TABLE.rows.size, initialColumn, TABLE.columns.size
-    //def withHeaderStyle - initialRow, initialRow, initialColumn, , TABLE.columns.size
-    //def mergeCells
-
-    def attachExcelToEmail(title: String): DataHub = {
-        EMAIL = new Email(title)
-        EMAIL.attach(EXCEL.fileName)
-        this
-    }
-
-    def deleteFile(fileName: String): DataHub = {
-        fileName.delete()
-        this
-    }
-
-    def andZip(fileNameOrFullPath: String): DataHub = {
-        ZIP.compress(fileNameOrFullPath.locate())
-        this
-    }
-
-    def andZipAll(fileNameOrFullPath: String): DataHub = {
-        ZIP.compressAll(fileNameOrFullPath.locate())
-        this
-    }
-
-    def addFileToZipList(fileNameOrFullPath: String): DataHub = {
-        ZIP.addFile(fileNameOrFullPath.locate())
-        this
-    }
-
-    //清除列表并删除文件
-    def andClear(): DataHub = {
-        ZIP.deleteAll()
-        this
-    }
-
-    //仅清除列表
-    def resetZipList(): DataHub = {
-        ZIP.clear()
-        this
-    }
-
-    def showZipList(): DataHub = {
-        ZIP.zipList.foreach(file => println(file.getAbsolutePath))
-        this
-    }
-
-    def attachZipToEmail(title: String): DataHub = {
-        EMAIL = new Email(title)
-        EMAIL.attach(ZIP.zipFile)
-        this
-    }
-
     // ---------- Reset ----------
 
     def reset(): DataHub = {
         if (TO_BE_CLEAR) {
             TABLE.clear()
             pageSQLs.clear()
+            blockSQLs.clear()
+            processSQLs.clear()
             $TOTAL = 0
             TO_BE_CLEAR = false
         }
@@ -646,16 +241,6 @@ class DataHub () {
         
         TO_BE_CLEAR = true
         
-        this
-    }
-
-    def debugger(info: String = ""): DataHub = {
-        println(info)
-        println("pageSQLs")
-        pageSQLs.foreach(println)
-        println("blockSQLs")
-        blockSQLs.foreach(println)
-
         this
     }
 
@@ -792,6 +377,74 @@ class DataHub () {
         $TOTAL
     }
 
+    def join(selectSQL: String, on: (String, String)*): DataHub = {
+        TABLE.join(CURRENT.executeDataTable(selectSQL), on: _*)
+        this
+    }
+
+
+    def pass(querySentence: String, default:(String, Any)*): DataHub = {
+        if (DEBUG) println(querySentence)
+        if (TABLE.isEmpty) {
+            if (default.nonEmpty) {
+                TABLE.addRow(DataRow(default: _*))
+            }
+            else {
+                throw new Exception("No data to pass. Please ensure data exists or provide default value")
+            }
+        }
+        TABLE.cut(CURRENT.tableSelect(querySentence, TABLE))
+
+        this
+    }
+
+    //execute SQL on target dataSource
+    def prep(nonQuerySQL: String, values: Any*): DataHub = {
+        TARGET.executeNonQuery(nonQuerySQL, values: _*)
+        this
+    }
+   
+    def insert(insertSQL: String): DataHub = put(insertSQL)
+    def update(updateSQL: String): DataHub = put(updateSQL)
+    def delete(deleteSQL: String): DataHub = put(deleteSQL)
+    def put(nonQuerySQL: String): DataHub = {
+
+        if (DEBUG) {
+            TABLE.show(10)
+            println(nonQuerySQL)
+        }
+
+        if (TABLE.nonEmpty) {
+            TARGET.tableUpdate(nonQuerySQL, TABLE)
+        }
+
+        if (pageSQLs.nonEmpty || blockSQLs.nonEmpty) {
+            stream(table => {
+                TARGET.tableUpdate(nonQuerySQL, table)
+                table.clear()
+            })
+        }
+
+        TO_BE_CLEAR = true
+
+        this
+    }
+
+    def insert(insertSQL: String, table: DataTable): DataHub = put(insertSQL, table)
+    def update(updateSQL: String, table: DataTable): DataHub = put(updateSQL, table)
+    def delete(deleteSQL: String, table: DataTable): DataHub = put(deleteSQL, table)
+    def put(nonQuerySentence: String, table: DataTable): DataHub = {
+
+        if (DEBUG) {
+            println(nonQuerySentence)
+        }
+
+        TARGET.tableUpdate(nonQuerySentence, table)
+        this
+    }
+
+    // ---------- multi thread ----------
+
     //设置并行度
     def pipes(amount: Int): DataHub = {
         LINES = amount
@@ -871,23 +524,23 @@ class DataHub () {
 
         nonQuerySQL.matchParameters.headOption match {
             case Some(param) =>
-                    var begin = beginKeyOrSQL match {
-                        case sentence: String => CURRENT.executeDataRow(sentence).getFirstLong() - 1
-                        case key: Int => key.toLong
-                        case key: Long => key
-                        case _ => beginKeyOrSQL.toString.toLong
-                    }
-                    val end = endKeyOrSQL match {
-                        case sentence: String => CURRENT.executeDataRow(sentence).getFirstLong()
-                        case key: Int => key.toLong
-                        case key: Long => key
-                        case _ => beginKeyOrSQL.toString.toLong
-                    }
+                var begin = beginKeyOrSQL match {
+                    case sentence: String => CURRENT.executeDataRow(sentence).getFirstLong() - 1
+                    case key: Int => key.toLong
+                    case key: Long => key
+                    case _ => beginKeyOrSQL.toString.toLong
+                }
+                val end = endKeyOrSQL match {
+                    case sentence: String => CURRENT.executeDataRow(sentence).getFirstLong()
+                    case key: Int => key.toLong
+                    case key: Long => key
+                    case _ => beginKeyOrSQL.toString.toLong
+                }
 
-                    while (begin < end) {
-                        Bulker.QUEUE.add(nonQuerySQL.replaceFirst(param.group(0), begin.toString).replace(param.group(0), (if (begin + bulkSize >= end) end else begin + bulkSize).toString))
-                        begin += bulkSize
-                    }
+                while (begin < end) {
+                    Bulker.QUEUE.add(nonQuerySQL.replaceFirst(param.group(0), begin.toString).replace(param.group(0), (if (begin + bulkSize >= end) end else begin + bulkSize).toString))
+                    begin += bulkSize
+                }
 
                 val parallel = new Parallel()
                 //producer
@@ -897,31 +550,9 @@ class DataHub () {
                 parallel.startAll()
                 parallel.waitAll()
 
-                //blockSize
+            //blockSize
             case None => CURRENT.executeNonQuery(nonQuerySQL)
         }
-
-        this
-    }
-
-
-    def join(selectSQL: String, on: (String, String)*): DataHub = {
-        TABLE.join(CURRENT.executeDataTable(selectSQL), on: _*)
-        this
-    }
-
-
-    def pass(querySentence: String, default:(String, Any)*): DataHub = {
-        if (DEBUG) println(querySentence)
-        if (TABLE.isEmpty) {
-            if (default.nonEmpty) {
-                TABLE.addRow(DataRow(default: _*))
-            }
-            else {
-                throw new Exception("No data to pass. Please ensure data exists or provide default value")
-            }
-        }
-        TABLE.cut(CURRENT.tableSelect(querySentence, TABLE))
 
         this
     }
@@ -942,51 +573,6 @@ class DataHub () {
 
     def process(selectSQL: String): DataHub = {
         processSQLs += selectSQL
-        this
-    }
-    
-    //execute SQL on target dataSource
-    def prep(nonQuerySQL: String, values: Any*): DataHub = {
-        TARGET.executeNonQuery(nonQuerySQL, values: _*)
-        this
-    }
-   
-    def insert(insertSQL: String): DataHub = put(insertSQL)
-    def update(updateSQL: String): DataHub = put(updateSQL)
-    def delete(deleteSQL: String): DataHub = put(deleteSQL)
-    def put(nonQuerySQL: String): DataHub = {
-
-        if (DEBUG) {
-            TABLE.show(10)
-            println(nonQuerySQL)
-        }
-
-        if (TABLE.nonEmpty) {
-            TARGET.tableUpdate(nonQuerySQL, TABLE)
-        }
-
-        if (pageSQLs.nonEmpty || blockSQLs.nonEmpty) {
-            stream(table => {
-                TARGET.tableUpdate(nonQuerySQL, table)
-                table.clear()
-            })
-        }
-
-        TO_BE_CLEAR = true
-
-        this
-    }
-
-    def insert(insertSQL: String, table: DataTable): DataHub = put(insertSQL, table)
-    def update(updateSQL: String, table: DataTable): DataHub = put(updateSQL, table)
-    def delete(deleteSQL: String, table: DataTable): DataHub = put(deleteSQL, table)
-    def put(nonQuerySentence: String, table: DataTable): DataHub = {
-
-        if (DEBUG) {
-            println(nonQuerySentence)
-        }
-
-        TARGET.tableUpdate(nonQuerySentence, table)
         this
     }
 
@@ -1181,7 +767,7 @@ class DataHub () {
             Output.writeMessage("Exit All Block")
         }
     }
-    
+
     // ---------- buffer basic ----------
     
     //switch table
@@ -1242,6 +828,10 @@ class DataHub () {
         }
         this
     }
+
+    def containsBuffer(tableName: String): Boolean = {
+        BUFFER.contains(tableName)
+    }
     
     def takeOut(): DataTable = {
         val table = DataTable.from(TABLE)
@@ -1249,10 +839,6 @@ class DataHub () {
         table
     }
 
-    def containsBuffer(tableName: String): Boolean = {
-        BUFFER.contains(tableName)
-    }
-    
     def takeOut(tableName: String): DataTable = {
         if (BUFFER.contains(tableName)) {
             val table = DataTable.from(BUFFER(tableName))
@@ -1262,6 +848,24 @@ class DataHub () {
         else {
             DataTable()
         }
+    }
+
+    def getData: DataTable = {
+        TABLE
+    }
+
+    def getData(tableName: String): DataTable = {
+        if (BUFFER.contains(tableName)) {
+            BUFFER(tableName)
+        }
+        else {
+            DataTable()
+        }
+    }
+
+    def preclear(): DataHub = {
+        TO_BE_CLEAR = true
+        this
     }
 
     def par: ParArray[DataRow] = {
@@ -1428,6 +1032,7 @@ class DataHub () {
         TABLE.cut(TABLE.takeSample(amount))
         this
     }
+
     
     def insertRow(fields: (String, Any)*): DataHub = {
 
@@ -1461,111 +1066,26 @@ class DataHub () {
         TABLE.clear()
         this
     }
-    
-    //def updateRow
-    
-    // ---------- Json & Api ---------
-    
-    def openJson(): DataHub = {
-        this
-    }
-    
-    def openJson(jsonText: String): DataHub = {
-        JSON = Json.fromText(jsonText)
-        this
-    }
-    
-    def openJsonApi(url: String): DataHub = {
-        JSON = Json.fromURL(url)
-        this
-    }
-    
-    def openJsonApi(url: String, post: String): DataHub = {
-        JSON = Json.fromURL(url, post)
+
+
+    // ---------- Extends ----------
+
+    def plug(func: String, extend: Any): DataHub = {
+        SLOTS += func -> extend
         this
     }
 
-    def parse(jsonPath: String): DataHub = {
-        TABLE.copy(JSON.parseTable(jsonPath))
-        this
+    def pick(func: String): Any = {
+        SLOTS(func)
     }
 
-    //---------- HTTP ----------
-
-    def GET(url: String): DataHub = {
-        HTTP = Http.GET(url)
-        this
+    def slots(func: String): Boolean = {
+        SLOTS.contains(func)
     }
 
-    def POST(url: String, data: String = ""): DataHub = {
-        HTTP = Http.POST(url, data)
-        this
-    }
 
-    def PUT(url: String, data: String = ""): DataHub = {
-        HTTP = Http.PUT(url, data)
-        this
-    }
 
-    def DELETE(url: String): DataHub = {
-        HTTP = Http.DELETE(url)
-        this
-    }
-
-    def setHeader(name: String, value: String): DataHub = {
-        HTTP.setHeader(name, value)
-        this
-    }
-
-    def toJson: DataHub = {
-        JSON = HTTP.toJson
-        this
-    }
-
-    //---------- PSQL ----------
-
-    def openSQL(SQL: String): DataHub = {
-        PSQL = new PSQL(SQL, this)
-        this
-    }
-
-    def openFileSQL(filePath: String): DataHub = {
-        PSQL = new PSQL(Source.fromFile(filePath.locate()).mkString, this)
-        this
-    }
-
-    def openResourceSQL(resourcePath: String): DataHub = {
-        PSQL = new PSQL(ResourceFile.open(resourcePath).output, this)
-        this
-    }
-
-    def setArgs(args: Any): DataHub = {
-        PSQL.assign(args)
-        this
-    }
-
-    def setVariable(name: String, value: Any): DataHub = {
-        PSQL.set(name, value)
-        this
-    }
-
-    def run(): PSQL = {
-        PSQL.$run()
-    }
-
-    def run(SQL: String): PSQL = {
-        new PSQL(SQL, this).$run()
-    }
-
-    def runFileSQL(filePath: String, outputType: String = OUTPUT.TABLE): PSQL = {
-        new PSQL(Source.fromFile(filePath.locate()).mkString, this).$run()
-    }
-
-    def runResourceSQL(resourcePath: String, outputType: String = OUTPUT.TABLE): PSQL = {
-        new PSQL(ResourceFile.open(resourcePath).output, this).$run()
-    }
-
-    // ---------- dataSource ----------
+    // ---------- DataSource ----------
 
     def executeDataTable(SQL: String, values: Any*): DataTable = CURRENT.executeDataTable(SQL, values: _*)
     def executeDataRow(SQL: String, values: Any*): DataRow = CURRENT.executeDataRow(SQL, values: _*)
@@ -1575,31 +1095,14 @@ class DataHub () {
     def executeSingleValue(SQL: String, values: Any*): DataCell = CURRENT.executeSingleValue(SQL, values: _*)
     def executeExists(SQL: String, values: Any*): Boolean = CURRENT.executeExists(SQL, values: _*)
     def executeNonQuery(SQL: String, values: Any*): Int = CURRENT.executeNonQuery(SQL, values: _*)
-    
-    // ---------- Json Basic ----------
-    
-    def parseTable(jsonPath: String): DataTable = JSON.parseTable(jsonPath)
-    def parseRow(jsonPath: String): DataRow = JSON.parseRow(jsonPath)
-    def parseList(jsonPath: String): java.util.List[Any] = JSON.parseJavaList(jsonPath)
-    def parseValue(jsonPath: String): DataCell = JSON.parseValue(jsonPath)
-    def parseNode(jsonPath: String): JsonNode = JSON.findNode(jsonPath)
-    
-    // ---------- other ----------
-    
-    def runCommand(commandText: String): DataHub = {
-        commandText.bash()
-        this
-    }
-    
-    def close(): Unit = {
 
+
+    def close(): Unit = {
         SOURCES.values.foreach(_.close())
         SOURCES.clear()
         BUFFER.clear()
         TABLE.clear()
-        pageSQLs.clear()
-        blockSQLs.clear()
-        processSQLs.clear()
+        SLOTS.clear()
 
         holder.delete()
     }

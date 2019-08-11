@@ -10,11 +10,18 @@ import scala.util.matching.Regex
 
 object Solver {
 
-    val SINGLE_LINE_COMMENT: Regex = """--.*(\r|$)""".r //单行注释
+    val WHOLE_LINE_COMMENT: Regex = """^--.*$""".r //整行注释
+    val SINGLE_LINE_COMMENT: Regex = """--.*?(\r|$)""".r //单行注释
     val MULTILINE_COMMENT: Regex = """/\*[\s\S]*\*/""".r //多行注释
     val ARGUMENT: Regex = """(#|&)\{([a-zA-Z0-9_]+)\}""".r  //入参 #{name} 或 &{name}
-    val GLOBAL_VARIABLE: Regex = """@\(?([a-zA-Z0-9_]+)\)?""".r //全局变量 @name 或 @(name)
-    val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
+    //val GLOBAL_VARIABLE: Regex = """@\(?([a-zA-Z0-9_]+)\)?""".r //全局变量 @name 或 @(name)
+    //val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
+    val VARIABLE: List[Regex] = List[Regex](
+        """@\(([a-zA-Z0-9_]+)\)""".r,
+        """\$\(([a-zA-Z0-9_]+)\)""".r,
+        """@([a-zA-Z0-9_]+)""".r,
+        """\$([a-zA-Z0-9_]+)""".r
+    )
     val USER_DEFINED_FUNCTION: Regex = """$[a-zA-Z_]+\(\)""".r //用户函数, 未完成
     val SYSTEM_FUNCTION: Regex = """@([a-z_]+)\(([^\)]*)\)""".r //系统函数, 未完成
     val JS_EXPRESSION: Regex = """\~\{([\s\S]+?)}""".r //js表达式
@@ -38,10 +45,22 @@ object Solver {
                         val char = PSQL.chars(i)
                         sentence = sentence.replace(m.group(0),
                             if (char.startsWith("\"\"\"")) {
-                                char.replace("\"\"\"", "\"").$restore(PSQL, "")
+                                char.$trim("\"\"\"")
+                                    .replace("\\", "\\\\")
+                                    .replace("\"", "\\\"")
+                                    .bracket("\"")
+                                    .replace("\r", "~u000d")
+                                    .replace("\n", "~u000a")
+                                    .$restore(PSQL, "")
                             }
                             else if (char.startsWith("'''")) {
-                                char.replace("'''", "'").$restore(PSQL, "")
+                                char.$trim("'''")
+                                    .replace("\\", "\\\\")
+                                    .replace("'", "\\'")
+                                    .bracket("'")
+                                    .replace("\r", "~u000d")
+                                    .replace("\n", "~u000a")
+                                    .$restore(PSQL, "")
                             }
                             else if (quote != "") {
                                 if (!char.quotesWith(quote)) {
@@ -71,7 +90,9 @@ object Solver {
         }
 
         def popStash(PSQL: PSQL, quote: String = "'"): String = {
-            sentence.restoreChars(PSQL, quote).restoreValues(PSQL, quote)
+            sentence.restoreChars(PSQL, quote)
+                    .restoreValues(PSQL, quote)
+                    .restoreSymbols()
         }
 
         //替换外部变量
@@ -93,23 +114,31 @@ object Solver {
 
         //替换特殊符号
         def restoreSymbols(): String = {
-            sentence.replace("~u0024", "$")
+            sentence.replace("~u003b", ";")
+                    .replace("~u0024", "$")
                     .replace("~u0040", "@")
                     .replace("~u007e", "~")
                     .replace("~u0021", "!")
-                    .replace("~u0023", "#")
-                    .replace("~u003b", ";")
-                    .replace("~u0026", "&")
+                    //.replace("~u0023", "#") //已在Parameter中替换
+                    //.replace("~u0026", "&")//已在Parameter中替换
+                    .replace("~u000d", "\r")
+                    .replace("~u000a", "\n")
+                    .replace("~u002d", "-")
+                    .replace("~u002f", "/")
         }
 
         //解析表达式中的变量
         def replaceVariables(PSQL: PSQL): String = {
-            List(GLOBAL_VARIABLE, USER_VARIABLE)
+            VARIABLE
                 .map(r => r.findAllMatchIn(sentence))
                 .flatMap(s => s.toList.sortBy(m => m.group(1).reverse))
                 .foreach(m => {
-                    PSQL.findVariable(m.group(0)).ifValid(data => {
-                        sentence = sentence.replace(m.group(0), PSQL.$stash(data))
+                    val whole = m.group(0)
+                    //有可能出现只有右括号没有左括号的情况出现
+                    val right = if (whole.endsWith(")") && !whole.contains("(")) ")" else ""
+
+                    PSQL.findVariable(whole).ifValid(data => {
+                        sentence = sentence.replace(whole, PSQL.$stash(data) + right)
                     })
                 })
 
@@ -225,13 +254,9 @@ object Solver {
                     .map(m => m.group(1).toInt)
                     .toList.head)
             }
-            //如果是括号包围的表达式- 这种情况应用不存在
-//            else if (sentence.bracketsWith("(", ")")) {
-//                new SHARP(sentence.restoreValues(PSQL)).execute(PSQL)
-//            }
             //如果是最短表达式
             else {
-                sentence.restoreValues(PSQL).eval()
+                sentence.restoreValues(PSQL).eval()//.restoreSymbols()
             }
         }
 

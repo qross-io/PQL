@@ -3,9 +3,9 @@ package io.qross.fs
 import java.io.{File, FileInputStream, FileOutputStream}
 import java.nio.file.Files
 
-import io.qross.core.{DataTable, DataType}
+import io.qross.core.{DataHub, DataTable, DataType, ExtensionNotFoundException}
 import io.qross.core.DataType.DataType
-import io.qross.net.Email
+import io.qross.net.{Email, HttpClient, Json}
 import io.qross.setting.Global
 import io.qross.fs.FilePath._
 import org.apache.poi.hssf.record.cf.FontFormatting
@@ -220,6 +220,203 @@ object Excel {
     def DateTimeFormat(formatStyle: String): String = {
         formatStyle
     } */
+
+    implicit class DataHub$Excel(val dh: DataHub) {
+
+        def EXCEL$R: Excel = {
+            if (dh.slots("EXCEL$R")) {
+                dh.pick("EXCEL$R").asInstanceOf[Excel]
+            }
+            else {
+                throw new ExtensionNotFoundException("Must open an excel first.")
+            }
+        }
+
+        def EXCEL$W: Excel = {
+            if (dh.slots("EXCEL$W")) {
+                dh.pick("EXCEL$W").asInstanceOf[Excel]
+            }
+            else {
+                throw new ExtensionNotFoundException("Must save as an excel first.")
+            }
+        }
+
+        def ZIP: Zip = dh.pick("ZIP").asInstanceOf[Zip]
+
+        def openExcel(fileNameOrPath: String): DataHub = {
+            dh
+        }
+
+        def saveAsExcel(fileNameOrPath: String): DataHub = {
+            dh.plug("EXCEL$W", new Excel(fileNameOrPath))
+            if (dh.slots("ZIP")) {
+                ZIP.addFile(EXCEL$W.path)
+            }
+            dh
+        }
+
+        def saveAsNewExcel(fileNameOrPath: String): DataHub = {
+            fileNameOrPath.delete()
+            saveAsExcel(fileNameOrPath)
+        }
+
+        def fromExcelTemplate(templateName: String): DataHub = {
+            EXCEL$W.fromTemplate(templateName)
+            dh
+        }
+
+        /*
+        def appendSheet(sheetName: String = "sheet1", initialRow: Int = 0, initialColumn: Int = 0): DataHub = {
+
+            if (TABLE.nonEmptySchema) {
+                EXCEL
+                        .setInitialRow(initialRow)
+                        .setInitialColumn(0)
+                        .openSheet(sheetName)
+                        .withoutHeader()
+                        .appendTable(TABLE)
+            }
+
+
+            if (pageSQLs.nonEmpty || blockSQLs.nonEmpty) {
+                stream(table => {
+                    EXCEL
+                            .setInitialRow(initialRow)
+                            .setInitialColumn(0)
+                            .openSheet(sheetName)
+                            .withoutHeader()
+                            .appendTable(table)
+                    table.clear()
+                })
+            }
+
+            dh.preclear()
+
+            dh
+        }
+
+        def appendSheetWithHeader(sheetName: String = "sheet1", initialRow: Int = 0, initialColumn: Int = 0): DataHub = {
+
+            if (TABLE.nonEmptySchema) {
+                EXCEL
+                        .setInitialRow(initialRow)
+                        .setInitialColumn(0)
+                        .openSheet(sheetName)
+                        .withHeader()
+                        .appendTable(TABLE)
+            }
+
+            if (pageSQLs.nonEmpty || blockSQLs.nonEmpty) {
+                stream(table => {
+                    EXCEL
+                            .setInitialRow(initialRow)
+                            .setInitialColumn(0)
+                            .openSheet(sheetName)
+                            .withHeader()
+                            .appendTable(table)
+                    table.clear()
+                })
+            }
+
+            dh.preclear()
+        }
+
+        def writeCellValue(value: Any, sheetName: String = "sheet1", rowIndex: Int = 0, colIndex: Int = 0): DataHub = {
+            EXCEL.openSheet(sheetName).setCellValue(value, rowIndex, colIndex).setInitialRow(rowIndex).setInitialColumn(colIndex)
+            this
+        }
+
+        def writeSheet(sheetName: String = "sheet1", initialRow: Int = 0, initialColumn: Int = 0): DataHub = {
+            EXCEL
+                    .setInitialRow(initialRow)
+                    .setInitialColumn(0)
+                    .openSheet(sheetName)
+                    .withoutHeader()
+                    .writeTable(TABLE)
+
+            dh.preclear()
+
+            this
+        }
+
+        def writeSheetWithHeader(sheetName: String = "sheet1", initialRow: Int = 0, initialColumn: Int = 0): DataHub = {
+            EXCEL
+                    .setInitialRow(initialRow)
+                    .setInitialColumn(0)
+                    .openSheet(sheetName)
+                    .withHeader()
+                    .writeTable(TABLE)
+
+            dh.preclear()
+
+            this
+        }
+
+        def setRegionStyle(rows: (Int, Int), cols: (Int, Int), styles: (String, Any)*): DataHub = {
+            EXCEL.setStyle(rows, cols, 1, styles: _*)
+            this
+        }
+
+        def withCellStyle(styles: (String, Any)*): DataHub = {
+            EXCEL.setCellStyle(EXCEL.getInitialRow, EXCEL.getInitialColumn, styles: _*)
+            this
+        }
+
+        def withHeaderStyle(styles: (String, Any)*): DataHub = {
+            EXCEL.setRowStyle(
+                EXCEL.getInitialRow,
+                EXCEL.getInitialColumn -> (EXCEL.getInitialColumn + TABLE.getFields.size - 1),
+                styles: _*)
+
+            this
+        }
+
+        def withRowStyle(styles: (String, Any)*): DataHub = {
+            EXCEL.setRowsStyle(
+                EXCEL.getActualInitialRow -> (EXCEL.getActualInitialRow + TABLE.count() - 1),
+                EXCEL.getInitialColumn -> (EXCEL.getInitialColumn + TABLE.getFields.size - 1),
+                styles: _*)
+
+            this
+        }
+
+        def withAlternateRowStyle(styles: (String, Any)*): DataHub = {
+            EXCEL.setAlternateRowsStyle(
+                EXCEL.getActualInitialRow -> (EXCEL.getActualInitialRow + TABLE.count() - 1),
+                EXCEL.getInitialColumn -> (EXCEL.getInitialColumn + TABLE.getFields.size - 1),
+                styles: _*
+            )
+            this
+        }
+
+        def mergeCells(rows: (Int, Int), cols: (Int, Int)): DataHub = {
+            EXCEL.mergeRegion(rows, cols)
+            dh
+        }
+
+        def removeMergeRegion(firstRow: Int, firstColumn: Int): DataHub = {
+            EXCEL.removeMergedRegion(firstRow, firstColumn)
+            dh
+        }
+        */
+
+//        def postExcelTo(url: String, data: String = ""): DataHub = {
+//            JSON = new Json(HttpClient.postFile(url, EXCEL.path, data))
+//            this
+//        }
+
+        //actualInitialRow - append
+        //def withStyle - initialRow + 1, TABLE.rows.size, initialColumn, TABLE.columns.size
+        //def withAlternateStyle - initialRow + 2, TABLE.rows.size, initialColumn, TABLE.columns.size
+        //def withHeaderStyle - initialRow, initialRow, initialColumn, , TABLE.columns.size
+        //def mergeCells
+
+        //    def attachExcelToEmail(title: String): DataHub = {
+        //        EMAIL = new Email(title)
+        //        EMAIL.attach(EXCEL.fileName)
+        //        this
+        //    }
+    }
 }
 
 class Excel(val fileName: String) {

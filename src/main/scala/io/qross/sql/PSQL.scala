@@ -3,11 +3,13 @@ package io.qross.sql
 import java.io.{File, FileNotFoundException}
 import java.util.regex.Matcher
 
+import io.qross.core.Authentication._
 import io.qross.core._
 import io.qross.ext.TypeExt._
 import io.qross.ext.{ArgumentMap, Output, ParameterMap}
 import io.qross.fs.FilePath._
 import io.qross.fs.ResourceFile
+import io.qross.net.Json._
 import io.qross.net.{Http, Json}
 import io.qross.setting.Properties
 import io.qross.sql.Patterns._
@@ -17,7 +19,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
-import scala.util.Try
 import scala.util.control.Breaks._
 
 object PSQL {
@@ -27,7 +28,7 @@ object PSQL {
 
         var SQL = ""
         val resource = ResourceFile.open(path)
-        if (!resource.exists) {
+        if (resource.exists) {
             SQL = resource.output
         }
         else {
@@ -56,6 +57,57 @@ object PSQL {
     //直接运行
     def run(SQL: String): Any = {
         PSQL.open(SQL).run()
+    }
+
+    implicit class DataHub$PSQL(val dh: DataHub) {
+
+        def PSQL: PSQL = {
+            if (dh.slots("PSQL")) {
+                dh.pick("PSQL").asInstanceOf[PSQL]
+            }
+            else {
+                throw new ExtensionNotFoundException("Must use openSQL/openFileSQL/openResourceSQL method to open a PSQL first.")
+            }
+        }
+
+        def openSQL(SQL: String): DataHub = {
+            dh.plug("PSQL", new PSQL(SQL, dh))
+        }
+
+        def openFileSQL(filePath: String): DataHub = {
+            dh.plug("PSQL", new PSQL(Source.fromFile(filePath.locate()).mkString, dh))
+        }
+
+        def openResourceSQL(resourcePath: String): DataHub = {
+            dh.plug("PSQL", new PSQL(ResourceFile.open(resourcePath).output, dh))
+            dh
+        }
+
+        def setArgs(args: Any): DataHub = {
+            PSQL.assign(args)
+            dh
+        }
+
+        def setVariable(name: String, value: Any): DataHub = {
+            PSQL.set(name, value)
+            dh
+        }
+
+        def run(): Any = {
+            PSQL.$run().$return
+        }
+
+        def run(SQL: String): Any = {
+            new PSQL(SQL, dh).$run().$return
+        }
+
+        def runFileSQL(filePath: String, outputType: String = OUTPUT.TABLE): Any = {
+            new PSQL(Source.fromFile(filePath.locate()).mkString, dh).$run().$return
+        }
+
+        def runResourceSQL(resourcePath: String, outputType: String = OUTPUT.TABLE): Any = {
+            new PSQL(ResourceFile.open(resourcePath).output, dh).$run().$return
+        }
     }
 }
 
@@ -117,7 +169,8 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         "RUN" -> parseRUN,
         "SELECT" -> parseSELECT,
         "REQUEST" -> parseREQUEST,
-        "PARSE" -> parsePARSE
+        "PARSE" -> parsePARSE,
+        "DEBUG" -> parseDEBUG
     )
 
     //执行器
@@ -145,7 +198,8 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         "RUN" -> executeRUN,
         "SELECT" -> executeSELECT,
         "REQUEST" -> executeREQUEST,
-        "PARSE" -> executePARSE
+        "PARSE" -> executePARSE,
+        "DEBUG" -> executeDEBUG
     )
 
     //开始解析
@@ -190,14 +244,26 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
             }
         }
 
+        //去掉单行注释
+        SQL = SQL.split("\r").map(s => {
+            if (WHOLE_LINE_COMMENT.test(s)) {
+                ""
+            }
+            else if (SINGLE_LINE_COMMENT.test(s)) {
+                SINGLE_LINE_COMMENT.replaceAllIn(s, "")
+            }
+            else {
+                s
+            }
+        }).mkString("\r").trim()
+
         //替换所有字符串
         //#char[n]
         for (i <- chars.indices) {
             SQL = SQL.replace(chars(i), s"~char[$i]")
         }
 
-        //去掉注释
-        SQL = SINGLE_LINE_COMMENT.replaceAllIn(SQL, "")
+        //去年多行注释
         SQL = MULTILINE_COMMENT.replaceAllIn(SQL, "")
 
         //开始解析
@@ -488,11 +554,11 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
     }
 
     private def parseSHOW(sentence: String): Unit = {
-        if ({m = $LIST.matcher(sentence); m}.find) {
+        if ({m = $SHOW.matcher(sentence); m}.find) {
             PARSING.head.addStatement(new Statement("SHOW", sentence, new SHOW(m.group(1))))
         }
         else {
-            throw new SQLParseException("Incorrect LIST sentence: " + sentence)
+            throw new SQLParseException("Incorrect SHOW sentence: " + sentence)
         }
     }
 
@@ -520,10 +586,19 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     private def parsePARSE(sentence: String): Unit = {
         if ($PARSE.test(sentence)) {
-            PARSING.head.addStatement(new Statement("PARSE", sentence, new PARSE(sentence.takeAfter($PARSE))))
+            PARSING.head.addStatement(new Statement("PARSE", sentence, new PARSE(sentence.takeAfter($PARSE).trim())))
         }
         else {
             throw new SQLParseException("Incorrect PARSE sentence: " + sentence)
+        }
+    }
+
+    private def parseDEBUG(sentence: String): Unit = {
+        if ($DEBUG.test(sentence)) {
+            PARSING.head.addStatement(new Statement("DEBUG", sentence, new DEBUG(sentence.takeAfter($DEBUG).trim())))
+        }
+        else {
+            throw new SQLParseException("Incorrect DEBUG sentence: " + sentence)
         }
     }
 
@@ -641,9 +716,10 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
             case "CACHE" => dh.openCache()
             case "TEMP" => dh.openTemp()
             case "DEFAULT" => dh.openDefault()
+            case "QROSS" => dh.openQross()
             case _ =>
                 val connectionName =
-                    if ($RESERVAR.test($open.connectionName)) {
+                    if ($RESERVED.test($open.connectionName)) {
                         if (!Properties.contains($open.connectionName)) {
                             throw new SQLExecuteException("Wrong connection name: " + $open.connectionName)
                         }
@@ -678,9 +754,10 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
             case "JDBC" =>
                 $save.targetName match {
                     case "DEFAULT" => dh.saveAsDefault()
+                    case "QROSS" => dh.saveAsQross()
                     case _ =>
                         val connectionName =
-                            if ($RESERVAR.test($save.targetName)) {
+                            if ($RESERVED.test($save.targetName)) {
                                 if (!Properties.contains($save.targetName)) {
                                     throw new SQLExecuteException("Wrong connection name: " + $save.targetName)
                                 }
@@ -827,7 +904,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
     }
 
     private def executeRUN(statement: Statement): Unit = {
-        dh.runCommand(statement.instance.asInstanceOf[RUN].commandText.$restore(this))
+        statement.instance.asInstanceOf[RUN].commandText.$restore(this).bash()
     }
 
     private def executeSELECT(statement: Statement): Unit = {
@@ -835,8 +912,11 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         RESULT = dh.executeDataTable(SQL)
         ROWS = RESULT.asInstanceOf[DataTable].size
 
-        Output.writeLine(SQL.take(100))
-        RESULT.asInstanceOf[DataTable].show()
+        if (dh.debugging) {
+            Output.writeLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            Output.writeLine(SQL.take(100))
+            RESULT.asInstanceOf[DataTable].show()
+        }
     }
 
     private def executeREQUEST(statement: Statement): Unit = {
@@ -866,6 +946,15 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         RESULT.asInstanceOf[DataTable].show()
     }
 
+    private def executeDEBUG(statement: Statement): Unit = {
+        val $debug = statement.instance.asInstanceOf[DEBUG]
+        dh.debug(if ("""^[a-zA-Z0-9]$""".r.test($debug.switch)) {
+            $debug.switch.toBoolean(false)
+        }
+        else {
+            $debug.switch.$eval(this).asBoolean(false)
+        })
+    }
 
     private def execute(statements: ArrayBuffer[Statement]): Unit = {
         breakable {
@@ -874,11 +963,15 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
                     EXECUTOR(statement.caption)(statement)
                 }
                 else if (NON_QUERY_CAPTIONS.contains(statement.caption)) {
-                    AFFECTED = dh.executeNonQuery(statement.sentence)
+                    val SQL = statement.sentence.$restore(this)
+                    AFFECTED = dh.executeNonQuery(SQL)
 
-                    Output.writeLine(statement.sentence.take(100))
-                    Output.writeLine("------------------------------------------------------------")
-                    Output.writeLine(s"$AFFECTED row(s) affected. ")
+                    if (dh.debugging) {
+                        Output.writeLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                        Output.writeLine(SQL.take(100))
+                        Output.writeLine("------------------------------------------------------------")
+                        Output.writeLine(s"$AFFECTED row(s) affected. ")
+                    }
                 }
                 else if (statement.caption == "CONTINUE") {
                     if (executeCONTINUE(statement)) {
@@ -1004,8 +1097,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         this
     }
 
-    def output: Any = {
-        dh.close()
+    def $return: Any = {
         if (RESULT != null) {
             RESULT
         }
@@ -1015,6 +1107,11 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         else {
             null
         }
+    }
+
+    def output: Any = {
+        dh.close()
+        this.$return
     }
 
     //运行但关闭DataHub
@@ -1032,7 +1129,8 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         for (i <- sentences.indices) {
             Output.writeLine(i, ": ", sentences(i))
         }
-        Output.writeLine("------------------------------------------------------------")
+
+        Output.writeLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         this.root.show(0)
     }
 }

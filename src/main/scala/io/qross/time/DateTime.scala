@@ -1,20 +1,23 @@
 package io.qross.time
 
+import java.sql.{Date, Time, Timestamp}
+import java.time._
 import java.time.format.DateTimeFormatter
 import java.time.temporal.{ChronoField, ChronoUnit}
-import java.time.{LocalDateTime, OffsetDateTime, ZoneId}
 import java.util.regex.Pattern
+
+import io.qross.ext.Output
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 object DateTime {
     
-    def now: DateTime = DateTime()
-    def from(dateTime: DateTime): DateTime = DateTime.now.setLocalDataTime(dateTime.localDateTime)
-    def of(epochSecond: Long): DateTime = DateTime(epochSecond.toString, "EPOCH")
+    def now: DateTime = new DateTime()
+    def from(dateTime: DateTime): DateTime = new DateTime(dateTime.localDateTime)
+    def ofTimestamp(epochSecond: Long): DateTime = new DateTime(epochSecond.toString, "EPOCH")
     def of(year: Int, month: Int, dayOfMonth: Int, hourOfDay: Int = 0, minute: Int = 0, second: Int = 0): DateTime = {
-        DateTime(f"$year-$month%02d-$dayOfMonth%02d $hourOfDay%02d:$minute%02d:$second%02d", "yyyy-MM-dd HH:mm:ss")
+        new DateTime(f"$year-$month%02d-$dayOfMonth%02d $hourOfDay%02d:$minute%02d:$second%02d", "yyyy-MM-dd HH:mm:ss")
     }
     
     def getDaysSpan(beginTime: String, endTime: String): Long = getDaysSpan(new DateTime(beginTime), new DateTime(endTime))
@@ -23,7 +26,7 @@ object DateTime {
     def getSecondsSpan(beginTime: DateTime, endTime: DateTime): Long = ChronoUnit.SECONDS.between(beginTime.localDateTime, endTime.localDateTime)
 }
 
-case class DateTime(private var dateTime: String = "", private var formatStyle: String = "") {
+class  DateTime(private val dateTime: Any = "", private val formatStyle: String = "") {
     
     //E,EE,EEE = Sun
     //EEEE = Sunday
@@ -38,75 +41,104 @@ case class DateTime(private var dateTime: String = "", private var formatStyle: 
     //MMMM = November
     
     //a = PM
-    
-    if (formatStyle == "") {
-        formatStyle = dateTime.length match {
-            case 8 => if (dateTime.contains(":")) {
-                          dateTime = "1970-01-01 " + dateTime
-                          "yyyy-MM-dd HH:mm:ss"
-                      }
-                      else {
-                          "yyyyMMdd"
-                      }
-            case 10 =>
-                if (dateTime.contains("-")) {
-                    "yyyy-MM-dd"
-                } else if (dateTime.contains("/")) {
-                    if (dateTime.indexOf("/") == 4) {
-                        "yyyy/MM/dd"
-                    }
-                    else {
-                        "dd/MM/yyyy"
-                    }
-                }
-                else if (Pattern.compile("").matcher(dateTime).find()) {
-                    "EPOCH"
-                }
-                else {
-                    "yyyyMMddHH"
-                }
-            case 12 => "yyyyMMddHHmm"
-            case 14 => "yyyyMMddHHmmss"
-            case 16 => "yyyyMMddHHmmss.S"
-            case 17 => "yyyyMMddHHmmss.SS"
-            case 18 => "yyyyMMddHHmmss.SSS"
-            case 19 => "yyyy-MM-dd HH:mm:ss"
-            case 21 => "yyyy-MM-dd HH:mm:ss.S"
-            case 22 => "yyyy-MM-dd HH:mm:ss.SS"
-            case 23 => "yyyy-MM-dd HH:mm:ss.SSS"
-            case _ => "yyyy-MM-dd HH:mm:ss"
-        }
+
+    val localDateTime: LocalDateTime = dateTime match {
+        case localDateTime: LocalDateTime => localDateTime
+        case str: String => if (str == "") {
+                                LocalDateTime.now()
+                            }
+                            else {
+                                parseLocalDateTime(str, formatStyle)
+                            }
+        case dt: DateTime => dt.localDateTime
+        case date: Date => parseLocalDateTime(date.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
+        case time: Time => parseLocalDateTime(LocalDate.now() + " " + time.toString, "yyyy-MM-dd HH:mm:ss")
+        case timeStamp: Timestamp => timeStamp.toLocalDateTime
+        case l: Long => parseLocalDateTime(l)
+        case i: Int => parseLocalDateTime(i)
+        case localDate: LocalDate => parseLocalDateTime(localDate.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
+        case localTime: LocalTime => parseLocalDateTime(LocalDate.now() + " " + localTime.toString, "yyyy-MM-dd HH:mm:ss")
+        case _ =>   Output.writeWarning("Can't recognize as or convert to DateTime: " + dateTime)
+                    LocalDateTime.now()
     }
 
-    if (dateTime.length == 8) {
-        dateTime += "00"
-        formatStyle += "HH"
-    }
-    else if (dateTime.length == 10 && (dateTime.contains("-") || dateTime.contains("/"))) {
-        dateTime += " 00"
-        formatStyle += " HH"
-    }
+    private def parseLocalDateTime(dateTime: String, format: String = ""): LocalDateTime = {
 
-    private var localDateTime : LocalDateTime =
-            if (formatStyle != "EPOCH") {
-                dateTime match {
-                    case "" => LocalDateTime.now()
-                    case _ => LocalDateTime.parse(dateTime, DateTimeFormatter.ofPattern(formatStyle))
+        val style = {
+            if (format == "") {
+                dateTime.length match {
+                    case 8 =>
+                        if (dateTime.contains(":")) {
+                            "HH:mm:ss"
+                        }
+                        else {
+                            "yyyyMMdd"
+                        }
+                    case 10 =>
+                        if (dateTime.contains("-")) {
+                            "yyyy-MM-dd"
+                        } else if (dateTime.contains("/")) {
+                            if (dateTime.indexOf("/") == 4) {
+                                "yyyy/MM/dd"
+                            }
+                            else {
+                                "dd/MM/yyyy"
+                            }
+                        }
+                        else {
+                            "yyyyMMddHH"
+                        }
+                    case 12 => "yyyyMMddHHmm"
+                    case 14 => "yyyyMMddHHmmss"
+                    case 16 => "yyyyMMddHHmmss.S"
+                    case 17 => "yyyyMMddHHmmss.SS"
+                    case 18 => "yyyyMMddHHmmss.SSS"
+                    case 19 => "yyyy-MM-dd HH:mm:ss"
+                    case 21 => "yyyy-MM-dd HH:mm:ss.S"
+                    case 22 => "yyyy-MM-dd HH:mm:ss.SS"
+                    case 23 => "yyyy-MM-dd HH:mm:ss.SSS"
+                    case _ => "yyyy-MM-dd HH:mm:ss"
                 }
             }
             else {
-                Try(dateTime.toLong) match {
-                    case Success(epoch) => LocalDateTime.ofEpochSecond(epoch, 0, OffsetDateTime.now.getOffset)
-                    case Failure(_) => LocalDateTime.now()
-                }
-                
+                format
             }
-   
-    private def setLocalDataTime(localDateTime: LocalDateTime): DateTime = {
-        this.localDateTime = localDateTime
-        this
+        }
+
+        if (dateTime.length == 8) {
+            if (style == "yyyyMMdd") {
+                LocalDateTime.parse(dateTime + "00", DateTimeFormatter.ofPattern(style + "HH"))
+            }
+            else {
+                LocalDateTime.parse( LocalDate.now().toString + " " + dateTime, DateTimeFormatter.ofPattern("yyyy-MM-dd " + style))
+            }
+        }
+        else if (dateTime.length == 10 && (dateTime.contains("-") || dateTime.contains("/"))) {
+            LocalDateTime.parse(dateTime + " 00", DateTimeFormatter.ofPattern(style + " HH"))
+        }
+        else {
+            LocalDateTime.parse(dateTime, DateTimeFormatter.ofPattern(style))
+        }
     }
 
+    private def parseLocalDateTime(timestamp: Long): LocalDateTime = {
+        val (second: Long, nano: Long) = {
+            //10位 秒
+            if (timestamp < 10000000000L) {
+                (timestamp, 0)
+            }
+            //17位 纳秒
+            else if (timestamp > 9999999999999L) {
+                (timestamp / 10000000, timestamp % 10000000)
+            }
+            //13位 毫秒
+            else {
+                (timestamp / 1000, timestamp % 1000 * 10000)
+            }
+        }
+        LocalDateTime.ofEpochSecond(second, nano.toInt, OffsetDateTime.now.getOffset)
+    }
+   
     def get(field: ChronoField): Int = this.localDateTime.get(field)
     def getYear: Int = this.localDateTime.getYear
     def getMonth: Int = this.localDateTime.getMonthValue
@@ -131,20 +163,19 @@ case class DateTime(private var dateTime: String = "", private var formatStyle: 
     def tickValue: String = this.getString("yyyyMMddHHmm00")
     
     def set(field: ChronoField, value: Int): DateTime = {
-        this.localDateTime = this.localDateTime.`with`(field, value)
+        new DateTime(this.localDateTime.`with`(field, value))
         this
     }
-    def setYear(value: Int): DateTime = {
-        this.localDateTime = this.localDateTime.withYear(value)
-        this
+
+    def setYear(year: Int): DateTime = {
+        new DateTime(this.localDateTime.withYear(year))
     }
+
     def setMonth(value: Int): DateTime = {
-        this.localDateTime = this.localDateTime.withMonth(value)
-        this
+        new DateTime(this.localDateTime.withMonth(value))
     }
     def setDayOfMonth(value: Int): DateTime = {
-        this.localDateTime = this.localDateTime.withDayOfMonth(value)
-        this
+        new DateTime(this.localDateTime.withDayOfMonth(value))
         /*
         LocalDateTime	with(TemporalField field, long newValue)
         LocalDateTime	withDayOfMonth(int dayOfMonth)
@@ -157,10 +188,11 @@ case class DateTime(private var dateTime: String = "", private var formatStyle: 
         LocalDateTime	withYear(int year)
         */
     }
+
     def setDayOfWeek(value: String): DateTime = {
         //MON, TUE, WED, THU, FRI, SAT, SUN
         if (value.length >= 2) {
-            this.localDateTime = this.localDateTime.`with`(ChronoField.DAY_OF_WEEK, {
+            new DateTime(this.localDateTime.`with`(ChronoField.DAY_OF_WEEK, {
                 value.substring(0, 2).toUpperCase() match {
                     case "MO" => 1
                     case "TU" => 2
@@ -169,104 +201,81 @@ case class DateTime(private var dateTime: String = "", private var formatStyle: 
                     case "FR" => 5
                     case "SA" => 6
                     case "SU" => 7
-                    case _ => throw new IllegalArgumentException("Unknown Week name.")
+                    case _ => throw new IllegalArgumentException("Unknown Week name: " + value)
                 }
-            })
+            }))
         }
         else {
             throw new IllegalArgumentException("Week name must be 2 or more chars at least, please check.")
         }
-        //while (value)
-        this
     }
     def setDayOfWeek(value: Int): DateTime = {
-        this.localDateTime = this.localDateTime.`with`(ChronoField.DAY_OF_WEEK, value)
-        this
+        new DateTime(this.localDateTime.`with`(ChronoField.DAY_OF_WEEK, value))
     }
     def setHour(value: Int): DateTime = {
-        this.localDateTime = this.localDateTime.withHour(value)
-        this
+        new DateTime(this.localDateTime.withHour(value))
     }
     def setMinute(value: Int): DateTime = {
-        this.localDateTime = this.localDateTime.withMinute(value)
-        this
+        new DateTime(this.localDateTime.withMinute(value))
     }
     def setSecond(value: Int): DateTime = {
-        this.localDateTime = this.localDateTime.withSecond(value)
-        this
+        new DateTime(this.localDateTime.withSecond(value))
     }
     def setNano(value: Int): DateTime = {
-        this.localDateTime = this.localDateTime.withNano(value)
-        this
+        new DateTime(this.localDateTime.withNano(value))
     }
     
     def setZeroOfMonth(): DateTime = {
-        this.localDateTime = this.localDateTime.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0)
-        this
+        new DateTime(this.localDateTime.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0))
     }
     def setZeroOfDay(): DateTime = {
-        this.localDateTime = this.localDateTime.withHour(0).withMinute(0).withSecond(0).withNano(0)
-        this
+        new DateTime(this.localDateTime.withHour(0).withMinute(0).withSecond(0).withNano(0))
     }
    
     def toEpochSecond: Long = this.localDateTime.atZone(ZoneId.systemDefault).toInstant.getEpochSecond
     
     def plus(unit: ChronoUnit, amount: Int): DateTime = {
-        this.localDateTime = this.localDateTime.plus(amount, unit)
-        this
+        new DateTime(this.localDateTime.plus(amount, unit))
     }
     def plusYears(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.plusYears(amount)
-        this
+        new DateTime(this.localDateTime.plusYears(amount))
     }
     def plusMonths(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.plusMonths(amount)
-        this
+        new DateTime(this.localDateTime.plusMonths(amount))
     }
     def plusDays(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.plusDays(amount)
-        this
+        new DateTime(this.localDateTime.plusDays(amount))
     }
     def plusHours(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.plusHours(amount)
-        this
+        new DateTime(this.localDateTime.plusHours(amount))
     }
     def plusMinutes(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.plusMinutes(amount)
-        this
+        new DateTime(this.localDateTime.plusMinutes(amount))
     }
     def plusSeconds(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.plusSeconds(amount)
-        this
+        new DateTime(this.localDateTime.plusSeconds(amount))
     }
     
     def minus(unit: ChronoUnit, amount: Int): DateTime = {
-        this.localDateTime = this.localDateTime.minus(amount, unit)
-        this
+        new DateTime(this.localDateTime.minus(amount, unit))
     }
     def minusYears(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.minusYears(amount)
-        this
+        new DateTime(this.localDateTime.minusYears(amount))
     }
     def minusMonths(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.minusMonths(amount)
-        this
+        new DateTime(this.localDateTime.minusMonths(amount))
     }
     def minusDays(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.minusDays(amount)
-        this
+        new DateTime(this.localDateTime.minusDays(amount))
     }
     def minusHours(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.minusHours(amount)
-        this
+        new DateTime(this.localDateTime.minusHours(amount))
     }
     def minusMinutes(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.minusMinutes(amount)
-        this
+        new DateTime(this.localDateTime.minusMinutes(amount))
     }
     def minusSeconds(amount: Long): DateTime = {
-        this.localDateTime = this.localDateTime.minusSeconds(amount)
-        this
+        new DateTime(this.localDateTime.minusSeconds(amount))
     }
     
     def getString(formatStyle: String): String = {
@@ -287,11 +296,11 @@ case class DateTime(private var dateTime: String = "", private var formatStyle: 
     def afterOrEquals(otherDateTime: DateTime): Boolean = this.localDateTime.isAfter(otherDateTime.localDateTime) || this.localDateTime.isEqual(otherDateTime.localDateTime)
     
     def copy(): DateTime = {
-        DateTime(this.getString("yyyy-MM-dd HH:mm:ss.SSS"))
+        new DateTime(this.localDateTime)
     }
     
-    def copy(dateTime: DateTime): Unit = {
-        this.localDateTime = dateTime.localDateTime
+    def copy(dateTime: DateTime): DateTime = {
+        new DateTime(dateTime.localDateTime)
     }
     
     //---------- Sharp Expression ----------

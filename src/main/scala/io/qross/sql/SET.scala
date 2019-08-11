@@ -5,6 +5,8 @@ import io.qross.ext.TypeExt._
 import io.qross.sql.Patterns._
 import io.qross.sql.Solver._
 import io.qross.core.DataType.DataType
+import io.qross.ext.Output
+import io.qross.net.Json._
 
 class SET(var variable: String, expression: String) {
 
@@ -12,15 +14,21 @@ class SET(var variable: String, expression: String) {
                                 DataType.AUTO
                             }
                             else {
-                                if ($DATATYPE.matcher(variable).find) {
-                                    DataType.ofName(variable.takeBefore($BLANK))
+                                if ($BLANK.test(variable)) {
+                                    if ($DATATYPE.test(variable)) {
+                                        val dt = variable.takeBefore($BLANK)
+                                        variable = variable.takeAfter($BLANK).trim()
+                                        DataType.ofName(dt)
+                                    }
+                                    else {
+                                        Output.writeWarning(s"Wrong data type : " + variable)
+                                        DataType.AUTO
+                                    }
                                 }
                                 else {
                                     DataType.AUTO
                                 }
                             }
-
-    variable = variable.takeAfter($BLANK).trim()
 
     val variables: Array[(DataType, String)] = if (variable.contains(",")) {
                                                     if (!$SELECT.test(expression) && !$PARSE.test(expression)) {
@@ -29,8 +37,14 @@ class SET(var variable: String, expression: String) {
                                                     variable.split(",")
                                                             .map(_.trim)
                                                             .map(v => {
-                                                                if ($DATATYPE.matcher(v).find) {
-                                                                    (DataType.ofName(v.takeBefore($BLANK)), v.takeAfter($BLANK).trim())
+                                                                if ($BLANK.test(v)) {
+                                                                    if ($DATATYPE.test(v)) {
+                                                                        (DataType.ofName(v.takeBefore($BLANK)), v.takeAfter($BLANK).trim())
+                                                                    }
+                                                                    else {
+                                                                        Output.writeWarning(s"Wrong data type : " + v)
+                                                                        (DataType.AUTO, v)
+                                                                    }
                                                                 }
                                                                 else {
                                                                     (DataType.AUTO, v)

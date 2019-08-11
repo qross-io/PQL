@@ -11,62 +11,17 @@ import io.qross.time.Timer
 import scala.collection.mutable
 
 object DataSource {
-    
-    def openDefault() : DataSource = {
+
+    def QROSS: DataSource = {
+        new DataSource(JDBC.QROSS)
+    }
+
+    def DEFAULT : DataSource = {
         new DataSource(JDBC.DEFAULT)
     }
 
     def createMemoryDatabase: DataSource = {
         new DataSource(DBType.Memory)
-    }
-    
-    
-    def queryDataTable(SQL: String, values: Any*): DataTable = {
-        val ds: DataSource = new DataSource()
-        val dataTable: DataTable = ds.executeDataTable(SQL, values: _*)
-        ds.close()
-        
-        dataTable
-    }
-    
-    def queryDataRow(SQL: String, values: Any*): DataRow = {
-        val ds: DataSource = new DataSource()
-        val dataRow: DataRow = ds.executeDataRow(SQL, values: _*)
-        ds.close()
-        
-        dataRow
-    }
-    
-    def querySingleValue(SQL: String, values: Any*): DataCell = {
-        val ds: DataSource = new DataSource()
-        val value: DataCell = ds.executeSingleValue(SQL, values: _*)
-        ds.close()
-        
-        value
-    }
-    
-    def queryUpdate(SQL: String, values: Any*): Int = {
-        val ds: DataSource = new DataSource()
-        val rows: Int = ds.executeNonQuery(SQL, values: _*)
-        ds.close()
-        
-        rows
-    }
-    
-    def queryExists(SQL: String, values: Any*): Boolean = {
-        val ds: DataSource = new DataSource()
-        val exists = ds.executeExists(SQL, values: _*)
-        ds.close()
-        
-        exists
-    }
-
-    def queryTest(connectionName: String = JDBC.DEFAULT): Boolean = {
-        val ds = new DataSource(connectionName)
-        ds.open()
-        val connected = ds.connection != null
-        ds.close()
-        connected
     }
 }
 
@@ -598,6 +553,50 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
 
     def tableDelete(SQL: String, table: DataTable): Long = {
         tableUpdate(SQL, table)
+    }
+
+    // ----------- Disposable -----------
+
+    def queryDataTable(SQL: String, values: Any*): DataTable = {
+        val dataTable: DataTable = this.executeDataTable(SQL, values: _*)
+        this.close()
+
+        dataTable
+    }
+
+    def queryDataRow(SQL: String, values: Any*): DataRow = {
+        val dataRow: DataRow = this.executeDataRow(SQL, values: _*)
+        this.close()
+
+        dataRow
+    }
+
+    def querySingleValue(SQL: String, values: Any*): DataCell = {
+        val value: DataCell = this.executeSingleValue(SQL, values: _*)
+        this.close()
+
+        value
+    }
+
+    def queryUpdate(SQL: String, values: Any*): Int = {
+        val rows: Int = this.executeNonQuery(SQL, values: _*)
+        this.close()
+
+        rows
+    }
+
+    def queryExists(SQL: String, values: Any*): Boolean = {
+        val exists = this.executeExists(SQL, values: _*)
+        this.close()
+
+        exists
+    }
+
+    def queryTest(): Boolean = {
+        this.open()
+        val connected = this.connection != null
+        this.close()
+        connected
     }
 
     // ---------- storeproceure ----------

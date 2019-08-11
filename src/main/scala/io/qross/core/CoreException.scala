@@ -7,3 +7,7 @@ class FieldNotFoundException(val s: String) extends RuntimeException(s) {
 class ConvertFailureException(val s: String) extends RuntimeException(s) {
 
 }
+
+class ExtensionNotFoundException(val s: String) extends RuntimeException(s) {
+
+}

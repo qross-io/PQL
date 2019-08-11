@@ -24,12 +24,7 @@ object DBType {
 object JDBC {
 
     val QROSS = "mysql.qross"
-    val DEFAULT =   if (Properties.contains("jdbc.default")) {
-                        Properties.get("jdbc.default")
-                    }
-                    else {
-                        QROSS
-                    }
+    val DEFAULT = "jdbc.default"
 
     private var QrossExists = false
     private var QrossConnectable = false
@@ -68,13 +63,14 @@ object JDBC {
         }
 
         if (QrossExists && !QrossConnectable) {
-            if (!DataSource.queryTest()) {
+
+            if (!DataSource.QROSS.queryTest()) {
                 Output.writeException(s"Can't open database, please check your connection string of $QROSS.")
             }
             else {
                 var version: String = ""
                 try {
-                    version = DataSource.querySingleValue("SELECT conf_value FROM qross_conf WHERE conf_key='QROSS_VERSION'").asText
+                    version = DataSource.QROSS.querySingleValue("SELECT conf_value FROM qross_conf WHERE conf_key='QROSS_VERSION'").asText
                     QrossConnectable = true
                 }
                 catch {
@@ -176,7 +172,7 @@ object JDBC {
 
     def setup(id: Int): Unit = {
         if (hasQrossSystem) {
-            val connection = DataSource.queryDataRow("SELECT * FROM qross_connections WHERE id=?", id)
+            val connection = DataSource.QROSS.queryDataRow("SELECT * FROM qross_connections WHERE id=?", id)
             connections.put(connection.getString("connection_name"), new JDBC(
                 connection.getString("db_type"),
                 connection.getString("connection_string"),

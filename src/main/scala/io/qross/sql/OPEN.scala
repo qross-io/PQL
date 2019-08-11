@@ -23,6 +23,7 @@ class OPEN(val sections: String*) {
         case "CACHE" => sourceType = "CACHE"
         case "TEMP" => sourceType = "TEMP"
         case "DEFAULT" => sourceType = "DEFAULT"
+        case "QROSS" => sourceType = "QROSS"
         case _ => connectionName = sections(0)
     }
 

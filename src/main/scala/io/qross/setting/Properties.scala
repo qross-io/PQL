@@ -1,8 +1,8 @@
 package io.qross.setting
 
 import java.io._
-
 import io.qross.jdbc.{DataSource, JDBC}
+import scala.collection.JavaConverters._
 
 object Properties {
 
@@ -26,8 +26,30 @@ object Properties {
     loadLocalFile(new File(BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath).getParentFile.getAbsolutePath.replace("\\", "/") + "/qross.properties")
     loadResourcesFile("/conf.properties")
 
-    if (JDBC.hasQrossSystem) {
+    checkReferrer("mysql.qross", "jdbc.default")
+    checkReferrer("jdbc.default", "mysql.qross")
+
+    if (containsQross) {
         loadPropertiesAndConnections()
+    }
+
+    private def checkReferrer(name: String, alternate: String): Unit = {
+        if (contains(name)) {
+            val value = props.getProperty(name)
+            if (contains(value)) {
+                props.setProperty(name, props.getProperty(value))
+            }
+            else  if (contains(s"$value.url")) {
+                props.setProperty(name, props.getProperty(s"$value.url"))
+            }
+        }
+        else {
+            props.setProperty(name, props.getProperty(alternate))
+        }
+    }
+
+    def containsQross: Boolean = {
+        props.containsKey("mysql.qross") || props.containsKey("mysql.qross.url")
     }
 
     def contains(key: String): Boolean = {
@@ -65,7 +87,7 @@ object Properties {
 
     //加载保存在数据库中的properties文件
     def loadPropertiesAndConnections(): Unit = {
-        val ds = new DataSource()
+        val ds = DataSource.QROSS
 
         ds.executeDataTable("SELECT properties_type, properties_path FROM qross_properties WHERE enabled='yes' ORDER BY id ASC")
                         .foreach(row => {

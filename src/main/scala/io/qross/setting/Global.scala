@@ -27,7 +27,7 @@ object Global {
 
     def PYTHON3_HOME: String = Configurations.getOrProperty("PYTHON3_HOME", "python3.home")
 
-    def EMAIL_NOTIFICATION: Boolean = Configurations.getOrProperty("EMAIL_NOTIFICATION", "email.notification").toBooleanOrElse(false)
+    def EMAIL_NOTIFICATION: Boolean = Configurations.getOrProperty("EMAIL_NOTIFICATION", "email.notification").toBoolean(false)
 
     def EMAIL_SMTP_HOST: String = Configurations.getOrProperty("EMAIL_SMTP_HOST", "email.smtp.host")
 
@@ -39,21 +39,21 @@ object Global {
 
     def EMAIL_SENDER_PASSWORD: String = Configurations.getOrProperty("EMAIL_SENDER_PASSWORD", "email.sender.password")
 
-    def EMAIL_SSL_AUTH_ENABLED: Boolean = Configurations.getOrProperty("EMAIL_SSL_AUTH_ENABLED", "email.ssl.auth.enabled").toBooleanOrElse(false)
+    def EMAIL_SSL_AUTH_ENABLED: Boolean = Configurations.getOrProperty("EMAIL_SSL_AUTH_ENABLED", "email.ssl.auth.enabled").toBoolean(false)
 
     def EMAIL_DEFAULT_TEMPLATE: String = Configurations.getOrProperty("EMAIL_DEFAULT_TEMPLATE", "email.default.template")
 
     def EMAIL_DEFAULT_SIGNATURE: String = Configurations.getOrProperty("EMAIL_DEFAULT_SIGNATURE", "email.default.signature")
 
-    def HADOOP_AND_HIVE_ENABLED: Boolean = Configurations.getOrProperty("HADOOP_AND_HIVE_ENABLED", "hadoop.and.hive.enabled").toBooleanOrElse(false)
+    def HADOOP_AND_HIVE_ENABLED: Boolean = Configurations.getOrProperty("HADOOP_AND_HIVE_ENABLED", "hadoop.and.hive.enabled").toBoolean(false)
 
     def LOGS_LEVEL: String = Configurations.getOrProperty("logs.level", "LOGS_LEVEL", "DEBUG").toUpperCase
 
     def CONCURRENT_BY_CPU_CORES: Int = Configurations.getOrProperty("CONCURRENT_BY_CPU_CORES", "concurrent.by.cpu.cores").ifNullOrEmpty("4").toInt
 
-    def EMAIL_EXCEPTIONS_TO_DEVELOPER: Boolean = Configurations.getOrProperty("EMAIL_EXCEPTIONS_TO_DEVELOPER", "email.exceptions.to.developer").toBooleanOrElse(true)
+    def EMAIL_EXCEPTIONS_TO_DEVELOPER: Boolean = Configurations.getOrProperty("EMAIL_EXCEPTIONS_TO_DEVELOPER", "email.exceptions.to.developer").toBoolean(true)
 
-    def QUIT_ON_NEXT_BEAT: Boolean = Configurations.get("QUIT_ON_NEXT_BEAT").toBooleanOrElse(false)  //for keeper only
+    def QUIT_ON_NEXT_BEAT: Boolean = Configurations.get("QUIT_ON_NEXT_BEAT").toBoolean(false)  //for keeper only
 
     def MASTER_USER_GROUP: String = Configurations.get("MASTER_USER_GROUP")
 
@@ -79,7 +79,7 @@ object Global {
 
     def EXCEL_TEMPLATES_PATH: String = Configurations.getOrProperty("EXCEL_TEMPLATES_PATH", "excel.templates.path")
 
-    def KERBEROS_AUTH: Boolean = Configurations.getOrProperty("KERBEROS_AUTH", "kerberos.auth").toBooleanOrElse(false)
+    def KERBEROS_AUTH: Boolean = Configurations.getOrProperty("KERBEROS_AUTH", "kerberos.auth").toBoolean(false)
 
     def KRB_USER_PRINCIPAL: String = Configurations.getOrProperty("KRB_USER_PRINCIPAL", "krb.user.principal")
 

@@ -3,6 +3,7 @@ package io.qross.net
 import java.io._
 import java.net.{HttpURLConnection, URL}
 
+import io.qross.core.{DataHub, ExtensionNotFoundException}
 import io.qross.fs.FilePath._
 import org.apache.commons.codec.binary.Base64
 
@@ -21,6 +22,43 @@ object Http {
 
     def DELETE(url: String, data: String = ""): Http = {
         new Http("DELETE", url, data)
+    }
+
+    implicit class DataHub$Http(val dh: DataHub) {
+
+        def HTTP: Http = {
+            if (dh.slots("HTTP")) {
+                dh.pick("HTTP").asInstanceOf[Http]
+            }
+            else {
+                throw new ExtensionNotFoundException("Must use GET/POST/PUT/DELETE method to open a http request.")
+            }
+        }
+
+        def GET(url: String): DataHub = {
+            dh.plug("HTTP", Http.GET(url))
+        }
+
+        def POST(url: String, data: String = ""): DataHub = {
+            dh.plug("HTTP", Http.POST(url, data))
+        }
+
+        def PUT(url: String, data: String = ""): DataHub = {
+            dh.plug("HTTP", Http.PUT(url, data))
+        }
+
+        def DELETE(url: String): DataHub = {
+            dh.plug("HTTP", Http.DELETE(url))
+        }
+
+        def setHeader(name: String, value: String): DataHub = {
+            HTTP.setHeader(name, value)
+            dh
+        }
+
+        def toJson: DataHub = {
+            dh.plug("JSON", HTTP.toJson)
+        }
     }
 }
 

@@ -1,12 +1,11 @@
 package io.qross.core
 
-import DataType.DataType
+import java.util
+
+import io.qross.core.DataType.DataType
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
-import io.qross.sql.SQLExecuteException
 import io.qross.time.DateTime
-
-import scala.util.{Failure, Success, Try}
 
 object DataCell {
     val NOT_FOUND: DataCell = DataCell("NOT_FOUND", DataType.EXCEPTION)
@@ -26,7 +25,10 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     def isNotNull: Boolean = value == null
     def isEmpty: Boolean = value == ""
     def isNotEmpty: Boolean = value != ""
-    def invalid: Boolean = dataType == DataType.EXCEPTION && value == "NOT_FOUND"
+    def invalid: Boolean = {
+        (dataType == DataType.EXCEPTION && value == "NOT_FOUND") ||
+                (dataType == DataType.NULL && value == null)
+    }
     def valid: Boolean = !invalid
 
     def data: Option[Any] = Option(value)
@@ -57,6 +59,30 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
             handler()
         }
         this
+    }
+
+    def orElse(data: DataCell): DataCell = {
+        if (valid) {
+            this
+        }
+        else {
+            data
+        }
+    }
+
+    def orElse(value: Any, dataType: DataType = DataType.NULL): DataCell = {
+        if (valid) {
+            this
+        }
+        else {
+            DataCell(value,
+                if (value != null && dataType == DataType.NULL) {
+                    DataType.ofValue(value)
+                }
+                else {
+                    dataType
+                })
+        }
     }
 
     def getString(quote: String = ""): String = {
@@ -105,6 +131,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def isText: Boolean = this.dataType == DataType.TEXT
     def asText: String = this.value.toText
+    def asText(defaultValue: Any): String = {
+        if (valid) {
+            this.valid.toText
+        }
+        else {
+            defaultValue.toText
+        }
+    }
     def toText: DataCell = {
         if (!this.isText) {
             DataCell(this.asText, DataType.TEXT)
@@ -116,7 +150,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def isInteger: Boolean = this.dataType == DataType.INTEGER
     def asInteger: Long = this.value.toInteger
-    def asInteger(defaultValue: Any): Long = this.value.toInteger(defaultValue)
+    def asInteger(defaultValue: Any): Long = {
+        if (valid) {
+            this.value.toInteger(defaultValue)
+        }
+        else {
+            defaultValue.toInteger
+        }
+    }
     def toInteger: DataCell = {
         if (!this.isInteger) {
             DataCell(this.asInteger, DataType.INTEGER)
@@ -128,6 +169,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def isDecimal: Boolean = this.dataType == DataType.DECIMAL
     def asDecimal: Double = this.value.toDecimal
+    def asDecimal(defaultValue: Any): Double = {
+        if (valid) {
+            this.value.toDecimal(defaultValue)
+        }
+        else {
+            defaultValue.toDecimal
+        }
+    }
     def toDecimal: DataCell = {
         if (!this.isDecimal) {
             DataCell(this.asDecimal, DataType.DECIMAL)
@@ -139,6 +188,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def isBoolean: Boolean = this.dataType == DataType.BOOLEAN
     def asBoolean: Boolean = this.value.toBoolean
+    def asBoolean(defaultValue: Any): Boolean = {
+        if (valid) {
+            this.value.toBoolean(defaultValue)
+        }
+        else {
+            defaultValue.toBoolean
+        }
+    }
     def toBoolean: DataCell = {
         if (!this.isBoolean) {
             DataCell(this.asBoolean, DataType.BOOLEAN)
@@ -150,6 +207,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def isDateTime: Boolean = this.dataType == DataType.DATETIME
     def asDateTime: DateTime = this.value.toDateTime
+    def asDateTime(defaultValue: Any): DateTime = {
+        if (valid) {
+            this.value.toDateTime(defaultValue)
+        }
+        else {
+            defaultValue.toDateTime
+        }
+    }
     def toDateTime: DataCell = {
         if (!this.isDateTime) {
             DataCell(this.asDateTime, DataType.DATETIME)
@@ -161,6 +226,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def isJson: Boolean = this.dataType == DataType.JSON
     def asJson: Json = this.value.toJson
+    def asJson(defaultValue: Any): Json = {
+        if (valid) {
+            this.value.toJson(defaultValue)
+        }
+        else {
+            defaultValue.toJson
+        }
+    }
     def toJson: DataCell = {
         if (!this.isJson) {
             DataCell(this.asJson, DataType.JSON)
@@ -171,7 +244,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     }
 
     def isTable: Boolean = this.dataType == DataType.TABLE
-    def asTable: DataTable = this.value.toTable
+    def asTable: DataTable = {
+        if (valid) {
+            this.value.toTable
+        }
+        else {
+            DataTable()
+        }
+    }
     def toTable: DataCell = {
         if (!this.isTable) {
             DataCell(this.asTable, DataType.TABLE)
@@ -182,7 +262,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     }
 
     def isRow: Boolean = this.dataType == DataType.ROW
-    def asRow: DataRow = this.value.toRow
+    def asRow: DataRow = {
+        if (valid) {
+            this.value.toRow
+        }
+        else {
+            DataRow()
+        }
+    }
     def toRow: DataCell = {
         if (!this.isRow) {
             DataCell(this.asRow, DataType.ROW)
@@ -193,8 +280,22 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     }
 
     def isJavaList: Boolean = this.dataType == DataType.LIST || this.dataType == DataType.ARRAY
-    def asScalaList: List[Any] = this.value.toScalaList
-    def asJavaList: java.util.List[Any] = this.value.toJavaList
+    def asScalaList: List[Any] = {
+        if (valid) {
+            this.value.toScalaList
+        }
+        else {
+            List[Any]()
+        }
+    }
+    def asJavaList: java.util.List[Any] = {
+        if (valid) {
+            this.value.toJavaList
+        }
+        else {
+            new util.ArrayList[Any]()
+        }
+    }
     def toJavaList: DataCell = {
         if (!this.isJavaList) {
             DataCell(this.asJavaList, DataType.ARRAY)

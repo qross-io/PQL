@@ -150,15 +150,9 @@ case class DataRow(private val items: (String, Any)*) {
     }
 
     def getString(fieldName: String, defaultValue: String = ""): String = getStringOption(fieldName).getOrElse(defaultValue)
-    def getStringOption(fieldNameOrIndex: Any): Option[String] = {
-        {
-            if (fieldNameOrIndex.isInstanceOf[Int]) {
-                get(fieldNameOrIndex.asInstanceOf[Int])
-            } else {
-                get(fieldNameOrIndex.asInstanceOf[String])
-            }
-        } match {
-            case Some(value) => if (value != null) Some(value.toString) else None
+    def getStringOption(fieldName: String): Option[String] = {
+        get(fieldName) match {
+            case Some(value) => if (value != null) Some(value.toString) else Some(null)
             case None => None
         }
     }
@@ -240,7 +234,7 @@ case class DataRow(private val items: (String, Any)*) {
     def getDateTime(fieldName: String, defaultValue: DateTime = DateTime.of(1970, 1, 1)): DateTime = getDateTimeOption(fieldName).getOrElse(defaultValue)
     def getDateTimeOption(fieldName: String): Option[DateTime] = {
         getStringOption(fieldName) match {
-            case Some(value) => Some(DateTime(value))
+            case Some(value) => Some(new DateTime(value))
             case None => None
         }
     }

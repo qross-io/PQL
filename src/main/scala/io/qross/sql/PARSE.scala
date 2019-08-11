@@ -2,6 +2,7 @@ package io.qross.sql
 
 import io.qross.core.{DataCell, DataType}
 import io.qross.ext.TypeExt._
+import io.qross.net.Json._
 import io.qross.sql.Patterns.ARROW
 
 class PARSE(val path: String) {
@@ -16,7 +17,7 @@ class PARSE(val path: String) {
                 (path, "")
             }
 
-        val data = DataCell(PSQL.dh.parseTable(path), DataType.TABLE)
+        val data = DataCell(PSQL.dh.parseTable(select), DataType.TABLE)
         if (links != "") {
             new SHARP(links, data).execute(PSQL)
         }

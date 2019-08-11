@@ -61,6 +61,9 @@ class SAVE$AS(sections: String*) {
             if (sections(0).equalsIgnoreCase("DEFAULT")) {
                 targetName = "DEFAULT"
             }
+            else if (sections(0).equalsIgnoreCase("QROSS")) {
+                targetName = "QROSS"
+            }
             else {
                 targetName = sections(0)
             }

@@ -4,6 +4,7 @@ import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.setting.{Configurations, Global}
 import io.qross.time.DateTime
+import io.qross.core.Authentication._
 
 object GlobalVariable {
 
@@ -17,7 +18,7 @@ object GlobalVariable {
     //Global.getClass.getMethod("").invoke(null)
 
     if (JDBC.hasQrossSystem) {
-        DataSource.queryDataTable("SELECT var_group, var_name, var_type, var_value FROM qross_variables WHERE var_group='SYSTEM'")
+        DataSource.QROSS.queryDataTable("SELECT var_group, var_name, var_type, var_value FROM qross_variables WHERE var_group='SYSTEM'")
                 .foreach(row => {
                     SYSTEM.set(
                         row.getString("var_name").toUpperCase()
@@ -41,7 +42,7 @@ object GlobalVariable {
                 if (SYSTEM.contains(name)) {
                     SYSTEM.set(name, value)
                     //更新数据库
-                    DataSource.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('SYSTEM', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""", value match {
+                    DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('SYSTEM', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""", value match {
                         case i: Int => "INTEGER"
                         case l: Long => "INTEGER"
                         case f: Float => "DECIMAL"
@@ -61,7 +62,7 @@ object GlobalVariable {
             USER.set(name, value)
             //更新数据库
             if (JDBC.hasQrossSystem) {
-                DataSource.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('USER', ?, ?, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""", value match {
+                DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('USER', ?, ?, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""", value match {
                     case i: Int => "INTEGER"
                     case l: Long => "INTEGER"
                     case f: Float => "DECIMAL"

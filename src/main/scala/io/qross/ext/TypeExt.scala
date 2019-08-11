@@ -1,12 +1,14 @@
 package io.qross.ext
 
 import java.sql.{Date, Time, Timestamp}
+import java.time.{LocalDate, LocalDateTime}
 
 import io.qross.core.DataType.DataType
 import io.qross.core._
 import io.qross.net.Json
 import io.qross.setting.Global
 import io.qross.sql.SQLExecuteException
+import io.qross.sql.Solver.Sentence
 import io.qross.time.{DateTime, Timer}
 import javax.script.{ScriptEngine, ScriptEngineManager, ScriptException}
 
@@ -21,7 +23,7 @@ object TypeExt {
 
     implicit class StringExt(var string: String) {
 
-        def toBooleanOrElse(defaultValue: Boolean = false): Boolean = {
+        def toBoolean(defaultValue: Boolean): Boolean = {
             if (Set("yes", "true", "1", "on", "ok").contains(string)) {
                 true
             }
@@ -94,12 +96,15 @@ object TypeExt {
             else {
                 val jse: ScriptEngine = new ScriptEngineManager().getEngineByName("JavaScript")
                 try {
-                    DataCell(jse.eval(string))
+                    val data = DataCell(jse.eval(string))
+                    if (data.isText) {
+                        data.value = data.value.toString.restoreSymbols()
+                    }
+                    data
                 }
                 catch {
                     case e: ScriptException =>
                         e.printStackTrace()
-                        //DataCell(null)
                         throw new SQLExecuteException("Can't caculate expression: " + string)
                 }
             }
@@ -141,8 +146,14 @@ object TypeExt {
             if (quote == "\"") {
                 "\"" + string.replace("\"", "\\\"") + "\""
             }
-            else {
+            else if (quote == "'") {
                 "'" + string.replace("'", "\\'") + "'"
+            }
+            else if (quote != "") {
+                quote + string + quote
+            }
+            else {
+                string
             }
         }
 
@@ -257,8 +268,8 @@ object TypeExt {
             string.startsWith(left) && string.endsWith(right)
         }
 
-        def bracket(left: String, right: String): String = {
-            left + string + right
+        def bracket(left: String, right: String = "NULL"): String = {
+            left + string + (if (right == "NULL") left else right)
         }
 
         def $startsWith(strings: String*): Boolean = {
@@ -352,7 +363,7 @@ object TypeExt {
         }
 
         def toDateTime: DateTime = {
-            DateTime.of(long)
+            DateTime.ofTimestamp(long)
         }
     }
 
@@ -450,16 +461,7 @@ object TypeExt {
         }
 
         def toDateTime: DateTime = {
-            any match {
-                case str: String => DateTime(str.removeQuotes())
-                case dt: DateTime => dt
-                case date: Date => DateTime(date.toString)
-                case time: Time => DateTime(time.toString)
-                case ts: Timestamp => DateTime(ts.toString)
-                case l: Long => DateTime.of(l)
-                case i: Int => DateTime.of(i)
-                case _ => throw new ConvertFailureException("Can't recognize as or convert to DateTime: " + any)
-            }
+            new DateTime(any)
         }
 
         def toDateTime(defaultValue: Any): DateTime = {
@@ -568,6 +570,15 @@ object TypeExt {
             }
         }
 
+        def toJson(defaultValue: Any): Json = {
+            try {
+                any.toJson
+            }
+            catch {
+                case _ : ConvertFailureException => defaultValue.toJson
+            }
+        }
+
         def toDataCell: DataCell = {
             DataCell(any)
         }
@@ -595,6 +606,10 @@ object TypeExt {
             }
             table
         }
+
+        def toJson: String = {
+            Json.serialize(list)
+        }
     }
 
     implicit class MapExt[A, B](map: Map[A, B]) {
@@ -612,6 +627,10 @@ object TypeExt {
                 row.set(item._1.toString, item._2)
             }
             row
+        }
+
+        def toJson: String = {
+            Json.serialize(map)
         }
     }
 }

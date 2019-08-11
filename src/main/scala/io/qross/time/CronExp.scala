@@ -53,8 +53,8 @@ object CronExp {
     def parse(expression: String = "0 * * * * ? *") = new CronExp(expression)
 
     def getTicks(cronExp: String, begin: String, end: String): List[String] = {
-        var tick = DateTime(begin)
-        val terminal = DateTime(end)
+        var tick = new DateTime(begin)
+        val terminal = new DateTime(end)
         val ticks = new mutable.ListBuffer[String]()
         val exp = new CronExp(cronExp)
         while(tick.beforeOrEquals(terminal)) {
@@ -64,9 +64,9 @@ object CronExp {
                             ticks += nextTick.getTickValue
                         }
                         if (nextTick.after(tick)) {
-                            tick.copy(nextTick)
+                            tick = tick.copy(nextTick)
                         }
-                        tick.plusMinutes(1)
+                        tick = tick.plusMinutes(1)
                 case None => tick = terminal.plusMinutes(1)  //future
             }
         }
@@ -178,9 +178,9 @@ case class CronExp(expression: String = "0 * * * * ? *") {
             case None => "NONE"
         }
     }
-    def getNextTick(dateTime: String): Option[DateTime] = this.getNextTick(DateTime(dateTime))
+    def getNextTick(dateTime: String): Option[DateTime] = this.getNextTick(new DateTime(dateTime))
     def getNextTick(dateTime: DateTime): Option[DateTime] = {
-        this.nextTick = dateTime.copy()
+        this.nextTick = dateTime
    
         if (!this.second.contains(ASTERISK)) {
             tryMatch(SECOND)
@@ -320,16 +320,16 @@ case class CronExp(expression: String = "0 * * * * ? *") {
         everyMatch(DAY).clear()
         
         val begin = 1
-        val end = this.nextTick.copy().plusMonths(1).setZeroOfMonth().plusDays(-1).getDayOfMonth
+        val end = this.nextTick.plusMonths(1).setZeroOfMonth().plusDays(-1).getDayOfMonth
       
         var value = this.dayOfMonth
         //LW,L,W
         if (value.contains(LAST_WORK_DAY)) {
             value = value.replace(LAST_WORK_DAY,
                 {
-                    val date = this.nextTick.copy().plusMonths(1).setZeroOfMonth().plusDays(-1)
+                    var date = this.nextTick.plusMonths(1).setZeroOfMonth().plusDays(-1)
                     while (date.getWeekName == "Sat" || date.getWeekName == "Sun") {
-                        date.plusDays(-1)
+                        date = date.plusDays(-1)
                     }
                     date.getDayOfMonth.toString
                 }
@@ -419,27 +419,27 @@ case class CronExp(expression: String = "0 * * * * ? *") {
         chronoName match  {
             case YEAR =>
             case MONTH =>
-                    this.nextTick.set(ChronoField.MONTH_OF_YEAR, if (this.month.contains(ASTERISK)) 1 else this.everyMatch(MONTH).head)
+                    this.nextTick = this.nextTick.set(ChronoField.MONTH_OF_YEAR, if (this.month.contains(ASTERISK)) 1 else this.everyMatch(MONTH).head)
                     resetMatchFrom(DAY)
             case DAY | WEEK =>
                     if (!this.dayOfMonth.contains(QUESTION)) {
                         parseDAY()
-                        this.nextTick.set(ChronoField.DAY_OF_MONTH, if (this.dayOfMonth.contains(ASTERISK)) 1 else this.everyMatch(DAY).head)
+                        this.nextTick = this.nextTick.set(ChronoField.DAY_OF_MONTH, if (this.dayOfMonth.contains(ASTERISK)) 1 else this.everyMatch(DAY).head)
                         resetMatchFrom(HOUR)
                     }
                     else {
                         parseWEEK()
-                        this.nextTick.set(ChronoField.DAY_OF_MONTH, if (this.dayOfWeek.contains(ASTERISK)) 1 else this.everyMatch(WEEK).head)
+                        this.nextTick = this.nextTick.set(ChronoField.DAY_OF_MONTH, if (this.dayOfWeek.contains(ASTERISK)) 1 else this.everyMatch(WEEK).head)
                         resetMatchFrom(HOUR)
                     }
             case HOUR =>
-                    this.nextTick.set(ChronoField.HOUR_OF_DAY, if (this.hour.contains(ASTERISK)) 0 else this.everyMatch(HOUR).head)
+                    this.nextTick = this.nextTick.set(ChronoField.HOUR_OF_DAY, if (this.hour.contains(ASTERISK)) 0 else this.everyMatch(HOUR).head)
                     resetMatchFrom(MINUTE)
             case MINUTE =>
-                    this.nextTick.set(ChronoField.MINUTE_OF_HOUR, if (this.minute.contains(ASTERISK)) 0 else this.everyMatch(MINUTE).head)
+                    this.nextTick = this.nextTick.set(ChronoField.MINUTE_OF_HOUR, if (this.minute.contains(ASTERISK)) 0 else this.everyMatch(MINUTE).head)
                     resetMatchFrom(SECOND)
             case SECOND =>
-                    this.nextTick.set(ChronoField.SECOND_OF_MINUTE, if (this.second.contains(ASTERISK)) 0 else this.everyMatch(SECOND).head)
+                    this.nextTick = this.nextTick.set(ChronoField.SECOND_OF_MINUTE, if (this.second.contains(ASTERISK)) 0 else this.everyMatch(SECOND).head)
             case _ =>
 
         }
@@ -514,7 +514,7 @@ case class CronExp(expression: String = "0 * * * * ? *") {
                 //not found
                 if (next == matchValue) {
                     if (chronoName != YEAR) {
-                        this.nextTick.plus(nextChronoUnit, 1).set(chronoField, begin)
+                        this.nextTick = this.nextTick.plus(nextChronoUnit, 1).set(chronoField, begin)
                         resetMatchFrom(chronoName)
                     }
                     else {
@@ -524,7 +524,7 @@ case class CronExp(expression: String = "0 * * * * ? *") {
                 //found
                 else {
                     matched = true
-                    this.nextTick.set(chronoField, next)
+                    this.nextTick = this.nextTick.set(chronoField, next)
                     //resetMatchFrom(chronoName)
                 }
             }
@@ -536,15 +536,15 @@ case class CronExp(expression: String = "0 * * * * ? *") {
     }
     
     private def getWorkDayOfMonth: List[Int] = {
-        val day = this.nextTick.copy().setZeroOfMonth()
-        val lastDay = day.copy().plusMonths(1).plusDays(-1)
+        var day = this.nextTick.setZeroOfMonth()
+        val lastDay = day.plusMonths(1).plusDays(-1)
         
         var list = new ArrayBuffer[Int]
         while (day.beforeOrEquals(lastDay)) {
             if (day.getWeekName != "Sat" && day.getWeekName != "Sun") {
                 list += day.getDayOfMonth
             }
-            day.plusDays(1)
+            day = day.plusDays(1)
         }
         
         list.toList

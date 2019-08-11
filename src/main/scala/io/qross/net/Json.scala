@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeType
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import org.json4s.{Formats, NoTypeHints}
 import org.json4s.jackson.Serialization
-import io.qross.core.{DataCell, DataRow, DataTable, DataType}
+import io.qross.core._
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -18,25 +18,54 @@ object Json {
     def fromText(text: String): Json = Json(text)
     def fromURL(url: String, post: String = ""): Json = Json().readURL(url, post)
 
-    //add toJson method for List
-    implicit class ListExt[T](list: List[T]) {
-        def toJson: String = {
-            Json.serialize(list)
-        }
-    }
-
-    implicit class MapExt[K, V](map: Map[K, V]) {
-        def toJson: String = {
-            Json.serialize(map)
-        }
-    }
-
     def serialize(obj: AnyRef): String = {
         implicit val formats: Formats = Serialization.formats(NoTypeHints)
         Serialization.write(obj)
     }
 
+    //对象列表
     val OBJECT$ARRAY: Regex = """^\[\s*\{.*\}\s*\]$""".r
+
+    implicit class DataHub$Json(val dh: DataHub) {
+        // ---------- Json & Api ---------
+
+        def JSON: Json = {
+            if (dh.slots("JSON")) {
+                dh.pick("JSON").asInstanceOf[Json]
+            }
+            else {
+                throw new ExtensionNotFoundException("Must open a json string or api first.")
+            }
+        }
+
+        def openJson(): DataHub = {
+            dh
+        }
+
+        def openJson(jsonText: String): DataHub = {
+            dh.plug("JSON", Json.fromText(jsonText))
+        }
+
+        def openJsonApi(url: String): DataHub = {
+            dh.plug("JSON", Json.fromURL(url))
+        }
+
+        def openJsonApi(url: String, post: String): DataHub = {
+            dh.plug("JSON", Json.fromURL(url, post))
+        }
+
+        def parse(jsonPath: String): DataHub = {
+            dh.clear().merge(JSON.parseTable(jsonPath))
+        }
+
+        // ---------- Json Basic ----------
+
+        def parseTable(jsonPath: String): DataTable = JSON.parseTable(jsonPath)
+        def parseRow(jsonPath: String): DataRow = JSON.parseRow(jsonPath)
+        def parseList(jsonPath: String): java.util.List[Any] = JSON.parseJavaList(jsonPath)
+        def parseValue(jsonPath: String): DataCell = JSON.parseValue(jsonPath)
+        def parseNode(jsonPath: String): JsonNode = JSON.findNode(jsonPath)
+    }
 }
 
 case class Json(text: String = "") {

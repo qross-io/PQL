@@ -1,6 +1,6 @@
 package io.qross.net
 
-import io.qross.core.DataRow
+import io.qross.core.{DataHub, DataRow, ExtensionNotFoundException}
 import io.qross.fs.ResourceFile
 import io.qross.fs.FilePath._
 import io.qross.jdbc.{DataSource, JDBC}
@@ -13,23 +13,145 @@ import javax.mail.{Message, SendFailedException, Session, Transport}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.io.Source
 
 object Email {
     
     //username/fullname -> (email, fullname)
-    val AllReceivers = new mutable.HashMap[String, (String, String)]()
+    val RECEIVERS: Map[String, (String, String)] = {
+        //get all receivers
+        if (JDBC.hasQrossSystem) {
+            val receivers = new mutable.HashMap[String, (String, String)]()
+            DataSource.QROSS.queryDataTable("SELECT username, fullname, email FROM qross_users WHERE enabled='yes'")
+                    .foreach(row => {
+                        receivers += row.getString("username") -> (row.getString("email"), row.getString("fullname"))
+                        receivers += row.getString("fullname") -> (row.getString("email"), row.getString("fullname"))
+                    }).clear()
 
-    //get all receivers
-    if (JDBC.hasQrossSystem) {
-        DataSource.queryDataTable("SELECT username, fullname, email FROM qross_users WHERE enabled='yes'")
-                .foreach(row => {
-                    AllReceivers += row.getString("username") -> (row.getString("email"), row.getString("fullname"))
-                    AllReceivers += row.getString("fullname") -> (row.getString("email"), row.getString("fullname"))
-                }).clear()
+            receivers.toMap
+        }
+        else {
+            Map[String, (String, String)]()
+        }
     }
 
     def write(title: String): Email = {
         new Email(title)
+    }
+
+    implicit class DataHub$Email(val dh: DataHub) {
+
+        def EMAIL: Email = {
+            if (dh.slots("EMAIL")) {
+                dh.pick("EMAIL").asInstanceOf[Email]
+            }
+            else {
+                throw new ExtensionNotFoundException("Must use writeEmail method to write an email first.")
+            }
+        }
+
+        def writeEmail(title: String): DataHub = {
+            dh.plug("EMAIL", new Email(title))
+        }
+
+        def fromResourceTemplate(resourceFile: String): DataHub = {
+            EMAIL.fromResourceTemplate(resourceFile)
+            dh
+        }
+
+        def withDefaultSignature(): DataHub = {
+            EMAIL.withDefaultSignature()
+            dh
+        }
+
+        def withSignature(resourceFile: String): DataHub = {
+            EMAIL.withSignature(resourceFile)
+            dh
+        }
+
+        def setEmailContent(content: String): DataHub = {
+            EMAIL.setContent(content)
+            dh
+        }
+
+        def placeEmailTitle(title: String): DataHub = {
+            EMAIL.placeContent("${title}", title)
+            dh
+        }
+
+        def placeEmailContent(content: String): DataHub = {
+            EMAIL.placeContent("${content}", content)
+            dh
+        }
+
+        def placeEmailDataTable(placeHolder: String = ""): DataHub = {
+            if (placeHolder == "") {
+                EMAIL.placeContent("${data}", dh.getData.toHtmlString)
+            }
+            else {
+                EMAIL.placeContent("${" + placeHolder + "}", dh.getData.toHtmlString)
+            }
+
+            dh.preclear()
+        }
+
+        def placeEmailHolder(replacements: (String, String)*): DataHub = {
+            for ((placeHolder, replacement) <- replacements) {
+                EMAIL.placeContent(placeHolder, replacement)
+            }
+            dh
+        }
+
+        def placeEmailContentWithRow(i: Int = 0): DataHub = {
+            dh.getData.getRow(i) match {
+                case Some(row) => EMAIL.placeContentWidthDataRow(row)
+                case None =>
+            }
+
+            dh.preclear()
+        }
+
+        def placeEmailContentWithFirstRow(): DataHub = {
+            dh.getData.firstRow match {
+                case Some(row) => EMAIL.placeContentWidthDataRow(row)
+                case _ =>
+            }
+
+            dh.preclear()
+        }
+
+        def to(receivers: String): DataHub = {
+            EMAIL.to(receivers)
+
+            dh
+        }
+
+        def cc(receivers: String): DataHub = {
+            EMAIL.cc(receivers)
+
+            dh
+        }
+
+        def bcc(receivers: String): DataHub = {
+            EMAIL.bcc(receivers)
+
+            dh
+        }
+
+        def attach(path: String): DataHub = {
+            EMAIL.attach(path)
+
+            dh
+        }
+
+        def send(): DataHub = {
+            EMAIL.placeContent("${title}", "")
+            EMAIL.placeContent("${content}", "")
+            EMAIL.placeContent("${data}", "")
+            EMAIL.send()
+
+            dh
+        }
     }
 }
 
@@ -43,8 +165,18 @@ class Email(private var title: String) {
     private var bccReceivers = new mutable.HashMap[String, String]()
     private var content: String = if (Global.EMAIL_DEFAULT_TEMPLATE != "") ResourceFile.open(Global.EMAIL_DEFAULT_TEMPLATE).output else ""
 
-    def fromTemplate(path: String): Email = {
+    def fromTemplate(template: String): Email = {
+        this.content = template
+        this
+    }
+
+    def fromResourceTemplate(path: String): Email = {
         this.content = ResourceFile.open(path).output
+        this
+    }
+
+    def fromFileTemplate(path: String): Email = {
+        this.content = Source.fromFile(path.locate()).mkString
         this
     }
 
@@ -101,7 +233,7 @@ class Email(private var title: String) {
                 address = address.substring(address.indexOf("<") + 1).dropRight(1)
             }
             else if (!address.contains("@")) {
-                Email.AllReceivers.get(address) match {
+                Email.RECEIVERS.get(address) match {
                     case Some(user) =>
                         address = user._1
                         personal = user._2

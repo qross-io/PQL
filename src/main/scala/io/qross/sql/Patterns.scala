@@ -42,12 +42,11 @@ object Patterns {
     val $SELECT: Regex = """(?i)^SELECT\s""".r
     val $NON_QUERY: Regex = s"(?i)^(${NON_QUERY_CAPTIONS.mkString("|")})\\s".r
 
-    //v0.5.9
     val $FOR: Pattern = Pattern.compile("""^FOR\s+([\s\S]+?)\s+IN\s+([\s\S]+?)\s+LOOP""", Pattern.CASE_INSENSITIVE)
     val $EXIT: Pattern = Pattern.compile("""^EXIT(\s+WHEN\s([\s\S]+))?$""", Pattern.CASE_INSENSITIVE)
     val $CONTINUE: Pattern = Pattern.compile("""^CONTINUE(\s+WHEN\s([\s\S]+))?$""", Pattern.CASE_INSENSITIVE)
     val $SET: Pattern = Pattern.compile("""^SET\s+([\s\S]+?):=([\s\S]+)$""", Pattern.CASE_INSENSITIVE)
-    val $DATATYPE: Pattern = Pattern.compile("""^(INTEGER|DECIMAL|BOOLEAN|TEXT|DATETIME|MAP|OBJECT|ROW|TABLE|ARRAY|LIST|JSON|REGEX)\s+""", Pattern.CASE_INSENSITIVE)
+    val $DATATYPE: Regex = """(?i)^(INT|INTEGER|DECIMAL|BOOLEAN|TEXT|DATETIME|MAP|OBJECT|ROW|TABLE|ARRAY|LIST|JSON|REGEX)\s+""".r
     val $OPEN: Pattern = Pattern.compile("""^OPEN\s+([\s\S]+?)(:\s+|$)""", Pattern.CASE_INSENSITIVE)
     val $USE: Pattern = Pattern.compile("""^USE\s+""")
     val $SAVE$AS: Pattern = Pattern.compile("""^SAVE\s+AS\s+([\s\S]+?)(:\s+|$)""", Pattern.CASE_INSENSITIVE)
@@ -59,7 +58,7 @@ object Patterns {
     val $PREP: Pattern = Pattern.compile("""^PREP\s*#""", Pattern.CASE_INSENSITIVE)
     val $OUTPUT: Pattern = Pattern.compile("""^OUTPUT([\s\S]*?)#""", Pattern.CASE_INSENSITIVE)
     val $PRINT: Pattern = Pattern.compile("""^PRINT\s+?([a-z]+\s+)?([\s\S]+)$""", Pattern.CASE_INSENSITIVE)
-    val $LIST: Pattern = Pattern.compile("""^LIST\s+(\d+)""", Pattern.CASE_INSENSITIVE)
+    val $SHOW: Pattern = Pattern.compile("""^SHOW\s+(\d+)""", Pattern.CASE_INSENSITIVE)
     val $RUN: Pattern = Pattern.compile("""^RUN\s+COMMAND\s+""", Pattern.CASE_INSENSITIVE)
     val $REQUEST: Pattern = Pattern.compile("""^REQUEST\s+JSON\s+API\s+""", Pattern.CASE_INSENSITIVE)
     val $REQUEST$METHOD: Pattern = Pattern.compile("""\s+(POST|PUT|DELETE)(\s+(\S+))?""", Pattern.CASE_INSENSITIVE)
@@ -67,14 +66,14 @@ object Patterns {
     val $PARSE: Regex = """(?i)^PARSE\s+""".r
     val $LINK: Regex = """(?i)\s[a-z]+(\s+[a-z]+)*(\s|$)""".r
     val $LET: Regex = """(?i)^LET\s""".r
+    val $DEBUG: Regex = """(?i)^DEBUG\s""".r
 
     val $VARIABLE: Regex = """^(\$|@)\(?[a-z0-9_]+\)?$""".r
     val $INTERMEDIATE$N: Regex = """^~value\[(\d+)\]$""".r
     val FUNCTION_NAMES: Set[String] = Function.getClass.getDeclaredMethods.map(m => m.getName).filter(n => "^[A-Z]".r.test(n)).toSet
-    val $RESERVAR: Regex = """[_A-Za-z0-9\.]+""".r
+    val $RESERVED: Regex = """^[_A-Za-z0-9\.]+$""".r
 
     val SHARP_LINKS: Set[String] = SHARP.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z]$""".r.test(n)).toSet
     val ARROW: String = "->"
 
-    //val SHARP_RESERVED: Set[String] = SHARP.getClass.getDeclaredMethods.flatMap(m => m.getName.split("\\$")).filter(n => "^[A-Z]+$".r.test(n)).toSet
 }

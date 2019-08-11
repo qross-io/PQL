@@ -5,6 +5,7 @@ import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.sql.Patterns._
 import io.qross.sql.Solver._
+import io.qross.net.Json._
 
 class FOR(var variable: String, val collection: String) {
 

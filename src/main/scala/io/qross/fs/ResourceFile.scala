@@ -18,25 +18,20 @@ object ResourceFile {
 class ResourceFile(path: String) {
 
     private val source: BufferedSource = Source.fromInputStream(BaseClass.MAIN.getResourceAsStream(path), "UTF-8")
-    val (content: String, lines: List[String], exists: Boolean) =
-    try {
-        val content = source.mkString
-        val lines = source.getLines().toList
-        source.close()
 
-        (content, lines, true)
-    }
-    catch {
-        case _: Exception =>
-            Output.writeException(s"Resource file $path doesn't exist.")
-            ("", List(), false)
-    }
+    val (content: String, exists: Boolean) =
+                try {
+                    val content = source.mkString
+                    source.close()
+
+                    (content, true)
+                }
+                catch {
+                    case _: Exception =>
+                        Output.writeException(s"Resource file $path doesn't exist.")
+                        ("", false)
+                }
     var output: String = content
-
-    def foreach(callback: String => Unit): ResourceFile = {
-        lines.foreach(line => callback(line))
-        this
-    }
 
     def replace(oldStr: String, newStr: String): ResourceFile = {
         output = output.replace(oldStr, newStr)

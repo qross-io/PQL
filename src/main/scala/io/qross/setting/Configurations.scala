@@ -8,7 +8,7 @@ object Configurations {
     private val CONFIG = DataRow()
 
     if (JDBC.hasQrossSystem) {
-        DataSource.queryDataTable("SELECT conf_key, conf_value FROM qross_conf")
+        DataSource.QROSS.queryDataTable("SELECT conf_key, conf_value FROM qross_conf")
                 .foreach(row => {
                     CONFIG.set(row.getString("conf_key"), row.getString("conf_value"))
                 }).clear()
@@ -27,7 +27,7 @@ object Configurations {
             CONFIG.set(name, value)
 
             if (JDBC.hasQrossSystem) {
-                DataSource.queryUpdate("UPDATE qross_conf SET conf_value=? WHERE conf_name=?", value, name)
+                DataSource.QROSS.queryUpdate("UPDATE qross_conf SET conf_value=? WHERE conf_name=?", value, name)
             }
         }
         else {

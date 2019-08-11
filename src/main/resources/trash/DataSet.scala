@@ -12,7 +12,7 @@ import scala.collection.mutable
 class DataSet(defaultSourceName: String = JDBC.DEFAULT) {
 
     private val SOURCES = mutable.HashMap[String, DataSource](
-        "DEFAULT" -> DataSource.openDefault()
+        "DEFAULT" -> DataSource.DEFAULT
     )
 
     private var CURRENT = SOURCES("DEFAULT")   //current dataSource - open

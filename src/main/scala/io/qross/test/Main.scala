@@ -11,24 +11,14 @@ import io.qross.net.Json
 import io.qross.ext.TypeExt._
 import io.qross.sql.Solver._
 import io.qross.sql.{OUTPUT, PSQL, Patterns, SHARP}
-import io.qross.time.DateTime
+import io.qross.time.{CronExp, DateTime}
 import io.qross.sql.Patterns._
+import io.qross.sql.PSQL._
 
 import scala.collection.mutable
+import scala.util.matching.Regex
 
 object Main {
-
-    implicit class A(var str: String) {
-
-        def m1(): String = {
-            str.replace("b", "c")
-        }
-
-        def m2(): String = {
-            str = str.replace("a", "b")
-            str
-        }
-    }
 
     def main(args: Array[String]): Unit = {
         //ResourceDir.open("/api").readAll().foreach(println)
@@ -48,7 +38,13 @@ object Main {
 //        prest.close()
 //        conn.close()
 
-//        println("HELLO/WORLD")
+
+        CronExp.parse("0 0 * * * ? *").getNextTick(DateTime.now).print
+
+
+
+
+        //PSQL.runFile("/sql/test.sql")
 
         System.exit(0)
 
