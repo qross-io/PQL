@@ -38,8 +38,12 @@ object SHARP {
             DataCell(data.asDateTime.express(args.head.asText), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET/EXPRESS, arguments ${args.length}, data type: ${data.dataType} ")
         }
+    }
+
+    def SET(data: DataCell, args: List[DataCell]): DataCell = {
+        EXPRESS(data, args)
     }
 
     def FORMAT(data: DataCell, args: List[DataCell]): DataCell = {
@@ -156,7 +160,115 @@ object SHARP {
     }
 
     def GET$WEEK$NAME(data: DataCell, args: List[DataCell]): DataCell = {
-        DataCell(data.asDateTime.getWeekName, DataType.INTEGER)
+        DataCell(data.asDateTime.getWeekName, DataType.TEXT)
+    }
+
+    def PLUS$YEARS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.plusYears(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS YEARS, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def PLUS$MONTHS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.plusMonths(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS MONTHS, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def PLUS$DAYS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.plusDays(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS DAYS, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def PLUS$HOURS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.plusHours(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS HOURS, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def PLUS$MINUTES(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.plusMinutes(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS MINUTES, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def PLUS$SECONDS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.plusSeconds(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS SECONDS, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def MINUS$YEARS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.minusYears(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS YEARS, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def MINUS$MONTHS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.minusMonths(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS MONTHS, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def MINUS$DAYS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.minusDays(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS DAYS, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def MINUS$HOURS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.minusHours(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS HOURS, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def MINUS$MINUTES(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.minusMinutes(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS MINUTES, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def MINUS$SECONDS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.minusSeconds(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS SECONDS, arguments ${args.length}, data type: ${data.dataType} ")
+        }
     }
 
     /* ---------- 整数 ---------- */
@@ -194,6 +306,56 @@ object SHARP {
         }
         else {
             throw new SQLExecuteException(s"Empty arguments or incorrect data type at UNTIL, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def TAKE(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asText.take(args.head.asInteger.toInt), DataType.TEXT)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def TAKE$RIGHT(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asText.takeRight(args.head.asInteger.toInt), DataType.TEXT)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def TAKE$BEFORE(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asText.takeBefore(args.head.asText), DataType.TEXT)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def TAKE$AFTER(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asText.takeAfter(args.head.asText), DataType.TEXT)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.length}, data type: ${data.dataType} ")
+        }
+    }
+
+    def SUBSTRING(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                DataCell(data.asText.substring(args.head.asInteger.toInt - 1), DataType.TEXT)
+            }
+            else {
+                DataCell(data.asText.substring(args.head.asInteger.toInt - 1, args(1).asInteger.toInt - 1), DataType.TEXT)
+            }
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.length}, data type: ${data.dataType} ")
         }
     }
 
@@ -329,11 +491,11 @@ object SHARP {
                             ""
                         }
 
-        DataCell(data.asScalaList.mkString(sep), DataType.TEXT)
+        DataCell(data.asList.mkString(sep), DataType.TEXT)
     }
 
     def SIZE(data: DataCell, args: List[DataCell]): DataCell = {
-        DataCell(data.asScalaList.size, DataType.INTEGER)
+        DataCell(data.asList.size, DataType.INTEGER)
     }
 
     def LENGTH(data: DataCell, args: List[DataCell]): DataCell = {
@@ -341,17 +503,17 @@ object SHARP {
     }
 
     def HEAD(data: DataCell, args: List[DataCell]): DataCell = {
-        DataCell(data.asScalaList.head)
+        DataCell(data.asList.head)
     }
 
     def LAST(data: DataCell, args: List[DataCell]): DataCell = {
-        DataCell(data.asScalaList.last)
+        DataCell(data.asList.last)
     }
 
     def GET(data: DataCell, args: List[DataCell]): DataCell = {
         if (args.nonEmpty) {
             val index = args.head.asInteger.toInt
-            val list = data.asScalaList
+            val list = data.asList
             if (index < list.size) {
                 DataCell(list(index))
             }
@@ -399,7 +561,7 @@ class SHARP(private val expression: String, private var data: DataCell = DataCel
             }
 
         val values = sentence.split($LINK.regex).map(a => a.trim)
-        val links = $LINK.findAllIn(sentence).map(l => l.trim().replaceAll("""\s+""", "$").toUpperCase()).toArray
+        val links = $LINK.findAllIn(sentence).map(l => l.trim().replaceAll("""\s+""", "\\$").toUpperCase()).toArray
 
         if (data.invalid) {
             data = values.head.$sharp(PSQL)
@@ -407,13 +569,17 @@ class SHARP(private val expression: String, private var data: DataCell = DataCel
 
         for (i <- links.indices) {
             if (SHARP_LINKS.contains(links(i))) {
-                data = SHARP.getClass.getDeclaredMethod(links(i)).invoke(null, data,
-                    if (i + 1 < values.length) {
-                        values(i + 1).toArgs(PSQL)
-                    }
-                    else {
-                        List[DataCell]()
-                    }).asInstanceOf[DataCell]
+                data =
+                    Class.forName("io.qross.sql.SHARP").getDeclaredMethod(links(i),
+                    Class.forName("io.qross.core.DataCell"),
+                    Class.forName("scala.collection.immutable.List"))
+                        .invoke(null, data,
+                            if (i + 1 < values.length) {
+                                values(i + 1).toArgs(PSQL)
+                            }
+                            else {
+                                List[DataCell]()
+                            }).asInstanceOf[DataCell]
             }
             else {
                 throw new SQLExecuteException("Wrong link name: " + links(i).replace("$", " "))
@@ -424,14 +590,3 @@ class SHARP(private val expression: String, private var data: DataCell = DataCel
     }
 }
 
-/*
-class SHARPS(val data: DataCell, val operations: String) {
-
-    private val sentence: String = expression.takeAfter($LET).trim()
-    private val values = sentence.split($LINK.regex).map(a => a.trim)
-    private val links = $LINK.findAllIn(sentence).map(l => l.trim().replaceAll("""\s+""", "$").toUpperCase()).toArray
-
-    private val values = "EMPTY " + operations.split($LINK.regex).map(a => a.trim)
-    private val links = $LINK.findAllIn(" " + operations).map(l => l.trim().replaceAll("""\s+""", "$").toUpperCase()).toArray
-
-} */

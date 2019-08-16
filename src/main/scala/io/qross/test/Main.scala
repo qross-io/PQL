@@ -3,7 +3,7 @@ package io.qross.test
 import java.sql.DriverManager
 import java.util.{Date, Properties}
 
-import io.qross.core.{DataHub, DataRow, DataTable}
+import io.qross.core._
 import io.qross.sql.Solver
 import io.qross.fs.{ResourceDir, ResourceFile}
 import io.qross.jdbc.DataSource
@@ -39,12 +39,14 @@ object Main {
 //        conn.close()
 
 
-        CronExp.parse("0 0 * * * ? *").getNextTick(DateTime.now).print
 
+        //CronExp.parse("0 0 6-23/1 * * ? *").getNextTick(DateTime.now).print
 
+//        val array = new Array[Class[_]](2)
+//        array(0) = Class[DataCell]
+//        array(1) = Class[List[DataCell]]
 
-
-        //PSQL.runFile("/sql/test.sql")
+        PSQL.runFile("/sql/test.sql")
 
         System.exit(0)
 

@@ -35,38 +35,11 @@ class FOR(var variable: String, val collection: String) {
                             throw new SQLExecuteException("Only supports SELECT or PARSE sentence in FOR loop query mode.")
                         }
                     }
-                    else if (collection.bracketsWith("$", "}}")) {
-//                        $list无意义
-//                        $table无意义
-//                        $value不能遍历
-//                        $row有意义
-                        var sentence = collection.$trim("$", "}}")
-                        val resultType = sentence.takeBefore("{{").toUpperCase().trim()
-                        sentence = sentence.takeAfter("{{")
-                        val caption = sentence.takeBefore($BLANK).toUpperCase()
-
-                        val table = if (caption == "SELECT") {
-                                        PSQL.dh.executeDataTable(sentence.$restore(PSQL))
-                                    }
-                                    else if (caption == "PARSE") {
-                                        PSQL.dh.parseTable(sentence.takeAfter($PARSE).$eval(PSQL).asText)
-                                    }
-                                    else {
-                                        DataTable()
-                                    }
-
-                        if (Set("ROW", "OBJECT", "MAP").contains(resultType)) {
-                            table.firstRow.getOrElse(DataRow()).toTable()
-                        }
-                        else {
-                            table
-                        }
-                    }
                     else if (collection.bracketsWith("[", "]")) {
-                        Json(collection.$place(PSQL)).parseTable("/")
+                        Json(collection.$restore(PSQL, "\"")).parseTable("/")
                     }
                     else if (collection.bracketsWith("{", "}")) {
-                        Json(collection.$place(PSQL)).parseRow("/").toTable()
+                        Json(collection.$restore(PSQL, "\"")).parseRow("/").toTable()
                     }
                     else if ($VARIABLE.test(collection)) {
                         //集合变量
@@ -82,7 +55,7 @@ class FOR(var variable: String, val collection: String) {
             table.map(row => {
                 val newRow = DataRow()
                 for (i <- variables.indices) {
-                    newRow.set(variables(i).toUpperCase, row.get(i).orNull)
+                    newRow.set(variables(i).substring(1).toUpperCase, row.get(i).orNull)
                 }
                 newRow
             }).foreach(forVars.addRow)

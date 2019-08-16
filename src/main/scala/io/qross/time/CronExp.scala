@@ -2,10 +2,13 @@ package io.qross.time
 
 import java.time.temporal.{ChronoField, ChronoUnit}
 
+import io.qross.ext.Output
+
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.Breaks._
 import scala.util.{Success, Try}
+import io.qross.ext.TypeExt._
 
 object CronExp {
 
@@ -93,13 +96,64 @@ case class CronExp(expression: String = "0 * * * * ? *") {
     
     private var nextTick: DateTime = _
 
-    private val fields = expression.toUpperCase().split(" ")
-    if (fields.length != 7) throw new IllegalArgumentException("expression must has 7 fields")
+    private val fields = {
+        if (expression.contains("#") || expression.contains("=")) {
+            val exp = mutable.LinkedHashMap[String, String](
+                "SECOND" -> "0",
+                "MINUTE" -> "*",
+                "HOUR" -> "*",
+                "DAY" -> "*",
+                "MONTH" -> "*",
+                "WEEK" -> "?",
+                "YEAR" -> "*")
+            expression.replace(" ", "").toUpperCase().split("#").foreach(item => {
+                if (item.contains("=")) {
+                    val field = item.takeBefore("=")
+                    val value = item.takeAfter("=")
+                    if (value.nonEmpty) {
+                        exp.put(field, value)
+                        if (field == "WEEK") {
+                            exp.put("DAY", "?")
+                        }
+                        else if (field == "DAY") {
+                            exp.put("WEEK", "?")
+                        }
+                    }
+                }
+            })
+
+            exp.values.toBuffer
+        }
+        else {
+            expression.toUpperCase().split(" ").toBuffer
+        }
+    }
+    //check format
+    if (fields.length < 2 || fields.length > 7) {
+        throw new IllegalArgumentException("Incorrect corn expression format: " + expression)
+    }
+    else {
+        if (fields.length < 7) {
+            fields.+=:("0")
+        }
+        if (fields.length == 3) {
+            fields += "*"
+        }
+        if (fields.length == 4) {
+            fields += "*"
+        }
+        if (fields.length == 5) {
+            fields += "?"
+        }
+        if (fields.length == 6) {
+            fields += "*"
+        }
+    }
     
-    private val second: String = fields(0)
-    private val minute: String = fields(1)
-    private val hour: String = fields(2)
-    private val dayOfMonth: String = {
+    val second: String = fields.head
+    val minute: String = fields(1)
+    val hour: String = fields(2)
+    val dayOfMonth: String = {
         if (fields(3).contains(QUESTION) && fields(5).contains(QUESTION)) {
             ASTERISK
         }
@@ -107,14 +161,14 @@ case class CronExp(expression: String = "0 * * * * ? *") {
             fields(3)
         }
     }
-    private val month: String = {
+    val month: String = {
         var value = fields(4)
         for ((k, v) <- MONTHS) {
             value = value.replace(k, v)
         }
         value
     }
-    private val dayOfWeek: String = {
+    val dayOfWeek: String = {
         var value = fields(5)
         for ((k, v) <- WEEKS) {
             value = value.replace(k, v)
@@ -180,25 +234,25 @@ case class CronExp(expression: String = "0 * * * * ? *") {
     }
     def getNextTick(dateTime: String): Option[DateTime] = this.getNextTick(new DateTime(dateTime))
     def getNextTick(dateTime: DateTime): Option[DateTime] = {
-        this.nextTick = dateTime
+        this.nextTick = dateTime.setNano(0)
    
         if (!this.second.contains(ASTERISK)) {
             tryMatch(SECOND)
         }
-        
-        //writeMessage("AFTER SECOND " + nextTick)
+
+        //Output.writeMessage("AFTER SECOND " + nextTick)
         
         if (!this.minute.contains(ASTERISK)) {
             tryMatch(MINUTE)
         }
-    
-        //writeMessage("AFTER MINUTE " + nextTick)
+
+        //Output.writeMessage("AFTER MINUTE " + nextTick)
         
         if (!this.hour.contains(ASTERISK)) {
             tryMatch(HOUR)
         }
-    
-        //writeMessage("AFTER HOUR " + this.nextTick)
+
+        Output.writeMessage("AFTER HOUR " + this.nextTick)
         
         if (!this.dayOfMonth.contains(QUESTION) && !this.dayOfMonth.contains(ASTERISK)) {
             tryMatch(DAY)
@@ -208,19 +262,19 @@ case class CronExp(expression: String = "0 * * * * ? *") {
             tryMatch(WEEK)
         }
 
-        //writeMessage("AFTER DAY AND WEEK " + this.nextTick)
+        Output.writeMessage("AFTER DAY AND WEEK " + this.nextTick)
         
         if (!this.month.contains(ASTERISK)) {
             tryMatch(MONTH)
         }
-    
-        //writeMessage("AFTER MONTH " + this.nextTick)
+
+        Output.writeMessage("AFTER MONTH " + this.nextTick)
         
         if (!this.year.contains(ASTERISK)) {
             tryMatch(YEAR)
         }
     
-        //writeMessage("AFTER YEAR " + this.nextTick)
+        Output.writeMessage("AFTER YEAR " + this.nextTick)
     
         Option(this.nextTick)
     }
@@ -234,7 +288,7 @@ case class CronExp(expression: String = "0 * * * * ? *") {
         if (m > end) m = end
         if (n < begin) n = begin
         if (n > end) n = end
-        if (l < 2) l = 2
+        if (l < 1) l = 1
 
         while (m <= n) {
             everyMatch(chronoName) += m

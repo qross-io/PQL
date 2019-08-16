@@ -43,13 +43,13 @@ class Condition(val expression: String) {
     NOT
     */
 
-    private val $OPERATOR = Pattern.compile("""==|!=|<>|>=|<=|\^=|=\^|\$=|=\$|\*=|=\*|#=|=#|>|<|=|\sNOT\sIN\s|\sIS\s+NOT\s|^IS\s+NOT\s|\sIN\s|\sIS\s|^IS\s|\sAND\s|\sOR\s|\sNOT\s+EXISTS|^NOT\s+EXISTS\s|\sEXISTS\s|^EXISTS\s|^NOT\s|\sNOT\s""", Pattern.CASE_INSENSITIVE)
+    private val $OPERATOR = Pattern.compile("""===|!==|==|!=|<>|>=|<=|\^=|=\^|\$=|=\$|\*=|=\*|#=|=#|>|<|=|\sNOT\sIN\s|\sIS\s+NOT\s|^IS\s+NOT\s|\sIN\s|\sIS\s|^IS\s|\sAND\s|\sOR\s|\sNOT\s+EXISTS|^NOT\s+EXISTS\s|\sEXISTS\s|^EXISTS\s|^NOT\s|\sNOT\s""", Pattern.CASE_INSENSITIVE)
 
     private val m: Matcher = $OPERATOR.matcher(expression)
     if (m.find) {
         this.field = expression.takeBefore(m.group(0)).trim
         this.value = expression.takeAfter(m.group(0)).trim
-        this.operator = m.group(0).trim.toUpperCase.replaceAll("""\s+""", "$")
+        this.operator = m.group(0).trim.toUpperCase.replaceAll("""\s+""", "\\$")
     }
 
 
@@ -60,8 +60,8 @@ class Condition(val expression: String) {
             case "NOT" => !value.asBoolean
             case "EXISTS" => value.asText.$trim("(", ")").trim() != ""
             case "NOT$EXISTS" => value.asText.$trim("(", ")").trim() == ""
-            case "IN" => value.asScalaList.toSet.contains(field.value)
-            case "NOT$IN" => !value.asScalaList.toSet.contains(field.value)
+            case "IN" => value.asList.toSet.contains(field.value)
+            case "NOT$IN" => !value.asList.toSet.contains(field.value)
             case "IS" =>
                 if (value.isNull) {
                     field.isNull || field.asText.bracketsWith("#{", "}") || field.asText.bracketsWith("&{", "}")
@@ -83,6 +83,8 @@ class Condition(val expression: String) {
                 else {
                     false
                 }
+            case "===" => field.asText == value.asText
+            case "!==" => field.asText != value.asText
             case "=" | "==" => field.asText.equalsIgnoreCase(value.asText)
             case "!=" | "<>" => !field.asText.equalsIgnoreCase(value.asText)
             case "^=" => field.asText.toLowerCase.startsWith(value.asText.toLowerCase)
@@ -118,7 +120,7 @@ class Condition(val expression: String) {
                 try
                     field.asDecimal < value.asDecimal
                 catch {
-                    case e: Exception =>
+                    case _: Exception =>
                         throw new SQLParseException("Value must be number on >= compare: " + field + " < " + value)
                 }
             case _ => value.asBoolean

@@ -72,6 +72,7 @@ object Patterns {
     val $INTERMEDIATE$N: Regex = """^~value\[(\d+)\]$""".r
     val FUNCTION_NAMES: Set[String] = Function.getClass.getDeclaredMethods.map(m => m.getName).filter(n => "^[A-Z]".r.test(n)).toSet
     val $RESERVED: Regex = """^[_A-Za-z0-9\.]+$""".r
+    val $CONSTANT: Regex = """^[A-Za-z_][A-Za-z0-9_]+$""".r
 
     val SHARP_LINKS: Set[String] = SHARP.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z]$""".r.test(n)).toSet
     val ARROW: String = "->"

@@ -59,6 +59,26 @@ object Function {
             DataCell(args.head.asText.replace(args(1).asText, args(2).asText), DataType.TEXT)
         }
         else {
+            throw new SQLParseException(s"Incorrect arguments at REPLACE, expect 3, actual ${args.size}")
+        }
+    }
+
+    //REPLACE(stringToReplace, oldString, newString)
+    def LEFT(args: List[DataCell]): DataCell = {
+        if (args.size == 2) {
+            DataCell(args.head.asText.take(args(1).asInteger.toInt), DataType.TEXT)
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at REPLACE, expect 2, actual ${args.size}")
+        }
+    }
+
+    //REPLACE(stringToReplace, oldString, newString)
+    def RIGHT(args: List[DataCell]): DataCell = {
+        if (args.size == 2) {
+            DataCell(args.head.asText.takeRight(args(1).asInteger.toInt), DataType.TEXT)
+        }
+        else {
             throw new SQLParseException(s"Incorrect arguments at REPLACE, expect 2, actual ${args.size}")
         }
     }
@@ -66,7 +86,9 @@ object Function {
 
 case class Function(functionName: String) {
     def call(args: List[DataCell]): DataCell = {
-        Function.getClass.getDeclaredMethod(functionName).invoke(null, args).asInstanceOf[DataCell]
+        Class.forName("io.qross.sql.Function")
+            .getDeclaredMethod(functionName, Class.forName("scala.collection.immutable.List"))
+            .invoke(null, args).asInstanceOf[DataCell]
     }
 }
 

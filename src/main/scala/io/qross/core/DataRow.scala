@@ -67,11 +67,13 @@ case class DataRow(private val items: (String, Any)*) {
 
     def set(fieldName: String, value: Any, dataType: DataType): Unit = {
 
-        if (!fields.contains(fieldName)) {
-            fields += fieldName -> dataType
+        val name = fieldName.toLowerCase()
+
+        if (!fields.contains(name)) {
+            fields += name -> dataType
         }
 
-        this.columns += fieldName -> (dataType match {
+        this.columns += name -> (dataType match {
                                         case DataType.DATETIME => value.toDateTime
                                         case DataType.JSON => value.toJson
                                         case _ => value
@@ -79,18 +81,20 @@ case class DataRow(private val items: (String, Any)*) {
     }
 
     def remove(fieldName: String): Unit = {
-        this.fields.remove(fieldName)
-        this.columns.remove(fieldName)
+        val name = fieldName.toLowerCase()
+        this.fields.remove(name)
+        this.columns.remove(name)
     }
     
     def updateFieldName(fieldName: String, newFieldName: String): Unit = {
-        this.set(newFieldName, this.columns.get(fieldName))
+        this.set(newFieldName, this.columns.get(fieldName.toLowerCase()))
         this.remove(fieldName)
     }
     
     def getDataType(fieldName: String): Option[DataType] = {
-        if (this.fields.contains(fieldName)) {
-            Some(this.fields(fieldName))
+        val name = fieldName.toLowerCase()
+        if (this.fields.contains(name)) {
+            Some(this.fields(name))
         }
         else {
             None
@@ -104,8 +108,9 @@ case class DataRow(private val items: (String, Any)*) {
     }
     
     def get(fieldName: String): Option[Any] = {
-        if (this.columns.contains(fieldName)) {
-            this.columns.get(fieldName)
+        val name = fieldName.toLowerCase()
+        if (this.columns.contains(name)) {
+            this.columns.get(name)
         }
         else {
             None
@@ -123,8 +128,9 @@ case class DataRow(private val items: (String, Any)*) {
     }
 
     def getCell(fieldName: String): DataCell = {
-        if (this.contains(fieldName)) {
-            DataCell(this.columns(fieldName), this.fields(fieldName))
+        val name = fieldName.toLowerCase()
+        if (this.contains(name)) {
+            DataCell(this.columns(name), this.fields(name))
         }
         else {
             DataCell.NOT_FOUND
@@ -141,8 +147,9 @@ case class DataRow(private val items: (String, Any)*) {
     }
 
     def getJson(fieldName: String): Json = {
-        if (this.contains(fieldName)) {
-            this.columns(fieldName).asInstanceOf[Json]
+        val name = fieldName.toLowerCase()
+        if (this.contains(name)) {
+            this.columns(name).asInstanceOf[Json]
         }
         else {
             Json()
@@ -287,8 +294,11 @@ case class DataRow(private val items: (String, Any)*) {
 
 
     
-    def contains(fieldName: String): Boolean = this.columns.contains(fieldName)
-    def contains(fieldName: String, value: Any): Boolean = this.columns.contains(fieldName) && this.getString(fieldName) == value.toString
+    def contains(fieldName: String): Boolean = this.columns.contains(fieldName.toLowerCase)
+    def contains(fieldName: String, value: Any): Boolean = {
+        val name = fieldName.toLowerCase()
+        this.columns.contains(name) && this.getString(name) == value.toString
+    }
     def size: Int = this.columns.size
     def isEmpty: Boolean = this.fields.isEmpty
     def nonEmpty: Boolean = this.fields.nonEmpty

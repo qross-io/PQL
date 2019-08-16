@@ -1,10 +1,9 @@
 package io.qross.sql
 
-import io.qross.core.{DataCell, DataRow, DataType}
+import io.qross.core.{DataCell, DataType}
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
-import io.qross.sql.Patterns.{FUNCTION_NAMES, $INTERMEDIATE$N}
-import io.qross.time.DateTime
+import io.qross.sql.Patterns.{$INTERMEDIATE$N, FUNCTION_NAMES, $CONSTANT}
 
 import scala.util.matching.Regex
 
@@ -16,14 +15,16 @@ object Solver {
     val ARGUMENT: Regex = """(#|&)\{([a-zA-Z0-9_]+)\}""".r  //入参 #{name} 或 &{name}
     //val GLOBAL_VARIABLE: Regex = """@\(?([a-zA-Z0-9_]+)\)?""".r //全局变量 @name 或 @(name)
     //val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
-    val VARIABLE: List[Regex] = List[Regex](
-        """@\(([a-zA-Z0-9_]+)\)""".r,
+    val USER_VARIABLE: List[Regex] = List[Regex](
         """\$\(([a-zA-Z0-9_]+)\)""".r,
-        """@([a-zA-Z0-9_]+)""".r,
         """\$([a-zA-Z0-9_]+)""".r
     )
+    val GLOBAL_VARIABLE: List[Regex] = List[Regex](
+        """@\(([a-zA-Z0-9_]+)\)(\s\S)""".r,
+        """@([a-zA-Z0-9_]+)(\s\S)""".r
+    )
     val USER_DEFINED_FUNCTION: Regex = """$[a-zA-Z_]+\(\)""".r //用户函数, 未完成
-    val SYSTEM_FUNCTION: Regex = """@([a-z_]+)\(([^\)]*)\)""".r //系统函数, 未完成
+    val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\(([^\)]*)\)""".r //系统函数
     val JS_EXPRESSION: Regex = """\~\{([\s\S]+?)}""".r //js表达式
     val JS_STATEMENT: Regex = """\~\{\{([\s\S]+?)}}""".r// js语句块
     val SHARP_EXPRESSION: Regex = """(?i)\$\{([^{][\s\S]+?)\}""".r //Sharp表达式
@@ -83,7 +84,7 @@ object Solver {
             VALUE$N.findAllMatchIn(sentence)
                 .foreach(m => {
                     val suffix = m.group(2)
-                    sentence = sentence.replace(m.group(0), PSQL.values(m.group(1).toInt).getString(if (suffix == "!") "" else quote) + (if (suffix == "!") "" else suffix))
+                    sentence = sentence.replace(m.group(0), PSQL.values(m.group(1).toInt).mkString(if (suffix == "!") "" else quote) + (if (suffix == "!") "" else suffix))
                 })
 
             sentence
@@ -129,48 +130,68 @@ object Solver {
 
         //解析表达式中的变量
         def replaceVariables(PSQL: PSQL): String = {
-            VARIABLE
+            USER_VARIABLE
                 .map(r => r.findAllMatchIn(sentence))
-                .flatMap(s => s.toList.sortBy(m => m.group(1).reverse))
+                .flatMap(s => s.toList.sortBy(m => m.group(1)).reverse)
                 .foreach(m => {
                     val whole = m.group(0)
-                    //有可能出现只有右括号没有左括号的情况出现
-                    val right = if (whole.endsWith(")") && !whole.contains("(")) ")" else ""
 
                     PSQL.findVariable(whole).ifValid(data => {
-                        sentence = sentence.replace(whole, PSQL.$stash(data) + right)
+                        sentence = sentence.replace(whole, PSQL.$stash(data))
                     })
                 })
+
+            GLOBAL_VARIABLE
+                    .map(r => r.findAllMatchIn(sentence))
+                    .flatMap(s => s.toList.sortBy(m => m.group(1)).reverse)
+                    .foreach(m => {
+                        val whole = m.group(0)
+                        val name = m.group(1)
+                        val tail = m.group(2)
+                        val prefix = whole.takeBefore(name)
+                        val suffix = whole.takeAfter(name)
+                        val field = prefix + name + suffix
+
+                        if (prefix.endsWith("(") && suffix.startsWith(")") || tail != "(" || !FUNCTION_NAMES.contains(name.toUpperCase())) {
+                            PSQL.findVariable(field).ifValid(data => {
+                                sentence = sentence.replace(field, PSQL.$stash(data))
+                            })
+                        }
+                    })
 
             sentence
         }
 
         def toArgs(PSQL: PSQL): List[DataCell] = {
-            val args = sentence.popStash(PSQL, "\"").$trim("(", ")")
-            if (Json.OBJECT$ARRAY.test(args)) {
-                List[DataCell](DataCell(Json(args).parseTable("/"), DataType.TABLE))
-            }
-            else if (args.bracketsWith("{", "}")) {
-                List[DataCell](DataCell(Json(args).parseRow("/")))
-            }
-            else if (args != "") {
-                Json(if (!args.bracketsWith("[", "]")) {
-                    args.bracket("[", "]")
+            var args = sentence.$trim("(", ")")
+
+            if (args.bracketsWith("[", "]") || args.bracketsWith("{", "}")) {
+                args = args.popStash(PSQL, "\"")
+                if (Json.OBJECT$ARRAY.test(args)) {
+                    List[DataCell](DataCell(Json(args).parseTable("/"), DataType.TABLE))
+                }
+                else if (args.bracketsWith("{", "}")) {
+                    List[DataCell](DataCell(Json(args).parseRow("/"), DataType.ROW))
+                }
+                else if (args.bracketsWith("[", "]")) {
+                    List[DataCell](DataCell(Json(args).parseJavaList("/"), DataType.ARRAY))
                 }
                 else {
-                    args
-                }).parseDataCellList("/")
+                    List[DataCell]()
+                }
             }
             else {
-                List[DataCell]()
+                args.split(",").map(arg => {
+                    arg.popStash(PSQL).$sharp(PSQL)
+                }).toList
             }
         }
 
         //解析表达式中的函数
         def replaceFunctions(PSQL: PSQL, quote: String = "'"): String = {
 
-            while (SYSTEM_FUNCTION.test(sentence)) { //循环防止嵌套
-                SYSTEM_FUNCTION
+            while (GLOBAL_FUNCTION.test(sentence)) { //循环防止嵌套
+                GLOBAL_FUNCTION
                     .findAllMatchIn(sentence)
                     .foreach(m => {
                         val funName = m.group(1).trim().toUpperCase()
@@ -246,17 +267,21 @@ object Solver {
         }
 
         //执行sharp短语句, sharp表达式本身的目的是避免嵌套, 所有本身不支持嵌套
-        def $sharp(PSQL: PSQL): DataCell = {
-            sentence = sentence.restoreChars(PSQL).trim()
+        def $sharp(PSQL: PSQL, quote: String = "'"): DataCell = {
+            sentence = sentence.restoreChars(PSQL, quote).trim()
             //如果是中间变量
             if ($INTERMEDIATE$N.test(sentence)) {
                 PSQL.values($INTERMEDIATE$N.findAllMatchIn(sentence)
                     .map(m => m.group(1).toInt)
                     .toList.head)
             }
+            //如果是常量
+            else if ($CONSTANT.test(sentence)) {
+                DataCell(sentence, DataType.TEXT)
+            }
             //如果是最短表达式
             else {
-                sentence.restoreValues(PSQL).eval()//.restoreSymbols()
+                sentence.restoreValues(PSQL, quote).eval()
             }
         }
 
@@ -273,11 +298,6 @@ object Solver {
         //按顺序计算嵌入式表达式、变量和函数
         def $restore(PSQL: PSQL, quote: String = "'"): String = {
             sentence.$clean(PSQL).popStash(PSQL, quote)
-        }
-
-        //仅适用于Json表达式, 保留双引号
-        def $place(PSQL: PSQL): String = {
-            sentence.$restore(PSQL, "\"")
         }
 
         //计算出最后结果, 适用于表达式

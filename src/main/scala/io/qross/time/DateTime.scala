@@ -7,6 +7,7 @@ import java.time.temporal.{ChronoField, ChronoUnit}
 import java.util.regex.Pattern
 
 import io.qross.ext.Output
+import io.qross.ext.TypeExt._
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -164,7 +165,6 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     
     def set(field: ChronoField, value: Int): DateTime = {
         new DateTime(this.localDateTime.`with`(field, value))
-        this
     }
 
     def setYear(year: Int): DateTime = {
@@ -315,24 +315,24 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
                 case ("HOUR", Success(v)) => this.plusHours(v)
                 case ("MINUTE", Success(v)) => this.plusMinutes(v)
                 case ("SECOND", Success(v)) => this.plusSeconds(v)
-                case _ =>
+                case _ => this
             }
         }
         else {
             //=
             (field.toUpperCase(), Try(value.toInt)) match {
-                case ("DAY", Success(v)) => if (v > 0) this.setDayOfMonth(v)
+                case ("DAY", Success(v)) => if (v > 0) this.setDayOfMonth(v) else this.setDayOfMonth(1)
                 case ("DAY", Failure(_)) =>  if (value == "L") this.plusMonths(1).setDayOfMonth(1).plusDays(-1) else this.setDayOfWeek(value)  // L = last_day & WeekName = Mon,Tus...Sun
+                case ("WEEK", Success(v)) => if (v < 0) this.setDayOfWeek(1) else if (v > 7) this.setDayOfWeek(7) else this.setDayOfWeek(v)
+                case ("WEEK", Failure(_)) => this.setDayOfWeek(value)
                 case ("MONTH", Success(v)) => this.setMonth(v)
                 case ("YEAR", Success(v)) => this.setYear(v)
                 case ("HOUR", Success(v)) => this.setHour(v)
                 case ("MINUTE", Success(v)) => this.setMinute(v)
                 case ("SECOND", Success(v)) => this.setSecond(v)
-                case _ =>
+                case _ => this
             }
         }
-        
-        this
     }
     
     def express(expression: String): DateTime = {
@@ -340,21 +340,16 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
         // exp includes num|Sun-Sat:1-7(only in day section)
         //year=2018#month=2#day=MON
         //month+1#day=1#day=MON#day-1
-        
-        val sections = expression.toUpperCase().replace(" ", "").replace("-", "=-").replace("+", "=+").split("#")
+        var dateTime = this
+        val sections = expression.toUpperCase().replaceAll("""\s""", "").replace("-", "=-").replace("+", "=+").split("#")
         for (section <- sections) {
             if (section.contains("=")) {
-                this.shift(section.substring(0, section.indexOf("=")), section.substring(section.indexOf("=") + 1))
-            }
-            else {
-                """(?i)^(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND)+""".r.findFirstIn(section) match {
-                    case Some(f) => this.shift(f, section.substring(f.length))
-                    case None =>
-                }
+                //dateTime = this.shift(section.substring(0, section.indexOf("=")), section.substring(section.indexOf("=") + 1))
+                dateTime = dateTime.shift(section.takeBefore("="), section.takeAfter("="))
             }
         }
         
-        this
+        dateTime
     }
     
     def matches(cronExp: String): Boolean = CronExp(cronExp).matches(this)
@@ -403,8 +398,8 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
                         "YEAR" -> "*")
                     FILTER.replace(" ", "").toUpperCase().split("#").foreach(item => {
                         if (item.contains("=")) {
-                            val field = item.substring(0, item.indexOf("="))
-                            val value = item.substring(item.indexOf("=") + 1)
+                            val field = item.takeBefore("=")
+                            val value = item.takeAfter("=")
                             if (value.nonEmpty) {
                                 exp.put(field, value)
                                 if (field == "WEEK") {

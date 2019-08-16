@@ -102,7 +102,9 @@ class ConditionGroup(expression: String) {
                                 DataCell.NULL
                             })
 
-            Output.writeDotLine(" ", condition.field, condition.operator, condition.value, " => ", condition.result)
+            if (PSQL.dh.debugging) {
+                Output.writeDotLine(" ", condition.field.$restore(PSQL, "\""), condition.operator, condition.value.$restore(PSQL, "\""), " => ", condition.result)
+            }
         }
 
         selects.clear()

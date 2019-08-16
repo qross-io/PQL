@@ -24,6 +24,7 @@ object TypeExt {
     implicit class StringExt(var string: String) {
 
         def toBoolean(defaultValue: Boolean): Boolean = {
+            string = string.toLowerCase()
             if (Set("yes", "true", "1", "on", "ok").contains(string)) {
                 true
             }
@@ -391,6 +392,18 @@ object TypeExt {
         def test(str: String): Boolean = {
             regex.findFirstIn(str).nonEmpty
         }
+
+        def exec(str: String): Array[String] = {
+            regex.findFirstMatchIn(str) match {
+                case Some(m) =>
+                    val result = new mutable.ArrayBuffer[String]()
+                    for (i <- 0 to m.groupCount) {
+                        result += m.group(i)
+                    }
+                    result.toArray
+                case None => new Array[String](0)
+            }
+        }
     }
 
     //for Sharp Expression
@@ -503,59 +516,6 @@ object TypeExt {
             }
         }
 
-        def toTable: DataTable = {
-            any match {
-                case dt: DataTable => dt
-                case row: DataRow => row.toTable()
-                case JavaList(list) => list.asScala.toList.toTable()
-                case JavaMap(map) => map.asScala.toMap.toTable()
-                case ScalaList(list) => list.toTable()
-                case ScalaMap(map) => map.toTable()
-                case str: String => str.toJson.parseTable("/")
-                case other => DataTable(DataRow("value" -> other))
-            }
-        }
-
-        def toRow: DataRow = {
-            any match {
-                case row: DataRow => row
-                case JavaMap(map) => map.asScala.toMap.toRow()
-                case ScalaMap(map) => map.toRow()
-                case str: String => str.toJson.parseRow("/")
-                case other => DataRow("value" -> other)
-            }
-        }
-
-        def toJavaList: java.util.List[Any] = {
-            any match {
-                case str: String =>
-                        //不能直接转换, 类型不匹配
-                        val list = new mutable.ListBuffer[Any]()
-                        str.split(",", -1).foreach(s => list += s)
-                        list.asJava
-                case JavaList(list) => list
-                case JavaMap(map) => map.asScala.values.toList.asJava
-                case ScalaList(list) => list.asJava
-                case ScalaMap(map) => map.values.toList.asJava
-                case dt: DataTable => dt.toJavaList
-                case row: DataRow => row.toJavaList
-                case other => List(other).asJava
-            }
-        }
-
-        def toScalaList: List[Any] = {
-            any match {
-                case str: String => str.split(",", -1).toList
-                case JavaList(list) => list.asScala.toList
-                case JavaMap(map) => map.asScala.values.toList
-                case ScalaList(list) => list
-                case ScalaMap(map) => map.values.toList
-                case dt: DataTable => dt.toJavaList.asScala.toList
-                case row: DataRow => row.toJavaList.asScala.toList
-                case other => List(other)
-            }
-        }
-
         def toJson: Json = {
             any match {
                 case str: String =>
@@ -621,7 +581,7 @@ object TypeExt {
             table
         }
 
-        def toRow(): DataRow = {
+        def toRow: DataRow = {
             val row = new DataRow()
             for (item <- map) {
                 row.set(item._1.toString, item._2)

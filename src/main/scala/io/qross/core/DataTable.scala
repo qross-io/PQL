@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import DataType.DataType
 import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.ext.Output
+import io.qross.ext.TypeExt._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -45,26 +46,24 @@ case class DataTable(private val items: DataRow*) {
     }
 
     def addField(fieldName: String, dataType: DataType): Unit = {
-        // . is illegal char in SQLite
-        val name = if (fieldName.contains(".")) fieldName.substring(fieldName.lastIndexOf(".") + 1) else fieldName
-        fields += name -> dataType
-        labels += name -> name
+        addFieldWithLabel(fieldName, fieldName, dataType)
     }
 
     def addFieldWithLabel(fieldName: String, labelName: String, dataType: DataType): Unit = {
-        val name = if (fieldName.contains(".")) fieldName.substring(fieldName.lastIndexOf(".") + 1) else fieldName
+        // . is illegal char in SQLite
+        val name = { if (fieldName.contains(".")) fieldName.takeAfter(".") else fieldName }.toLowerCase()
         fields += name -> dataType
         labels += name -> labelName
     }
     
     def label(alias: (String, String)*): DataTable = {
         for ((fieldName, otherName) <- alias) {
-            labels += fieldName -> otherName
+            labels += fieldName.toLowerCase() -> otherName
         }
         this
     }
     
-    def contains(field: String): Boolean = fields.contains(field)
+    def contains(fieldName: String): Boolean = fields.contains(fieldName.toLowerCase())
 
     def newRow(): DataRow = {
         val row = DataRow()
@@ -78,12 +77,13 @@ case class DataTable(private val items: DataRow*) {
         rows += row
     }
 
-    def alter(field: String, newName: String): Unit = {
-        if (fields.contains(field)) {
+    def alter(fieldName: String, newName: String): Unit = {
+        val name = fieldName.toLowerCase()
+        if (fields.contains(name)) {
             val list = fields.toList
             fields.clear()
             list.foreach(item => {
-                if (item._1 != field) {
+                if (item._1 != name) {
                     fields += item._1 -> item._2
                 }
                 else {
@@ -93,9 +93,10 @@ case class DataTable(private val items: DataRow*) {
         }
     }
 
-    def alter(field: String, dataType: DataType): Unit = {
-        if (fields.contains(field)) {
-            fields += field -> dataType
+    def alter(fieldName: String, dataType: DataType): Unit = {
+        val name = fieldName.toLowerCase()
+        if (fields.contains(name)) {
+            fields += name -> dataType
         }
     }
 
@@ -176,24 +177,6 @@ case class DataTable(private val items: DataRow*) {
         table
     }
     
-    def distinct(fieldNames: String*): DataTable = {
-        val table = DataTable()
-        val set = new mutable.HashSet[DataRow]()
-        if (fieldNames.isEmpty) {
-            rows.foreach(row => set += row)
-        }
-        else {
-            rows.foreach(row => {
-                val newRow = DataRow()
-                fieldNames.foreach(fieldName => newRow.set(fieldName, row.get(fieldName).get))
-                set += newRow
-            })
-        }
-        set.foreach(row => table.addRow(row))
-
-        table
-    }
-
     def size: Int = rows.size
     def count(): Int = rows.size
     def columnCount: Int = fields.size
@@ -581,9 +564,9 @@ case class DataTable(private val items: DataRow*) {
     def getLabelNames: List[String] = labels.values.toList
     def getLabels: mutable.LinkedHashMap[String, String] = labels
     def getFields: mutable.LinkedHashMap[String, DataType] = fields
-    def getFieldType(fieldName: String): DataType = fields(fieldName)
+    def getFieldType(fieldName: String): DataType = fields(fieldName.toLowerCase())
     def getRow(i: Int): Option[DataRow] = if (i < rows.size) Some(rows(i)) else None
-    def getColumn(fieldName: String): List[Any] = rows.map(row => row.columns(fieldName)).toList
+    def getColumn(fieldName: String): List[Any] = rows.map(row => row.columns(fieldName.toLowerCase())).toList
 
     def firstRow: Option[DataRow] = if (rows.nonEmpty) Some(rows(0)) else None
     def lastRow: Option[DataRow] = if (rows.nonEmpty) Some(rows(rows.size - 1)) else None
@@ -662,8 +645,12 @@ case class DataTable(private val items: DataRow*) {
         rows.map(row => row.columns.asJava).asJava
     }
 
+    def toList: List[Any] = {
+        rows.map(row => row.columns.head._2).toList
+    }
+
     def toJavaList: java.util.List[Any] = {
-        rows.map(row => row.columns.head._2).toList.asJava
+        toList.asJava
     }
 
     def toJsonString: String = {

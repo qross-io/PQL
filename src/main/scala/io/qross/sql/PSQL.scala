@@ -416,9 +416,24 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
     }
 
     private def parseEXIT(sentence: String): Unit = {
+        var contained = false
+        breakable {
+            for (group <- PARSING) {
+                if (group.caption == "FOR" || group.caption == "WHILE") {
+                    contained = true
+                    break
+                }
+            }
+        }
+
         if ({m = $EXIT.matcher(sentence); m}.find) {
-            val $exit: Statement = new Statement("EXIT", m.group(0), if (m.group(1) != null) new ConditionGroup(m.group(2).trim()) else null)
-            PARSING.head.addStatement($exit)
+            if (contained) {
+                val $exit: Statement = new Statement("EXIT", m.group(0), if (m.group(1) != null) new ConditionGroup(m.group(2).trim()) else null)
+                PARSING.head.addStatement($exit)
+            }
+            else {
+                throw new SQLParseException("EXIT must be contained in FOR or WHILE statement: " + sentence)
+            }
         }
         else {
             throw new SQLParseException("Incorrect EXIT sentence: " + sentence)
@@ -426,9 +441,24 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
     }
 
     private def parseCONTINUE(sentence: String): Unit = {
+        var contained = false
+        breakable {
+            for (group <- PARSING) {
+                if (group.caption == "FOR" || group.caption == "WHILE") {
+                    contained = true
+                    break
+                }
+            }
+        }
+
         if ({m = $CONTINUE.matcher(sentence); m}.find) {
-            val $continue: Statement = new Statement("CONTINUE", m.group(0), if (m.group(1) != null) new ConditionGroup(m.group(2).trim()) else null)
-            PARSING.head.addStatement($continue)
+            if (contained) {
+                val $continue: Statement = new Statement("CONTINUE", m.group(0), if (m.group(1) != null) new ConditionGroup(m.group(2).trim()) else null)
+                PARSING.head.addStatement($continue)
+            }
+            else {
+                throw new SQLParseException("CONTINUE must be contained in FOR or WHILE statement: " + sentence)
+            }
         }
         else {
             throw new SQLParseException("Incorrect CONTINUE sentence: " + sentence)
@@ -666,17 +696,49 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     //continue属于exit的子集
     private def executeCONTINUE(statement: Statement): Boolean = {
-        if (statement.instance == null) {
-            true
+
+        var contained = false
+        breakable {
+            for (group <- EXECUTING) {
+                if (group.caption == "FOR" || group.caption == "WHILE") {
+                    contained = true
+                    break
+                }
+            }
+        }
+
+        if (contained) {
+            if (statement.instance == null) {
+                true
+            }
+            else {
+                statement.instance.asInstanceOf[ConditionGroup].evalAll(this)
+            }
         }
         else {
-            statement.instance.asInstanceOf[ConditionGroup].evalAll(this)
+            throw new SQLExecuteException("CONTINUE must be contained in FOR or WHILE statement: " + statement.sentence)
         }
     }
 
     private def executeEXIT(statement: Statement): Boolean = {
-        breakCurrentLoop = executeCONTINUE(statement)
-        breakCurrentLoop
+
+        var contained = false
+        breakable {
+            for (group <- EXECUTING) {
+                if (group.caption == "FOR" || group.caption == "WHILE") {
+                    contained = true
+                    break
+                }
+            }
+        }
+
+        if (contained) {
+            breakCurrentLoop = executeCONTINUE(statement)
+            breakCurrentLoop
+        }
+        else {
+            throw new SQLExecuteException("EXIT must be contained in FOR or WHILE statement: " + statement.sentence)
+        }
     }
 
     private def executeWHILE(statement: Statement): Unit = {
@@ -718,7 +780,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
             case "DEFAULT" => dh.openDefault()
             case "QROSS" => dh.openQross()
             case _ =>
-                val connectionName =
+                val connectionName = {
                     if ($RESERVED.test($open.connectionName)) {
                         if (!Properties.contains($open.connectionName)) {
                             throw new SQLExecuteException("Wrong connection name: " + $open.connectionName)
@@ -728,7 +790,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
                     else {
                         $open.connectionName.$eval(this).asText
                     }
-
+                }
 
                 if ($open.databaseName == "") {
                     dh.open(connectionName)
@@ -747,8 +809,12 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
     private def executeSAVE(statement: Statement): Unit = {
         val $save = statement.instance.asInstanceOf[SAVE$AS]
         $save.targetType match {
-            case "CACHE TABLE" => dh.cache($save.targetName.$eval(this).asText)
-            case "TEMP TABLE" => dh.temp($save.targetName.$eval(this).asText)
+            case "CACHE TABLE" => {
+                dh.cache($save.targetName.$eval(this).asText)
+            }
+            case "TEMP TABLE" => {
+                dh.temp($save.targetName.$eval(this).asText)
+            }
             case "CACHE" => dh.saveAsCache()
             case "TEMP" => dh.saveAsTemp()
             case "JDBC" =>
@@ -873,7 +939,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
                     //JSON, 输出类型设置无效
                     if ($output.content.startsWith("[") || $output.content.startsWith("{")) {
                         //对象或数组类型不能eval
-                        RESULT = Json.fromText($output.content.$place(this))
+                        RESULT = Json.fromText($output.content.$restore(this, "\""))
                                     .findNode("/")
                     }
                     else {
@@ -886,7 +952,24 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     private def executePRINT(statement: Statement): Unit = {
         val $print = statement.instance.asInstanceOf[PRINT]
-        val message = $print.message.$eval(this).asText
+        val message = {
+            if ($print.message.bracketsWith("(", ")")) {
+                $print.message
+                    .$trim("(", ")")
+                    .split(",")
+                    .map(m => {
+                        m.$eval(this).mkString("\"")
+                    })
+                    .mkString(", ")
+                    .bracket("(", ")")
+            }
+            else if ($print.message.bracketsWith("[", "]") || $print.message.bracketsWith("{", "}")) {
+                $print.message.$restore(this, "\"")
+            }
+            else {
+                $print.message.$eval(this).asText
+            }
+        }
         $print.messageType match {
             case "WARN" => Output.writeWarning(message)
             case "ERROR" => Output.writeException(message)
@@ -913,7 +996,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         ROWS = RESULT.asInstanceOf[DataTable].size
 
         if (dh.debugging) {
-            Output.writeLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            Output.writeLine("                                                                        ")
             Output.writeLine(SQL.take(100))
             RESULT.asInstanceOf[DataTable].show()
         }
@@ -948,12 +1031,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     private def executeDEBUG(statement: Statement): Unit = {
         val $debug = statement.instance.asInstanceOf[DEBUG]
-        dh.debug(if ("""^[a-zA-Z0-9]$""".r.test($debug.switch)) {
-            $debug.switch.toBoolean(false)
-        }
-        else {
-            $debug.switch.$eval(this).asBoolean(false)
-        })
+        dh.debug($debug.switch.$eval(this).asBoolean(false))
     }
 
     private def execute(statements: ArrayBuffer[Statement]): Unit = {
@@ -967,9 +1045,9 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
                     AFFECTED = dh.executeNonQuery(SQL)
 
                     if (dh.debugging) {
-                        Output.writeLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                        Output.writeLine("                                                                        ")
                         Output.writeLine(SQL.take(100))
-                        Output.writeLine("------------------------------------------------------------")
+                        Output.writeLine("------------------------------------------------------------------------")
                         Output.writeLine(s"$AFFECTED row(s) affected. ")
                     }
                 }
@@ -1060,6 +1138,10 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         else if (symbol == "@") {
             //全局变量
             cell = GlobalVariable.get(name, this)
+
+            if (cell.invalid) {
+                throw new SQLExecuteException(s"Global variable $field is not found.")
+            }
         }
 
         cell
@@ -1130,7 +1212,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
             Output.writeLine(i, ": ", sentences(i))
         }
 
-        Output.writeLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        Output.writeLine("------------------------------------------------------------")
         this.root.show(0)
     }
 }

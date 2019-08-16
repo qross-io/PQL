@@ -992,12 +992,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         TABLE.cut(TABLE.collect(filter)(map))
         this
     }
-    
-    def distinct(fieldNames: String*): DataHub = {
-        TABLE.cut(TABLE.distinct(fieldNames: _*))
-        this
-    }
-    
+
     def count(groupBy: String*): DataHub = {
         TABLE.cut(TABLE.count(groupBy: _*))
         this

@@ -5,6 +5,7 @@ import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.setting.{Configurations, Global}
 import io.qross.time.DateTime
 import io.qross.core.Authentication._
+import io.qross.sql.Patterns.FUNCTION_NAMES
 
 object GlobalVariable {
 
@@ -36,6 +37,9 @@ object GlobalVariable {
 
         if (PROCESS.contains(name)) {
             throw new SQLExecuteException("Can't update process variable. This variable is readonly.")
+        }
+        else if (FUNCTION_NAMES.contains(name)) {
+            throw new SQLExecuteException(s"$name is a global function.")
         }
         else if (SYSTEM.contains(name) || Configurations.contains(name)) {
             if (role == "MASTER") {

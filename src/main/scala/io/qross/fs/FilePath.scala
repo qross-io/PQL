@@ -26,17 +26,18 @@ object FilePath {
             var full = path.toPath
 
             if (!full.startsWith("/") && !full.contains(":/")) {
-                if (Global.QROSS_SYSTEM == "WORKER") {
-                    full = Global.QROSS_WORKER_HOME  + full
-                }
-                else {
-                    full = Global.QROSS_KEEPER_HOME  + full
-                }
+//                if (Global.QROSS_SYSTEM == "WORKER") {
+//                    full = Global.QROSS_WORKER_HOME  + full
+//                }
+//                else {
+//                    full = Global.QROSS_KEEPER_HOME  + full
+//                }
+                full = System.getProperty("user.dir").toDir + "qross/temp/" + full
             }
 
             val parent = new File(full).getParentFile
             if (!parent.exists()) {
-                parent.mkdir()
+                parent.mkdirs()
             }
 
             full

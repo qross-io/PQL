@@ -7,6 +7,8 @@ import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.time.DateTime
 
+import scala.collection.JavaConverters._
+
 object DataCell {
     val NOT_FOUND: DataCell = DataCell("NOT_FOUND", DataType.EXCEPTION)
     val NULL: DataCell = DataCell(null, DataType.NULL)
@@ -85,7 +87,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         }
     }
 
-    def getString(quote: String = ""): String = {
+    def mkString(quote: String = ""): String = {
         if (value != null) {
             value.toString.userQuotesIf(quote, dataType == DataType.TEXT || dataType == DataType.DATETIME)
         }
@@ -246,7 +248,12 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     def isTable: Boolean = this.dataType == DataType.TABLE
     def asTable: DataTable = {
         if (valid) {
-            this.value.toTable
+            this.dataType match {
+                case DataType.TABLE => this.value.asInstanceOf[DataTable]
+                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].toTable("field")
+                case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]].asScala.toList.toTable()
+                case _ => DataTable(DataRow("value" -> this.value))
+            }
         }
         else {
             DataTable()
@@ -264,7 +271,18 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     def isRow: Boolean = this.dataType == DataType.ROW
     def asRow: DataRow = {
         if (valid) {
-            this.value.toRow
+            this.dataType match {
+                case DataType.TABLE => this.value.asInstanceOf[DataTable].firstRow.getOrElse(DataRow())
+                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow]
+                case DataType.ARRAY | DataType.LIST =>
+                    val list = this.value.asInstanceOf[java.util.List[Any]]
+                    val row = DataRow()
+                    for (i <- 0 until list.size()) {
+                        row.set("item_" + i, list.get(i))
+                    }
+                    row
+                case _ => DataRow("value" -> this.value)
+            }
         }
         else {
             DataRow()
@@ -280,9 +298,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     }
 
     def isJavaList: Boolean = this.dataType == DataType.LIST || this.dataType == DataType.ARRAY
-    def asScalaList: List[Any] = {
+    def asList: List[Any] = {
         if (valid) {
-            this.value.toScalaList
+            this.dataType match {
+                case DataType.TABLE => this.value.asInstanceOf[DataTable].toList
+                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].getValues
+                case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]].asScala.toList
+                case _ => List[Any](this.value)
+            }
         }
         else {
             List[Any]()
@@ -290,7 +313,12 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     }
     def asJavaList: java.util.List[Any] = {
         if (valid) {
-            this.value.toJavaList
+            this.dataType match {
+                case DataType.TABLE => this.value.asInstanceOf[DataTable].toJavaList
+                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].toJavaList
+                case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]]
+                case _ => List[Any](this.value).asJava
+            }
         }
         else {
             new util.ArrayList[Any]()
