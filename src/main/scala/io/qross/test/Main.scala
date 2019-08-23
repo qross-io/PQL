@@ -46,6 +46,8 @@ object Main {
 //        array(0) = Class[DataCell]
 //        array(1) = Class[List[DataCell]]
 
+        //"12345".takeAfter(3).take(10).print
+
         PSQL.runFile("/sql/test.sql")
 
         System.exit(0)

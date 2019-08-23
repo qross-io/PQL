@@ -27,10 +27,9 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     def isNotNull: Boolean = value == null
     def isEmpty: Boolean = value == ""
     def isNotEmpty: Boolean = value != ""
-    def invalid: Boolean = {
-        (dataType == DataType.EXCEPTION && value == "NOT_FOUND") ||
-                (dataType == DataType.NULL && value == null)
-    }
+    def notFound: Boolean = dataType == DataType.EXCEPTION && value == "NOT_FOUND"
+    def found: Boolean = !notFound
+    def invalid: Boolean = dataType == DataType.EXCEPTION
     def valid: Boolean = !invalid
 
     def data: Option[Any] = Option(value)
@@ -44,6 +43,20 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def ifNull(handler: () => Unit): DataCell = {
         if (isNull) {
+            handler()
+        }
+        this
+    }
+
+    def ifFound(handler: DataCell => Unit): DataCell = {
+        if (found) {
+            handler(this)
+        }
+        this
+    }
+
+    def ifNotFound(handler: () => Unit): DataCell = {
+        if (notFound) {
             handler()
         }
         this
@@ -252,11 +265,11 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable]
                 case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].toTable("field")
                 case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]].asScala.toList.toTable()
-                case _ => DataTable(DataRow("value" -> this.value))
+                case _ => new DataTable(new DataRow("value" -> this.value))
             }
         }
         else {
-            DataTable()
+            new DataTable()
         }
     }
     def toTable: DataCell = {
@@ -272,20 +285,20 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     def asRow: DataRow = {
         if (valid) {
             this.dataType match {
-                case DataType.TABLE => this.value.asInstanceOf[DataTable].firstRow.getOrElse(DataRow())
+                case DataType.TABLE => this.value.asInstanceOf[DataTable].firstRow.getOrElse(new DataRow())
                 case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow]
                 case DataType.ARRAY | DataType.LIST =>
                     val list = this.value.asInstanceOf[java.util.List[Any]]
-                    val row = DataRow()
+                    val row = new DataRow()
                     for (i <- 0 until list.size()) {
                         row.set("item_" + i, list.get(i))
                     }
                     row
-                case _ => DataRow("value" -> this.value)
+                case _ => new DataRow("value" -> this.value)
             }
         }
         else {
-            DataRow()
+            new DataRow()
         }
     }
     def toRow: DataCell = {

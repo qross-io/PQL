@@ -361,7 +361,7 @@ object SHARP {
 
     /* ---------- DataTable ---------- */
 
-    def INSERT$IF$EMPTY(data: DataCell, args: List[DataCell]): DataCell = {
+    def INSERT$IF$NOT$EXISTS(data: DataCell, args: List[DataCell]): DataCell = {
         if (args.nonEmpty) {
             val table = data.asTable
             if (args.head.isTable) {
@@ -393,7 +393,7 @@ object SHARP {
                             args.head.asRow
                         }
                         else {
-                            DataRow()
+            new DataRow()
                         }
 
         data.asTable.firstRow match {
@@ -407,7 +407,7 @@ object SHARP {
                             args.head.asRow
                         }
                         else {
-                            DataRow()
+            new DataRow()
                         }
 
         data.asTable.lastRow match {
@@ -418,7 +418,7 @@ object SHARP {
 
     def GET$ROW(data: DataCell, args: List[DataCell]): DataCell = {
         if (args.nonEmpty) {
-            DataCell(data.asTable.getRow(args.head.asInteger.toInt).getOrElse(DataRow()), DataType.ROW)
+            DataCell(data.asTable.getRow(args.head.asInteger.toInt - 1).getOrElse(new DataRow()), DataType.ROW)
         }
         else {
             throw new SQLExecuteException(s"Empty arguments or incorrect data type at GET ROW, arguments ${args.length}, data type: ${data.dataType} ")

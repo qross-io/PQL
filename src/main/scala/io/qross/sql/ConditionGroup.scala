@@ -15,85 +15,63 @@ import scala.collection.mutable.ArrayBuffer
 class ConditionGroup(expression: String) {
 
     private val conditions = new ArrayBuffer[Condition]()
-    private val ins = new ArrayBuffer[String]()
-    private val exists = new ArrayBuffer[String]()
-    private val selects = new ArrayBuffer[String]()
 
     def evalAll(PSQL: PSQL): Boolean = {
 
         //解析表达式
         var exp = expression.$clean(PSQL)
 
-         //replace SELECT to ~select[n]
+         //replace SELECT to ~value[n]
         var m: Matcher = null
         while ({m = $SELECT$.matcher(exp); m}.find) {
-            val select = findOutSelect(exp, m.group)
-            exp = exp.replace(select, "~select[" + selects.size + "]")
-            selects += select
+            val select = findOutSelect(exp, m.group(0))
+            //exp = exp.replace(select, "~select[" + selects.size + "]")
+            exp = exp.replace(select, PSQL.$stash(DataCell(
+                PSQL.dh.executeSingleList(select.$trim("(", ")").trim().$restore(PSQL)),
+                DataType.ARRAY
+            )))
+            //selects += select
         }
-
-        //replace EXISTS () to ~exists[n]
-        m = EXISTS$$.matcher(exp)
-        while (m.find) {
-            exp = exp.replace(m.group(1), "~exists[" + exists.size + "]")
-            exists += m.group(1)
-        }
-
-        //replace IN () to #[in:n]
-        m = IN$$.matcher(exp)
-        while(m.find) {
-            exp = exp.replace(m.group(1), "~in[" + ins.size + "]")
-            ins += m.group(1)
-        }
-
-        //以上3步目的是去掉括号
 
         // 解析括号中的逻辑 () 并将表达式分步
         while ({m = $BRACKET.matcher(exp); m}.find) {
             parseBasicExpression(m.group(1).trim)
-            exp = exp.replace(m.group(0), CONDITION + (this.conditions.size - 1) + N)
+            exp = exp.replace(m.group(0), "~condition[" + (this.conditions.size - 1) + "]")
         }
         //finally
         parseBasicExpression(exp)
 
-        exists.clear()
-        ins.clear()
-
-        //最终执行
-
-        //IN (SELECT ...)
-        val selectResult = new ArrayBuffer[String]
-        for (select <- selects) {
-            selectResult += PSQL.dh.executeSingleList(select.popStash(PSQL)).asScala.mkString(",")
-        }
-
         //最终执行
         for (condition <- this.conditions) {
             val field = condition.field
-            var value = condition.value
+            val value = condition.value
 
-            m = SELECT$N.matcher(value)
-            while (m.find) {
-                value = value.replace(m.group(0), selectResult(m.group(1).toInt))
-            }
-
-            condition.eval( if ({m = CONDITION$.matcher(field); m}.find) {
+            condition.eval( if (field == null || field == "") {
+                                DataCell.NULL
+                            }
+                            else if ($CONDITION.test(field)) {
                                 DataCell(conditions(m.group(1).toInt).result, DataType.BOOLEAN)
                             }
-                            else if (field.nonEmpty) {
-                                field.$sharp(PSQL)
+                            else if ($VARIABLE.test(field)) {
+                                PSQL.findVariable(field)
+                            }
+                            else if ($INTERMEDIATE$N.test(field)) {
+                                PSQL.values(field.$trim("~value[", "]").toInt)
                             }
                             else {
-                                DataCell.NULL
+                                field.$sharp(PSQL)
                             },
-                            if ({m = CONDITION$.matcher(value); m}.find) {
-                                DataCell(conditions(m.group(1).toInt).result, DataType.BOOLEAN)
+                            if ($CONDITION.test(value)) {
+                                DataCell(conditions(value.$trim("~condition[", "]").toInt).result, DataType.BOOLEAN)
                             }
-                            else if (condition.operator == "IN" || condition.operator == "NOT$IN") {
-                                DataCell(value.$trim("(", ")").split(",").map(m => m.$sharp(PSQL).value).toList.asJava, DataType.ARRAY)
+                            else if ($VARIABLE.test(value)) {
+                                PSQL.findVariable(value)
+                            }
+                            else if ($INTERMEDIATE$N.test(value)) {
+                                PSQL.values(value.$trim("~value[", "]").toInt)
                             }
                             else if (!value.equalsIgnoreCase("EMPTY") && !value.equalsIgnoreCase("NULL") && value != "()") {
-                                value.$sharp(PSQL)
+                                value.$sharp(PSQL, "\"")
                             }
                             else if (value.equalsIgnoreCase("EMPTY")) {
                                 DataCell.EMPTY
@@ -103,11 +81,9 @@ class ConditionGroup(expression: String) {
                             })
 
             if (PSQL.dh.debugging) {
-                Output.writeDotLine(" ", condition.field.$restore(PSQL, "\""), condition.operator, condition.value.$restore(PSQL, "\""), " => ", condition.result)
+                Output.writeDotLine(" ", if (field != null) field.$restore(PSQL, "\"") else "", condition.operator, value.$restore(PSQL, "\""), " => ", condition.result)
             }
         }
-
-        selects.clear()
 
         val result = conditions(conditions.size - 1).result
 
@@ -143,7 +119,7 @@ class ConditionGroup(expression: String) {
             throw new SQLParseException("Can't find closed bracket for SELECT: " + expression)
         }
         else {
-            expression.substring(begin, end)
+            expression.substring(begin - 1, end + 1)
         }
     }
 
@@ -156,18 +132,6 @@ class ConditionGroup(expression: String) {
         var clause = ""
         var exp = expression
 
-        //restore EXISTS
-        m = EXISTS$N.matcher(exp)
-        while (m.find) {
-            exp = exp.replace(m.group(0), exists(m.group(1).toInt))
-        }
-
-        //restore IN
-        m = IN$N.matcher(exp)
-        while (m.find) {
-            exp = exp.replace(m.group(0), ins(m.group(1).toInt))
-        }
-
         //AND
         while ({m = $AND.matcher(exp); m}.find) {
             clause = m.group(2)
@@ -179,19 +143,19 @@ class ConditionGroup(expression: String) {
                 left = left.substring(left.indexOf(n.group) + n.group.length)
             }
 
-            if (!left.startsWith(CONDITION)) {
-                exp = exp.replace(left, CONDITION + this.conditions.size + N)
-                clause = clause.replace(left, CONDITION + this.conditions.size + N)
+            if (!$CONDITION.test(left)) {
+                exp = exp.replace(left, stash)
+                clause = clause.replace(left, stash)
                 conditions += new Condition(left.trim)
             }
 
-            if (!right.startsWith(CONDITION)) {
-                exp = exp.replace(right, CONDITION + this.conditions.size + N)
-                clause = clause.replace(right, CONDITION + this.conditions.size + N)
+            if (!$CONDITION.test(right)) {
+                exp = exp.replace(right, stash)
+                clause = clause.replace(right, stash)
                 conditions += new Condition(right.trim)
             }
 
-            exp = exp.replace(clause, CONDITION + this.conditions.size + N)
+            exp = exp.replace(clause, stash)
             conditions += new Condition(clause.trim) // left AND right
 
         }
@@ -201,26 +165,30 @@ class ConditionGroup(expression: String) {
             left = m.group(3)
             right = m.group(4)
 
-            if (!left.startsWith(CONDITION)) {
-                exp = exp.replace(left, CONDITION + this.conditions.size + N)
-                clause = clause.replace(left, CONDITION + this.conditions.size + N)
+            if (!$CONDITION.test(left)) {
+                exp = exp.replace(left, stash)
+                clause = clause.replace(left, stash)
                 conditions += new Condition(left.trim)
             }
 
-            if (!right.startsWith(CONDITION)) {
-                exp = exp.replace(right, CONDITION + this.conditions.size + N)
-                clause = clause.replace(right, CONDITION + this.conditions.size + N)
+            if (!$CONDITION.test(right)) {
+                exp = exp.replace(right, stash)
+                clause = clause.replace(right, stash)
                 conditions += new Condition(right.trim)
             }
 
-            exp = exp.replace(clause, CONDITION + this.conditions.size + N)
+            exp = exp.replace(clause, stash)
             this.conditions += new Condition(clause.trim) // left OR right
 
         }
 
         //SINGLE
-        if (!expression.startsWith(CONDITION)) {
-            conditions += new Condition(expression.trim)
+        if (!$CONDITION.test(exp)) {
+            conditions += new Condition(exp.trim)
         }
+    }
+
+    private def stash: String = {
+        "~condition[" + this.conditions.size + "]"
     }
 }

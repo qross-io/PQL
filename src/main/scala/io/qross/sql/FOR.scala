@@ -26,7 +26,7 @@ class FOR(var variable: String, val collection: String) {
                         //(PARSE...)
                         val query = collection.$trim("(", ")").trim()
                         if ($SELECT.test(query)) {
-                            PSQL.dh.executeDataTable(query.$restore(PSQL))
+                            new SELECT(query.$restore(PSQL)).execute(PSQL).asTable
                         }
                         else if ($PARSE.test(query)) {
                             PSQL.dh.parseTable(query.takeAfter($PARSE).$eval(PSQL).asText)
@@ -53,7 +53,7 @@ class FOR(var variable: String, val collection: String) {
 
         if (variables.length <= table.columnCount) {
             table.map(row => {
-                val newRow = DataRow()
+                val newRow = new DataRow()
                 for (i <- variables.indices) {
                     newRow.set(variables(i).substring(1).toUpperCase, row.get(i).orNull)
                 }

@@ -17,7 +17,7 @@ object DataRow {
     def from(json: String): DataRow = Json(json).parseRow("/")
     def from(json: String, path: String): DataRow = Json(json).parseRow(path)
     def from(row: DataRow, fieldNames: String*): DataRow = {
-        val newRow = DataRow()
+        val newRow = new DataRow()
         if (fieldNames.nonEmpty) {
             fieldNames.foreach(fieldName => newRow.set(fieldName, row.get(fieldName).get))
         }
@@ -29,16 +29,20 @@ object DataRow {
     }
 }
 
-case class DataRow(private val items: (String, Any)*) {
+class DataRow() {
+
+    def this(items: (String, Any)*) {
+        this()
+
+        for ((k, v) <- items) {
+            this.set(k, v)
+        }
+    }
     
     val columns = new mutable.LinkedHashMap[String, Any]()
     val fields = new mutable.LinkedHashMap[String, DataType]()
     var table: DataTable = _  // 所属的DataTable
-    
-    for ((k, v) <- items) {
-        this.set(k, v)
-    }
-    
+
     //insert or update
     def set(fieldName: String, value: Any): Unit = {
         if (table == null) {
@@ -156,15 +160,17 @@ case class DataRow(private val items: (String, Any)*) {
         }
     }
 
-    def getString(fieldName: String, defaultValue: String = ""): String = getStringOption(fieldName).getOrElse(defaultValue)
+    def getString(fieldName: String): String = getString(fieldName, "")
+    def getString(fieldName: String, defaultValue: String): String = getStringOption(fieldName).getOrElse(defaultValue)
     def getStringOption(fieldName: String): Option[String] = {
         get(fieldName) match {
             case Some(value) => if (value != null) Some(value.toString) else Some(null)
             case None => None
         }
     }
-    
-    def getInt(fieldName: String, defaultValue: Int = 0): Int = getIntOption(fieldName).getOrElse(defaultValue)
+
+    def getInt(fieldName: String): Int = getInt(fieldName, 0)
+    def getInt(fieldName: String, defaultValue: Int): Int = getIntOption(fieldName).getOrElse(defaultValue)
     def getIntOption(fieldName: String): Option[Int] = {
         get(fieldName) match {
             case Some(value) => value match {
@@ -177,8 +183,9 @@ case class DataRow(private val items: (String, Any)*) {
             case None => None
         }
     }
-    
-    def getLong(fieldName: String, defaultValue: Long = 0L): Long = getLongOption(fieldName).getOrElse(defaultValue)
+
+    def getLong(fieldName: String): Long = getLong(fieldName, 0L)
+    def getLong(fieldName: String, defaultValue: Long): Long = getLongOption(fieldName).getOrElse(defaultValue)
     def getLongOption(fieldName: String): Option[Long] = {
         get(fieldName) match {
             case Some(value) => value match {
@@ -192,8 +199,9 @@ case class DataRow(private val items: (String, Any)*) {
             case None => None
         }
     }
-    
-    def getFloat(fieldName: String, defaultValue: Float = 0F): Float = getFloatOption(fieldName).getOrElse(defaultValue)
+
+    def getFloat(fieldName: String): Float = getFloat(fieldName, 0F)
+    def getFloat(fieldName: String, defaultValue: Float): Float = getFloatOption(fieldName).getOrElse(defaultValue)
     def getFloatOption(fieldName: String): Option[Float] = {
         get(fieldName) match {
             case Some(value) => value match {
@@ -207,8 +215,9 @@ case class DataRow(private val items: (String, Any)*) {
             case None => None
         }
     }
-    
-    def getDouble(fieldName: String, defaultValue: Double = 0D): Double = getDoubleOption(fieldName).getOrElse(defaultValue)
+
+    def getDouble(fieldName: String): Double = getDouble(fieldName, 0D)
+    def getDouble(fieldName: String, defaultValue: Double): Double = getDoubleOption(fieldName).getOrElse(defaultValue)
     def getDoubleOption(fieldName: String): Option[Double] = {
         get(fieldName) match {
             case Some(value) => value match {
@@ -238,7 +247,8 @@ case class DataRow(private val items: (String, Any)*) {
         }
     }
 
-    def getDateTime(fieldName: String, defaultValue: DateTime = DateTime.of(1970, 1, 1)): DateTime = getDateTimeOption(fieldName).getOrElse(defaultValue)
+    def getDateTime(fieldName: String): DateTime = getDateTime(fieldName, DateTime.of(1970, 1, 1))
+    def getDateTime(fieldName: String, defaultValue: DateTime): DateTime = getDateTimeOption(fieldName).getOrElse(defaultValue)
     def getDateTimeOption(fieldName: String): Option[DateTime] = {
         getStringOption(fieldName) match {
             case Some(value) => Some(new DateTime(value))

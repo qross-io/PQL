@@ -16,17 +16,17 @@ import scala.util.control.Breaks._
 object DataTable {
     
     def from(dataTable: DataTable): DataTable = {
-        DataTable().copy(dataTable)
+        new DataTable().copy(dataTable)
     }
     
     def ofSchema(dataTable: DataTable): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         table.fields ++= dataTable.fields
         table
     }
     
     def withFields(fields: (String, DataType)*): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         fields.foreach(field => {
             table.addField(field._1, field._2)
         })
@@ -34,16 +34,20 @@ object DataTable {
     }
 }
 
-case class DataTable(private val items: DataRow*) {
+class DataTable() {
+
+    def this(items: DataRow*) {
+        this()
+        //initial rows
+        for (row <- items) {
+            addRow(row)
+        }
+    }
     
     val rows = new mutable.ArrayBuffer[DataRow]()
     private val fields = new mutable.LinkedHashMap[String, DataType]()
     private val labels = new mutable.LinkedHashMap[String, String]()
-    
-    //initial rows
-    for (row <- items) {
-        addRow(row)
-    }
+
 
     def addField(fieldName: String, dataType: DataType): Unit = {
         addFieldWithLabel(fieldName, fieldName, dataType)
@@ -66,7 +70,7 @@ case class DataTable(private val items: DataRow*) {
     def contains(fieldName: String): Boolean = fields.contains(fieldName.toLowerCase())
 
     def newRow(): DataRow = {
-        val row = DataRow()
+        val row = new DataRow()
         row.fields ++= fields
         row.table = this
         row
@@ -128,7 +132,7 @@ case class DataTable(private val items: DataRow*) {
 
     //遍历并返回新的DataTable
     def iterate(callback: DataRow => Unit): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         rows.foreach(row => {
             callback(row)
             table.addRow(row)
@@ -138,7 +142,7 @@ case class DataTable(private val items: DataRow*) {
     }
     
     def collect(filter: DataRow => Boolean) (map: DataRow => DataRow): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         rows.foreach(row => {
             if (filter(row)) {
                 table.addRow(map(row))
@@ -149,7 +153,7 @@ case class DataTable(private val items: DataRow*) {
     }
     
     def map(callback: DataRow => DataRow): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         rows.foreach(row => {
             table.addRow(callback(row))
         })
@@ -167,7 +171,7 @@ case class DataTable(private val items: DataRow*) {
     }
     
     def filter(callback: DataRow => Boolean): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         rows.foreach(row => {
             if (callback(row)) {
                 table.addRow(row)
@@ -182,9 +186,9 @@ case class DataTable(private val items: DataRow*) {
     def columnCount: Int = fields.size
     
     def count(groupBy: String*): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         if (groupBy.isEmpty) {
-            table.addRow(DataRow("_count" -> count))
+            table.addRow(new DataRow("_count" -> count))
         }
         else {
             val map = new mutable.HashMap[DataRow, Int]()
@@ -207,11 +211,11 @@ case class DataTable(private val items: DataRow*) {
     }
     
     def sum(fieldName: String, groupBy: String*): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         if (groupBy.isEmpty) {
             var s = 0D
             rows.foreach(row => s += row.getDoubleOption(fieldName).getOrElse(0D))
-            table.addRow(DataRow("_sum" -> s))
+            table.addRow(new DataRow("_sum" -> s))
         }
         else {
             val map = new mutable.HashMap[DataRow, Double]()
@@ -258,11 +262,11 @@ case class DataTable(private val items: DataRow*) {
             }
         }
         
-        val table = DataTable()
+        val table = new DataTable()
         if (groupBy.isEmpty) {
             var s = 0D
             rows.foreach(row => s += row.getDoubleOption(fieldName).getOrElse(0D))
-            table.addRow(DataRow("_avg" -> s / count))
+            table.addRow(new DataRow("_avg" -> s / count))
         }
         else {
             val map = new mutable.HashMap[DataRow, AVG]()
@@ -306,13 +310,13 @@ case class DataTable(private val items: DataRow*) {
             def get(): Option[Double] = max
         }
         
-        val table = DataTable()
+        val table = new DataTable()
         if (groupBy.isEmpty) {
             val m = MAX()
             rows.foreach(row => {
                 m.compare(row.getDoubleOption(fieldName))
             })
-            table.addRow(DataRow("_max" -> m.get().getOrElse("none")))
+            table.addRow(new DataRow("_max" -> m.get().getOrElse("none")))
         }
         else {
             val map = new mutable.HashMap[DataRow, MAX]()
@@ -356,13 +360,13 @@ case class DataTable(private val items: DataRow*) {
             def get(): Option[Double] = min
         }
     
-        val table = DataTable()
+        val table = new DataTable()
         if (groupBy.isEmpty) {
             val m = MIN()
             rows.foreach(row => {
                 m.compare(row.getDoubleOption(fieldName))
             })
-            table.addRow(DataRow("_min" -> m.get().getOrElse("none")))
+            table.addRow(new DataRow("_min" -> m.get().getOrElse("none")))
         }
         else {
             val map = new mutable.HashMap[DataRow, MIN]()
@@ -387,7 +391,7 @@ case class DataTable(private val items: DataRow*) {
     
     //take
     def take(amount: Int): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         for (i <- 0 until amount) {
             table.addRow(rows(i))
         }
@@ -396,7 +400,7 @@ case class DataTable(private val items: DataRow*) {
     }
 
     def takeSample(amount: Int): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         Random.shuffle(rows)
             .take(amount)
             .foreach(row => {
@@ -407,7 +411,7 @@ case class DataTable(private val items: DataRow*) {
     }
 
     def insertRow(fields: (String, Any)*): DataTable = {
-        addRow(DataRow(fields: _*))
+        addRow(new DataRow(fields: _*))
         this
     }
     
@@ -439,7 +443,7 @@ case class DataTable(private val items: DataRow*) {
     }
     
     def deleteWhile(filter: DataRow => Boolean): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         rows.foreach(row => {
             if (!filter(row)) {
                 table.addRow(row)
@@ -450,10 +454,10 @@ case class DataTable(private val items: DataRow*) {
     }
     
     def select(filter: DataRow => Boolean)(fieldNames: String*): DataTable = {
-        val table = DataTable()
+        val table = new DataTable()
         rows.foreach(row => {
             if (filter(row)) {
-                val newRow = DataRow()
+                val newRow = new DataRow()
                 fieldNames.foreach(fieldName => {
                     newRow.set(fieldName, row.get(fieldName).orNull)
                 })
@@ -561,11 +565,14 @@ case class DataTable(private val items: DataRow*) {
     }
     
     def getFieldNames: List[String] = fields.keySet.toList
+    def getFieldNameList: java.util.List[String] = getFieldNames.asJava
     def getLabelNames: List[String] = labels.values.toList
+    def getLabelList: java.util.List[String] = getLabelNames.asJava
     def getLabels: mutable.LinkedHashMap[String, String] = labels
     def getFields: mutable.LinkedHashMap[String, DataType] = fields
     def getFieldType(fieldName: String): DataType = fields(fieldName.toLowerCase())
     def getRow(i: Int): Option[DataRow] = if (i < rows.size) Some(rows(i)) else None
+    def getRowList: java.util.List[DataRow] = rows.asJava
     def getColumn(fieldName: String): List[Any] = rows.map(row => row.columns(fieldName.toLowerCase())).toList
 
     def firstRow: Option[DataRow] = if (rows.nonEmpty) Some(rows(0)) else None

@@ -21,22 +21,13 @@ object Patterns {
     val $BLANK: Regex = """\s""".r
     val $BLANKS: String = """\s+"""
 
-    val CONDITION: String = "~condition["
-    val N: String = "]"
-    val $SELECT$: Pattern = Pattern.compile("""\(\s*SELECT\s""", Pattern.CASE_INSENSITIVE)  //(SELECT...)
-    val SELECT$N: Pattern = Pattern.compile("""~select\[(\d+)\]""")
-    val EXISTS$$: Pattern = Pattern.compile("""EXISTS\s*(\([^\)]+\))""", Pattern.CASE_INSENSITIVE) // EXISTS()
-    val EXISTS$N: Pattern = Pattern.compile("""~exists\[(\d+)\]""")
-    val IN$$: Pattern = Pattern.compile("""\sIN\s*(\([^\)]+\))""", Pattern.CASE_INSENSITIVE)
-    val IN$N: Pattern = Pattern.compile("""~in\[(\d+)\]""")
     val $BRACKET: Pattern = Pattern.compile("""\(([^\)]+)\)""", Pattern.CASE_INSENSITIVE)
     val $AND: Pattern = Pattern.compile("""(^|\sOR\s)(([\s\S]+?)\s+AND\s+([\s\S]+?))($|\sAND|\sOR)""", Pattern.CASE_INSENSITIVE)
     val $_OR: Pattern = Pattern.compile("\\sOR\\s", Pattern.CASE_INSENSITIVE)
     val $OR: Pattern = Pattern.compile("""(^)(([\s\S]+?)\s+OR\s+([\s\S]+?))(\sOR|$)""", Pattern.CASE_INSENSITIVE)
-    val CONDITION$: Pattern = Pattern.compile("""~condition\[(\d+)\]""", Pattern.CASE_INSENSITIVE)
 
-    //val $FUNCTION: Pattern = Pattern.compile("""@([a-z_]+)\s*\(([^()]*)\)""", Pattern.CASE_INSENSITIVE)
-    // $STRING: Pattern = Pattern.compile("""#\{s(\d+)}""", Pattern.CASE_INSENSITIVE)
+    val $SELECT$: Pattern = Pattern.compile("""\(\s*SELECT\s""", Pattern.CASE_INSENSITIVE)  //(SELECT...)
+    val $CONDITION: Regex = """(?i)^~condition\[(\d+)\]$""".r
 
     val NON_QUERY_CAPTIONS: Set[String] = Set[String]("INSERT", "UPDATE", "DELETE", "CREATE", "ALTER", "DROP", "TRUNCATE")
     val $SELECT: Regex = """(?i)^SELECT\s""".r

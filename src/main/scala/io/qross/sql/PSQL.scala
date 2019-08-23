@@ -113,11 +113,11 @@ object PSQL {
 
 class PSQL(val originalSQL: String, val dh: DataHub) {
 
-    //存储字符串
-    //~char[n]
+    //字符串 ~char[n]
     val chars: ArrayBuffer[String] = new ArrayBuffer[String]()
-    //存储计算过程中的中间结果
-    //~value[n]
+    //富字符串 ~string[n]
+    val strings: ArrayBuffer[String] = new ArrayBuffer[String]()
+    //计算过程中的中间结果~value[n]
     val values: ArrayBuffer[DataCell] = new ArrayBuffer[DataCell]()
 
     private var SQL: String = originalSQL
@@ -164,6 +164,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         "PUT" -> parsePUT,
         "PREP" -> parsePREP,
         "OUTPUT" -> parseOUTPUT,
+        "ECHO" -> parseECHO,
         "PRINT" -> parsePRINT,
         "SHOW" -> parseSHOW,
         "RUN" -> parseRUN,
@@ -193,6 +194,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         "PUT" -> executePUT,
         "PREP" -> executePREP,
         "OUTPUT" -> executeOUTPUT,
+        "ECHO" -> executeECHO,
         "PRINT" -> executePRINT,
         "SHOW" -> executeSHOW,
         "RUN" -> executeRUN,
@@ -208,63 +210,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         //check arguments
         ARGUMENT.findAllMatchIn(SQL).foreach(m => Output.writeWarning(s"Argument ${m.group(0)} is not assigned."))
 
-        //找出富字符串
-        RICH_CHAR.foreach(regex => {
-            regex.findAllIn(SQL).foreach(char => chars += char)
-        })
-
-        //找出普通字符串
-        var quote: Int = -1
-        var previous: Char = ' '
-        for (i <- SQL.indices) {
-            val c = SQL.charAt(i)
-            if (c == '\'') {
-                if (previous == '\'') {
-                    if (SQL.charAt(i-1) != '\\') {
-                        chars += SQL.substring(quote, i + 1)
-                        previous = ' '
-                    }
-                }
-                else if (previous != '"') {
-                    previous = '\''
-                    quote = i
-                }
-            }
-            else if (c == '"') {
-                if (previous == '"') {
-                    if (SQL.charAt(i-1) != '\\') {
-                        chars += SQL.substring(quote, i + 1)
-                        previous = ' '
-                    }
-                }
-                else if (previous != '\'') {
-                    previous = '"'
-                    quote = i
-                }
-            }
-        }
-
-        //去掉单行注释
-        SQL = SQL.split("\r").map(s => {
-            if (WHOLE_LINE_COMMENT.test(s)) {
-                ""
-            }
-            else if (SINGLE_LINE_COMMENT.test(s)) {
-                SINGLE_LINE_COMMENT.replaceAllIn(s, "")
-            }
-            else {
-                s
-            }
-        }).mkString("\r").trim()
-
-        //替换所有字符串
-        //#char[n]
-        for (i <- chars.indices) {
-            SQL = SQL.replace(chars(i), s"~char[$i]")
-        }
-
-        //去年多行注释
-        SQL = MULTILINE_COMMENT.replaceAllIn(SQL, "")
+        SQL = SQL.cleanCommentsAndStashChars(this)
 
         //开始解析
         PARSING.push(root)
@@ -574,6 +520,10 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
         }
     }
 
+    private def parseECHO(sentence: String): Unit = {
+
+    }
+
     private def parsePRINT(sentence: String): Unit = {
         if ({m = $PRINT.matcher(sentence); m}.find) {
             PARSING.head.addStatement(new Statement("PRINT", sentence, new PRINT(m.group(1), m.group(2).trim)))
@@ -856,7 +806,8 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     private def executeGET(statement: Statement): Unit = {
         val $get = statement.instance.asInstanceOf[GET]
-        dh.get($get.selectSQL.$restore(this))
+        dh.buffer(new SELECT($get.selectSQL.$restore(this)).execute(this).asTable)
+        //dh.get($get.selectSQL.$restore(this))
     }
 
     private def executePASS(statement: Statement): Unit = {
@@ -937,7 +888,7 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
                 }
                 else {
                     //JSON, 输出类型设置无效
-                    if ($output.content.startsWith("[") || $output.content.startsWith("{")) {
+                    if ($output.content.bracketsWith("[", "]") || $output.content.bracketsWith("{", "}")) {
                         //对象或数组类型不能eval
                         RESULT = Json.fromText($output.content.$restore(this, "\""))
                                     .findNode("/")
@@ -948,6 +899,10 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
                     }
                 }
         }
+    }
+
+    private def executeECHO(statement: Statement): Unit = {
+        
     }
 
     private def executePRINT(statement: Statement): Unit = {
@@ -992,13 +947,14 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
 
     private def executeSELECT(statement: Statement): Unit = {
         val SQL = statement.sentence.$restore(this)
-        RESULT = dh.executeDataTable(SQL)
-        ROWS = RESULT.asInstanceOf[DataTable].size
+        val result = new SELECT(SQL).execute(this)
+        RESULT = result.value
+        ROWS = result.asTable.size
 
         if (dh.debugging) {
             Output.writeLine("                                                                        ")
             Output.writeLine(SQL.take(100))
-            RESULT.asInstanceOf[DataTable].show()
+            result.asTable.show()
         }
     }
 
@@ -1139,9 +1095,10 @@ class PSQL(val originalSQL: String, val dh: DataHub) {
             //全局变量
             cell = GlobalVariable.get(name, this)
 
-            if (cell.invalid) {
-                throw new SQLExecuteException(s"Global variable $field is not found.")
-            }
+            //未找到忽略, MySQL的局部变量也是以 @ 开头
+//            if (cell.invalid) {
+//                throw new SQLExecuteException(s"Global variable $field is not found.")
+//            }
         }
 
         cell

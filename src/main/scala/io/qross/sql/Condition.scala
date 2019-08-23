@@ -43,7 +43,7 @@ class Condition(val expression: String) {
     NOT
     */
 
-    private val $OPERATOR = Pattern.compile("""===|!==|==|!=|<>|>=|<=|\^=|=\^|\$=|=\$|\*=|=\*|#=|=#|>|<|=|\sNOT\sIN\s|\sIS\s+NOT\s|^IS\s+NOT\s|\sIN\s|\sIS\s|^IS\s|\sAND\s|\sOR\s|\sNOT\s+EXISTS|^NOT\s+EXISTS\s|\sEXISTS\s|^EXISTS\s|^NOT\s|\sNOT\s""", Pattern.CASE_INSENSITIVE)
+    private val $OPERATOR = Pattern.compile("""===|!==|==|!=|<>|>=|<=|\^=|=\^|\$=|=\$|\*=|=\*|#=|=#|>|<|=|\sNOT\sIN\s|\sIS\s+NOT\s|^IS\s+NOT\s|\sIN\s|\sIS\s|^IS\s|\sAND\s|\sOR\s|\sNOT\s+EXISTS|^NOT\s+EXISTS\s|\sEXISTS\s|^EXISTS\s|\sLIKE\s|\sNOT\sLIKE\s|^NOT\s|\sNOT\s""", Pattern.CASE_INSENSITIVE)
 
     private val m: Matcher = $OPERATOR.matcher(expression)
     if (m.find) {
@@ -62,6 +62,8 @@ class Condition(val expression: String) {
             case "NOT$EXISTS" => value.asText.$trim("(", ")").trim() == ""
             case "IN" => value.asList.toSet.contains(field.value)
             case "NOT$IN" => !value.asList.toSet.contains(field.value)
+            case "LIKE" => { "(?i)" + value.asText.replace("%", """[\s\S]*""").replace("?", """[\s\S]""").bracket("^", "$") }.r.test(field.asText)
+            case "NOT$LIKE" => !{ "(?i)" + value.asText.replace("%", """[\s\S]*""").replace("?", """[\s\S]""").bracket("^", "$") }.r.test(field.asText)
             case "IS" =>
                 if (value.isNull) {
                     field.isNull || field.asText.bracketsWith("#{", "}") || field.asText.bracketsWith("&{", "}")
@@ -70,7 +72,7 @@ class Condition(val expression: String) {
                     field.asText == ""
                 }
                 else {
-                    false
+                    field.asText == value.asText
                 }
 
             case "IS$NOT" =>
@@ -81,7 +83,7 @@ class Condition(val expression: String) {
                     field.asText != ""
                 }
                 else {
-                    false
+                    field.asText != value.asText
                 }
             case "===" => field.asText == value.asText
             case "!==" => field.asText != value.asText

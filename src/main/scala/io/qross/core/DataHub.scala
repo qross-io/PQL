@@ -38,7 +38,7 @@ class DataHub (private val defaultConnectionName: String = "") {
 
     private var DEBUG = false
     
-    private val TABLE = DataTable()  //current buffer
+    private val TABLE = new DataTable()  //current buffer
     private val BUFFER = new mutable.HashMap[String, DataTable]() //all buffer
 
     private var TO_BE_CLEAR: Boolean = false
@@ -74,7 +74,7 @@ class DataHub (private val defaultConnectionName: String = "") {
     def openCache(): DataHub = {
         reset()
         if (!SOURCES.contains("CACHE")) {
-            SOURCES += "CACHE" -> DataSource.createMemoryDatabase
+            SOURCES += "CACHE" -> DataSource.MEMORY
         }
         CURRENT = SOURCES("CACHE")
         this
@@ -133,7 +133,7 @@ class DataHub (private val defaultConnectionName: String = "") {
     
     def saveAsCache(): DataHub = {
         if (!SOURCES.contains("CACHE")) {
-            SOURCES += "CACHE" -> DataSource.createMemoryDatabase
+            SOURCES += "CACHE" -> DataSource.MEMORY
         }
         TARGET = SOURCES("CACHE")
         this
@@ -211,7 +211,7 @@ class DataHub (private val defaultConnectionName: String = "") {
     def cache(tableName: String, table: DataTable, primaryKey: String): DataHub = {
 
         if (!SOURCES.contains("CACHE")) {
-            SOURCES += "CACHE" -> DataSource.createMemoryDatabase
+            SOURCES += "CACHE" -> DataSource.MEMORY
         }
 
         //var createSQL = "" + tableName + " (__pid INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE"
@@ -387,7 +387,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         if (DEBUG) println(querySentence)
         if (TABLE.isEmpty) {
             if (default.nonEmpty) {
-                TABLE.addRow(DataRow(default: _*))
+                TABLE.addRow(new DataRow(default: _*))
             }
             else {
                 throw new Exception("No data to pass. Please ensure data exists or provide default value")
@@ -846,7 +846,7 @@ class DataHub (private val defaultConnectionName: String = "") {
             table
         }
         else {
-            DataTable()
+            new DataTable()
         }
     }
 
@@ -859,7 +859,7 @@ class DataHub (private val defaultConnectionName: String = "") {
             BUFFER(tableName)
         }
         else {
-            DataTable()
+            new DataTable()
         }
     }
 
@@ -875,21 +875,21 @@ class DataHub (private val defaultConnectionName: String = "") {
     def firstRow: DataRow = {
         TABLE.firstRow match {
             case Some(row) => row
-            case None => DataRow()
+            case None => new DataRow()
         }
     }
 
     def lastRow: DataRow = {
         TABLE.lastRow match {
             case Some(row) => row
-            case None => DataRow()
+            case None => new DataRow()
         }
     }
 
     def getRow(i: Int): DataRow = {
         TABLE.getRow(i) match {
             case Some(row) => row
-            case None => DataRow()
+            case None => new DataRow()
         }
     }
 

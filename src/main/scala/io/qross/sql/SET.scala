@@ -66,24 +66,44 @@ class SET(var variable: String, expression: String) {
         if ($SELECT.test(exp)) { //SELECT
             exp = exp.$restore(PSQL)
 
+            val result = new SELECT(exp).execute(PSQL)
+
             if (variables.nonEmpty) {
-                val row = PSQL.dh.executeDataRow(exp)
-                if (row.size >= variables.length) {
-                    for (i <- variables.indices) {
-                        PSQL.updateVariable(variables(i)._2, row.getCell(i).to(variables(i)._1))
-                    }
+                result.asTable.firstRow match {
+                    case Some(row) =>
+                        if (row.size >= variables.length) {
+                            for (i <- variables.indices) {
+                                PSQL.updateVariable(variables(i)._2, row.getCell(i).to(variables(i)._1))
+                            }
+                        }
+                        else {
+                            throw new SQLExecuteException("Columns amount in SELECT must equals variables number.")
+                        }
+                    case None =>
+                        for (i <- variables.indices) {
+                            PSQL.updateVariable(variables(i)._2, DataCell(null, variables(i)._1))
+                        }
                 }
-                else {
-                    throw new SQLExecuteException("Columns amount in SELECT must equals variables number.")
-                }
+
             }
             else {
                 PSQL.updateVariable(variable,
                         dataType match {
-                            case DataType.TABLE => DataCell(PSQL.dh.executeDataTable(exp), DataType.TABLE)
-                            case DataType.ROW => DataCell(PSQL.dh.executeDataRow(exp), DataType.ROW)
-                            case DataType.ARRAY => DataCell(PSQL.dh.executeSingleList(exp), DataType.ARRAY)
-                            case _ => PSQL.dh.executeSingleValue(exp)
+                            case DataType.TABLE => result.toTable
+                            case DataType.ROW => result.toRow
+                            case DataType.ARRAY => result.toJavaList
+                            case _ =>
+                                result.asTable.firstRow match {
+                                    case Some(row) =>
+                                        val data = row.getCell(0)
+                                        if (data.notFound) {
+                                            DataCell.NULL
+                                        }
+                                        else {
+                                            data
+                                        }
+                                    case None => DataCell.NULL
+                                }
                         }
                 )
             }

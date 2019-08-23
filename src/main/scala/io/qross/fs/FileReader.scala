@@ -82,7 +82,7 @@ case class FileReader(filePath: String) {
         var table = new DataTable()
         while (this.hasNextLine) {
             val line = this.readLine.split(this.delimiter, -1)
-            val row = DataRow()
+            val row = new DataRow()
             var i = 0
             for (field <- fields.keys) {
                 row.set(field, if (i < line.length) line(i) else fields(field))
@@ -136,7 +136,7 @@ case class FileReader(filePath: String) {
         val table = new DataTable()
         while (this.hasNextLine) {
             val line = this.readLine.split(this.delimiter, -1)
-            val row = DataRow()
+            val row = new DataRow()
             for (i <- fields.indices) {
                 row.set(fields(i), if (i < line.length) line(i) else null)
             }

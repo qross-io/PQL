@@ -56,13 +56,17 @@ object Properties {
         props.containsKey(key)
     }
 
-    def get(key: String, defaultValue: String = ""): String = {
+    def get(key: String, defaultValue: String): String = {
         if (props.containsKey(key)) {
             props.getProperty(key)
         }
         else {
             defaultValue
         }
+    }
+
+    def get(key: String): String = {
+        get(key, "null")
     }
 
     def set(key: String, value: String): Unit = {

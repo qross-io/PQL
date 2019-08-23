@@ -6,6 +6,10 @@
 
 DEBUG ON;
 
+OPEN "mysql.qross";
+SELECT id FROM test.wz LIMIT 0 -> INSERT IF NOT EXISTS 2;
+
+
 --SET $a := @NOW SET "DAY=1" SET "DAY-1" FORMAT "yyyy-MM-dd";
 --set $a := @now PLUS DAYS $b * - 2;
 --TEMP hello # SELECT * FROM test.wz;
@@ -14,9 +18,6 @@ DEBUG ON;
 --    SELECT * FROM hello;
 
 
-SET $a := @LEFT("hello", 2);
-PRINT $a;
-
-PRINT @REPLACE('hello world', 'o', 'x');
-
-"A" == "a"
+--IF true THEN
+--    PRINT INFO 'CORRECT;
+--END IF;

@@ -858,7 +858,7 @@ class Excel(val fileName: String) {
 
         val fis = new FileInputStream(new File(path))
         //val workbook: Workbook = if (version == FASHION) new XSSFWorkbook(fis) else new HSSFWorkbook(fis)
-        DataTable()
+        new DataTable()
 
         /*
         //获取工作表

@@ -119,7 +119,7 @@ case class Json(text: String = "") {
         val node = findNode(path)
         if (node.isArray) {
             node.elements().forEachRemaining(child => {
-                val row = DataRow()
+                val row = new DataRow()
                 if (child.isObject) {
                     child.fields().forEachRemaining(item => {
                         //table.addField(item.getKey, DataType.from(node))
@@ -140,7 +140,7 @@ case class Json(text: String = "") {
             })
         }
         else if (node.isObject) {
-            val row = DataRow()
+            val row = new DataRow()
             node.fields().forEachRemaining(child => {
                 //table.addField(child.getKey, DataType.from(child.getValue))
                 row.set(child.getKey, getCell(child.getValue))
@@ -148,7 +148,7 @@ case class Json(text: String = "") {
             table.addRow(row)
         }
         else {
-            val row = DataRow()
+            val row = new DataRow()
             row.set("_value", getCell(node))
             table.addRow(row)
         }
@@ -158,7 +158,7 @@ case class Json(text: String = "") {
 
     def parseRow(path: String): DataRow = {
         
-        val row = new DataRow
+        val row = new DataRow()
         
         val node = findNode(path)
         if (node.isObject) {

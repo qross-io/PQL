@@ -1,17 +1,16 @@
 package io.qross.sql
 
 import io.qross.core.{DataCell, DataType}
+import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
-import io.qross.sql.Patterns.{$INTERMEDIATE$N, FUNCTION_NAMES, $CONSTANT}
+import io.qross.sql.Patterns.{$CONSTANT, $INTERMEDIATE$N, FUNCTION_NAMES}
 
+import scala.collection.mutable
 import scala.util.matching.Regex
 
 object Solver {
 
-    val WHOLE_LINE_COMMENT: Regex = """^--.*$""".r //整行注释
-    val SINGLE_LINE_COMMENT: Regex = """--.*?(\r|$)""".r //单行注释
-    val MULTILINE_COMMENT: Regex = """/\*[\s\S]*\*/""".r //多行注释
     val ARGUMENT: Regex = """(#|&)\{([a-zA-Z0-9_]+)\}""".r  //入参 #{name} 或 &{name}
     //val GLOBAL_VARIABLE: Regex = """@\(?([a-zA-Z0-9_]+)\)?""".r //全局变量 @name 或 @(name)
     //val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
@@ -20,11 +19,11 @@ object Solver {
         """\$([a-zA-Z0-9_]+)""".r
     )
     val GLOBAL_VARIABLE: List[Regex] = List[Regex](
-        """@\(([a-zA-Z0-9_]+)\)(\s\S)""".r,
-        """@([a-zA-Z0-9_]+)(\s\S)""".r
+        """@\(([a-zA-Z0-9_]+)\)""".r,
+        """@([a-zA-Z0-9_]+)""".r
     )
     val USER_DEFINED_FUNCTION: Regex = """$[a-zA-Z_]+\(\)""".r //用户函数, 未完成
-    val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\(([^\)]*)\)""".r //系统函数
+    val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\s*\(([^\)]*)\)""".r //系统函数
     val JS_EXPRESSION: Regex = """\~\{([\s\S]+?)}""".r //js表达式
     val JS_STATEMENT: Regex = """\~\{\{([\s\S]+?)}}""".r// js语句块
     val SHARP_EXPRESSION: Regex = """(?i)\$\{([^{][\s\S]+?)\}""".r //Sharp表达式
@@ -32,9 +31,134 @@ object Solver {
 
     val RICH_CHAR: List[Regex] = List[Regex]("\"\"\"[\\s\\S]*?\"\"\"".r, "'''[\\s\\S]*?'''".r) //富字符串
     val CHAR$N: Regex = """~char\[(\d+)\]""".r  //字符串占位符
+    val STRING$N: Regex = """~string\[(\d+)\]""".r  //富字符串占位符
     val VALUE$N: Regex = """~value\[(\d+)\]($|\s|\S)""".r //中间结果占位符
 
     implicit class Sentence(var sentence: String) {
+
+        def cleanCommentsAndStashChars(PSQL: PSQL): String = {
+
+            sentence = sentence.replace("'''", "%three-single-quotes%")
+                               .replace("\"\"\"", "%three-double-quotes%")
+
+            val blocks = new mutable.ArrayBuffer[(String, Int, Int)]()
+            var closing: Char = ' '
+            var start = -1
+            for (i <- sentence.indices) {
+                val c = sentence.charAt(i)
+                c match {
+                    //单行注释开始
+                    case '-' =>
+                        if (i > 0 && sentence.charAt(i - 1) == '-' && closing == ' ') {
+                            closing = c
+                            start = i - 1
+                        }
+                    //单行注释结束
+                    case '\r' =>
+                        if (closing == '-') {
+                            blocks += (("SINGLE-LINE-COMMENT", start, i + 1))
+                            start = -1
+                            closing = ' '
+                        }
+                    //多行注释开始
+                    case '*' =>
+                        if (i > 0 && sentence.charAt(i - 1) == '/' && closing == ' ') {
+                            closing = '*'
+                            start = i - 1
+                        }
+                    //多行注释结束
+                    case '/' =>
+                        if (closing == '*' && i > 0 && sentence.charAt(i - 1) == '*') {
+                            blocks += (("MULTI-LINES-COMMENT", start, i + 1))
+                            start = -1
+                            closing = ' '
+                        }
+                    //单引号字符串
+                    case '\'' =>
+                        if (closing == ' ') {
+                            closing = '\''
+                            start = i
+                        }
+                        else if (closing == '\'') {
+                            if (i > 0 && sentence.charAt(i - 1) != '\\') {
+                                blocks += (("SINGLE-QUOTE-STRING", start, i + 1))
+                                start = -1
+                                closing = ' '
+                            }
+                        }
+                    //双引号字符串
+                    case '"' =>
+                        if (closing == ' ') {
+                            closing = '"'
+                            start = i
+                        }
+                        else if (closing == '"') {
+                            if (i > 0 && sentence.charAt(i - 1) != '\\') {
+                                blocks += (("DOUBLE-QUOTE-STRING", start, i + 1))
+                                start = -1
+                                closing = ' '
+                            }
+                        }
+                    case _ =>
+                }
+            }
+
+            //最后一行是注释
+            if (start > -1) {
+                closing match {
+                    case '-' => blocks += (("SINGLE-LINE-COMMENT", start, sentence.length))
+                    case '*' => throw new SQLParseException("Multi-lines comment isn't closed: " + sentence.takeAfter(start - 1).take(20))
+                    case '\'' => throw new SQLParseException("Char isn't closed: " + sentence.takeAfter(start - 1).take(20))
+                    case '"' => throw new SQLParseException("String isn't closed: " + sentence.takeAfter(start - 1).take(20))
+                }
+                start = -1
+                closing = ' '
+            }
+
+            /* 闭合检查
+            case '(' =>
+            case ')' =>
+            case '{' =>
+            case '}' =>
+            //<% %>
+            case '%' =>
+            case '>' =>
+            */
+
+            blocks.map(closed => {
+                (sentence.substring(closed._2, closed._3),
+                    closed._1 match {
+                        case "SINGLE-LINE-COMMENT" => ""
+                        case "MULTI-LINES-COMMENT" => ""
+                        case "SINGLE-QUOTE-STRING" => "~"
+                        case "DOUBLE-QUOTE-STRING" => "~"
+                        case _ =>
+                    })
+            }).foreach(repl => {
+                if (repl._2 == "") {
+                    sentence = sentence.replace(repl._1, "")
+                }
+                else {
+                    PSQL.chars += repl._1
+                    sentence = sentence.replace(repl._1, "~char[" + (PSQL.chars.size - 1) + "]")
+                }
+            })
+
+            sentence = sentence.replace("%three-single-quotes%", "'''")
+                               .replace("%three-double-quotes%", "\"\"\"")
+
+            //找出富字符串
+            RICH_CHAR.foreach(regex => {
+                regex.findAllIn(sentence)
+                    .foreach(string => {
+                        PSQL.strings += string
+                        sentence = sentence.replace(string, "~string[" + (PSQL.strings.size - 1) + "]")
+                    })
+            })
+
+            sentence
+        }
+
         //恢复字符串
         def restoreChars(PSQL: PSQL, quote: String = ""): String = {
 
@@ -45,25 +169,7 @@ object Solver {
                     if (i < PSQL.chars.size) {
                         val char = PSQL.chars(i)
                         sentence = sentence.replace(m.group(0),
-                            if (char.startsWith("\"\"\"")) {
-                                char.$trim("\"\"\"")
-                                    .replace("\\", "\\\\")
-                                    .replace("\"", "\\\"")
-                                    .bracket("\"")
-                                    .replace("\r", "~u000d")
-                                    .replace("\n", "~u000a")
-                                    .$restore(PSQL, "")
-                            }
-                            else if (char.startsWith("'''")) {
-                                char.$trim("'''")
-                                    .replace("\\", "\\\\")
-                                    .replace("'", "\\'")
-                                    .bracket("'")
-                                    .replace("\r", "~u000d")
-                                    .replace("\n", "~u000a")
-                                    .$restore(PSQL, "")
-                            }
-                            else if (quote != "") {
+                            if (quote != "") {
                                 if (!char.quotesWith(quote)) {
                                     char.removeQuotes().useQuotes(quote)
                                 }
@@ -73,6 +179,37 @@ object Solver {
                             }
                             else {
                                 char
+                            })
+                    }
+                })
+
+            STRING$N
+                .findAllMatchIn(sentence)
+                .foreach(m => {
+                    val i = m.group(1).toInt
+                    if (i < PSQL.strings.size) {
+                        val string = PSQL.strings(i)
+                        sentence = sentence.replace(m.group(0),
+                            if (string.startsWith("\"\"\"")) {
+                                string.$trim("\"\"\"")
+                                    .$restore(PSQL, "")
+                                    .replace("\\", "\\\\")
+                                    .replace("\"", "\\\"")
+                                    .bracket("\"")
+                                    .replace("\r", "~u000d")
+                                    .replace("\n", "~u000a")
+                            }
+                            else if (string.startsWith("'''")) {
+                                string.$trim("'''")
+                                    .$restore(PSQL, "")
+                                    .replace("\\", "\\\\")
+                                    .replace("'", "\\'")
+                                    .bracket("'")
+                                    .replace("\r", "~u000d")
+                                    .replace("\n", "~u000a")
+                            }
+                            else {
+                                string
                             })
                     }
                 })
@@ -136,8 +273,10 @@ object Solver {
                 .foreach(m => {
                     val whole = m.group(0)
 
-                    PSQL.findVariable(whole).ifValid(data => {
+                    PSQL.findVariable(whole).ifFound(data => {
                         sentence = sentence.replace(whole, PSQL.$stash(data))
+                    }).ifNotFound(() => {
+                        Output.writeWarning(s"The variable $whole has not been assigned.")
                     })
                 })
 
@@ -147,14 +286,10 @@ object Solver {
                     .foreach(m => {
                         val whole = m.group(0)
                         val name = m.group(1)
-                        val tail = m.group(2)
-                        val prefix = whole.takeBefore(name)
-                        val suffix = whole.takeAfter(name)
-                        val field = prefix + name + suffix
 
-                        if (prefix.endsWith("(") && suffix.startsWith(")") || tail != "(" || !FUNCTION_NAMES.contains(name.toUpperCase())) {
-                            PSQL.findVariable(field).ifValid(data => {
-                                sentence = sentence.replace(field, PSQL.$stash(data))
+                        if (whole.contains("(") && whole.endsWith(")") || !FUNCTION_NAMES.contains(name.toUpperCase())) {
+                            PSQL.findVariable(whole).ifFound(data => {
+                                sentence = sentence.replace(whole, PSQL.$stash(data))
                             })
                         }
                     })
@@ -271,9 +406,7 @@ object Solver {
             sentence = sentence.restoreChars(PSQL, quote).trim()
             //如果是中间变量
             if ($INTERMEDIATE$N.test(sentence)) {
-                PSQL.values($INTERMEDIATE$N.findAllMatchIn(sentence)
-                    .map(m => m.group(1).toInt)
-                    .toList.head)
+                PSQL.values(sentence.$trim("~value[", "]").toInt)
             }
             //如果是常量
             else if ($CONSTANT.test(sentence)) {

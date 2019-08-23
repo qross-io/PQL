@@ -12,17 +12,12 @@ import scala.collection.mutable
 
 object DataSource {
 
-    def QROSS: DataSource = {
-        new DataSource(JDBC.QROSS)
-    }
+    def QROSS: DataSource = new DataSource(JDBC.QROSS)
 
-    def DEFAULT : DataSource = {
-        new DataSource(JDBC.DEFAULT)
-    }
+    def DEFAULT : DataSource = new DataSource(JDBC.DEFAULT)
 
-    def createMemoryDatabase: DataSource = {
-        new DataSource(DBType.Memory)
-    }
+    def MEMORY: DataSource = new DataSource(DBType.Memory)
+
 }
 
 class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: String = "") {
@@ -69,6 +64,8 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
                 else {
                     System.err.println("Open database ClassNotFoundException " + e.getMessage)
                 }
+            case e: InstantiationException => System.err.println("Open database InstantiationException " + e.getMessage)
+            case e: IllegalAccessException => System.err.println("Open database IllegalAccessException " + e.getMessage)
         }
 
         //尝试连接
@@ -80,8 +77,6 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
                 this.connection = Some(DriverManager.getConnection(config.connectionString))
             }
         } catch {
-            case e: InstantiationException => System.err.println("Open database InstantiationException " + e.getMessage)
-            case e: IllegalAccessException => System.err.println("Open database IllegalAccessException " + e.getMessage)
             case e: SQLException => System.err.println("Open database SQLException " + e.getMessage)
         }
 
@@ -123,7 +118,7 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
     
     def executeDataTable(SQL: String, values: Any*): DataTable = {
         
-        val table: DataTable = new DataTable
+        val table: DataTable = new DataTable()
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
                 val meta: ResultSetMetaData = rs.getMetaData
@@ -139,12 +134,12 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
                     table.addFieldWithLabel(fieldName, meta.getColumnLabel(i), DataType.ofTypeName(meta.getColumnTypeName(i), meta.getColumnClassName(i))) //meta.getColumnTypeName(i)
                 }
 
-                val fields = table.getFields.toList
+                val fields = table.getFieldNames
                 while (rs.next) {
                     val row = table.newRow()
                     for (i <- 1 to columns) {
                         //row.set(fields(i-1)._1, if (fields(i-1)._2 != DataType.BLOB) rs.getObject(i) else rs.getString(i))
-                        row.set(fields(i-1)._1, rs.getObject(i))
+                        row.set(fields(i-1), rs.getObject(i))
                     }
                     table.insert(row)
                 }
@@ -259,7 +254,7 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
     }
     
     def executeSingleValue(SQL: String, values: Any*): DataCell = {
-        var data: DataCell = DataCell.NOT_FOUND
+        var data: DataCell = DataCell.NULL
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
                 if (rs.next()) {
@@ -499,7 +494,7 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
     }
 
     def tableSelect(SQL: String, table: DataTable): DataTable = {
-        val result = DataTable()
+        val result = new DataTable()
 
         if (SQL.contains("?")) {
             table.foreach(row => {

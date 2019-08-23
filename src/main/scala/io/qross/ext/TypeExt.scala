@@ -417,6 +417,7 @@ object TypeExt {
         def toText: String = {
             any match {
                 case str: String => str
+                case null => null
                 case _ => any.toString
             }
         }
@@ -561,7 +562,7 @@ object TypeExt {
                             row.set(fieldName + i, array(i))
                         }
                         table.addRow(row)
-                    case _ => table.addRow(DataRow(fieldName -> item))
+                    case _ => table.addRow(new DataRow(fieldName -> item))
                 }
             }
             table
@@ -576,7 +577,7 @@ object TypeExt {
         def toTable(keyName: String = "key", valueName: String = "value"): DataTable = {
             val table = new DataTable()
             for (item <- map) {
-                table.addRow(DataRow(keyName -> item._1, valueName -> item._2))
+                table.addRow(new DataRow(keyName -> item._1, valueName -> item._2))
             }
             table
         }

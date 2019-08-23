@@ -5,7 +5,7 @@ import io.qross.jdbc.{DataSource, JDBC}
 
 object Configurations {
 
-    private val CONFIG = DataRow()
+    private val CONFIG = new DataRow()
 
     if (JDBC.hasQrossSystem) {
         DataSource.QROSS.queryDataTable("SELECT conf_key, conf_value FROM qross_conf")
