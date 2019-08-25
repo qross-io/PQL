@@ -4,16 +4,16 @@ import java.sql.DriverManager
 import java.util.{Date, Properties}
 
 import io.qross.core._
-import io.qross.sql.Solver
+import io.qross.pql.Solver
 import io.qross.fs.{ResourceDir, ResourceFile}
 import io.qross.jdbc.DataSource
 import io.qross.net.Json
 import io.qross.ext.TypeExt._
-import io.qross.sql.Solver._
-import io.qross.sql.{OUTPUT, PSQL, Patterns, SHARP}
+import io.qross.pql.Solver._
+import io.qross.pql.{OUTPUT, PQL, Patterns, SHARP}
 import io.qross.time.{CronExp, DateTime}
-import io.qross.sql.Patterns._
-import io.qross.sql.PSQL._
+import io.qross.pql.Patterns._
+import io.qross.pql.PQL._
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -46,9 +46,16 @@ object Main {
 //        array(0) = Class[DataCell]
 //        array(1) = Class[List[DataCell]]
 
-        //"12345".takeAfter(3).take(10).print
+        "12345".split("4").flatMap(i => {
+            if (i.contains("2")) {
+                i.split("2")
+            }
+            else {
+                i
+            }
+        }).foreach(println)
 
-        PSQL.runFile("/sql/test.sql")
+        //PQL.runFile("/sql/test.sql")
 
         System.exit(0)
 
@@ -62,7 +69,7 @@ object Main {
 
         System.exit(0)
 
-        new PSQL("""12"3\",4" --"--"hello
+        new PQL("""12"3\",4" --"--"hello
          | 5678',90'
          | /*
          | '--\'na'me
@@ -89,7 +96,7 @@ object Main {
         dh.close()
 //
 
-//        PSQL.open(
+//        PQL.open(
 //            """
 //               SELECT b, c FROM dt;
 //            """.stripMargin).run()
@@ -101,7 +108,7 @@ object Main {
         OUTPUT "arr" # [1, 2, 3];
         OUTPUT "val" # "hello" + "#" + "world";
 
-        PSQL.open(
+        PQL.open(
             """
               | REQUEST JSON API "http://localhost:8080/api2?name=abc";
               |     PARSE "/";

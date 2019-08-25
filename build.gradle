@@ -6,10 +6,10 @@ apply plugin: 'maven'
 apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
-version = '0.5.9-64-SNAPSHOT'
+version = '0.5.9-65-SNAPSHOT'
 sourceCompatibility = 1.8
 
-archivesBaseName = "qross-psql"
+archivesBaseName = "qross-pql"
 
 // jar {
 //     manifest {
@@ -50,15 +50,13 @@ dependencies {
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.6'
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.4'
     compile group: 'org.json4s', name: 'json4s-jackson_2.12', version: '3.6.2'
-    //compile group: 'commons-configuration', name: 'commons-configuration', version: '1.10'
+
     runtime group: 'mysql', name: 'mysql-connector-java', version: '5.1.47'
     //runtime group: 'mysql', name: 'mysql-connector-java', version: '8.0.16'
     //runtime('mysql:mysql-connector-java')
     runtime group: 'org.xerial', name: 'sqlite-jdbc', version: '3.20.0'
-    //compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.4'
 
-    //runtime group: 'com.alibaba.cloud.analyticdb', name: 'adbclient', version: '1.0.3'
-
+    //compile group: 'commons-configuration', name: 'commons-configuration', version: '1.10'
     //compile group: 'org.apache.hadoop', name: 'hadoop-common', version: '2.7.1'
     //compile group: 'org.apache.hadoop', name: 'hadoop-hdfs', version: '2.7.1'
     //compile group: 'org.apache.hadoop', name: 'hadoop-auth', version: '2.7.1'
@@ -81,7 +79,7 @@ uploadArchives {
             pom.project {
                 name = project.name
                 packaging = 'jar'
-                description = 'qross PSQL and development toolkit v0.5.9'
+                description = 'qross PQL and development toolkit v0.5.9'
             }
         }
     }
@@ -90,7 +88,7 @@ uploadArchives {
 shadowJar {
     zip64 true
     //mergeServiceFiles('META-INF/spring.*')
-    archiveName = "qross-psql-0.5.9.jar"
+    archiveName = "qross-pql-0.5.9.jar"
 }
 
 artifacts {

@@ -1,7 +1,7 @@
 package io.qross.core
 
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.sql.GlobalVariable
+import io.qross.pql.GlobalVariable
 
 object Authentication {
     implicit class DataHub$Auth(val dh: DataHub) {

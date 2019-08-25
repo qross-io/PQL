@@ -7,8 +7,8 @@ import io.qross.core.DataType.DataType
 import io.qross.core._
 import io.qross.net.Json
 import io.qross.setting.Global
-import io.qross.sql.SQLExecuteException
-import io.qross.sql.Solver.Sentence
+import io.qross.pql.SQLExecuteException
+import io.qross.pql.Solver.Sentence
 import io.qross.time.{DateTime, Timer}
 import javax.script.{ScriptEngine, ScriptEngineManager, ScriptException}
 
@@ -167,7 +167,7 @@ object TypeExt {
             }
         }
 
-        //去掉常量中的双引号，用于PSQL计算结果
+        //去掉常量中的双引号，用于PQL计算结果
         def removeQuotes(): String = {
             if (string.bracketsWith("\"", "\"")) {
                 string.substring(1, string.length - 1).replace("\\\"", "\"")
