@@ -19,7 +19,7 @@ object BaseClass {
 
                 if (findable) {
                     className = stack.getClassName
-                    if (!stack.getClassName.$startsWith("io.qross.setting", "io.qross.fs", "io.qross.jdbc", "io.qross.core", "io.qross.ext", "io.qross.net", "io.qross.sql")) {
+                    if (!stack.getClassName.$startsWith("io.qross.setting", "io.qross.fs", "io.qross.jdbc", "io.qross.core", "io.qross.ext", "io.qross.net", "io.qross.pql")) {
                         break
                     }
                 }

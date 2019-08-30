@@ -561,7 +561,7 @@ class SHARP(private val expression: String, private var data: DataCell = DataCel
             }
 
         val values = sentence.split($LINK.regex, -1).map(_.trim())
-        val links = $LINK.findAllIn(sentence).map(l => l.trim().replaceAll("""\s+""", "\\$").toUpperCase()).toArray
+        val links = $LINK.findAllIn(sentence).map(l => l.trim().replaceAll(BLANKS, "\\$").toUpperCase()).toArray
 
         if (data.invalid) {
             data = values.head.$sharp(PQL)
@@ -570,7 +570,7 @@ class SHARP(private val expression: String, private var data: DataCell = DataCel
         for (i <- links.indices) {
             if (SHARP_LINKS.contains(links(i))) {
                 data =
-                    Class.forName("io.qross.sql.SHARP").getDeclaredMethod(links(i),
+                    Class.forName("io.qross.pql.SHARP").getDeclaredMethod(links(i),
                     Class.forName("io.qross.core.DataCell"),
                     Class.forName("scala.collection.immutable.List"))
                         .invoke(null, data,

@@ -1,19 +1,22 @@
 package io.qross.net
 
 import io.qross.core.{DataHub, DataRow, ExtensionNotFoundException}
-import io.qross.fs.ResourceFile
+import io.qross.ext.Output
+import io.qross.ext.TypeExt._
 import io.qross.fs.FilePath._
+import io.qross.fs.SourceFile
 import io.qross.jdbc.{DataSource, JDBC}
+import io.qross.pql.PQL
+import io.qross.pql.Patterns.EMBEDDED
 import io.qross.setting.Global
 import io.qross.time.Timer
-import io.qross.ext.Output
+import io.qross.pql.Solver._
 import javax.activation.{DataHandler, FileDataSource}
 import javax.mail.internet._
 import javax.mail.{Message, SendFailedException, Session, Transport}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.io.Source
 
 object Email {
     
@@ -54,8 +57,8 @@ object Email {
             dh.plug("EMAIL", new Email(title))
         }
 
-        def fromResourceTemplate(resourceFile: String): DataHub = {
-            EMAIL.fromResourceTemplate(resourceFile)
+        def fromTemplate(template: String): DataHub = {
+            EMAIL.fromTemplate(template)
             dh
         }
 
@@ -75,21 +78,21 @@ object Email {
         }
 
         def placeEmailTitle(title: String): DataHub = {
-            EMAIL.placeContent("${title}", title)
+            EMAIL.placeData("#{title}", title)
             dh
         }
 
         def placeEmailContent(content: String): DataHub = {
-            EMAIL.placeContent("${content}", content)
+            EMAIL.placeData("#{content}", content)
             dh
         }
 
         def placeEmailDataTable(placeHolder: String = ""): DataHub = {
             if (placeHolder == "") {
-                EMAIL.placeContent("${data}", dh.getData.toHtmlString)
+                EMAIL.placeData("#{data}", dh.getData.toHtmlString)
             }
             else {
-                EMAIL.placeContent("${" + placeHolder + "}", dh.getData.toHtmlString)
+                EMAIL.placeData("#{" + placeHolder + "}", dh.getData.toHtmlString)
             }
 
             dh.preclear()
@@ -97,14 +100,14 @@ object Email {
 
         def placeEmailHolder(replacements: (String, String)*): DataHub = {
             for ((placeHolder, replacement) <- replacements) {
-                EMAIL.placeContent(placeHolder, replacement)
+                EMAIL.placeData(placeHolder, replacement)
             }
             dh
         }
 
         def placeEmailContentWithRow(i: Int = 0): DataHub = {
             dh.getData.getRow(i) match {
-                case Some(row) => EMAIL.placeContentWidthDataRow(row)
+                case Some(row) => EMAIL.placeDataWithRow(row)
                 case None =>
             }
 
@@ -113,7 +116,7 @@ object Email {
 
         def placeEmailContentWithFirstRow(): DataHub = {
             dh.getData.firstRow match {
-                case Some(row) => EMAIL.placeContentWidthDataRow(row)
+                case Some(row) => EMAIL.placeDataWithRow(row)
                 case _ =>
             }
 
@@ -145,9 +148,9 @@ object Email {
         }
 
         def send(): DataHub = {
-            EMAIL.placeContent("${title}", "")
-            EMAIL.placeContent("${content}", "")
-            EMAIL.placeContent("${data}", "")
+            EMAIL.placeData("${title}", "")
+            EMAIL.placeData("${content}", "")
+            EMAIL.placeData("${data}", "")
             EMAIL.send()
 
             dh
@@ -163,59 +166,81 @@ class Email(private var title: String) {
     private var toReceivers = new mutable.HashMap[String, String]()
     private var ccReceivers = new mutable.HashMap[String, String]()
     private var bccReceivers = new mutable.HashMap[String, String]()
-    private var content: String = if (Global.EMAIL_DEFAULT_TEMPLATE != "") ResourceFile.open(Global.EMAIL_DEFAULT_TEMPLATE).output else ""
+    private var content: String = ""
 
     def fromTemplate(template: String): Email = {
-        this.content = template
+        this.content = EMBEDDED + {
+            if (template.bracketsWith("<", ">") || (template.contains("<%") && template.contains("%>"))) {
+                template
+            }
+            else {
+                SourceFile.read(template)
+            }
+        }
         this
     }
 
-    def fromResourceTemplate(path: String): Email = {
-        this.content = ResourceFile.open(path).output
-        this
-    }
-
-    def fromFileTemplate(path: String): Email = {
-        this.content = Source.fromFile(path.locate()).mkString
+    def fromDefaultTemplate(): Email = {
+        fromTemplate(Global.EMAIL_DEFAULT_TEMPLATE)
         this
     }
 
     def withDefaultSignature(): Email = {
-        this.content = this.content.replace("${signature}", ResourceFile.open(Global.EMAIL_DEFAULT_SIGNATURE).output)
+        withSignature(Global.EMAIL_DEFAULT_SIGNATURE)
+    }
+
+    def withSignature(signature: String): Email = {
+        val code = {
+            if (signature.bracketsWith("<", ">") || (signature.contains("<%") && signature.contains("%>"))) {
+                signature
+            }
+            else {
+                SourceFile.read(signature)
+            }
+        }
+        this.content = {
+            if (this.content.contains("#{signature}")) {
+                this.content.replace("#{signature}", code)
+            }
+            else if ("""</body>""".r.test(this.content)) {
+                this.content.replaceAll("""</body>""", code)
+            }
+            else {
+                this.content + code
+            }
+        }
+
         this
     }
 
-    def withSignature(path: String): Email = {
-        this.content = this.content.replace("${signature}", ResourceFile.open(path).output)
-        this
-    }
-    
     def setTitle(title: String): Email = {
         this.title = title
         this
     }
-    
+
     def setContent(content: String): Email = {
-        this.content = if (this.content.contains("${content}")) this.content.replace("${content}", content) else content
+        this.content = if (this.content.contains("#{content}")) this.content.replace("#{content}", content) else content
         this
     }
 
-    def placeContent(placeHolder: String, replacement: String): Email = {
+    def placeData(placeHolder: String, replacement: String): Email = {
         this.content = this.content.replace(placeHolder, replacement)
         this
     }
 
-    def placeContentWidthDataRow(row: DataRow): Email = {
-        row.foreach((key, value) => {
-            this.content = this.content.replace("${" + key + "}", if (value != null) value.toString else "")
-        })
+    def placeData(queryString: String): Email = {
+        queryString.toHashMap()
+            .foreach(k => {
+                this.content = this.content.replace(k._1, k._1)
+            })
         this
     }
-    
-    //def readContentFromUrl(url: String): Email = {
-    //    this
-    //}
-    
+
+    def placeDataWithRow(row: DataRow): Email = {
+        this.content = this.content.replaceArguments(row)
+        this
+    }
+
     def attach(paths: String*): Email = {
         paths.foreach(path => {
             this.attachments += path.locate()
@@ -270,6 +295,9 @@ class Email(private var title: String) {
 
     def send(): Unit = {
         if (toReceivers.nonEmpty || ccReceivers.nonEmpty || bccReceivers.nonEmpty) {
+
+            this.content = PQL.runEmbedded(this.content).toString
+
             transfer()
         }
     }

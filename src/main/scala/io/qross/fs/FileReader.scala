@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.zip.GZIPInputStream
 
 import io.qross.core.{DataRow, DataTable}
-import io.qross.setting.Global
+import io.qross.setting.{Environment, Global}
 import io.qross.thread.{Cube, Parallel}
 import io.qross.time.Timer
 import io.qross.ext._
@@ -73,7 +73,7 @@ case class FileReader(filePath: String) {
         val cube = new Cube()
         val parallel = new Parallel()
         //consumer
-        for (i <- 0 until Global.CORES * 2) {
+        for (i <- 0 until Environment.cpuThreads * 2) {
             parallel.add(new FileReaderConsumer(cube, handler))
         }
         parallel.startAll()

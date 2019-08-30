@@ -79,7 +79,7 @@ class DataRow() {
 
         this.columns += name -> (dataType match {
                                         case DataType.DATETIME => value.toDateTime
-                                        case DataType.JSON => value.toJson
+                                        case DataType.JSON => value
                                         case _ => value
                                      })
     }
@@ -250,8 +250,12 @@ class DataRow() {
     def getDateTime(fieldName: String): DateTime = getDateTime(fieldName, DateTime.of(1970, 1, 1))
     def getDateTime(fieldName: String, defaultValue: DateTime): DateTime = getDateTimeOption(fieldName).getOrElse(defaultValue)
     def getDateTimeOption(fieldName: String): Option[DateTime] = {
-        getStringOption(fieldName) match {
-            case Some(value) => Some(new DateTime(value))
+        get(fieldName) match {
+            case Some(value) =>
+                value match {
+                    case dt: DateTime => Some(dt)
+                    case _ => Some(new DateTime(value))
+                }
             case None => None
         }
     }
@@ -260,10 +264,10 @@ class DataRow() {
     def getDataTypes: List[DataType] = this.fields.values.toList
     def getValues: List[Any] = this.columns.values.toList
 
-    def getFirstString(defaultVlaue: String = ""): String = {
+    def getFirstString(defaultValue: String = ""): String = {
         this.columns.headOption match {
             case Some(field) => field._2.toString
-            case None => defaultVlaue
+            case None => defaultValue
         }
     }
 

@@ -3,6 +3,7 @@ package io.qross.time
 import io.qross.ext.TypeExt._
 import io.qross.time.ChronExp._
 
+import scala.collection.mutable
 import scala.util.matching.Regex
 
 object ChronExp {
@@ -11,6 +12,27 @@ object ChronExp {
     val PERIOD: Regex = """(?i)^(MINUTELY|HOURLY|DAILY|WEEKLY|MONTHLY|ANNUAL|YEARLY)\s""".r
 
     val CLASSIC: String = "CLASSIC"
+
+    def getTicks(chronExp: String, begin: String, end: String): List[String] = {
+        var tick = new DateTime(begin)
+        val terminal = new DateTime(end)
+        val ticks = new mutable.ListBuffer[String]()
+        val chron = new ChronExp(chronExp)
+        while(tick.beforeOrEquals(terminal)) {
+            chron.getNextTick(tick) match {
+                case Some(nextTick) =>
+                    if (nextTick.beforeOrEquals(terminal)) {
+                        ticks += nextTick.getTickValue
+                    }
+                    if (nextTick.after(tick)) {
+                        tick = tick.copy(nextTick)
+                    }
+                    tick = tick.plusMinutes(1)
+                case None => tick = terminal.plusMinutes(1)  //future
+            }
+        }
+        ticks.toList
+    }
 }
 
 case class ChronExp(expression: String) {
@@ -28,7 +50,6 @@ case class ChronExp(expression: String) {
     }
 
     def getNextTick(dateTime: DateTime): Option[DateTime] = {
-
         group
             .map(cron => cron.getNextTick(dateTime))
             .reduce((r1, r2) => {
@@ -48,5 +69,12 @@ case class ChronExp(expression: String) {
             })
 
         None
+    }
+
+    def getNextTickOrNone(dateTime: DateTime): String = {
+        getNextTick(dateTime) match {
+            case Some(tick) => tick.getTickValue
+            case None => "N/A"
+        }
     }
 }

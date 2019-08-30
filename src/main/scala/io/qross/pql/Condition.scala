@@ -2,8 +2,9 @@ package io.qross.pql
 
 import java.util.regex.{Matcher, Pattern}
 
-import io.qross.core.{DataCell, DataType}
+import io.qross.core.DataCell
 import io.qross.ext.TypeExt._
+import io.qross.pql.Patterns.BLANKS
 
 class Condition(val expression: String) {
     var field: String = null
@@ -49,7 +50,7 @@ class Condition(val expression: String) {
     if (m.find) {
         this.field = expression.takeBefore(m.group(0)).trim
         this.value = expression.takeAfter(m.group(0)).trim
-        this.operator = m.group(0).trim.toUpperCase.replaceAll("""\s+""", "\\$")
+        this.operator = m.group(0).trim.toUpperCase.replaceAll(BLANKS, "\\$")
     }
 
 

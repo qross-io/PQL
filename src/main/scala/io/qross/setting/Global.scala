@@ -75,9 +75,13 @@ object Global {
 
     def CLEAN_TASK_RECORDS_FREQUENCY: String = Configurations.getOrProperty("CLEAN_TASK_RECORDS_FREQUENCY", "clean.task.records.frequency")
 
-    def BEATS_MAILING_FREQUENCY: String = Configurations.getOrProperty("BEATS_MAILING_FREQUENCY", "beats.mailing_frequency")
+    def BEATS_MAILING_FREQUENCY: String = Configurations.getOrProperty("BEATS_MAILING_FREQUENCY", "beats.mailing.frequency")
+
+    def DISK_MONITOR_FREQUENCY: String = Configurations.getOrProperty("DISK_MONITOR_FREQUENCY", "disk.monitor.frequency")
 
     def EXCEL_TEMPLATES_PATH: String = Configurations.getOrProperty("EXCEL_TEMPLATES_PATH", "excel.templates.path")
+
+    def EMAIL_TEMPLATES_PATH: String = Configurations.getOrProperty("EMAIL_TEMPLATES_PATH", "email.templates.path")
 
     def KERBEROS_AUTH: Boolean = Configurations.getOrProperty("KERBEROS_AUTH", "kerberos.auth").toBoolean(false)
 
@@ -87,5 +91,4 @@ object Global {
 
     def KRB_KRB5CONF_PATH: String = Configurations.getOrProperty("KRB_KRB5CONF_PATH", "krb.krb5conf.path")
 
-    def CORES: Int = Runtime.getRuntime.availableProcessors
 }

@@ -519,24 +519,26 @@ object TypeExt {
 
         def toJson: Json = {
             any match {
-                case str: String =>
-                    if (str.startsWith("http://") || str.startsWith("https://")) {
+                case json: Json => json
+                case str: String => {
+                    if (str.bracketsWith("{", "}") || str.bracketsWith("[", "]")) {
+                        Json(str)
+                    }
+                    else if (str.startsWith("http://") || str.startsWith("https://")) {
                         Json.fromURL(str)
                     }
                     else {
-                        Json(str.removeQuotes())
+                        Json(str.useQuotes("\""))
                     }
-                case json: Json => json
-                case _ => throw new ConvertFailureException("Can't recognize as or convert to Json: " + any)
-            }
-        }
-
-        def toJson(defaultValue: Any): Json = {
-            try {
-                any.toJson
-            }
-            catch {
-                case _ : ConvertFailureException => defaultValue.toJson
+                }
+                case dt: DataTable => Json(dt.toString)
+                case row: DataRow => Json(row.toString)
+                case l: Long => Json(l.toString)
+                case i: Int => Json(i.toString)
+                case f: Float => Json(f.toString)
+                case d: Double => Json(d.toString)
+                case o: AnyRef => Json(Json.serialize(o))
+                case _ => Json()
             }
         }
 
@@ -568,7 +570,7 @@ object TypeExt {
             table
         }
 
-        def toJson: String = {
+        def toJsonString: String = {
             Json.serialize(list)
         }
     }
@@ -590,7 +592,7 @@ object TypeExt {
             row
         }
 
-        def toJson: String = {
+        def toJsonString: String = {
             Json.serialize(map)
         }
     }

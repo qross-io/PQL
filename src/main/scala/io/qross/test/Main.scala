@@ -1,5 +1,6 @@
 package io.qross.test
 
+import java.lang.management.ManagementFactory
 import java.sql.DriverManager
 import java.util.{Date, Properties}
 
@@ -14,6 +15,7 @@ import io.qross.pql.{OUTPUT, PQL, Patterns, SHARP}
 import io.qross.time.{CronExp, DateTime}
 import io.qross.pql.Patterns._
 import io.qross.pql.PQL._
+import io.qross.setting.Environment
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -46,14 +48,13 @@ object Main {
 //        array(0) = Class[DataCell]
 //        array(1) = Class[List[DataCell]]
 
-        "12345".split("4").flatMap(i => {
-            if (i.contains("2")) {
-                i.split("2")
-            }
-            else {
-                i
-            }
-        }).foreach(println)
+        System.currentTimeMillis().print
+
+        Environment.jvmMemoryUsage.print
+        Environment.systemMemoryUsage.print
+        Environment.cpuUsage.print
+
+
 
         //PQL.runFile("/sql/test.sql")
 

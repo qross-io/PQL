@@ -1,6 +1,6 @@
 package io.qross.pql
 
-import io.qross.core.{DataCell, DataType}
+import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
@@ -11,7 +11,7 @@ import scala.util.matching.Regex
 
 object Solver {
 
-    val ARGUMENT: Regex = """(#|&)\{([a-zA-Z0-9_]+)\}""".r  //入参 #{name} 或 &{name}
+    val ARGUMENT: Regex = """[#&]\{([a-zA-Z0-9_]+)\}""".r  //入参 #{name} 或 &{name}
     //val GLOBAL_VARIABLE: Regex = """@\(?([a-zA-Z0-9_]+)\)?""".r //全局变量 @name 或 @(name)
     //val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
     val USER_VARIABLE: List[Regex] = List[Regex](
@@ -125,24 +125,23 @@ object Solver {
             case '>' =>
             */
 
-            blocks.map(closed => {
-                (sentence.substring(closed._2, closed._3),
-                    closed._1 match {
-                        case "SINGLE-LINE-COMMENT" => ""
-                        case "MULTI-LINES-COMMENT" => ""
-                        case "SINGLE-QUOTE-STRING" => "~"
-                        case "DOUBLE-QUOTE-STRING" => "~"
-                        case _ =>
-                    })
-            }).foreach(repl => {
-                if (repl._2 == "") {
-                    sentence = sentence.replace(repl._1, "")
-                }
-                else {
-                    PQL.chars += repl._1
-                    sentence = sentence.replace(repl._1, "~char[" + (PQL.chars.size - 1) + "]")
-                }
-            })
+            blocks
+                .reverse
+                .foreach(closed => {
+                    val before = sentence.takeBefore(closed._2)
+                    val after = sentence.takeAfter(closed._3 - 1)
+                    val replacement = {
+                        if (closed._1 == "SINGLE-LINE-COMMENT" || closed._1 == "MULTI-LINES-COMMENT") {
+                            ""
+                        }
+                        else {
+                            PQL.chars += sentence.substring(closed._2, closed._3)
+                            "~char[" + (PQL.chars.size - 1) + "]"
+                        }
+                    }
+
+                    sentence = before + replacement + after
+                })
 
             sentence = sentence.replace("%three-single-quotes%", "'''")
                                .replace("%three-double-quotes%", "\"\"\"")
@@ -156,7 +155,7 @@ object Solver {
                     })
             })
 
-            sentence
+            sentence.trim
         }
 
         //恢复字符串
@@ -239,11 +238,26 @@ object Solver {
                 .findAllMatchIn(sentence)
                 .foreach(m => {
                     val whole = m.group(0)
-                    val fieldName = m.group(4)
-                    val prefix = m.group(1)
+                    val fieldName = m.group(1)
 
                     if (map.contains(fieldName)) {
-                        sentence = sentence.replace(whole, prefix + map(fieldName))
+                        sentence = sentence.replace(whole, map(fieldName))
+                    }
+                })
+
+            sentence
+        }
+
+        //替换外部变量
+        def replaceArguments(row: DataRow): String = {
+            ARGUMENT
+                .findAllMatchIn(sentence)
+                .foreach(m => {
+                    val whole = m.group(0)
+                    val fieldName = m.group(1)
+
+                    if (row.contains(fieldName)) {
+                        sentence = sentence.replace(whole, row.getString(fieldName, "null"))
                     }
                 })
 

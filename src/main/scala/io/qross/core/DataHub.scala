@@ -4,7 +4,7 @@ import io.qross.core.DataType.DataType
 import io.qross.ext.Output
 import io.qross.fs.FilePath._
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.setting.Global
+import io.qross.setting.{Environment, Global}
 import io.qross.thread.Parallel
 import io.qross.time.{DateTime, Timer}
 import io.qross.core.Parameter._
@@ -14,7 +14,7 @@ import scala.collection.parallel.mutable.ParArray
 
 
 object DataHub {
-    def Qross: DataHub = new DataHub(JDBC.QROSS)
+    def QROSS: DataHub = new DataHub(JDBC.QROSS)
 }
 
 class DataHub (private val defaultConnectionName: String = "") {
@@ -51,7 +51,7 @@ class DataHub (private val defaultConnectionName: String = "") {
     private var $TOTAL: Int = 0
 
     //producers/consumers amount
-    private var LINES: Int = Global.CORES
+    private var LINES: Int = Environment.cpuThreads
     private var TANKS: Int = 3
     //selectSQL, @param
     private val pageSQLs = new mutable.HashMap[String, String]()

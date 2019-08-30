@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import org.json4s.{Formats, NoTypeHints}
 import org.json4s.jackson.Serialization
 import io.qross.core._
+import io.qross.ext.TypeExt._
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -74,7 +75,17 @@ case class Json(text: String = "") {
     private var root: JsonNode = _
     
     if (text != "") {
-        root = mapper.readTree(text)
+        root = mapper.readTree({
+            if (text.bracketsWith("'{", "}'")
+                || text.bracketsWith("\"{", "}\"")
+                || text.bracketsWith("'[", "]'")
+                || text.bracketsWith("\"[", "]\"")) {
+                text.removeQuotes()
+            }
+            else {
+                text
+            }
+        })
     }
     
     def readURL(url: String, post: String = ""): Json = {

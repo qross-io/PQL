@@ -16,7 +16,7 @@ object Patterns {
     val $END_LOOP: Pattern = Pattern.compile("""^END\s+LOOP""", Pattern.CASE_INSENSITIVE)
 
     val $BLANK: Regex = """\s""".r
-    val $BLANKS: String = """\s+"""
+    val BLANKS: String = """\s+"""
 
     val $BRACKET: Pattern = Pattern.compile("""\(([^\)]+)\)""", Pattern.CASE_INSENSITIVE)
     val $AND: Pattern = Pattern.compile("""(^|\sOR\s)(([\s\S]+?)\s+AND\s+([\s\S]+?))($|\sAND|\sOR)""", Pattern.CASE_INSENSITIVE)
@@ -67,6 +67,7 @@ object Patterns {
     val SHARP_LINKS: Set[String] = SHARP.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z]$""".r.test(n)).toSet
     val ARROW: String = "->"
 
+    val EMBEDDED: String = "EMBEDDED:"
     val EM$LEFT: String = "<%"
     val EM$RIGHT: String = "%>"
 }

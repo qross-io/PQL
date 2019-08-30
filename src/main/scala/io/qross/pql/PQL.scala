@@ -1,47 +1,50 @@
 package io.qross.pql
 
-import java.io.{File, FileNotFoundException}
 import java.util.regex.Matcher
 
 import io.qross.core.Authentication._
 import io.qross.core._
+import io.qross.ext.Output
 import io.qross.ext.TypeExt._
-import io.qross.ext.{ArgumentMap, Output, ParameterMap}
-import io.qross.fs.FilePath._
-import io.qross.fs.ResourceFile
+import io.qross.fs.SourceFile
+import io.qross.net.Http
 import io.qross.net.Json._
-import io.qross.net.{Http, Json}
-import io.qross.setting.Properties
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
+import io.qross.setting.Properties
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.io.Source
 import scala.util.control.Breaks._
 
 object PQL {
 
+    //打开但不运行
+    def open(SQL: String): PQL = {
+        new PQL(SQL, new DataHub())
+    }
+
+    def openEmbedded(SQL: String): PQL = {
+        new PQL(EMBEDDED + SQL, new DataHub())
+    }
+
+    //直接运行
+    def run(SQL: String): Any = {
+        PQL.open(SQL).run()
+    }
+
+    def runEmbedded(SQL: String): Any = {
+        PQL.openEmbedded(SQL).run()
+    }
+
     //打开文件但不运行
     def openFile(path: String): PQL = {
+        new PQL(SourceFile.read(path), new DataHub())
+    }
 
-        var SQL = ""
-        val resource = ResourceFile.open(path)
-        if (resource.exists) {
-            SQL = resource.output
-        }
-        else {
-            val file = new File(path.locate())
-            if (file.exists()) {
-                SQL = Source.fromFile(file, "UTF-8").mkString
-            }
-            else {
-                throw new FileNotFoundException(s"File $path doesn't exists.")
-            }
-        }
-
-        new PQL(SQL, new DataHub())
+    def openEmbeddedFile(path: String): PQL = {
+        new PQL(EMBEDDED + SourceFile.read(path), new DataHub())
     }
 
     //直接运行
@@ -49,14 +52,8 @@ object PQL {
         PQL.openFile(path).run()
     }
 
-    //打开但不运行
-    def open(SQL: String): PQL = {
-        new PQL(SQL, new DataHub())
-    }
-
-    //直接运行
-    def run(SQL: String): Any = {
-        PQL.open(SQL).run()
+    def runEmbeddedFile(path: String): Any = {
+        PQL.openEmbeddedFile(path).run()
     }
 
     implicit class DataHub$PQL(val dh: DataHub) {
@@ -74,17 +71,40 @@ object PQL {
             dh.plug("PQL", new PQL(SQL, dh))
         }
 
-        def openFileSQL(filePath: String): DataHub = {
-            dh.plug("PQL", new PQL(Source.fromFile(filePath.locate()).mkString, dh))
+        def openEmbeddedSQL(SQL: String): DataHub = {
+            dh.plug("PQL", new PQL(EMBEDDED + SQL, dh))
         }
 
-        def openResourceSQL(resourcePath: String): DataHub = {
-            dh.plug("PQL", new PQL(ResourceFile.open(resourcePath).output, dh))
+        def openFileSQL(filePath: String): DataHub = {
+            dh.plug("PQL", new PQL(SourceFile.read(filePath), dh))
+        }
+
+        def openEmbeddedFileSQL(filePath: String): DataHub = {
+            dh.plug("PQL", new PQL(EMBEDDED + SourceFile.read(filePath), dh))
+        }
+
+        def setArgs(name: String, value: String): DataHub = {
+            PQL.place(name, value)
             dh
         }
 
-        def setArgs(args: Any): DataHub = {
-            PQL.assign(args)
+        def setArgs(queryString: String): DataHub = {
+            PQL.place(queryString)
+            dh
+        }
+
+        def setArgs(args: (String, String)*): DataHub = {
+            PQL.place(args: _*)
+            dh
+        }
+
+        def setArgs(queries: java.util.Map[String, Array[String]]): DataHub = {
+            PQL.place(queries)
+            dh
+        }
+
+        def setArgs(args: Map[String, String]): DataHub = {
+            PQL.place(args)
             dh
         }
 
@@ -101,12 +121,16 @@ object PQL {
             new PQL(SQL, dh).$run().$return
         }
 
-        def runFileSQL(filePath: String): Any = {
-            new PQL(Source.fromFile(filePath.locate()).mkString, dh).$run().$return
+        def runEmbedded(SQL: String): Any = {
+            new PQL(if (!SQL.startsWith(EMBEDDED)) EMBEDDED + SQL else SQL, dh).$run().$return
         }
 
-        def runResourceSQL(resourcePath: String): Any = {
-            new PQL(ResourceFile.open(resourcePath).output, dh).$run().$return
+        def runFile(filePath: String): Any = {
+            new PQL(SourceFile.read(filePath), dh).$run().$return
+        }
+
+        def runEmbeddedFile(filePath: String): Any = {
+            new PQL(EMBEDDED + SourceFile.read(filePath), dh).$run().$return
         }
     }
 }
@@ -122,9 +146,9 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private var SQL: String = originalSQL
 
-    val embedded: Boolean = originalSQL.startsWith("EMBEDDED: ")
-    if (embedded) {
-        SQL = SQL.drop(10)
+    val embedded: Boolean = SQL.startsWith(EMBEDDED) || SQL.bracketsWith("<", ">") || (SQL.contains("<%") && SQL.contains("%>"))
+    if (embedded && SQL.startsWith(EMBEDDED)) {
+        SQL = SQL.drop(9)
     }
 
     private val root: Statement = new Statement("ROOT", SQL)
@@ -460,7 +484,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private def parseOPEN(sentence: String): Unit = {
         if ({m = $OPEN.matcher(sentence); m}.find) {
-            PARSING.head.addStatement(new Statement("OPEN", sentence, new OPEN(m.group(1).trim.split($BLANKS): _*)))
+            PARSING.head.addStatement(new Statement("OPEN", sentence, new OPEN(m.group(1).trim.split(BLANKS): _*)))
             if (m.group(2).trim == ":") {
                 parseStatement(sentence.takeAfter(m.group(2)).trim)
             }
@@ -482,7 +506,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private def parseSAVE(sentence: String): Unit = {
         //save as
         if ({m = $SAVE$AS.matcher(sentence); m}.find) {
-            PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE$AS(m.group(1).trim.split($BLANKS): _*)))
+            PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE$AS(m.group(1).trim.split(BLANKS): _*)))
             if (m.group(2).trim == ":") {
                 parseStatement(sentence.takeAfter(":").trim)
             }
@@ -608,7 +632,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private def parseSEND(sentence: String): Unit = {
         if ($SEND$MAIL.test(sentence)) {
-            PARSING.head.addStatement(new Statement("SEND$MAIL", sentence, new SEND$MAIL(sentence.takeAfter($SEND$MAIL).trim())))
+            PARSING.head.addStatement(new Statement("SEND$MAIL", sentence, new SEND$MAIL(sentence.takeAfter($SEND$MAIL))))
         }
         else {
             throw new SQLParseException("Incorrect SEND MAIL sentence: " + sentence)
@@ -810,12 +834,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private def executeSAVE(statement: Statement): Unit = {
         val $save = statement.instance.asInstanceOf[SAVE$AS]
         $save.targetType match {
-            case "CACHE TABLE" => {
-                dh.cache($save.targetName.$eval(this).asText)
-            }
-            case "TEMP TABLE" => {
-                dh.temp($save.targetName.$eval(this).asText)
-            }
+            case "CACHE TABLE" => dh.cache($save.targetName.$eval(this).asText)
+            case "TEMP TABLE" => dh.temp($save.targetName.$eval(this).asText)
             case "CACHE" => dh.saveAsCache()
             case "TEMP" => dh.saveAsTemp()
             case "JDBC" =>
@@ -1089,13 +1109,28 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     }
 
     //传递参数和数据, Spring Boot的httpRequest参数
-    def assign(args: Any): PQL = {
-        this.SQL = this.SQL.replaceArguments(args match {
-            case ParameterMap(queries) => queries.asScala.map(kv => (kv._1, kv._2(0))).toMap
-            case ArgumentMap(arguments) => arguments
-            case queryString: String => queryString.toHashMap()
-            case _ => Map[String, String]()
-        })
+    def place(name: String, value: String): PQL = {
+        this.SQL = this.SQL.replaceArguments(Map[String, String](name -> value))
+        this
+    }
+
+    def place(args: (String, String)*): PQL = {
+        this.SQL = this.SQL.replaceArguments(args.toMap[String, String])
+        this
+    }
+
+    def place(queries: java.util.Map[String, Array[String]]): PQL = {
+        this.SQL = this.SQL.replaceArguments(queries.asScala.map(kv => (kv._1, kv._2(0))).toMap)
+        this
+    }
+
+    def place(args: Map[String, String]): PQL = {
+        this.SQL = this.SQL.replaceArguments(args)
+        this
+    }
+
+    def place(queryString: String): PQL = {
+        this.SQL = this.SQL.replaceArguments(queryString.toHashMap())
         this
     }
 

@@ -86,7 +86,7 @@ object Function {
 
 case class Function(functionName: String) {
     def call(args: List[DataCell]): DataCell = {
-        Class.forName("io.qross.sql.Function")
+        Class.forName("io.qross.pql.Function")
             .getDeclaredMethod(functionName, Class.forName("scala.collection.immutable.List"))
             .invoke(null, args).asInstanceOf[DataCell]
     }

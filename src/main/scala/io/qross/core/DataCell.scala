@@ -240,15 +240,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     }
 
     def isJson: Boolean = this.dataType == DataType.JSON
-    def asJson: Json = this.value.toJson
-    def asJson(defaultValue: Any): Json = {
-        if (valid) {
-            this.value.toJson(defaultValue)
-        }
-        else {
-            defaultValue.toJson
-        }
-    }
+    def asJson: Json = value.toJson
     def toJson: DataCell = {
         if (!this.isJson) {
             DataCell(this.asJson, DataType.JSON)

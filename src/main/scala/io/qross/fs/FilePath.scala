@@ -32,7 +32,7 @@ object FilePath {
 //                else {
 //                    full = Global.QROSS_KEEPER_HOME  + full
 //                }
-                full = System.getProperty("user.dir").toDir + "qross/temp/" + full
+                full = Global.QROSS_WORKER_HOME + "temp/" + full
             }
 
             val parent = new File(full).getParentFile

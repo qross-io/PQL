@@ -229,7 +229,7 @@ case class CronExp(expression: String = "0 * * * * ? *") {
     def getNextTickOrNone(dateTime: DateTime): String = {
         getNextTick(dateTime) match {
             case Some(tick) => tick.getTickValue
-            case None => "NONE"
+            case None => "N/A"
         }
     }
     def getNextTick(dateTime: String): Option[DateTime] = this.getNextTick(new DateTime(dateTime))

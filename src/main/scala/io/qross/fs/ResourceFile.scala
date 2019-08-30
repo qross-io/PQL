@@ -40,7 +40,7 @@ class ResourceFile(path: String) {
 
     def replaceWith(row: DataRow): ResourceFile = {
         row.foreach((key, value) => {
-            output = output.replace("${" + key + "}", if (value != null) value.toString else "")
+            output = output.replace("#{" + key + "}", if (value != null) value.toString else "")
         })
         this
     }
