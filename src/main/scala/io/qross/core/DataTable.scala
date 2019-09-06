@@ -1,14 +1,14 @@
 package io.qross.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import DataType.DataType
-import io.qross.jdbc.{DataSource, JDBC}
+import io.qross.core.DataType.DataType
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
+import io.qross.jdbc.{DataSource, JDBC}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.ListBuffer
 import scala.collection.parallel.mutable.ParArray
 import scala.util.Random
 import scala.util.control.Breaks._
@@ -49,59 +49,32 @@ class DataTable() {
     private val labels = new mutable.LinkedHashMap[String, String]()
 
 
+    //添加列
     def addField(fieldName: String, dataType: DataType): Unit = {
         addFieldWithLabel(fieldName, fieldName, dataType)
     }
 
+    //添加列和标签
     def addFieldWithLabel(fieldName: String, labelName: String, dataType: DataType): Unit = {
         // . is illegal char in SQLite
         val name = { if (fieldName.contains(".")) fieldName.takeAfter(".") else fieldName }.toLowerCase()
         fields += name -> dataType
         labels += name -> labelName
     }
-    
+
+    //设置标签
     def label(alias: (String, String)*): DataTable = {
         for ((fieldName, otherName) <- alias) {
             labels += fieldName.toLowerCase() -> otherName
         }
         this
     }
-    
-    def contains(fieldName: String): Boolean = fields.contains(fieldName.toLowerCase())
 
     def newRow(): DataRow = {
         val row = new DataRow()
         row.fields ++= fields
         row.table = this
         row
-    }
-
-    //添加的行结构需要与table一致
-    def insert(row: DataRow): Unit = {
-        rows += row
-    }
-
-    def alter(fieldName: String, newName: String): Unit = {
-        val name = fieldName.toLowerCase()
-        if (fields.contains(name)) {
-            val list = fields.toList
-            fields.clear()
-            list.foreach(item => {
-                if (item._1 != name) {
-                    fields += item._1 -> item._2
-                }
-                else {
-                    fields += newName -> item._2
-                }
-            })
-        }
-    }
-
-    def alter(fieldName: String, dataType: DataType): Unit = {
-        val name = fieldName.toLowerCase()
-        if (fields.contains(name)) {
-            fields += name -> dataType
-        }
     }
 
     //直接添加一个新行, 自动判断数据结构
@@ -119,10 +92,12 @@ class DataTable() {
         this
     }
 
+    //并行
     def par: ParArray[DataRow] = {
         rows.par
     }
-    
+
+    //遍历
     def foreach(callback: DataRow => Unit): DataTable = {
         rows.foreach(row => {
             callback(row)
@@ -130,7 +105,7 @@ class DataTable() {
         this
     }
 
-    //遍历并返回新的DataTable
+    //遍历并返回新的DataTable, 数据表内容不变
     def iterate(callback: DataRow => Unit): DataTable = {
         val table = new DataTable()
         rows.foreach(row => {
@@ -140,7 +115,30 @@ class DataTable() {
 
         table
     }
-    
+
+    //过滤
+    def filter(callback: DataRow => Boolean): DataTable = {
+        val table = new DataTable()
+        rows.foreach(row => {
+            if (callback(row)) {
+                table.addRow(row)
+            }
+        })
+
+        table
+    }
+
+    //遍历并返回新的数据表, 结构不一样, 一行对一行
+    def map(callback: DataRow => DataRow): DataTable = {
+        val table = new DataTable()
+        rows.foreach(row => {
+            table.addRow(callback(row))
+        })
+
+        table
+    }
+
+    //filter + map
     def collect(filter: DataRow => Boolean) (map: DataRow => DataRow): DataTable = {
         val table = new DataTable()
         rows.foreach(row => {
@@ -152,15 +150,7 @@ class DataTable() {
         table
     }
     
-    def map(callback: DataRow => DataRow): DataTable = {
-        val table = new DataTable()
-        rows.foreach(row => {
-            table.addRow(callback(row))
-        })
-
-        table
-    }
-    
+    //制表, 遍历并返回新的数据表, 一行对一表
     def table(fields: (String, DataType)*)(callback: DataRow => DataTable): DataTable = {
         val table = DataTable.withFields(fields: _*)
         rows.foreach(row => {
@@ -169,22 +159,22 @@ class DataTable() {
 
         table
     }
-    
-    def filter(callback: DataRow => Boolean): DataTable = {
-        val table = new DataTable()
-        rows.foreach(row => {
-            if (callback(row)) {
-                table.addRow(row)
-            }
-        })
 
-        table
-    }
-    
+
+    //是否包含某一列
+    def contains(fieldName: String): Boolean = fields.contains(fieldName.toLowerCase())
+    //行数
     def size: Int = rows.size
+    //行数
+    def height: Int = rows.size
+    //行数
     def count(): Int = rows.size
+    //列数
     def columnCount: Int = fields.size
-    
+    //列数
+    def width: Int = fields.size
+
+    //聚合方法
     def count(groupBy: String*): DataTable = {
         val table = new DataTable()
         if (groupBy.isEmpty) {
@@ -209,7 +199,8 @@ class DataTable() {
         }
         table
     }
-    
+
+    //聚合方法
     def sum(fieldName: String, groupBy: String*): DataTable = {
         val table = new DataTable()
         if (groupBy.isEmpty) {
@@ -238,7 +229,7 @@ class DataTable() {
         table
     }
     
-    //avg
+    //聚合方法
     def avg(fieldName: String, groupBy: String*): DataTable = {
     
         case class AVG(private val v: Double = 0D) {
@@ -288,8 +279,8 @@ class DataTable() {
     
         table
     }
-    
-    //max
+
+    //聚合方法
     def max(fieldName: String, groupBy: String*): DataTable = {
     
         case class MAX(number: Option[Double] = None) {
@@ -338,8 +329,8 @@ class DataTable() {
     
         table
     }
-    
-    //min
+
+    //聚合方法
     def min(fieldName: String, groupBy: String*): DataTable = {
         
         case class MIN(number: Option[Double] = None) {
@@ -389,7 +380,7 @@ class DataTable() {
         table
     }
     
-    //take
+    //从前向后取n行
     def take(amount: Int): DataTable = {
         val table = new DataTable()
         for (i <- 0 until amount) {
@@ -399,6 +390,7 @@ class DataTable() {
         table
     }
 
+    //随机取n行
     def takeSample(amount: Int): DataTable = {
         val table = new DataTable()
         Random.shuffle(rows)
@@ -410,12 +402,50 @@ class DataTable() {
         table
     }
 
-    def insertRow(fields: (String, Any)*): DataTable = {
+    //数据操作
+
+    //添加的行结构需要与table一致, 与newRow搭配, 与addRow不同
+    def insert(row: DataRow): Unit = {
+        rows += row
+    }
+
+    //按字段添加行, addRow的重载
+    def insert(fields: (String, Any)*): DataTable = {
         addRow(new DataRow(fields: _*))
         this
     }
-    
-    def updateWhile(filter: DataRow => Boolean)(setValue: DataRow => Unit): DataTable = {
+
+    //按短语句添加行 INTO (A, B) VALUES (1, '2') , INTO关键词可省略
+    def insert(fragment: String): DataTable = {
+        null
+    }
+
+    //按过滤器删除
+    def delete(filter: DataRow => Boolean): DataTable = {
+        val table = new DataTable()
+        rows.foreach(row => {
+            if (!filter(row)) {
+                table.addRow(row)
+            }
+        })
+        clear()
+        table
+    }
+
+    //按短语句删除 WHERE A=1 AND B='2' , WHERE关键词可忽略
+    def delete(fragment: String): DataTable = {
+        null
+    }
+
+    def update(setValue: DataRow => Unit): DataTable = {
+        rows.foreach(row => {
+            setValue(row)
+        })
+        this
+    }
+
+    //按过滤器修改
+    def update(filter: DataRow => Boolean)(setValue: DataRow => Unit): DataTable = {
         rows.foreach(row => {
             if (filter(row)) {
                 setValue(row)
@@ -423,8 +453,13 @@ class DataTable() {
         })
         this
     }
-    
-    def upsertRow(filter: DataRow => Boolean)(setValue: DataRow => Unit)(fields: (String, Any)*): DataTable = {
+
+    //按短语句修改 SET A=1, B='2' WHERE C=0 OR D>0
+    def update(fragment: String): DataTable = {
+        null
+    }
+
+    def upsert(filter: DataRow => Boolean)(setValue: DataRow => Unit)(fields: (String, Any)*): DataTable = {
         var exists = false
         breakable {
             for(row <- rows) {
@@ -436,23 +471,20 @@ class DataTable() {
             }
         }
         if (!exists) {
-            insertRow(fields: _*)
+            insert(fields: _*)
         }
-        
+
         this
     }
-    
-    def deleteWhile(filter: DataRow => Boolean): DataTable = {
-        val table = new DataTable()
-        rows.foreach(row => {
-            if (!filter(row)) {
-                table.addRow(row)
-            }
-        })
-        clear()
-        table
+
+    def select(filter: DataRow => Boolean): DataTable = {
+        this.filter(filter)
     }
-    
+
+    def select(fieldNames: String*): DataTable = {
+        null
+    }
+
     def select(filter: DataRow => Boolean)(fieldNames: String*): DataTable = {
         val table = new DataTable()
         rows.foreach(row => {
@@ -467,14 +499,43 @@ class DataTable() {
         table
     }
 
-    def select(filter: DataRow => Boolean): ArrayBuffer[DataRow] = {
-        val rows = new ArrayBuffer[DataRow]()
-        this.rows.foreach(row => {
-            if (filter(row)) {
-                rows += row
-            }
-        })
-        rows
+    // SELECT "A, B AS C"
+    // SELECT "B, SUM(A) AS C HAVING C>10"
+    // SELECT "A, B, GATHER(C, D, E, F) AS X"
+    // SELECT "A, B, GATHER(C, D, GATHER(E, F)) AS X"
+    // SELECT "*, TREE(parentId=0) AS nodes"
+    def select(fragment: String): DataTable = {
+        null
+    }
+
+    // 修改列名
+    def alter(fieldName: String, newName: String): Unit = {
+        val name = fieldName.toLowerCase()
+        if (fields.contains(name)) {
+            val list = fields.toList
+            fields.clear()
+            list.foreach(item => {
+                if (item._1 != name) {
+                    fields += item._1 -> item._2
+                }
+                else {
+                    fields += newName -> item._2
+                }
+            })
+        }
+    }
+
+    // 修改数据类型
+    def alter(fieldName: String, dataType: DataType): Unit = {
+        val name = fieldName.toLowerCase()
+        if (fields.contains(name)) {
+            fields += name -> dataType
+        }
+    }
+
+    // 修改列名 A AS A1, B AS B2
+    def alter(fragment: String): DataTable = {
+        null
     }
     
     def updateSource(SQL: String): DataTable = {
@@ -581,6 +642,20 @@ class DataTable() {
     def firstColumn: Option[List[Any]] = if (fields.nonEmpty) Option(rows.map(r => r.columns.head._2).toList) else None
     def lastColumn: Option[List[Any]] = if (fields.nonEmpty) Option(rows.map(r => r.columns.last._2).toList) else None
 
+    def getCell(rowIndex: Int, colIndex: Int): DataCell = {
+        getRow(rowIndex) match {
+            case Some(row) => row.getCell(colIndex)
+            case None => DataCell.NOT_FOUND
+        }
+    }
+
+    def getCell(rowIndex: Int, fieldName: String): DataCell = {
+        getRow(rowIndex) match {
+            case Some(row) => row.getCell(fieldName)
+            case None => DataCell.NOT_FOUND
+        }
+    }
+
     def getFirstCellStringValue(defaultValue: String = ""): String = {
         firstRow match {
             case Some(row) => row.getFirstString(defaultValue)
@@ -672,6 +747,7 @@ class DataTable() {
     }
 
     override def toString: String = {
+        //Json.serialize(toJavaMapList)
         new ObjectMapper().writeValueAsString(toJavaMapList)
     }
     

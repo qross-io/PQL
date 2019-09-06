@@ -48,15 +48,11 @@ object Main {
 //        array(0) = Class[DataCell]
 //        array(1) = Class[List[DataCell]]
 
-        System.currentTimeMillis().print
-
-        Environment.jvmMemoryUsage.print
-        Environment.systemMemoryUsage.print
-        Environment.cpuUsage.print
-
-
+        //new PQL("SELECT switch_time FROM qross_jobs LIMIT 5 -> GET LAST ROW", DataHub.QROSS).run().print
 
         //PQL.runFile("/sql/test.sql")
+
+        ResourceDir.open("/sql/").listFiles("*.sql").foreach(println)
 
         System.exit(0)
 

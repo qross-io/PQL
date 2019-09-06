@@ -6,7 +6,7 @@ apply plugin: 'maven'
 apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
-version = '0.5.9-70-SNAPSHOT'
+version = '0.5.9-80-SNAPSHOT'
 sourceCompatibility = 1.8
 
 archivesBaseName = "qross-pql"
@@ -40,8 +40,10 @@ repositories {
 dependencies {
 	compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.4'
 
-    //compile group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.12'
+    compile group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.23'
     //compile group: 'com.typesafe.akka', name: 'akka-remote_2.12', version: '2.5.12'
+    compile group: 'com.typesafe.akka', name: 'akka-http_2.12', version: '10.1.9'
+    compile group: 'com.typesafe.akka', name: 'akka-stream_2.12', version: '2.5.23'
 
     // compile (group: 'org.apache.hive', name: 'hive-jdbc', version: '2.0.0') {
     //     exclude(group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl')

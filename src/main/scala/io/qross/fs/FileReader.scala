@@ -11,8 +11,9 @@ import io.qross.thread.{Cube, Parallel}
 import io.qross.time.Timer
 import io.qross.ext._
 import io.qross.fs.FilePath._
+import io.qross.net.Json
 
-//在hive相关的包中
+//在hive相关的包中, 将来移到HDFSReader中
 //import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 
 import scala.collection.mutable
@@ -25,7 +26,6 @@ case class FileReader(filePath: String) {
 
     private val CHARSET = "utf-8"
     private var delimiter: String = ","
-    private var tableName: String = "DEFAULT"
     //field, defaultValue
     private val fields = new mutable.LinkedHashMap[String, String]()
     
@@ -52,13 +52,13 @@ case class FileReader(filePath: String) {
         this
     }
 
-    def asTable(tableName: String): FileReader = {
-        this.tableName = tableName
+    def jsonObjectLine: FileReader = {
+        this.delimiter = "JSON$OBJECT$LINE"
         this
     }
 
     //field, defaultValue
-    def withColumnsAndDefaultValue(fields: (String, String)*): FileReader = {
+    def withDefaultValues(fields: (String, String)*): FileReader = {
         this.fields ++= fields
         this
     }
@@ -68,7 +68,7 @@ case class FileReader(filePath: String) {
         this
     }
 
-    def etl(handler: DataTable => DataTable): FileReader = {
+    def etl(handler: DataTable => Unit): FileReader = {
 
         val cube = new Cube()
         val parallel = new Parallel()
@@ -81,14 +81,8 @@ case class FileReader(filePath: String) {
         //producer
         var table = new DataTable()
         while (this.hasNextLine) {
-            val line = this.readLine.split(this.delimiter, -1)
-            val row = new DataRow()
-            var i = 0
-            for (field <- fields.keys) {
-                row.set(field, if (i < line.length) line(i) else fields(field))
-                i += 1
-            }
-            table.addRow(row)
+
+            table.addRow(this.parseLine)
 
             if (table.count() >= 10000) {
                 FileReader.DATA.add(table)
@@ -106,7 +100,7 @@ case class FileReader(filePath: String) {
         cube.reset()
 
         parallel.waitAll()
-        Output.writeMessage("Finish Reader.")
+        Output.writeMessage("Finish reading.")
 
         this
     }
@@ -115,6 +109,27 @@ case class FileReader(filePath: String) {
         
     def readLine: String = scanner.nextLine
 
+    def parseLine: DataRow = {
+        if (this.delimiter != "JSON$OBJECT$LINE") {
+            val row = new DataRow()
+            val line = this.readLine.split(this.delimiter, -1)
+            var i = 0
+            for (field <- fields.keys) {
+                row.set(field, if (i < line.length) line(i) else fields(field))
+                i += 1
+            }
+            row
+        }
+        else {
+            val row = Json.fromText(this.readLine).parseRow("/")
+            for (field <- fields.keys) {
+                if (!row.contains(field)) {
+                    row.set(field, fields(field))
+                }
+            }
+            row
+        }
+    }
     /*
     def readAsTable(fields: String*): DataTable = {
         val table = new DataTable()
@@ -135,12 +150,7 @@ case class FileReader(filePath: String) {
     def readAllAsTable(fields: String*): DataTable = {
         val table = new DataTable()
         while (this.hasNextLine) {
-            val line = this.readLine.split(this.delimiter, -1)
-            val row = new DataRow()
-            for (i <- fields.indices) {
-                row.set(fields(i), if (i < line.length) line(i) else null)
-            }
-            table.addRow(row)
+            table.addRow(this.parseLine)
         }
         table
     }

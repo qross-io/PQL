@@ -60,7 +60,7 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
         case localDate: LocalDate => parseLocalDateTime(localDate.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
         case localTime: LocalTime => parseLocalDateTime(LocalDate.now() + " " + localTime.toString, "yyyy-MM-dd HH:mm:ss")
         case _ =>   Output.writeWarning("Can't recognize as or convert to DateTime: " + dateTime)
-                    LocalDateTime.now()
+                    LocalDateTime.of(1970, 1, 1, 0, 0, 0)
     }
 
     private def parseLocalDateTime(dateTime: String, format: String = ""): LocalDateTime = {

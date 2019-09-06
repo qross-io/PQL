@@ -12,6 +12,7 @@ import io.qross.net.Json._
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 import io.qross.setting.Properties
+import io.qross.time.DateTime
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -43,8 +44,16 @@ object PQL {
         new PQL(SourceFile.read(path), new DataHub())
     }
 
+    def openFile(path: String, dh: DataHub): PQL = {
+        new PQL(SourceFile.read(path), dh)
+    }
+
     def openEmbeddedFile(path: String): PQL = {
         new PQL(EMBEDDED + SourceFile.read(path), new DataHub())
+    }
+
+    def openEmbeddedFile(path: String, dh: DataHub): PQL = {
+        new PQL(EMBEDDED + SourceFile.read(path), dh)
     }
 
     //直接运行
@@ -52,8 +61,16 @@ object PQL {
         PQL.openFile(path).run()
     }
 
+    def runFile(path: String, dh: DataHub): Any = {
+        PQL.openFile(path, dh).run()
+    }
+
     def runEmbeddedFile(path: String): Any = {
         PQL.openEmbeddedFile(path).run()
+    }
+
+    def runEmbeddedFile(path: String, dh: DataHub): Any = {
+        PQL.openEmbeddedFile(path, dh).run()
     }
 
     implicit class DataHub$PQL(val dh: DataHub) {
@@ -1158,13 +1175,23 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     def $return: Any = {
         if (RESULT.nonEmpty) {
             if (RESULT.size == 1) {
-                RESULT.head
+                RESULT.head match {
+                    case table: DataTable => table.toJavaMapList
+                    case row: DataRow => row.toJavaMap
+                    case dt: DateTime => dt.toString
+                    case o => o
+                }
             }
             else if (embedded) {
                 RESULT.mkString
             }
             else {
-                RESULT.asJava
+                RESULT.map {
+                        case table: DataTable => table.toJavaMapList
+                        case row: DataRow => row.toJavaMap
+                        case dt: DateTime => dt.toString
+                        case o => o
+                }.asJava
             }
         }
         else if (AFFECTED > -1) {

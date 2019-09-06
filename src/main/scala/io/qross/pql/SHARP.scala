@@ -38,7 +38,7 @@ object SHARP {
             DataCell(data.asDateTime.express(args.head.asText), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET/EXPRESS, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET/EXPRESS, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -51,7 +51,7 @@ object SHARP {
             DataCell(data.asDateTime.format(args.head.asText), DataType.TEXT)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at FORMAT, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at FORMAT, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -60,7 +60,7 @@ object SHARP {
             DataCell(data.asDateTime.setYear(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET YEAR, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET YEAR, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -69,7 +69,7 @@ object SHARP {
             DataCell(data.asDateTime.setMonth(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET MONTH, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET MONTH, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -78,7 +78,7 @@ object SHARP {
             DataCell(data.asDateTime.setDayOfMonth(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET DAY, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET DAY, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -87,7 +87,7 @@ object SHARP {
             DataCell(data.asDateTime.setHour(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET HOUR, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET HOUR, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -96,7 +96,7 @@ object SHARP {
             DataCell(data.asDateTime.setMinute(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET MINUTE, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET MINUTE, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -105,7 +105,7 @@ object SHARP {
             DataCell(data.asDateTime.setSecond(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET SECOND, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET SECOND, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -114,7 +114,7 @@ object SHARP {
             DataCell(data.asDateTime.setNano(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET NANO, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET NANO, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -123,7 +123,7 @@ object SHARP {
             DataCell(data.asDateTime.setDayOfWeek(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET WEEK, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET WEEK, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -168,7 +168,7 @@ object SHARP {
             DataCell(data.asDateTime.plusYears(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS YEARS, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS YEARS, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -177,7 +177,7 @@ object SHARP {
             DataCell(data.asDateTime.plusMonths(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS MONTHS, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS MONTHS, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -186,7 +186,7 @@ object SHARP {
             DataCell(data.asDateTime.plusDays(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS DAYS, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS DAYS, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -195,7 +195,7 @@ object SHARP {
             DataCell(data.asDateTime.plusHours(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS HOURS, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS HOURS, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -204,7 +204,7 @@ object SHARP {
             DataCell(data.asDateTime.plusMinutes(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS MINUTES, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS MINUTES, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -213,7 +213,7 @@ object SHARP {
             DataCell(data.asDateTime.plusSeconds(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS SECONDS, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS SECONDS, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -222,7 +222,7 @@ object SHARP {
             DataCell(data.asDateTime.minusYears(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS YEARS, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS YEARS, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -231,7 +231,7 @@ object SHARP {
             DataCell(data.asDateTime.minusMonths(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS MONTHS, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS MONTHS, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -240,7 +240,7 @@ object SHARP {
             DataCell(data.asDateTime.minusDays(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS DAYS, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS DAYS, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -249,7 +249,7 @@ object SHARP {
             DataCell(data.asDateTime.minusHours(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS HOURS, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS HOURS, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -258,7 +258,7 @@ object SHARP {
             DataCell(data.asDateTime.minusMinutes(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS MINUTES, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS MINUTES, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -267,7 +267,7 @@ object SHARP {
             DataCell(data.asDateTime.minusSeconds(args.head.asInteger.toInt), DataType.DATETIME)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS SECONDS, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS SECONDS, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -279,7 +279,7 @@ object SHARP {
             DataCell(data.asInteger.to(args.head.asInteger).toList.asJava, DataType.ARRAY)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TO, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TO, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -289,7 +289,7 @@ object SHARP {
             DataCell(data.asInteger.until(args.head.asInteger).toList.asJava, DataType.ARRAY)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at UNTIL, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at UNTIL, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -297,7 +297,7 @@ object SHARP {
 
     def SPLIT(data: DataCell, args: List[DataCell]): DataCell = {
         if (args.nonEmpty) {
-            if (args.length == 1) {
+            if (args.size == 1) {
                 DataCell(data.asText.split(args.head.asText).toList.asJava, DataType.ARRAY)
             }
             else {
@@ -305,7 +305,7 @@ object SHARP {
             }
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at UNTIL, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at UNTIL, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -314,7 +314,7 @@ object SHARP {
             DataCell(data.asText.take(args.head.asInteger.toInt), DataType.TEXT)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -323,7 +323,7 @@ object SHARP {
             DataCell(data.asText.takeRight(args.head.asInteger.toInt), DataType.TEXT)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -332,7 +332,7 @@ object SHARP {
             DataCell(data.asText.takeBefore(args.head.asText), DataType.TEXT)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -341,7 +341,7 @@ object SHARP {
             DataCell(data.asText.takeAfter(args.head.asText), DataType.TEXT)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -355,7 +355,7 @@ object SHARP {
             }
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at TAKE BEFORE, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -384,7 +384,7 @@ object SHARP {
             }
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at INSERT IF EMPTY, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at INSERT IF EMPTY, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -421,7 +421,7 @@ object SHARP {
             DataCell(data.asTable.getRow(args.head.asInteger.toInt - 1).getOrElse(new DataRow()), DataType.ROW)
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at GET ROW, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at GET ROW, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 
@@ -451,34 +451,52 @@ object SHARP {
             }
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at GET COLUMN, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at GET COLUMN, arguments ${args.size}, data type: ${data.dataType} ")
+        }
+    }
+
+    def GET$FIRST$CELL$DATA(data: DataCell, args: List[DataCell]): DataCell = {
+        data.asTable.firstRow match {
+            case Some(row) => row.firstCell
+            case None => DataCell.NOT_FOUND
+        }
+    }
+
+    def GET$LAST$CELL$DATA(data: DataCell, args: List[DataCell]): DataCell = {
+        data.asTable.lastRow match {
+            case Some(row) => row.lastCell
+            case None => DataCell.NOT_FOUND
+        }
+    }
+
+    def GET$CELL$DATA(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.size == 2) {
+            if (args(1).isInteger) {
+                data.asTable.getCell(args.head.asInteger(0).toInt - 1, args(1).asInteger(0).toInt - 1)
+            }
+            else {
+                data.asTable.getCell(args.head.asInteger(0).toInt - 1, args(1).asText)
+            }
+        }
+        else {
+            throw new SQLExecuteException(s"Incorrect arguments length at GET CELL DATA, expected: 2, actual: ${args.size} ")
         }
     }
 
     /* ---------- DataRow ---------- */
 
     def GET$DATA(data: DataCell, args: List[DataCell]): DataCell = {
-        null
-    }
-
-    def GET$TEXT(data: DataCell, args: List[DataCell]): DataCell = {
-        null
-    }
-
-    def GET$INTEGER(data: DataCell, args: List[DataCell]): DataCell = {
-        null
-    }
-
-    def GET$INT(data: DataCell, args: List[DataCell]): DataCell = {
-        null
-    }
-
-    def GET$DATETIME(data: DataCell, args: List[DataCell]): DataCell = {
-        null
-    }
-
-    def GET$DECIMAL(data: DataCell, args: List[DataCell]): DataCell = {
-        null
+        if (args.nonEmpty) {
+            if (args.head.isInteger) {
+                data.asRow.getCell(args.head.asInteger.toInt - 1)
+            }
+            else {
+                data.asRow.getCell(args.head.asText)
+            }
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at GET DATA, arguments ${args.size}, data type: ${data.dataType} ")
+        }
     }
 
     /* ---------- DataList ---------- */
@@ -522,7 +540,7 @@ object SHARP {
             }
         }
         else {
-            throw new SQLExecuteException(s"Empty arguments or incorrect data type at GET, arguments ${args.length}, data type: ${data.dataType} ")
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at GET, arguments ${args.size}, data type: ${data.dataType} ")
         }
     }
 

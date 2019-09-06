@@ -91,4 +91,14 @@ object Global {
 
     def KRB_KRB5CONF_PATH: String = Configurations.getOrProperty("KRB_KRB5CONF_PATH", "krb.krb5conf.path")
 
+    def KEEPER_HTTP_ADDRESS: String = {
+        var address = Configurations.getOrProperty("KEEPER_HTTP_ADDRESS", "keeper.http.address")
+        if (address == "") {
+            address = Environment.localHostAddress
+            Configurations.set("KEEPER_HTTP_ADDRESS", address)
+        }
+        address
+    }
+
+    def KEEPER_HTTP_PORT: Int = Configurations.getOrProperty("KEEPER_HTTP_PORT", "keeper.http.port", "7700").toInt
 }

@@ -43,7 +43,7 @@ object Properties {
                 props.setProperty(name, props.getProperty(s"$value.url"))
             }
         }
-        else {
+        else if (contains(alternate)) {
             props.setProperty(name, props.getProperty(alternate))
         }
     }

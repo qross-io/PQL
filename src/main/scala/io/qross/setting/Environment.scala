@@ -1,14 +1,26 @@
 package io.qross.setting
 
 import java.lang.management.ManagementFactory
+import java.net.InetAddress
 
 import com.sun.management.OperatingSystemMXBean
+import io.qross.time.Timer
 
 object Environment {
 
     val cpuThreads: Int = Runtime.getRuntime.availableProcessors()
 
-    def cpuUsage: Double = 0L
+    def cpuUsage: Double = {
+        val bean = ManagementFactory.getOperatingSystemMXBean.asInstanceOf[OperatingSystemMXBean]
+
+        var total = 0D
+        for (i <- 0 to 99) {
+            Timer.sleep(0.01F)
+            total += bean.getSystemCpuLoad
+        }
+
+        total / 100
+    }
 
     def jvmUsedMemory: Long = {
         val runtime = Runtime.getRuntime
@@ -40,9 +52,9 @@ object Environment {
         val bean = ManagementFactory.getOperatingSystemMXBean.asInstanceOf[OperatingSystemMXBean]
         val freeMemory: Long = bean.getFreePhysicalMemorySize
         val totalMemory: Long = bean.getTotalPhysicalMemorySize
-        println(freeMemory)
-        println(totalMemory)
 
         (Math.round((totalMemory - freeMemory).toDouble / totalMemory.toDouble * 10000D) / 10000D).toFloat
     }
+
+    def localHostAddress: String = InetAddress.getLocalHost.getHostAddress
 }

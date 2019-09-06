@@ -77,11 +77,18 @@ class DataRow() {
             fields += name -> dataType
         }
 
-        this.columns += name -> (dataType match {
-                                        case DataType.DATETIME => value.toDateTime
-                                        case DataType.JSON => value
-                                        case _ => value
-                                     })
+        this.columns += name -> {
+            if (value != null) {
+                dataType match {
+                    case DataType.DATETIME => value.toDateTime.toString
+                    case DataType.JSON => value
+                    case _ => value
+                }
+            }
+            else {
+                null
+            }
+        }
     }
 
     def remove(fieldName: String): Unit = {
@@ -144,6 +151,24 @@ class DataRow() {
     def getCell(index: Int): DataCell = {
         if (index < this.columns.size) {
             DataCell(this.columns.take(index + 1).last._2, this.fields.take(index + 1).last._2)
+        }
+        else {
+            DataCell.NOT_FOUND
+        }
+    }
+
+    def firstCell: DataCell = {
+        if (this.columns.nonEmpty) {
+            DataCell(this.columns.head._2, this.fields.head._2)
+        }
+        else {
+            DataCell.NOT_FOUND
+        }
+    }
+
+    def lastCell: DataCell = {
+        if (this.columns.nonEmpty) {
+            DataCell(this.columns.last._2, this.fields.last._2)
         }
         else {
             DataCell.NOT_FOUND
@@ -348,7 +373,8 @@ class DataRow() {
     }
 
     override def toString: String = {
-        new ObjectMapper().writeValueAsString(toJavaMap)
+        //Json.serialize(toJavaMap)
+        new ObjectMapper().writeValueAsString(columns.asJava)
     }
     
     override def equals(obj: scala.Any): Boolean = {

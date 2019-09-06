@@ -15,6 +15,7 @@ import scala.collection.parallel.mutable.ParArray
 
 object DataHub {
     def QROSS: DataHub = new DataHub(JDBC.QROSS)
+    def DEFAULT: DataHub = new DataHub("")
 }
 
 class DataHub (private val defaultConnectionName: String = "") {
@@ -1036,7 +1037,7 @@ class DataHub (private val defaultConnectionName: String = "") {
             TO_BE_CLEAR = false
         }
 
-        TABLE.insertRow(fields: _*)
+        TABLE.insert(fields: _*)
         this
     }
     
@@ -1048,7 +1049,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         }
 
         if (TABLE.isEmpty) {
-            TABLE.insertRow(fields: _*)
+            TABLE.insert(fields: _*)
         }
         this
     }

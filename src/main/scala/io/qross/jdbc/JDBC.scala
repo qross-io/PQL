@@ -30,7 +30,7 @@ object JDBC {
     private var QrossConnectable = false
 
     private val drivers: immutable.HashMap[String, String] = immutable.HashMap[String, String](
-                DBType.MySQL -> "com.mysql.jdbc.Driver", //com.mysql.cj.jdbc.Driver,com.mysql.jdbc.Driver",
+                DBType.MySQL -> "com.mysql.cj.jdbc.Driver,com.mysql.jdbc.Driver", //com.mysql.cj.jdbc.Driver,com.mysql.jdbc.Driver",
                 DBType.SQLite -> "org.sqlite.JDBC",
                 DBType.Presto -> "com.facebook.presto.jdbc.PrestoDriver",
                 DBType.Hive -> "org.apache.hive.jdbc.HiveDriver",
@@ -170,6 +170,7 @@ object JDBC {
         connections(connectionName)
     }
 
+    //refresh
     def setup(id: Int): Unit = {
         if (hasQrossSystem) {
             val connection = DataSource.QROSS.queryDataRow("SELECT * FROM qross_connections WHERE id=?", id)

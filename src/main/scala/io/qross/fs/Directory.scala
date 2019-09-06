@@ -4,6 +4,8 @@ import java.io.{File, FileFilter}
 
 import io.qross.ext.TypeExt._
 
+import scala.util.matching.Regex
+
 object Directory {
 
     def listFiles(path: String): Array[File] = {
@@ -26,18 +28,25 @@ object Directory {
     }
 
     def listFiles(path: String, filter: String): Array[File] = {
+        listFiles(path, filter.replace("?", "[\\s\\S]")
+                            .replace("[\\s\\S]*", "")
+                            .replace(".", "\\.")
+                            .r)
+    }
+
+    def listFiles(path: String, filter: Regex): Array[File] = {
         val dir = new File(path)
         if (dir.exists()) {
             if (dir.isDirectory) {
                 dir.listFiles(
                     new FileFilter {
                         override def accept(f: File): Boolean = {
-                            filter.r.test(f.getPath)
+                            filter.test(f.getPath)
                         }
                     }
                 )
             }
-            else if (filter.r.test(path)) {
+            else if (filter.test(path)) {
                 Array[File](dir)
             }
             else {

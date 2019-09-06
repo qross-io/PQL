@@ -3,21 +3,63 @@ package io.qross.fs
 import java.io.{File, IOException}
 import java.util
 import java.util.jar.{JarEntry, JarFile}
+import java.util.regex.Pattern
 
 import io.qross.setting.BaseClass
+import io.qross.ext.TypeExt._
 
 import scala.collection.mutable
+import scala.collection.JavaConverters._
 import scala.io.Source
+import scala.util.matching.Regex
 
 object ResourceDir {
     def open(path: String): ResourceDir = {
         new ResourceDir(path)
     }
+
+    //support wildcards
+    def listFiles(path: String, filter: String): Array[String] = {
+        new ResourceDir(path).listFiles(filter)
+    }
+
+    //support regex - for Java
+    def listFiles(path: String, filter: Pattern): Array[String] = {
+        new ResourceDir(path).listFiles(filter)
+    }
+
+    def listFiles(path: String, filter: Regex):  Array[String] = {
+        new ResourceDir(path).listFiles(filter)
+    }
+
+    def listFiles(path: String): Array[String] = {
+        new ResourceDir(path).listFiles("".r)
+    }
 }
 
 class ResourceDir(path: String) {
 
-    def listFiles(ends: String = ""): List[String] = {
+    def listFiles(): Array[String] = {
+        listFiles("".r)
+    }
+
+    def listFiles(filter: String): Array[String] = {
+        listFiles(
+            filter.replace("?", "[\\s\\S]")
+                  .replace("*", "[\\s\\S]*")
+                  .replace(".", "\\.")
+                  .r)
+    }
+
+    def listFiles(filter: Pattern): Array[String] = {
+        var pattern = filter.pattern()
+        if (!pattern.startsWith("(?i)")) {
+            pattern = "(?i)" + pattern
+        }
+        listFiles(pattern.r)
+    }
+
+    def listFiles(filter: Regex): Array[String] = {
 
         try {
             val root: String = BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath
@@ -28,8 +70,8 @@ class ResourceDir(path: String) {
                 val jarEntry: JarEntry = entries.nextElement
                 val name: String = jarEntry.getName
                 if (name.startsWith(if (path.startsWith("/")) path.drop(1) else path)) {
-                    if (ends != "") {
-                        if (name.endsWith(ends)) {
+                    if (filter.regex != "") {
+                        if (filter.test(name)) {
                             files += "/" + name
                         }
                     }
@@ -39,25 +81,29 @@ class ResourceDir(path: String) {
                 }
             }
 
-            files.toList
+            files.toArray
         } catch {
             case _: IOException =>
                 val resource = BaseClass.MAIN.getResourceAsStream(path)
                 if (resource != null) {
-                    Source.fromInputStream(resource, "UTF-8")
-                            .mkString
-                            .split("\\s")
-                            .map(f => path + (if (path.endsWith("/")) "" else "/") + f.trim())
-                            .toList
+                    val sl = if (path.endsWith("/")) "" else "/"
+                    val files = Source.fromInputStream(resource, "UTF-8")
+                        .mkString
+                        .split("\\s")
+
+                    files.filter(name => filter.test(name))
+                        .map(f => path + sl + f.trim()) ++:
+                    files.filter(!_.contains("."))
+                            .flatMap(dir => ResourceDir.listFiles(path + sl + dir + "/", filter))
                 }
                 else {
-                    List[String]()
+                    new Array[String](0)
                 }
         }
     }
 
-    def readAll(ends: String = ""): List[String] = {
-        listFiles(ends).map(file => {
+    def readAll(filter: String): Array[String] = {
+        listFiles(filter).map(file => {
             ResourceFile.open(file).output
         })
     }
