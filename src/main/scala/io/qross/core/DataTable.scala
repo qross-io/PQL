@@ -504,6 +504,8 @@ class DataTable() {
     // SELECT "A, B, GATHER(C, D, E, F) AS X"
     // SELECT "A, B, GATHER(C, D, GATHER(E, F)) AS X"
     // SELECT "*, TREE(parentId=0) AS nodes"
+    // SELECT "A, B, PARTITION(C,D)"  二次分组聚合
+    // 二次分组排序, TOP N, 再次聚合, 参与SQL SERVER和第一版FSQL
     def select(fragment: String): DataTable = {
         null
     }
@@ -537,36 +539,30 @@ class DataTable() {
     def alter(fragment: String): DataTable = {
         null
     }
-    
+
     def updateSource(SQL: String): DataTable = {
         updateSource(JDBC.DEFAULT, SQL)
         this
     }
-    
+
     def updateSource(dataSource: String, SQL: String): DataTable = {
         val ds = new DataSource(dataSource)
         ds.tableUpdate(SQL, this)
         ds.close()
-        
+
         this
     }
 
-    def nonEmpty: Boolean = {
-        rows.nonEmpty
-    }
-    
-    def isEmpty: Boolean = {
-        rows.isEmpty
-    }
-
-    def isEmptySchema: Boolean = {
-        fields.isEmpty
+    def batchUpdate(dataSource: DataSource, nonQuerySQL: String): Boolean = {
+        if (nonEmpty) {
+            dataSource.tableUpdate(nonQuerySQL, this)
+            true
+        }
+        else {
+            false
+        }
     }
 
-    def nonEmptySchema: Boolean = {
-        fields.nonEmpty
-    }
-    
     def copy(otherTable: DataTable): DataTable = {
         clear()
         union(otherTable)
@@ -615,16 +611,11 @@ class DataTable() {
         this
     }
 
-    def batchUpdate(dataSource: DataSource, nonQuerySQL: String): Boolean = {
-        if (nonEmpty) {
-            dataSource.tableUpdate(nonQuerySQL, this)
-            true
-        }
-        else {
-            false
-        }
-    }
-    
+    def nonEmpty: Boolean = rows.nonEmpty
+    def isEmpty: Boolean = rows.isEmpty
+    def isEmptySchema: Boolean = fields.isEmpty
+    def nonEmptySchema: Boolean = fields.nonEmpty
+
     def getFieldNames: List[String] = fields.keySet.toList
     def getFieldNameList: java.util.List[String] = getFieldNames.asJava
     def getLabelNames: List[String] = labels.values.toList
