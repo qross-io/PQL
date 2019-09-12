@@ -222,7 +222,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         }
         val placeHolders = new mutable.ArrayBuffer[String]()
         val fields = new mutable.ArrayBuffer[String]()
-        for ((field, dataType) <- table.getFields) {
+        for ((field, dataType) <- table.getColumns) {
             fields += field + " " + dataType.toString
             placeHolders += "?"
         }
@@ -311,7 +311,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         }
         val placeHolders = new mutable.ArrayBuffer[String]()
         val fields = new mutable.ArrayBuffer[String]()
-        for ((field, dataType) <- table.getFields) {
+        for ((field, dataType) <- table.getColumns) {
             fields += field + " " + dataType.toString
             placeHolders += "?"
         }
@@ -497,13 +497,13 @@ class DataHub (private val defaultConnectionName: String = "") {
             case Some(param) =>
                 blockSQLs += selectSQL -> (param.group(0),
                         beginKeyOrSQL match {
-                            case sentence: String => CURRENT.executeDataRow(sentence).getFirstLong()
+                            case sentence: String => CURRENT.executeDataRow(sentence).getLong(0)
                             case key: Long => key
                             case key: Int => key.toLong
                             case _ => beginKeyOrSQL.toString.toLong
                         },
                         endKeyOrSQL match {
-                            case sentence: String => CURRENT.executeDataRow(sentence).getFirstLong()
+                            case sentence: String => CURRENT.executeDataRow(sentence).getLong(0)
                             case key: Long => key
                             case key: Int => key.toLong
                             case _ => endKeyOrSQL.toString.toLong
@@ -526,13 +526,13 @@ class DataHub (private val defaultConnectionName: String = "") {
         nonQuerySQL.matchParameters.headOption match {
             case Some(param) =>
                 var begin = beginKeyOrSQL match {
-                    case sentence: String => CURRENT.executeDataRow(sentence).getFirstLong() - 1
+                    case sentence: String => CURRENT.executeDataRow(sentence).getLong(0) - 1
                     case key: Int => key.toLong
                     case key: Long => key
                     case _ => beginKeyOrSQL.toString.toLong
                 }
                 val end = endKeyOrSQL match {
-                    case sentence: String => CURRENT.executeDataRow(sentence).getFirstLong()
+                    case sentence: String => CURRENT.executeDataRow(sentence).getLong(0)
                     case key: Int => key.toLong
                     case key: Long => key
                     case _ => beginKeyOrSQL.toString.toLong

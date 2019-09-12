@@ -14,6 +14,7 @@ import javax.script.{ScriptEngine, ScriptEngineManager, ScriptException}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.sys.process._
 import scala.util.control.Breaks._
 import scala.util.matching.Regex
@@ -348,6 +349,44 @@ object TypeExt {
 
             process.exitValue()
         }
+
+        //处理字符串
+        def pickChars(chars: ListBuffer[String]): String = {
+
+            if (string.contains("'") || string.contains("\"")) {
+                var pre = ' '
+                var pri = 0
+                for (i <- string.indices) {
+                    val c = string.charAt(i)
+                    if (c == '\'') {
+                        if (pre == ' ') {
+                            pre = '\''
+                            pri = i
+                        }
+                        else if (pre == '\'' && string.charAt(i - 1) != '\\') {
+                            chars += string.substring(pri, i + 1)
+                            pre = ' '
+                        }
+                    }
+                    else if (c == '"') {
+                        if (pre == ' ') {
+                            pre = '"'
+                            pri = i
+                        }
+                        else if (pre == '"' && string.charAt(i - 1) != '\\') {
+                            chars += string.substring(pri, i + 1)
+                            pre = ' '
+                        }
+                    }
+                }
+
+                for (i <- chars.indices) {
+                    string = string.takeBefore(chars(i)) + s"~str[$i]" + string.takeAfter(chars(i))
+                }
+            }
+
+            string
+        }
     }
 
     implicit class LongExt(long: Long) {
@@ -365,26 +404,6 @@ object TypeExt {
 
         def toDateTime: DateTime = {
             DateTime.ofTimestamp(long)
-        }
-    }
-
-    implicit class FloatExt(float: Float) {
-        def floor(precision: Int = 0): Double = {
-            Math.floor(float * Math.pow(10, precision)) / Math.pow(10, precision)
-        }
-
-        def round(precision: Int = 0): Double = {
-            Math.round(float * Math.pow(10, precision)) / Math.pow(10, precision)
-        }
-    }
-
-    implicit class DoubleExt(double: Double) {
-        def floor(precision: Int = 0): Double = {
-            Math.floor(double * Math.pow(10, precision)) / Math.pow(10, precision)
-        }
-
-        def round(precision: Int = 0): Double = {
-            Math.round(double * Math.pow(10, precision)) / Math.pow(10, precision)
         }
     }
 

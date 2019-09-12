@@ -6,7 +6,7 @@ apply plugin: 'maven'
 apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
-version = '0.5.9-80-SNAPSHOT'
+version = '0.5.9-95-SNAPSHOT'
 sourceCompatibility = 1.8
 
 archivesBaseName = "qross-pql"
@@ -32,9 +32,6 @@ repositories {
     }
 	mavenCentral()
     jcenter()
-    maven{
-        url "https://nexus-bigdata.zichan360.com/repository/maven-public/"
-    }
 }
 
 dependencies {
@@ -81,7 +78,7 @@ uploadArchives {
             pom.project {
                 name = project.name
                 packaging = 'jar'
-                description = 'qross PQL and development toolkit v0.5.9'
+                description = 'qross PQL and development toolkit v0.6.0'
             }
         }
     }

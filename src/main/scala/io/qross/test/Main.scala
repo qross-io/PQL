@@ -2,6 +2,7 @@ package io.qross.test
 
 import java.lang.management.ManagementFactory
 import java.sql.DriverManager
+import java.util.regex.Matcher
 import java.util.{Date, Properties}
 
 import io.qross.core._
@@ -18,6 +19,7 @@ import io.qross.pql.PQL._
 import io.qross.setting.Environment
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 
 object Main {
@@ -50,19 +52,7 @@ object Main {
 
         //new PQL("SELECT switch_time FROM qross_jobs LIMIT 5 -> GET LAST ROW", DataHub.QROSS).run().print
 
-        //PQL.runFile("/sql/test.sql")
-
-        ResourceDir.open("/sql/").listFiles("*.sql").foreach(println)
-
-        System.exit(0)
-
-        val m = $EXIT.matcher("exit when true")
-        if (m.find()) {
-            m.group(0).print
-            println(m.group(1) == "")
-        }
-
-
+        PQL.openFile("/sql/test.sql").run()
 
         System.exit(0)
 

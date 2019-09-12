@@ -117,7 +117,7 @@ public class DataAccess {
                 while (rs.next()) {
                     DataRow row = table.newRow();
                     for (int i = 1; i <= columns; i++) {
-                        row.set(fields.get(i), rs.getObject(i), table.getFieldType(fields.get(i)));
+                        row.set(fields.get(i), rs.getObject(i), table.getFieldDataType(fields.get(i)));
                     }
                     table.addRow(row);
                 }

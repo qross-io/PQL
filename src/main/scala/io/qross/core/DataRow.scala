@@ -19,11 +19,11 @@ object DataRow {
     def from(row: DataRow, fieldNames: String*): DataRow = {
         val newRow = new DataRow()
         if (fieldNames.nonEmpty) {
-            fieldNames.foreach(fieldName => newRow.set(fieldName, row.get(fieldName).get))
+            fieldNames.foreach(fieldName => newRow.set(fieldName, row.getCell(fieldName)))
         }
         else {
+            newRow.values ++= row.values
             newRow.columns ++= row.columns
-            newRow.fields ++= row.fields
         }
         newRow
     }
@@ -38,9 +38,10 @@ class DataRow() {
             this.set(k, v)
         }
     }
-    
-    val columns = new mutable.LinkedHashMap[String, Any]()
-    val fields = new mutable.LinkedHashMap[String, DataType]()
+
+    val fields = new mutable.ArrayBuffer[String]()
+    val columns = new mutable.LinkedHashMap[String, DataType]()
+    val values = new mutable.LinkedHashMap[String, Any]()
     var table: DataTable = _  // 所属的DataTable
 
     //insert or update
@@ -52,7 +53,7 @@ class DataRow() {
         else {
             //在table中的row
             if (table.contains(fieldName)) {
-                set(fieldName, value, table.getFieldType(fieldName))
+                set(fieldName, value, table.getFieldDataType(fieldName))
             }
             else {
                 throw new FieldNotFoundException(s"Field name $fieldName is not contained its DataTable")
@@ -73,11 +74,12 @@ class DataRow() {
 
         val name = fieldName.toLowerCase()
 
-        if (!fields.contains(name)) {
-            fields += name -> dataType
+        if (!columns.contains(name)) {
+            fields += name
+            columns += name -> dataType
         }
 
-        this.columns += name -> {
+        this.values += name -> {
             if (value != null) {
                 dataType match {
                     case DataType.DATETIME => value.toDateTime.toString
@@ -93,35 +95,47 @@ class DataRow() {
 
     def remove(fieldName: String): Unit = {
         val name = fieldName.toLowerCase()
-        this.fields.remove(name)
-        this.columns.remove(name)
+        if (this.columns.contains(name)) {
+            this.fields -= name
+            this.columns -= name
+            this.values -= name
+        }
     }
-    
+
     def updateFieldName(fieldName: String, newFieldName: String): Unit = {
-        this.set(newFieldName, this.columns.get(fieldName.toLowerCase()))
-        this.remove(fieldName)
+        val oldName = fieldName.toLowerCase()
+        val newName = newFieldName.toLowerCase()
+        this.fields(this.fields.indexOf(oldName)) = newName
+        this.values += newName -> this.values(oldName)
+        this.values -= oldName
+        this.columns += newName -> this.columns(oldName)
+        this.columns -= oldName
     }
-    
+
+    def alter(fieldName: String, newFieldName: String): Unit = {
+        updateFieldName(fieldName, newFieldName)
+    }
+
     def getDataType(fieldName: String): Option[DataType] = {
         val name = fieldName.toLowerCase()
-        if (this.fields.contains(name)) {
-            Some(this.fields(name))
+        if (this.columns.contains(name)) {
+            Some(this.columns(name))
         }
         else {
             None
         }
     }
-    
+
     def foreach(callback: (String, Any) => Unit): Unit = {
-        for ((k, v) <- this.columns) {
+        for ((k, v) <- this.values) {
             callback(k, v)
         }
     }
-    
+
     def get(fieldName: String): Option[Any] = {
         val name = fieldName.toLowerCase()
-        if (this.columns.contains(name)) {
-            this.columns.get(name)
+        if (this.values.contains(name)) {
+            this.values.get(name)
         }
         else {
             None
@@ -130,8 +144,8 @@ class DataRow() {
 
     //by index
     def get(index: Int): Option[Any] = {
-        if (index < this.columns.size) {
-            Some(this.columns.take(index + 1).last._2)
+        if (index < this.values.size) {
+            this.values.get(this.fields(index))
         }
         else {
             None
@@ -141,7 +155,7 @@ class DataRow() {
     def getCell(fieldName: String): DataCell = {
         val name = fieldName.toLowerCase()
         if (this.contains(name)) {
-            DataCell(this.columns(name), this.fields(name))
+            DataCell(this.values(name), this.columns(name))
         }
         else {
             DataCell.NOT_FOUND
@@ -149,8 +163,9 @@ class DataRow() {
     }
 
     def getCell(index: Int): DataCell = {
-        if (index < this.columns.size) {
-            DataCell(this.columns.take(index + 1).last._2, this.fields.take(index + 1).last._2)
+        if (index < this.values.size) {
+            val name = this.fields(index)
+            DataCell(this.values(name), this.columns(name))
         }
         else {
             DataCell.NOT_FOUND
@@ -158,17 +173,12 @@ class DataRow() {
     }
 
     def firstCell: DataCell = {
-        if (this.columns.nonEmpty) {
-            DataCell(this.columns.head._2, this.fields.head._2)
-        }
-        else {
-            DataCell.NOT_FOUND
-        }
+        getCell(0)
     }
 
     def lastCell: DataCell = {
-        if (this.columns.nonEmpty) {
-            DataCell(this.columns.last._2, this.fields.last._2)
+        if (this.fields.nonEmpty) {
+            getCell(this.fields.size - 1)
         }
         else {
             DataCell.NOT_FOUND
@@ -178,7 +188,7 @@ class DataRow() {
     def getJson(fieldName: String): Json = {
         val name = fieldName.toLowerCase()
         if (this.contains(name)) {
-            this.columns(name).asInstanceOf[Json]
+            this.values(name).asInstanceOf[Json]
         }
         else {
             Json()
@@ -186,16 +196,28 @@ class DataRow() {
     }
 
     def getString(fieldName: String): String = getString(fieldName, "")
+    def getString(index: Int): String = getString(index, "")
     def getString(fieldName: String, defaultValue: String): String = getStringOption(fieldName).getOrElse(defaultValue)
+    def getString(index: Int, defaultValue: String): String = getStringOption(index).getOrElse(defaultValue)
     def getStringOption(fieldName: String): Option[String] = {
         get(fieldName) match {
             case Some(value) => if (value != null) Some(value.toString) else Some(null)
             case None => None
         }
     }
+    def getStringOption(index: Int): Option[String] = {
+        if (index < fields.size) {
+            getStringOption(fields(index))
+        }
+        else {
+            None
+        }
+    }
 
     def getInt(fieldName: String): Int = getInt(fieldName, 0)
+    def getInt(index: Int): Int = getInt(index, 0)
     def getInt(fieldName: String, defaultValue: Int): Int = getIntOption(fieldName).getOrElse(defaultValue)
+    def getInt(index: Int, defaultValue: Int): Int = getIntIntOption(index).getOrElse(defaultValue)
     def getIntOption(fieldName: String): Option[Int] = {
         get(fieldName) match {
             case Some(value) => value match {
@@ -208,9 +230,19 @@ class DataRow() {
             case None => None
         }
     }
+    def getIntIntOption(index: Int): Option[Int] = {
+        if (index < fields.size) {
+            getIntOption(fields(index))
+        }
+        else {
+            None
+        }
+    }
 
     def getLong(fieldName: String): Long = getLong(fieldName, 0L)
+    def getLong(index: Int): Long = getLong(index, 0L)
     def getLong(fieldName: String, defaultValue: Long): Long = getLongOption(fieldName).getOrElse(defaultValue)
+    def getLong(index: Int, defaultValue: Long): Long = getLongOption(index).getOrElse(defaultValue)
     def getLongOption(fieldName: String): Option[Long] = {
         get(fieldName) match {
             case Some(value) => value match {
@@ -224,9 +256,19 @@ class DataRow() {
             case None => None
         }
     }
+    def getLongOption(index: Int): Option[Long] = {
+        if (index < fields.size) {
+            getLongOption(fields(index))
+        }
+        else {
+            None
+        }
+    }
 
     def getFloat(fieldName: String): Float = getFloat(fieldName, 0F)
+    def getFloat(index: Int): Float = getFloat(index, 0F)
     def getFloat(fieldName: String, defaultValue: Float): Float = getFloatOption(fieldName).getOrElse(defaultValue)
+    def getFloat(index: Int, defaultValue: Float): Float = getFloatOption(index).getOrElse(defaultValue)
     def getFloatOption(fieldName: String): Option[Float] = {
         get(fieldName) match {
             case Some(value) => value match {
@@ -240,9 +282,19 @@ class DataRow() {
             case None => None
         }
     }
+    def getFloatOption(index: Int): Option[Float] = {
+        if (index < fields.size) {
+            getFloatOption(fields(index))
+        }
+        else {
+            None
+        }
+    }
 
     def getDouble(fieldName: String): Double = getDouble(fieldName, 0D)
+    def getDouble(index: Int): Double = getDouble(index, 0D)
     def getDouble(fieldName: String, defaultValue: Double): Double = getDoubleOption(fieldName).getOrElse(defaultValue)
+    def getDouble(index: Int, defaultValue: Double): Double = getDoubleOption(index).getOrElse(defaultValue)
     def getDoubleOption(fieldName: String): Option[Double] = {
         get(fieldName) match {
             case Some(value) => value match {
@@ -258,22 +310,42 @@ class DataRow() {
             case None => None
         }
     }
-    
-    def getBoolean(fieldName: String): Boolean = {
+    def getDoubleOption(index: Int): Option[Double] = {
+        if (index < fields.size) {
+            getDoubleOption(fields(index))
+        }
+        else {
+            None
+        }
+    }
+
+    def getBoolean(fieldName: String): Boolean = getBoolean(fieldName, false)
+    def getBoolean(fieldName: String, defaultValue: Boolean): Boolean = {
         get(fieldName) match {
             case Some(value) =>
                 value match {
                     case bool: Boolean => bool
                     case _ =>
-                        val value = getString(fieldName, "0").toLowerCase
+                        val value = getString(fieldName, defaultValue.toString).toLowerCase
                         value == "yes" || value == "true" || value == "1" || value == "ok"
                 }
-            case None => false
+            case None => defaultValue
+        }
+    }
+    def getBoolean(index: Int): Boolean = getBoolean(index, false)
+    def getBoolean(index: Int, defaultValue: Boolean): Boolean = {
+        if (index < fields.size) {
+            getBoolean(fields(index), defaultValue)
+        }
+        else {
+            defaultValue
         }
     }
 
     def getDateTime(fieldName: String): DateTime = getDateTime(fieldName, DateTime.of(1970, 1, 1))
+    def getDateTime(index: Int): DateTime = getDateTime(index, DateTime.of(1970, 1, 1))
     def getDateTime(fieldName: String, defaultValue: DateTime): DateTime = getDateTimeOption(fieldName).getOrElse(defaultValue)
+    def getDateTime(index: Int, defaultValue: DateTime): DateTime = getDateTimeOption(index).getOrElse(defaultValue)
     def getDateTimeOption(fieldName: String): Option[DateTime] = {
         get(fieldName) match {
             case Some(value) =>
@@ -284,74 +356,39 @@ class DataRow() {
             case None => None
         }
     }
-
-    def getFields: List[String] = this.fields.keySet.toList
-    def getDataTypes: List[DataType] = this.fields.values.toList
-    def getValues: List[Any] = this.columns.values.toList
-
-    def getFirstString(defaultValue: String = ""): String = {
-        this.columns.headOption match {
-            case Some(field) => field._2.toString
-            case None => defaultValue
+    def getDateTimeOption(index: Int): Option[DateTime] = {
+        if (index < fields.size) {
+            getDateTimeOption(fields(index))
+        }
+        else {
+            None
         }
     }
 
-    def getFirstInt(defaultValue: Int = 0): Int = {
-        this.fields.headOption match {
-            case Some(field) => this.getInt(field._1)
-            case None => defaultValue
-        }
-    }
+    def getFields: List[String] = fields.toList
+    def getDataTypes: List[DataType] = columns.values.toList
+    def getValues: List[Any] = values.values.toList
 
-    def getFirstLong(defaultValue: Long = 0L): Long = {
-        this.fields.headOption match {
-            case Some(field) => this.getLong(field._1)
-            case None => defaultValue
-        }
-    }
-
-    def getFirstFloat(defaultValue: Float = 0F): Float = {
-        this.fields.headOption match {
-            case Some(field) => this.getFloat(field._1)
-            case None => defaultValue
-        }
-    }
-
-    def getFirstDouble(defaultValue: Double = 0D): Double = {
-        this.fields.headOption match {
-            case Some(field) => this.getDouble(field._1)
-            case None => defaultValue
-        }
-    }
-
-    def getFirstBoolean(defaultValue: Boolean = false): Boolean = {
-        this.fields.headOption match {
-            case Some(field) => this.getBoolean(field._1)
-            case None => defaultValue
-        }
-    }
-
-
-    
     def contains(fieldName: String): Boolean = this.columns.contains(fieldName.toLowerCase)
     def contains(fieldName: String, value: Any): Boolean = {
         val name = fieldName.toLowerCase()
         this.columns.contains(name) && this.getString(name) == value.toString
     }
-    def size: Int = this.columns.size
-    def isEmpty: Boolean = this.fields.isEmpty
-    def nonEmpty: Boolean = this.fields.nonEmpty
+    def size: Int = fields.size
+    def length: Int = fields.length
+    def isEmpty: Boolean = fields.isEmpty
+    def nonEmpty: Boolean = fields.nonEmpty
 
     def combine(otherRow: DataRow): DataRow = {
-        for ((field, value) <- otherRow.columns) {
-            this.set(field, value)
+        for (field <- otherRow.fields) {
+            this.set(field, otherRow.values(field), otherRow.columns(field))
         }
         this
     }
 
-    def join(delimiter: String): String = {
+    def mkString(delimiter: String): String = {
         val values = new mutable.StringBuilder()
-        for (field <- getFields) {
+        for (field <- fields) {
             if (values.nonEmpty) {
                 values.append(", ")
             }
@@ -361,32 +398,32 @@ class DataRow() {
     }
 
     def toJavaMap: java.util.Map[String, Any] = {
-        columns.asJava
+        values.asJava
     }
 
     def toJavaList: java.util.List[Any] = {
-        columns.values.toList.asJava
+        values.values.toList.asJava
     }
 
     def toTable(keyName: String = "key", valueName: String = "value"): DataTable = {
-        columns.toMap.toTable(keyName, valueName)
+        values.toMap.toTable(keyName, valueName)
     }
 
     override def toString: String = {
         //Json.serialize(toJavaMap)
-        new ObjectMapper().writeValueAsString(columns.asJava)
+        new ObjectMapper().writeValueAsString(values.asJava)
     }
-    
+
     override def equals(obj: scala.Any): Boolean = {
-        this.columns == obj.asInstanceOf[DataRow].columns
+        this.values == obj.asInstanceOf[DataRow].values
     }
 
     override def hashCode(): Int = {
-        Objects.hash(columns, fields)
+        Objects.hash(values, columns)
     }
-    
+
     def clear(): Unit = {
+        this.values.clear()
         this.columns.clear()
-        this.fields.clear()
     }
 }

@@ -3,20 +3,23 @@ package io.qross.pql
 import io.qross.core.{DataCell, DataType}
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.ARROW
+import io.qross.pql.Solver._
 
 class SELECT(val sentence: String) {
+    //val SQL = statement.sentence.$restore(this)
+    //$restore(this) 在内部处理
+
+    val (select, links) =
+        if (sentence.contains(ARROW)) {
+            (sentence.takeBefore(ARROW), sentence.takeAfter(ARROW))
+        }
+        else {
+            (sentence, "")
+        }
 
     def execute(PQL: PQL): DataCell = {
 
-        val (select, links) =
-            if (sentence.contains(ARROW)) {
-                (sentence.takeBefore(ARROW), sentence.takeAfter(ARROW))
-            }
-            else {
-                (sentence, "")
-            }
-
-        val data = DataCell(PQL.dh.executeDataTable(select), DataType.TABLE)
+       val data = PQL.dh.executeDataTable(select.$restore(PQL)).toDataCell(DataType.TABLE)
         if (links != "") {
             new SHARP(links, data).execute(PQL)
         }

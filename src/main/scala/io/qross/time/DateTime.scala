@@ -233,6 +233,7 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     }
    
     def toEpochSecond: Long = this.localDateTime.atZone(ZoneId.systemDefault).toInstant.getEpochSecond
+    def toEpochMilli: Long = this.localDateTime.atZone(ZoneId.systemDefault).toInstant.toEpochMilli
     
     def plus(unit: ChronoUnit, amount: Int): DateTime = {
         new DateTime(this.localDateTime.plus(amount, unit))
@@ -294,15 +295,15 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     def beforeOrEquals(otherDateTime: DateTime): Boolean = this.localDateTime.isBefore(otherDateTime.localDateTime) || this.localDateTime.isEqual(otherDateTime.localDateTime)
     def after(otherDateTime: DateTime): Boolean = this.localDateTime.isAfter(otherDateTime.localDateTime)
     def afterOrEquals(otherDateTime: DateTime): Boolean = this.localDateTime.isAfter(otherDateTime.localDateTime) || this.localDateTime.isEqual(otherDateTime.localDateTime)
-    
+
+    def later(otherDateTime: DateTime): Long = this.toEpochMilli - otherDateTime.toEpochMilli
+    def earlier(otherDateTime: DateTime): Long = otherDateTime.toEpochMilli - this.toEpochMilli
+    def span(otherDateTime: DateTime): Long = Math.abs(this.toEpochMilli - otherDateTime.toEpochMilli)
+
     def copy(): DateTime = {
         new DateTime(this.localDateTime)
     }
-    
-    def copy(dateTime: DateTime): DateTime = {
-        new DateTime(dateTime.localDateTime)
-    }
-    
+
     //---------- Sharp Expression ----------
     
     def shift(field: String, value: String): DateTime = {

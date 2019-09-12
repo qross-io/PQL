@@ -23,7 +23,10 @@ object Rest {
         val path: server.Route =
             pathSingleSlash {
                 get {
-                    complete(new PQL("SELECT * FROM qross_jobs LIMIT 5", DataHub.QROSS).run().toString)
+                    complete(new PQL(
+                        """OUTPUT { "a": ${{ SELECT * FROM qross_jobs LIMIT 10 -> GET FIRST ROW -> GET DATA 'title' }}, "b": ${{
+                          | SELECT * FROM qross_jobs LIMIT 5 -> GET FIRST COLUMN
+                          |}} }""".stripMargin, DataHub.QROSS).run().toString)
                 }
             }
 

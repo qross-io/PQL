@@ -4,7 +4,7 @@ import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
-import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, FUNCTION_NAMES}
+import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, FUNCTION_NAMES, $LINK}
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -33,6 +33,7 @@ object Solver {
     val CHAR$N: Regex = """~char\[(\d+)\]""".r  //字符串占位符
     val STRING$N: Regex = """~string\[(\d+)\]""".r  //富字符串占位符
     val VALUE$N: Regex = """~value\[(\d+)\]($|\s|\S)""".r //中间结果占位符
+    val STR$N: Regex = """~str\[(\d+)\]""".r //计算过程中的字符串占位符
 
     implicit class Sentence(var sentence: String) {
 
@@ -331,7 +332,7 @@ object Solver {
             }
             else {
                 args.split(",").map(arg => {
-                    arg.popStash(PQL).$sharp(PQL)
+                    arg.$sharp(PQL)
                 }).toList
             }
         }
@@ -401,13 +402,13 @@ object Solver {
             QUERY_EXPRESSION
                 .findAllMatchIn(sentence)
                 .foreach(m => {
-                    val query: String = m.group(2).trim() //查询语句
-                    val caption: String = m.group(3).trim().toUpperCase
+                    val query: String = m.group(1).trim() //查询语句
+                    val caption: String = m.group(2).trim().toUpperCase
 
                     sentence = sentence.replace(m.group(0), PQL.$stash(
                         caption match {
-                            case "SELECT" => new SELECT(query).execute(PQL)
-                            case "PARSE" => new PARSE(query.takeAfter("""^PARSE\s""".r).eval().asText).execute(PQL)
+                            case "SELECT" => new SELECT(query.$express(PQL)).execute(PQL)
+                            case "PARSE" => new PARSE(query.takeAfter("""^PARSE\s""".r).$express(PQL).eval().asText).execute(PQL)
                             case _ => DataCell(PQL.dh.executeNonQuery(query), DataType.INTEGER)
                         }))
                 })
@@ -417,29 +418,37 @@ object Solver {
 
         //执行sharp短语句, sharp表达式本身的目的是避免嵌套, 所有本身不支持嵌套
         def $sharp(PQL: PQL, quote: String = "'"): DataCell = {
-            sentence = sentence.restoreChars(PQL, quote).trim()
-            //如果是中间变量
+            //中间变量
             if ($INTERMEDIATE$N.test(sentence)) {
                 PQL.values(sentence.$trim("~value[", "]").toInt)
             }
-            //如果是常量
+            //常量
             else if ($CONSTANT.test(sentence)) {
                 DataCell(sentence, DataType.TEXT)
             }
-            //如果是最短表达式
+            //SHARP表达式
+            else if ($LINK.test(sentence)) {
+                new SHARP(sentence).execute(PQL, quote)
+            }
+            //最短表达式
             else {
-                sentence.restoreValues(PQL, quote).eval()
+                sentence.popStash(PQL, quote).trim().eval()
             }
         }
 
-        //计算表达式, 但保留字符串和中间值
-        def $clean(PQL: PQL): String = {
+        //计算表达式, 不包括查询表达式, $clean的子集, 在计算查询表达式时使用
+        def $express(PQL: PQL): String = {
             sentence.replaceVariables(PQL)
                 .replaceFunctions(PQL)
                 .replaceSharpExpressions(PQL)
                 .replaceJsExpressions(PQL)
                 .replaceJsStatements(PQL)
-                .replaceQueryExpressions(PQL)
+        }
+
+        //计算表达式, 但保留字符串和中间值
+        //先计算查询表达式的原因是如果子表达式过早的被替换掉, 在解析SHARP表达式时会出现字符串解析冲突
+        def $clean(PQL: PQL): String = {
+            sentence.replaceQueryExpressions(PQL).$express(PQL)
         }
 
         //按顺序计算嵌入式表达式、变量和函数

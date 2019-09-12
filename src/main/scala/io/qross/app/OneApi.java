@@ -16,8 +16,8 @@ public class OneApi {
     public String defaultValue = "";
     public String sentences = "";
 
-    // group -> name -> OneApi
-    public static Map<String, Map<String, OneApi>> ALL = new HashMap<>();
+    // group -> name -> METHOD -> OneApi
+    public static Map<String, Map<String, Map<String, OneApi>>> ALL = new HashMap<>();
 
     //read all api settings from resources:/api/
     public static void readAll() {
@@ -48,7 +48,10 @@ public class OneApi {
                             api.sentences = API[3].trim();
                         }
 
-                        ALL.get(path).put(api.name, api);
+                        if (!ALL.get(path).containsKey(api.name)) {
+                            ALL.get(path).put(api.name, new HashMap<>());
+                        }
+                        ALL.get(path).get(api.name).put(api.method, api);
                     }
                 }
             }
@@ -61,12 +64,12 @@ public class OneApi {
 
     public static Object request(String group, String name, String method, Map<String, String[]> args, DataHub dh) {
 
-        if (!OneApi.contains(group, name)) {
+        if (!OneApi.contains(group, name, method)) {
             OneApi.readAll();
         }
 
-        if (OneApi.contains(group, name)) {
-            OneApi api = OneApi.pick(group, name);
+        if (OneApi.contains(group, name, method)) {
+            OneApi api = OneApi.pick(group, name, method);
 
             if (api.method.equalsIgnoreCase(method)) {
 
@@ -80,14 +83,18 @@ public class OneApi {
             }
         }
 
-        return "{\"error\": \"WRONG OR MISS path '" + group + "/" + name + "'\"}";
+        return "{\"error\": \"WRONG or MISS path/method '" + group + "/" + name + " " + method + "'\"}";
     }
 
     public static boolean contains(String group, String name) {
         return ALL.containsKey(group) && ALL.get(group).containsKey(name);
     }
 
-    public static OneApi pick(String group, String name) {
-        return ALL.get(group).get(name);
+    public static boolean contains(String group, String name, String method) {
+        return ALL.containsKey(group) && ALL.get(group).containsKey(name) && ALL.get(group).get(name).containsKey(method.toUpperCase());
+    }
+
+    public static OneApi pick(String group, String name, String method) {
+        return ALL.get(group).get(name).get(method.toUpperCase());
     }
 }

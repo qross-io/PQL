@@ -50,7 +50,7 @@ class ConditionGroup(expression: String) {
                                 DataCell.NULL
                             }
                             else if ($CONDITION.test(field)) {
-                                DataCell(conditions(m.group(1).toInt).result, DataType.BOOLEAN)
+                                conditions(value.$trim("~condition[", "]").toInt).result.toDataCell(DataType.BOOLEAN)
                             }
                             else if ($VARIABLE.test(field)) {
                                 PQL.findVariable(field)
@@ -70,14 +70,17 @@ class ConditionGroup(expression: String) {
                             else if ($INTERMEDIATE$N.test(value)) {
                                 PQL.values(value.$trim("~value[", "]").toInt)
                             }
-                            else if (!value.equalsIgnoreCase("EMPTY") && !value.equalsIgnoreCase("NULL") && value != "()") {
-                                value.$sharp(PQL, "\"")
-                            }
                             else if (value.equalsIgnoreCase("EMPTY")) {
                                 DataCell.EMPTY
                             }
-                            else {
+                            else if (value.equalsIgnoreCase("UNDEFINED")) {
+                                DataCell.NOT_FOUND
+                            }
+                            else if (value.equalsIgnoreCase("NULL") || value == "()") {
                                 DataCell.NULL
+                            }
+                            else {
+                                value.$sharp(PQL, "\"")
                             })
 
             if (PQL.dh.debugging) {

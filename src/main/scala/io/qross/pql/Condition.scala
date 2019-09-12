@@ -66,8 +66,8 @@ class Condition(val expression: String) {
             case "LIKE" => { "(?i)" + value.asText.replace("%", """[\s\S]*""").replace("?", """[\s\S]""").bracket("^", "$") }.r.test(field.asText)
             case "NOT$LIKE" => !{ "(?i)" + value.asText.replace("%", """[\s\S]*""").replace("?", """[\s\S]""").bracket("^", "$") }.r.test(field.asText)
             case "IS" =>
-                if (value.isNull) {
-                    field.isNull || field.asText.bracketsWith("#{", "}") || field.asText.bracketsWith("&{", "}")
+                if (value.isNull || value.invalid) {
+                    field.isNull || field.invalid || field.asText.bracketsWith("#{", "}") || field.asText.bracketsWith("&{", "}")
                 }
                 else if (value.isEmpty) {
                     field.asText == ""
@@ -77,8 +77,8 @@ class Condition(val expression: String) {
                 }
 
             case "IS$NOT" =>
-                if (value.isNull) {
-                    field.isNotNull && !field.asText.bracketsWith("#{", "}") && !field.asText.bracketsWith("&{", "}")
+                if (value.isNull || value.invalid) {
+                    field.isNotNull && field.valid && !field.asText.bracketsWith("#{", "}") && !field.asText.bracketsWith("&{", "}")
                 }
                 else if (value.isEmpty) {
                     field.asText != ""

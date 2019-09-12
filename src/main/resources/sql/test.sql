@@ -6,34 +6,16 @@
 
 DEBUG ON;
 
+--SLEEP TO NEXT MINUTE;
+--SLEEP TO NEXT SECOND;
+--SLEEP 2 SECONDS;
+--SLEEP 3 MILLISECONDS;
+
 OPEN "mysql.qross";
-SELECT id FROM test.wz LIMIT 0 -> INSERT IF NOT EXISTS 2;
 
---set $date := #{Date};
-set $day_start_datetime := @now minus Days 1 format "yyyy-MM-dd" ;
+SEND MAIL "test" CONTENT "hello world" TO "wuzheng; fengchen;";
 
-set $js_end_dat1 := $day_start_datetime format "yyyyMMdd" ; -- 结束日期不带'-'
---print $js_end_dat1;
-set $js_end_dat := $js_end_dat1 format "yyyy-MM-dd" ; -- 结束日期带'-'
 
-set $js_start_time_rz :=  $js_end_dat + ' 00:00:00';  -- 一天开始时间
-set $js_end_time_rz :=  $js_end_dat + ' 00:00:00';  -- 一天结束时间
-
-set $stat_mon := $day_start_datetime format "yyyyMM" ;  -- 获取统计月份
-
-set $js_start_dat1 := $day_start_datetime minus Days 37 format "yyyyMMdd" ; -- 传入计算开始日期
-set $js_start_dat := $js_start_dat1 format "yyyy-MM-dd" ; --传入开始日期带'-'
-
-set $target_table :='data_analy_agent_rate';
-print $day_start_datetime;
-print $js_end_dat1;
-print $js_end_dat;
-print $js_start_time_rz;
-print $js_end_time_rz;
-print $stat_mon;
-print $js_start_dat1;
-print $js_start_dat;
-print $target_table;
 
 --SET $a := @NOW SET "DAY=1" SET "DAY-1" FORMAT "yyyy-MM-dd";
 --set $a := @now PLUS DAYS $b * - 2;

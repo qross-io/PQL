@@ -26,7 +26,7 @@ class FOR(var variable: String, val collection: String) {
                         //(PARSE...)
                         val query = collection.$trim("(", ")").trim()
                         if ($SELECT.test(query)) {
-                            new SELECT(query.$restore(PQL)).execute(PQL).asTable
+                            new SELECT(query).execute(PQL).asTable
                         }
                         else if ($PARSE.test(query)) {
                             PQL.dh.parseTable(query.takeAfter($PARSE).$eval(PQL).asText)

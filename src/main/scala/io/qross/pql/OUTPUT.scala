@@ -11,10 +11,10 @@ class OUTPUT(val content: String) {
     def execute(PQL: PQL): Any = {
 
         if ($SELECT.test(content)) {
-            new SELECT(content.$restore(PQL)).execute(PQL)
+             new SELECT(content).execute(PQL).value
         }
         else if ($PARSE.test(content)) {
-            new PARSE(content.takeAfter($PARSE).trim.$eval(PQL).asText).execute(PQL)
+            new PARSE(content.takeAfter($PARSE).trim.$eval(PQL).asText).execute(PQL).value
         }
         else if ($NON_QUERY.test(content)) {
             PQL.AFFECTED = PQL.dh.executeNonQuery(content.$restore(PQL))

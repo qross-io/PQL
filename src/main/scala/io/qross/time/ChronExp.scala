@@ -25,7 +25,7 @@ object ChronExp {
                         ticks += nextTick.getTickValue
                     }
                     if (nextTick.after(tick)) {
-                        tick = tick.copy(nextTick)
+                        tick = new DateTime(nextTick)
                     }
                     tick = tick.plusMinutes(1)
                 case None => tick = terminal.plusMinutes(1)  //future

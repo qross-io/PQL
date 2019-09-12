@@ -339,7 +339,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private def parseELSE(sentence: String): Unit = {
         if ({m = $ELSE_IF.matcher(sentence); m}.find) {
-            val $elsif: Statement = new Statement("ELSE_IF", m.group(0), new ConditionGroup(m.group(1)))
+            val $elsif: Statement = new Statement("ELSE_IF", m.group(0), new ConditionGroup(m.group(2)))
             if (PARSING.isEmpty || (!(PARSING.head.caption == "IF") && !(PARSING.head.caption == "ELSE_IF"))) {
                 throw new SQLParseException("Can't find previous IF or ELSE IF clause: " + m.group(0))
             }
@@ -962,14 +962,17 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     }
 
     private def executeSELECT(statement: Statement): Unit = {
-        val SQL = statement.sentence.$restore(this)
-        val result = new SELECT(SQL).execute(this)
+        val result = new SELECT(statement.sentence).execute(this)
         RESULT += result.value
-        ROWS = result.asTable.size
+        ROWS = result.dataType match {
+            case DataType.TABLE => result.asTable.size
+            case DataType.ARRAY | DataType.LIST => result.asList.size
+            case _ => 1
+        }
 
         if (dh.debugging) {
             Output.writeLine("                                                                        ")
-            Output.writeLine(SQL.take(100))
+            Output.writeLine(statement.sentence.popStash(this).take(100))
             result.asTable.show()
         }
     }
@@ -1178,7 +1181,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 RESULT.head match {
                     case table: DataTable => table.toJavaMapList
                     case row: DataRow => row.toJavaMap
-                    case dt: DateTime => dt.toString
+                    case dt: DateTime => dt.toString.useQuotes("\"")
+                    case str: String => str.useQuotes("\"")
                     case o => o
                 }
             }
@@ -1189,7 +1193,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 RESULT.map {
                         case table: DataTable => table.toJavaMapList
                         case row: DataRow => row.toJavaMap
-                        case dt: DateTime => dt.toString
+                        case dt: DateTime => dt.toString.useQuotes("\"")
+                        case str: String => str.useQuotes("\"")
                         case o => o
                 }.asJava
             }

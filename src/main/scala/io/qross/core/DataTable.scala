@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.qross.core.DataType.DataType
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
+import io.qross.fql.Fragment
 import io.qross.jdbc.{DataSource, JDBC}
+import io.qross.net.Json
+import io.qross.pql.SQLParseException
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -21,7 +24,7 @@ object DataTable {
     
     def ofSchema(dataTable: DataTable): DataTable = {
         val table = new DataTable()
-        table.fields ++= dataTable.fields
+        table.columns ++= dataTable.columns
         table
     }
     
@@ -43,10 +46,15 @@ class DataTable() {
             addRow(row)
         }
     }
-    
-    val rows = new mutable.ArrayBuffer[DataRow]()
-    private val fields = new mutable.LinkedHashMap[String, DataType]()
+
+    //所有field的集合, 有序有索引
+    private val fields = new mutable.ListBuffer[String]()
+    //所有field及dataType的集合
+    private val columns = new mutable.LinkedHashMap[String, DataType]()
+    //所有field及label的集合
     private val labels = new mutable.LinkedHashMap[String, String]()
+    //所有行的集合
+    val rows = new mutable.ArrayBuffer[DataRow]()
 
 
     //添加列
@@ -58,21 +66,25 @@ class DataTable() {
     def addFieldWithLabel(fieldName: String, labelName: String, dataType: DataType): Unit = {
         // . is illegal char in SQLite
         val name = { if (fieldName.contains(".")) fieldName.takeAfter(".") else fieldName }.toLowerCase()
-        fields += name -> dataType
-        labels += name -> labelName
+        if (!columns.contains(name)) {
+            fields += name
+            columns += name -> dataType
+            labels += name -> labelName
+        }
     }
 
     //设置标签
     def label(alias: (String, String)*): DataTable = {
-        for ((fieldName, otherName) <- alias) {
-            labels += fieldName.toLowerCase() -> otherName
+        for ((fieldName, aliaName) <- alias) {
+            labels += fieldName.toLowerCase() -> aliaName
         }
         this
     }
 
     def newRow(): DataRow = {
         val row = new DataRow()
-        row.fields ++= fields
+        row.fields ++= this.fields
+        row.columns ++= this.columns
         row.table = this
         row
     }
@@ -87,6 +99,7 @@ class DataTable() {
                 }
             }
         }
+        row.table = this
         rows += row
 
         this
@@ -128,6 +141,17 @@ class DataTable() {
         table
     }
 
+    def filterNot(callback: DataRow => Boolean): DataTable = {
+        val table = new DataTable()
+        rows.foreach(row => {
+            if (!callback(row)) {
+                table.addRow(row)
+            }
+        })
+
+        table
+    }
+
     //遍历并返回新的数据表, 结构不一样, 一行对一行
     def map(callback: DataRow => DataRow): DataTable = {
         val table = new DataTable()
@@ -162,7 +186,7 @@ class DataTable() {
 
 
     //是否包含某一列
-    def contains(fieldName: String): Boolean = fields.contains(fieldName.toLowerCase())
+    def contains(fieldName: String): Boolean = columns.contains(fieldName.toLowerCase())
     //行数
     def size: Int = rows.size
     //行数
@@ -170,9 +194,9 @@ class DataTable() {
     //行数
     def count(): Int = rows.size
     //列数
-    def columnCount: Int = fields.size
+    def columnCount: Int = columns.size
     //列数
-    def width: Int = fields.size
+    def width: Int = columns.size
 
     //聚合方法
     def count(groupBy: String*): DataTable = {
@@ -404,9 +428,20 @@ class DataTable() {
 
     //数据操作
 
-    //添加的行结构需要与table一致, 与newRow搭配, 与addRow不同
-    def insert(row: DataRow): Unit = {
+    //添加的行结构需要与table一致, 与newRow搭配, 与addRow不同, 不判断数据结构
+    def insert(row: DataRow): DataTable = {
+        row.table = this
         rows += row
+        this
+    }
+
+    def insertIfEmpty(row: DataRow): DataTable = {
+        if (this.isEmpty) {
+            insert(row)
+        }
+        else {
+            this
+        }
     }
 
     //按字段添加行, addRow的重载
@@ -415,9 +450,27 @@ class DataTable() {
         this
     }
 
-    //按短语句添加行 INTO (A, B) VALUES (1, '2') , INTO关键词可省略
+    def insertIfEmpty(fields: (String, Any)*): DataTable = {
+        if (this.isEmpty) {
+            insert(fields: _*)
+        }
+        else {
+            this
+        }
+    }
+
+    //按短语句添加行 (A, B) VALUES (1, '2')
     def insert(fragment: String): DataTable = {
-        null
+        new Fragment(fragment).insertInto(this)
+    }
+
+    def insertIfEmpty(fragment: String): DataTable = {
+        if (this.isEmpty) {
+            insert(fragment)
+        }
+        else {
+            this
+        }
     }
 
     //按过滤器删除
@@ -477,21 +530,34 @@ class DataTable() {
         this
     }
 
+    //仅WHERE, 同filter
     def select(filter: DataRow => Boolean): DataTable = {
         this.filter(filter)
     }
 
+    //仅SELECT, 选择部分字段生成一个新表
     def select(fieldNames: String*): DataTable = {
-        null
+        val table = new DataTable()
+        rows.foreach(row => {
+            val newRow = new DataRow()
+            fieldNames.foreach(fieldName => {
+                if (contains(fieldName)) {
+                    newRow.set(fieldName, row.getCell(fieldName))
+                }
+            })
+            table.addRow(newRow)
+        })
+        table
     }
 
+    //SELECT+WHERE
     def select(filter: DataRow => Boolean)(fieldNames: String*): DataTable = {
         val table = new DataTable()
         rows.foreach(row => {
             if (filter(row)) {
                 val newRow = new DataRow()
                 fieldNames.foreach(fieldName => {
-                    newRow.set(fieldName, row.get(fieldName).orNull)
+                    newRow.set(fieldName, row.getCell(fieldName))
                 })
                 table.addRow(newRow)
             }
@@ -506,38 +572,56 @@ class DataTable() {
     // SELECT "*, TREE(parentId=0) AS nodes"
     // SELECT "A, B, PARTITION(C,D)"  二次分组聚合
     // 二次分组排序, TOP N, 再次聚合, 参与SQL SERVER和第一版FSQL
+    // SELECT ... WHERE ... HAVING ... LIMIT N
     def select(fragment: String): DataTable = {
         null
     }
 
+    // 删除列
+    def drop(fieldNames: String*): Unit = {
+        for (fieldName <- fieldNames) {
+            val name = fieldName.toLowerCase
+            fields -= name
+            columns -= name
+            labels -= name
+            rows.foreach(_.remove(name))
+        }
+    }
+
     // 修改列名
-    def alter(fieldName: String, newName: String): Unit = {
-        val name = fieldName.toLowerCase()
-        if (fields.contains(name)) {
-            val list = fields.toList
-            fields.clear()
-            list.foreach(item => {
-                if (item._1 != name) {
-                    fields += item._1 -> item._2
-                }
-                else {
-                    fields += newName -> item._2
-                }
-            })
+    def alter(fieldName: String, newFieldName: String): Unit = {
+        val oldName = fieldName.toLowerCase()
+        val newName = newFieldName.toLowerCase()
+
+        if (columns.contains(oldName)) {
+            fields(fields.indexOf(oldName)) = newName
+            columns += (newName -> columns(oldName))
+            columns -= oldName
+            labels += (newName -> { if (labels(oldName).equalsIgnoreCase(fieldName)) newFieldName else labels(oldName) })
+            labels -= oldName
+
+            rows.foreach(_.alter(fieldName, newFieldName))
         }
     }
 
     // 修改数据类型
     def alter(fieldName: String, dataType: DataType): Unit = {
         val name = fieldName.toLowerCase()
-        if (fields.contains(name)) {
-            fields += name -> dataType
+        if (columns.contains(name)) {
+            columns += name -> dataType
         }
     }
 
     // 修改列名 A AS A1, B AS B2
     def alter(fragment: String): DataTable = {
-        null
+        fragment.split(",")
+            .map(f => (f.takeBefore("(?i)\\sAS\\s".r).trim(), f.takeAfter("(?i)\\sAS\\s".r).trim()))
+            .filter(f => f._1 != "" && f._2 != "")
+            .foreach(f => {
+                alter(f._1, f._2)
+            })
+
+        this
     }
 
     def updateSource(SQL: String): DataTable = {
@@ -568,28 +652,39 @@ class DataTable() {
         union(otherTable)
         this
     }
-    
+
     def cut(otherTable: DataTable): DataTable = {
         clear()
         merge(otherTable)
         this
     }
-    
+
     def merge(otherTable: DataTable): DataTable = {
         union(otherTable)
         otherTable.clear()
         this
     }
-    
+
+    //可不同结构的表进行结合
     def union(otherTable: DataTable): DataTable = {
-        fields ++= otherTable.fields
+        otherTable.fields.foreach(field => {
+            if (!columns.contains(field)) {
+                this.fields += field
+            }
+        })
+        columns ++= otherTable.columns
         labels ++= otherTable.labels
         rows ++= otherTable.rows
         this
     }
 
     def join(otherTable: DataTable, on: (String, String)*): DataTable = {
-        fields ++= otherTable.fields
+        otherTable.fields.foreach(field => {
+            if (!columns.contains(field)) {
+                this.fields += field
+            }
+        })
+        columns ++= otherTable.columns
         labels ++= otherTable.labels
         for (row <- this.rows) {
             for (line <- otherTable.rows) {
@@ -616,22 +711,36 @@ class DataTable() {
     def isEmptySchema: Boolean = fields.isEmpty
     def nonEmptySchema: Boolean = fields.nonEmpty
 
-    def getFieldNames: List[String] = fields.keySet.toList
+    def getFieldNames: List[String] = fields.toList
     def getFieldNameList: java.util.List[String] = getFieldNames.asJava
     def getLabelNames: List[String] = labels.values.toList
     def getLabelList: java.util.List[String] = getLabelNames.asJava
     def getLabels: mutable.LinkedHashMap[String, String] = labels
-    def getFields: mutable.LinkedHashMap[String, DataType] = fields
-    def getFieldType(fieldName: String): DataType = fields(fieldName.toLowerCase())
+    def getColumns: mutable.LinkedHashMap[String, DataType] = columns
+    def getFieldDataType(fieldName: String): DataType = columns(fieldName.toLowerCase())
     def getRow(i: Int): Option[DataRow] = if (i < rows.size) Some(rows(i)) else None
     def getRowList: java.util.List[DataRow] = rows.asJava
-    def getColumn(fieldName: String): List[Any] = rows.map(row => row.columns(fieldName.toLowerCase())).toList
+    def getColumn(fieldName: String): List[Any] = rows.map(row => row.get(fieldName).orNull).toList
 
     def firstRow: Option[DataRow] = if (rows.nonEmpty) Some(rows(0)) else None
     def lastRow: Option[DataRow] = if (rows.nonEmpty) Some(rows(rows.size - 1)) else None
 
-    def firstColumn: Option[List[Any]] = if (fields.nonEmpty) Option(rows.map(r => r.columns.head._2).toList) else None
-    def lastColumn: Option[List[Any]] = if (fields.nonEmpty) Option(rows.map(r => r.columns.last._2).toList) else None
+    def firstColumn: Option[List[Any]] = {
+        if (fields.nonEmpty) {
+            Some(rows.map(row => row.get(0).orNull).toList)
+        }
+        else {
+            None
+        }
+    }
+    def lastColumn: Option[List[Any]] = {
+        if (fields.nonEmpty) {
+            Some(rows.map(row => row.get(fields.size - 1).orNull).toList)
+        }
+        else {
+            None
+        }
+    }
 
     def getCell(rowIndex: Int, colIndex: Int): DataCell = {
         getRow(rowIndex) match {
@@ -649,42 +758,42 @@ class DataTable() {
 
     def getFirstCellStringValue(defaultValue: String = ""): String = {
         firstRow match {
-            case Some(row) => row.getFirstString(defaultValue)
+            case Some(row) => row.getString(0, defaultValue)
             case None => defaultValue
         }
     }
 
     def getFirstCellIntValue(defaultValue: Int = 0): Int = {
         firstRow match {
-            case Some(row) => row.getFirstInt(defaultValue)
+            case Some(row) => row.getInt(0, defaultValue)
             case None => defaultValue
         }
     }
 
     def getFirstCellLongValue(defaultValue: Long = 0L): Long = {
         firstRow match {
-            case Some(row) => row.getFirstLong(defaultValue)
+            case Some(row) => row.getLong(0, defaultValue)
             case None => defaultValue
         }
     }
 
     def getFirstCellFloatValue(defaultValue: Float = 0F): Float = {
         firstRow match {
-            case Some(row) => row.getFirstFloat(defaultValue)
+            case Some(row) => row.getFloat(0, defaultValue)
             case None => defaultValue
         }
     }
 
     def getFirstCellDoubleValue(defaultValue: Double = 0D): Double = {
         firstRow match {
-            case Some(row) => row.getFirstDouble(defaultValue)
+            case Some(row) => row.getDouble(0, defaultValue)
             case None => defaultValue
         }
     }
 
     def getFirstCellBooleanValue(defaultValue: Boolean = false): Boolean = {
         firstRow match {
-            case Some(row) => row.getFirstBoolean(defaultValue)
+            case Some(row) => row.getBoolean(0, defaultValue)
             case None => defaultValue
         }
     }
@@ -704,7 +813,7 @@ class DataTable() {
         breakable {
             var i = 0
             for (row <- rows) {
-                Output.writeLine(row.join(", "))
+                Output.writeLine(row.mkString(", "))
                 i += 1
                 if (i >= limit) {
                     break
@@ -715,11 +824,11 @@ class DataTable() {
     }
 
     def toJavaMapList: java.util.List[java.util.Map[String, Any]] = {
-        rows.map(row => row.columns.asJava).asJava
+        rows.map(row => row.values.asJava).asJava
     }
 
     def toList: List[Any] = {
-        rows.map(row => row.columns.head._2).toList
+        rows.map(row => row.values.head._2).toList
     }
 
     def toJavaList: java.util.List[Any] = {
@@ -728,13 +837,13 @@ class DataTable() {
 
     def toJsonString: String = {
         val sb = new StringBuilder()
-        for ((fieldName, dataType) <- fields) {
+        for ((fieldName, dataType) <- columns) {
             if (sb.nonEmpty) {
                 sb.append(",")
             }
             sb.append("\"" + fieldName + "\":\"" + dataType + "\"")
         }
-        "{\"fields\":{" + sb.toString +"}, \"rows\":" + rows.asJava.toString + "}"
+        "{\"columns\":{" + sb.toString +"}, \"rows\":" + rows.asJava.toString + "}"
     }
 
     override def toString: String = {
@@ -746,7 +855,7 @@ class DataTable() {
         val sb = new StringBuilder()
         sb.append("""<table cellpadding="5" cellspacing="1" border="0" style="background-color:#909090">""")
         sb.append("<tr>")
-        fields.keySet.foreach(field => {
+        columns.keySet.foreach(field => {
             sb.append("""<th style="text-align: left; background-color:#D0D0D0">""")
             sb.append(labels(field))
             sb.append("</th>")
@@ -773,7 +882,8 @@ class DataTable() {
     
     def clear(): Unit = {
         rows.clear()
-        fields.clear()
+        columns.clear()
         labels.clear()
+        fields.clear()
     }
 }

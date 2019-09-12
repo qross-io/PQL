@@ -36,7 +36,7 @@ object Patterns {
     val $SET: Pattern = Pattern.compile("""^SET\s+([\s\S]+?):=([\s\S]+)$""", Pattern.CASE_INSENSITIVE)
     val $DATATYPE: Regex = """(?i)^(INT|INTEGER|DECIMAL|BOOLEAN|TEXT|DATETIME|MAP|OBJECT|ROW|TABLE|ARRAY|LIST|JSON|REGEX)\s+""".r
     val $OPEN: Pattern = Pattern.compile("""^OPEN\s+([\s\S]+?)(:\s+|$)""", Pattern.CASE_INSENSITIVE)
-    val $USE: Pattern = Pattern.compile("""^USE\s+""")
+    val $USE: Pattern = Pattern.compile("""(?i)^USE\s+""")
     val $SAVE$AS: Pattern = Pattern.compile("""^SAVE\s+AS\s+([\s\S]+?)(:\s+|$)""", Pattern.CASE_INSENSITIVE)
     val $CACHE: Pattern = Pattern.compile("""^CACHE\s+(\S+)\s*#""", Pattern.CASE_INSENSITIVE)
     val $TEMP: Pattern = Pattern.compile("""^TEMP\s+(\S+)\s*#""", Pattern.CASE_INSENSITIVE)
@@ -44,7 +44,7 @@ object Patterns {
     val $PASS: Pattern = Pattern.compile("""^PASS\s*#""", Pattern.CASE_INSENSITIVE)
     val $PUT: Pattern = Pattern.compile("""^PUT\s*#""", Pattern.CASE_INSENSITIVE)
     val $PREP: Pattern = Pattern.compile("""^PREP\s*#""", Pattern.CASE_INSENSITIVE)
-    val $OUTPUT: Regex = """^OUTPUT\s*#?""".r
+    val $OUTPUT: Regex = """(?i)^OUTPUT\s*#?""".r
     val $PRINT: Pattern = Pattern.compile("""^PRINT\s+?([a-z]+\s+)?([\s\S]+)$""", Pattern.CASE_INSENSITIVE)
     val $SHOW: Pattern = Pattern.compile("""^SHOW\s+(\d+)""", Pattern.CASE_INSENSITIVE)
     val $RUN: Pattern = Pattern.compile("""^RUN\s+COMMAND\s+""", Pattern.CASE_INSENSITIVE)
@@ -58,7 +58,7 @@ object Patterns {
     val $DEBUG: Regex = """(?i)^DEBUG\s""".r
     val $ECHO: Regex = """(?i)^ECHO\s""".r
 
-    val $VARIABLE: Regex = """^(\$|@)\(?[a-z0-9_]+\)?$""".r
+    val $VARIABLE: Regex = """^(\$|@)\(?[A-Za-z0-9_]+\)?$""".r
     val $INTERMEDIATE$N: Regex = """^~value\[(\d+)\]$""".r
     val FUNCTION_NAMES: Set[String] = Function.getClass.getDeclaredMethods.map(m => m.getName).filter(n => "^[A-Z]".r.test(n)).toSet
     val $RESERVED: Regex = """^[_A-Za-z0-9\.]+$""".r

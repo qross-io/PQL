@@ -62,11 +62,10 @@ class SET(var variable: String, expression: String) {
         //4. 执行函数 - 以函数名开头，不需要加$前缀 - 直接执行函数
         //5. 变量间直接赋值 - 是变量格式(有$前缀)且是存在于变量列表中的变量 - 直接赋值
         //6. 数学表达式 - 其他 - 解析函数和变量然后求值，出错则抛出异常
-        var exp = this.expression
-        if ($SELECT.test(exp)) { //SELECT
-            exp = exp.$restore(PQL)
 
-            val result = new SELECT(exp).execute(PQL)
+        if ($SELECT.test(expression)) { //SELECT
+
+            val result = new SELECT(expression).execute(PQL)
 
             if (variables.nonEmpty) {
                 result.asTable.firstRow match {
@@ -108,11 +107,12 @@ class SET(var variable: String, expression: String) {
                 )
             }
         }
-        else if ($PARSE.test(exp)) {
-            exp = exp.takeAfter($BLANK).trim.$restore(PQL)
+        else if ($PARSE.test(expression)) {
+            //暂不支持SHARP表达式
+            val path = expression.takeAfter($BLANK).trim.$restore(PQL)
 
             if (variables.nonEmpty) {
-                val row = PQL.dh.parseRow(exp)
+                val row = PQL.dh.parseRow(path)
                 if (row.size >= variables.length) {
                     for (i <- variables.indices) {
                         PQL.updateVariable(variables(i)._2, row.getCell(i).to(variables(i)._1))
@@ -125,23 +125,22 @@ class SET(var variable: String, expression: String) {
             else {
                 PQL.updateVariable(variable,
                     dataType match {
-                        case DataType.AUTO | DataType.JSON => DataCell(PQL.dh.parseNode(exp), DataType.JSON)
-                        case DataType.TABLE => DataCell(PQL.dh.parseTable(exp), DataType.TABLE)
-                        case DataType.ROW => DataCell(PQL.dh.parseRow(exp), DataType.ROW)
-                        case DataType.ARRAY => DataCell(PQL.dh.parseList(exp), DataType.ARRAY)
-                        case _ => PQL.dh.parseValue(exp)
+                        case DataType.AUTO | DataType.JSON => DataCell(PQL.dh.parseNode(path), DataType.JSON)
+                        case DataType.TABLE => DataCell(PQL.dh.parseTable(path), DataType.TABLE)
+                        case DataType.ROW => DataCell(PQL.dh.parseRow(path), DataType.ROW)
+                        case DataType.ARRAY => DataCell(PQL.dh.parseList(path), DataType.ARRAY)
+                        case _ => PQL.dh.parseValue(path)
                     }
                 )
             }
         }
-        else if ($NON_QUERY.test(exp)) {
+        else if ($NON_QUERY.test(expression)) {
             //INSERT + UPDATE + DELETE
-            exp = exp.$restore(PQL)
-            PQL.updateVariable(variable, DataCell(PQL.dh.executeNonQuery(exp), DataType.INTEGER))
+            PQL.updateVariable(variable, DataCell(PQL.dh.executeNonQuery(expression.$restore(PQL)), DataType.INTEGER))
         }
         else {
-            exp = exp.$clean(PQL) //在SHARP表达式内部再恢复字符串和中间值
-            PQL.updateVariable(variable, new SHARP(exp).execute(PQL))
+            //在SHARP表达式内部再恢复字符串和中间值
+            PQL.updateVariable(variable, new SHARP(expression.$clean(PQL)).execute(PQL))
         }
     }
 }
