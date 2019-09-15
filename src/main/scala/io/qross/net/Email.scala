@@ -1,16 +1,15 @@
 package io.qross.net
 
-import io.qross.core.{DataHub, DataRow, ExtensionNotFoundException}
+import io.qross.core.{DataHub, DataRow, DataType, ExtensionNotFoundException}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.fs.FilePath._
 import io.qross.fs.SourceFile
 import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.pql.PQL
-import io.qross.pql.Patterns.EMBEDDED
+import io.qross.pql.Solver._
 import io.qross.setting.Global
 import io.qross.time.Timer
-import io.qross.pql.Solver._
 import javax.activation.{DataHandler, FileDataSource}
 import javax.mail.internet._
 import javax.mail.{Message, SendFailedException, Session, Transport}
@@ -169,12 +168,23 @@ class Email(private var title: String) {
     private var content: String = ""
 
     def fromTemplate(template: String): Email = {
-        this.content = EMBEDDED + {
-            if (template.bracketsWith("<", ">") || (template.contains("<%") && template.contains("%>"))) {
+
+        //name, filePath - .htm/.html/.txt, content
+        //io.qross.pql.PQL.runEmbeddedFile(args.head.asText).toString
+        //PQL.runEmbedded(template).toString
+
+        this.content = {
+            if (template.trim().bracketsWith("<", ">") || (template.contains("<%") && template.contains("%>"))) {
                 template
             }
-            else {
+            else if (template.contains(".") && "(?i)^htm|html|txt$".r.test(template.takeAfter("."))) {
                 SourceFile.read(template)
+            }
+            else {
+                DataSource.QROSS
+                        .querySingleValue("SELECT template_content FROM qross_email_templates WHERE template_name=?", template)
+                        .orElse(template, DataType.TEXT)
+                        .asText
             }
         }
         this
@@ -194,15 +204,22 @@ class Email(private var title: String) {
             if (signature.bracketsWith("<", ">") || (signature.contains("<%") && signature.contains("%>"))) {
                 signature
             }
-            else {
+            else if (signature.contains(".") && "(?i)^htm|html|txt$".r.test(signature.takeAfter("."))) {
                 SourceFile.read(signature)
             }
+            else {
+                DataSource.QROSS
+                        .querySingleValue("SELECT signature_content FROM qross_email_signatures WHERE signature_name=?", signature)
+                        .orElse(signature, DataType.TEXT)
+                        .asText
+            }
         }
+
         this.content = {
             if (this.content.contains("#{signature}")) {
                 this.content.replace("#{signature}", code)
             }
-            else if ("""</body>""".r.test(this.content)) {
+            else if ("""(?i)</body>""".r.test(this.content)) {
                 this.content.replaceAll("""</body>""", code)
             }
             else {
@@ -295,9 +312,7 @@ class Email(private var title: String) {
 
     def send(): Unit = {
         if (toReceivers.nonEmpty || ccReceivers.nonEmpty || bccReceivers.nonEmpty) {
-
             this.content = PQL.runEmbedded(this.content).toString
-
             transfer()
         }
     }

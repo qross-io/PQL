@@ -6,7 +6,7 @@ apply plugin: 'maven'
 apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
-version = '0.5.9-95-SNAPSHOT'
+version = '0.5.9-96-SNAPSHOT'
 sourceCompatibility = 1.8
 
 archivesBaseName = "qross-pql"
@@ -78,7 +78,7 @@ uploadArchives {
             pom.project {
                 name = project.name
                 packaging = 'jar'
-                description = 'qross PQL and development toolkit v0.6.0'
+                description = 'Qross PQL and development toolkit v0.6.0'
             }
         }
     }
@@ -87,7 +87,7 @@ uploadArchives {
 shadowJar {
     zip64 true
     //mergeServiceFiles('META-INF/spring.*')
-    archiveName = "qross-pql-0.5.9.jar"
+    archiveName = "qross-pql-0.6.0.jar"
 }
 
 artifacts {

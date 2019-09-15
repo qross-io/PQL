@@ -9,7 +9,7 @@ import scala.collection.mutable
 
 class SEND$MAIL(val info: String) {
 
-    //SET CONTENT
+    //CONTENT
     //FROM TEMPLATE
     //FROM DEFAULT TEMPLATE    @DEFAULT_EMAIL_TEMPLATE
     //WITH DEFAULT SIGNATURE    @DEFAULT_EMAIL_SIGNATURE
@@ -58,10 +58,10 @@ class SEND$MAIL(val info: String) {
         for (i <- links.indices) {
             val args = links(i)._2.toArgs(PQL)
             links(i)._1 match {
-                case "SET$CONTENT" => if (args.nonEmpty) email.setContent(args.head.asText)
-                case "FROM$TEMPLATE" => if (args.nonEmpty) email.setContent(io.qross.pql.PQL.runEmbeddedFile(args.head.asText).toString)
+                case "CONTENT" => if (args.nonEmpty) email.setContent(args.head.asText)
+                case "FROM$TEMPLATE" => if (args.nonEmpty) email.fromTemplate(args.head.asText)
                 case "FROM$DEFAULT$TEMPLATE" => email.fromDefaultTemplate()
-                case "WITH$SIGNATURE" => if (args.nonEmpty) email.withSignature(io.qross.pql.PQL.runEmbeddedFile(args.head.asText).toString)
+                case "WITH$SIGNATURE" => if (args.nonEmpty) email.withSignature(args.head.asText)
                 case "WITH$DEFAULT$SIGNATURE" => email.withDefaultSignature()
                 case "REPLACE" =>
                     if (args.size == 1) {
@@ -76,15 +76,15 @@ class SEND$MAIL(val info: String) {
                     }
                 case "TO" =>
                     if (args.nonEmpty) {
-                        email.to(args.map(_.asText).mkString(","))
+                        email.to(args.map(_.asText).mkString(";"))
                     }
                 case "CC" =>
                     if (args.nonEmpty) {
-                        email.cc(args.map(_.asText).mkString(","))
+                        email.cc(args.map(_.asText).mkString(";"))
                     }
                 case "BCC" =>
                     if (args.nonEmpty) {
-                        email.bcc(args.map(_.asText).mkString(","))
+                        email.bcc(args.map(_.asText).mkString(";"))
                     }
             }
         }

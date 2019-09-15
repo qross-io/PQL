@@ -267,7 +267,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 SQL.split(";").map(_.trim)
             }
             else {
-                SQL .split(EM$RIGHT)
+                SQL.split(EM$RIGHT)
                     .flatMap(block => {
                         if (block.contains(EM$LEFT)) {
                             val s = new mutable.ArrayBuffer[String]()
@@ -287,10 +287,9 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                             s
                         }
                         else {
-                            "ECHO " + block
+                            List[String]("ECHO " + block)
                         }
                     })
-                    .map(_.toString)
             }
         }
 
@@ -649,7 +648,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private def parseSEND(sentence: String): Unit = {
         if ($SEND$MAIL.test(sentence)) {
-            PARSING.head.addStatement(new Statement("SEND$MAIL", sentence, new SEND$MAIL(sentence.takeAfter($SEND$MAIL))))
+            PARSING.head.addStatement(new Statement("SEND", sentence, new SEND$MAIL(sentence.takeAfter($SEND$MAIL))))
         }
         else {
             throw new SQLParseException("Incorrect SEND MAIL sentence: " + sentence)
@@ -998,7 +997,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     }
 
     private def executeSEND(statement: Statement): Unit = {
-
+        statement.instance.asInstanceOf[SEND$MAIL].send(this)
     }
 
     private def executePARSE(statement: Statement): Unit = {
@@ -1177,7 +1176,10 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     def $return: Any = {
         if (RESULT.nonEmpty) {
-            if (RESULT.size == 1) {
+            if (embedded) {
+                RESULT.mkString
+            }
+            else if (RESULT.size == 1) {
                 RESULT.head match {
                     case table: DataTable => table.toJavaMapList
                     case row: DataRow => row.toJavaMap
@@ -1185,9 +1187,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                     case str: String => str.useQuotes("\"")
                     case o => o
                 }
-            }
-            else if (embedded) {
-                RESULT.mkString
             }
             else {
                 RESULT.map {

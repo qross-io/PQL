@@ -254,7 +254,7 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
     }
     
     def executeSingleValue(SQL: String, values: Any*): DataCell = {
-        var data: DataCell = DataCell.NULL
+        var data: DataCell = DataCell.NOT_FOUND
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
                 if (rs.next()) {

@@ -13,7 +13,7 @@ DEBUG ON;
 
 OPEN "mysql.qross";
 
-SEND MAIL "test" CONTENT "hello world" TO "wuzheng; fengchen;";
+SEND MAIL "test" CONTENT "hello world" TO "wuzheng";
 
 
 
