@@ -1079,6 +1079,10 @@ class DataHub (private val defaultConnectionName: String = "") {
         SLOTS.contains(func)
     }
 
+    def pull(func: String): DataHub = {
+        SLOTS -= func
+        this
+    }
 
 
     // ---------- DataSource ----------

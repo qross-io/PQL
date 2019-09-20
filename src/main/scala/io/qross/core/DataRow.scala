@@ -397,13 +397,10 @@ class DataRow() {
         values.toString()
     }
 
-    def toJavaMap: java.util.Map[String, Any] = {
-        values.asJava
-    }
-
-    def toJavaList: java.util.List[Any] = {
-        values.values.toList.asJava
-    }
+    def toMap: Map[String, Any] = values.toMap
+    def toSeq: Seq[(String, Any)] = values.toSeq
+    def toJavaMap: java.util.Map[String, Any] = values.asJava
+    def toJavaList: java.util.List[Any] = values.values.toList.asJava
 
     def toTable(keyName: String = "key", valueName: String = "value"): DataTable = {
         values.toMap.toTable(keyName, valueName)

@@ -21,6 +21,42 @@ object FilePath {
             dir
         }
 
+        def isDir: Boolean = {
+            """(?i)^([a-z]+:/|/)?([a-z0-9$_-]/)*""".r.test(path.toDir)
+        }
+
+        def isFile: Boolean = {
+            val full = path.toPath
+            if (full.contains("/")) {
+                val p = full.takeRightBefore("/") + "/"
+                val f = full.takeRightAfter("/")
+                p.isDir && f.isFile
+            }
+            else {
+                """^[a-zA-Z0-9\$_-]+\.[a-z0-9]+$""".r.test(full)
+            }
+        }
+
+        def takeDir: String = {
+            val full = path.toPath
+            if (full.contains("/")) {
+                full.takeRightBefore("/") + "/"
+            }
+            else {
+                ""
+            }
+        }
+
+        def takeFile: String = {
+            val full = path.toPath
+            if (full.contains("/")) {
+                full.takeRightAfter("/")
+            }
+            else {
+                full
+            }
+        }
+
         def locate(): String = {
 
             var full = path.toPath

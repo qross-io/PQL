@@ -126,6 +126,6 @@ class Zip {
     }
 
     def addFile(path: String): Unit = {
-        this.zipList += new File(path)
+        this.zipList += new File(path.locate())
     }
 }

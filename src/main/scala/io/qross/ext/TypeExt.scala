@@ -221,6 +221,25 @@ object TypeExt {
             }
         }
 
+        def takeRightBefore(value: Any): String = {
+            value match {
+                case char: String =>
+                    if (char == "" || !string.contains(char)) {
+                        ""
+                    }
+                    else {
+                        string.substring(0, string.lastIndexOf(char))
+                    }
+                case index: Integer => string.substring(0, index)
+                case rex: Regex =>
+                    rex.findAllIn(string).toList.lastOption match {
+                        case Some(v) => string.substring(0, string.lastIndexOf(v))
+                        case None => ""
+                    }
+                case _ => ""
+            }
+        }
+
         def takeRightAfter(value: Any): String = {
             value match {
                 case char: String =>

@@ -1,6 +1,6 @@
 package io.qross.net
 
-import io.qross.core.{DataHub, DataRow, DataType, ExtensionNotFoundException}
+import io.qross.core._
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.fs.FilePath._
@@ -48,7 +48,7 @@ object Email {
                 dh.pick("EMAIL").asInstanceOf[Email]
             }
             else {
-                throw new ExtensionNotFoundException("Must use writeEmail method to write an email first.")
+                throw new SlotObjectNotFoundException("Must use writeEmail method to write an email first.")
             }
         }
 

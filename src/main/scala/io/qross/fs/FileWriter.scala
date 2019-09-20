@@ -35,10 +35,26 @@ case class FileWriter(filePath: String, deleteFileIfExists: Boolean = true) {
         this
     }
 
-    def writeTable(table: DataTable): FileWriter = {
-        writeLine(table.getLabelNames.mkString(delimiter))
+    def writeTable(table: DataTable, withHeader: Boolean): FileWriter = {
+        if (withHeader) {
+            writeLine(table.getLabelNames.mkString(delimiter))
+        }
         table.foreach(row => {
             writeLine(row.getValues.mkString(delimiter))
+        })
+        this
+    }
+
+    def writeTable(table: DataTable): FileWriter = {
+        table.foreach(row => {
+            writeLine(row.getValues.mkString(delimiter))
+        })
+        this
+    }
+
+    def writeTableAsJsonLine(table: DataTable): FileWriter = {
+        table.foreach(row => {
+            writeLine(row.toString)
         })
         this
     }

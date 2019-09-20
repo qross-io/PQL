@@ -216,10 +216,9 @@ object Excel {
         }
     }
 
-    /*
     def DateTimeFormat(formatStyle: String): String = {
         formatStyle
-    } */
+    }
 
     implicit class DataHub$Excel(val dh: DataHub) {
 
@@ -846,6 +845,7 @@ class Excel(val fileName: String) {
         val fos = new FileOutputStream(file)
         workbook.write(fos)
         workbook.close()
+        fos.close()
 
         this
     }

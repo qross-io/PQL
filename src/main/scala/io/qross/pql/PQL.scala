@@ -522,7 +522,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private def parseSAVE(sentence: String): Unit = {
         //save as
         if ({m = $SAVE$AS.matcher(sentence); m}.find) {
-            PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE$AS(m.group(1).trim.split(BLANKS): _*)))
+            PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE$AS(m.group(1).trim)))
             if (m.group(2).trim == ":") {
                 parseStatement(sentence.takeAfter(":").trim)
             }
@@ -848,37 +848,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     }
 
     private def executeSAVE(statement: Statement): Unit = {
-        val $save = statement.instance.asInstanceOf[SAVE$AS]
-        $save.targetType match {
-            case "CACHE TABLE" => dh.cache($save.targetName.$eval(this).asText)
-            case "TEMP TABLE" => dh.temp($save.targetName.$eval(this).asText)
-            case "CACHE" => dh.saveAsCache()
-            case "TEMP" => dh.saveAsTemp()
-            case "JDBC" =>
-                $save.targetName match {
-                    case "DEFAULT" => dh.saveAsDefault()
-                    case "QROSS" => dh.saveAsQross()
-                    case _ =>
-                        val connectionName =
-                            if ($RESERVED.test($save.targetName)) {
-                                if (!Properties.contains($save.targetName)) {
-                                    throw new SQLExecuteException("Wrong connection name: " + $save.targetName)
-                                }
-                                $save.targetName
-                            }
-                            else {
-                                $save.targetName.$eval(this).asText
-                            }
-
-                        if ($save.databaseName == "") {
-                            dh.saveAs(connectionName)
-                        }
-                        else {
-                            dh.saveAs(connectionName, $save.databaseName.$eval(this).asText)
-                        }
-                }
-            case _ =>
-        }
+        statement.instance.asInstanceOf[SAVE$AS].execute(this)
     }
 
     private def executeCACHE(statement: Statement): Unit = {

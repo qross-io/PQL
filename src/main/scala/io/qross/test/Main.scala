@@ -6,16 +6,17 @@ import java.util.regex.Matcher
 import java.util.{Date, Properties}
 
 import io.qross.core._
-import io.qross.pql.Solver
+import io.qross.pql._
 import io.qross.fs.{ResourceDir, ResourceFile}
 import io.qross.jdbc.DataSource
 import io.qross.net.Json
 import io.qross.ext.TypeExt._
+import io.qross.fs.FilePath._
 import io.qross.pql.Solver._
-import io.qross.pql.{OUTPUT, PQL, Patterns, SHARP}
 import io.qross.time.{CronExp, DateTime}
 import io.qross.pql.Patterns._
 import io.qross.pql.PQL._
+import io.qross.pql.SAVE$AS.WITH$HEADER$
 import io.qross.setting.Environment
 
 import scala.collection.mutable
@@ -52,9 +53,34 @@ object Main {
 
         //new PQL("SELECT switch_time FROM qross_jobs LIMIT 5 -> GET LAST ROW", DataHub.QROSS).run().print
 
+        //PQL.openFile("/sql/test.sql").run()
 
+        /*
+        SAVE AS connectionName;
+        SAVE AS connectionName USE databaseName;
+        SAVE AS DEFAULT;
+        SAVE AS CACHE;
+        SAVE AS CACHE TABLE tableName;
+        SAVE AS TEMP;
+        SAVE AS TEMP TABLE tableName;
 
-        PQL.openFile("/sql/test.sql").run()
+        SAVE AS (NEW) CSV FILE "file.csv"
+        WITHOUT HEADER
+            WITH HEADER { "name": "label" };
+        SAVE AS (NEW) JSON FILE "file.json"
+        WITH HEADER
+            WITH HEADER { "name": "label" }
+        SAVE AS TXT FILE "file.log"
+        WITH HEADER
+            WITH HEADER { "name": "label" }
+        DELIMITED BY ",";
+
+        SAVE AS NEW EXCEL "abc.xlxs";
+        */
+
+        """c:\abc\1.txt""".isFile.print
+
+        //new SAVE$AS("""""")
 
         System.exit(0)
 
