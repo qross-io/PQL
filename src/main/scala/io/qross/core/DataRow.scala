@@ -42,31 +42,14 @@ class DataRow() {
     val fields = new mutable.ArrayBuffer[String]()
     val columns = new mutable.LinkedHashMap[String, DataType]()
     val values = new mutable.LinkedHashMap[String, Any]()
-    var table: DataTable = _  // 所属的DataTable
 
     //insert or update
     def set(fieldName: String, value: Any): Unit = {
-        if (table == null) {
-            //独立row
-            set(fieldName, value, DataType.ofValue(value))
-        }
-        else {
-            //在table中的row
-            if (table.contains(fieldName)) {
-                set(fieldName, value, table.getFieldDataType(fieldName))
-            }
-            else {
-                throw new FieldNotFoundException(s"Field name $fieldName is not contained its DataTable")
-            }
-        }
+        set(fieldName, value, DataType.ofValue(value))
+
     }
 
      def set(fieldName: String, cell: DataCell): Unit = {
-        if (table != null) {
-            if (!table.contains(fieldName)) {
-                table.addField(fieldName, cell.dataType)
-            }
-        }
         set(fieldName, cell.value, cell.dataType)
     }
 

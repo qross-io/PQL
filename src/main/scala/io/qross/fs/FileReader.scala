@@ -89,7 +89,7 @@ case class FileReader(filePath: String) {
                 table = new DataTable()
 
                 while (FileReader.DATA.size() >= 3) {
-                    Timer.sleep(0.1F)
+                    Timer.sleep(100)
                 }
             }
         }

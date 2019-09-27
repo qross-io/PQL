@@ -321,41 +321,46 @@ object SHARP {
         }
     }
 
+    //Timer
+    def MILLIS(data: DataCell, args: List[DataCell]): DataCell = {
+        data.asInteger.toDataCell(DataType.INTEGER)
+    }
+
     def MILLISECONDS(data: DataCell, args: List[DataCell]): DataCell = {
         data.asInteger.toDataCell(DataType.INTEGER)
     }
 
     def SECONDS(data: DataCell, args: List[DataCell]): DataCell = {
-        (data.asDecimal * 1000).toDataCell(DataType.INTEGER)
+        data.asDecimal.seconds.toDataCell(DataType.INTEGER)
     }
 
     def MINUTES(data: DataCell, args: List[DataCell]): DataCell = {
-        (data.asDecimal * 1000 * 60).toDataCell(DataType.INTEGER)
+        data.asDecimal.minutes.toDataCell(DataType.INTEGER)
     }
 
     def HOURS(data: DataCell, args: List[DataCell]): DataCell = {
-        (data.asDecimal * 1000 * 60 * 60).toDataCell(DataType.INTEGER)
+        data.asDecimal.hours.toDataCell(DataType.INTEGER)
     }
 
     def DAYS(data: DataCell, args: List[DataCell]): DataCell = {
-        (data.asDecimal * 1000 * 60 * 60 * 24).toDataCell(DataType.INTEGER)
+        data.asDecimal.days.toDataCell(DataType.INTEGER)
     }
 
     // TimeSpan
     def TO$SECONDS(data: DataCell, args: List[DataCell]): DataCell = {
-        data.asInteger.seconds.toDataCell(DataType.DECIMAL)
+        data.asInteger.toSeconds.toDataCell(DataType.DECIMAL)
     }
 
     def TO$MINUTES(data: DataCell, args: List[DataCell]): DataCell = {
-        data.asInteger.minutes.toDataCell(DataType.DECIMAL)
+        data.asInteger.toMinutes.toDataCell(DataType.DECIMAL)
     }
 
     def TO$HOURS(data: DataCell, args: List[DataCell]): DataCell = {
-        data.asInteger.hours.toDataCell(DataType.DECIMAL)
+        data.asInteger.toHours.toDataCell(DataType.DECIMAL)
     }
 
     def TO$DAYS(data: DataCell, args: List[DataCell]): DataCell = {
-        data.asInteger.days.toDataCell(DataType.DECIMAL)
+        data.asInteger.toDays.toDataCell(DataType.DECIMAL)
     }
 
     /* 小数 */
@@ -677,7 +682,7 @@ class SHARP(private val expression: String, private var data: DataCell = DataCel
 
     def execute(PQL: PQL, quote: String = "'"): DataCell = {
 
-        var sentence =
+        val sentence =
             if (data.invalid) {
                 expression.takeAfter($LET).trim()
             }

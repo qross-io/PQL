@@ -18,7 +18,7 @@ import scala.util.control.Breaks._
         thread.start()
     }
 
-    def startAll(interval: Float = 0.1F): Unit = {
+    def startAll(interval: Int = 100): Unit = {
         for (t <- this.threads) {
             if (interval > 0) {
                 Timer.sleep(interval)
@@ -52,7 +52,7 @@ import scala.util.control.Breaks._
 
     def waitAll(): Unit = {
         while (this.running) {
-            Timer.sleep(1F)
+            Timer.sleep(1000)
         }
     }
 

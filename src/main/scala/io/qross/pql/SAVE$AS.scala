@@ -121,6 +121,8 @@ class SAVE$AS(var sentence: String) {
                         file = sentence
                     }
 
+                    file = file.$eval(PQL).asText
+
                     if (file.isFile) {
                         if (deleteIfExists) {
                             PQL.dh.saveAsNewCsvFile(file)
@@ -130,8 +132,8 @@ class SAVE$AS(var sentence: String) {
                         }
                         header match {
                             case "NONE" =>
-                            case "HEADER" => PQL.dh.withHeader().write()
-                            case _ => PQL.dh.withHeader(header)
+                            case "HEADER" => PQL.dh.withHeader()
+                            case _ => PQL.dh.withHeader(header.$restore(PQL, "\""))
                         }
                         PQL.dh.write()
                     }
@@ -200,6 +202,9 @@ class SAVE$AS(var sentence: String) {
                         header = "HEADER"
                     }
 
+                    file = file.$eval(PQL).asText
+                    delimiter = delimiter.$eval(PQL).asText(",")
+
                     if (file.isFile) {
                         if (deleteIfExists) {
                             PQL.dh.saveAsNewTextFile(file, delimiter)
@@ -210,7 +215,7 @@ class SAVE$AS(var sentence: String) {
                         header match {
                             case "NONE" =>
                             case "HEADER" => PQL.dh.withHeader()
-                            case _ => PQL.dh.withHeader(header)
+                            case _ => PQL.dh.withHeader(header.$restore(PQL, "\""))
                         }
                         PQL.dh.write()
                     }
@@ -227,6 +232,9 @@ class SAVE$AS(var sentence: String) {
                     if (BLANKS.r.test(file)) {
                         file = file.takeBefore(BLANKS.r)
                     }
+
+                    file = file.$eval(PQL).asText
+
                     if (file.isFile) {
                         if (deleteIfExists) {
                             PQL.dh.saveAsNewJsonFile(file)

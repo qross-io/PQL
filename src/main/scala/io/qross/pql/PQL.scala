@@ -172,7 +172,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private var m: Matcher = _
 
     //结果集
-    private val RESULT: mutable.ArrayBuffer[Any] = new mutable.ArrayBuffer[Any]()
+    val RESULT: mutable.ArrayBuffer[Any] = new mutable.ArrayBuffer[Any]()
     var ROWS: Int = -1 //最后一个SELECT返回的结果数量
     var AFFECTED: Int = -1  //最后一个非SELECT语句影响的数据表行数
 
@@ -218,7 +218,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         "REQUEST" -> parseREQUEST,
         "SEND" -> parseSEND,
         "PARSE" -> parsePARSE,
-        "DEBUG" -> parseDEBUG
+        "DEBUG" -> parseDEBUG,
+        "SLEEP" -> parseSLEEP
     )
 
     //执行器
@@ -249,7 +250,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         "REQUEST" -> executeREQUEST,
         "SEND" -> executeSEND,
         "PARSE" -> executePARSE,
-        "DEBUG" -> executeDEBUG
+        "DEBUG" -> executeDEBUG,
+        "SLEEP" -> executeSLEEP
     )
 
     //开始解析
@@ -501,9 +503,9 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private def parseOPEN(sentence: String): Unit = {
         if ({m = $OPEN.matcher(sentence); m}.find) {
             PARSING.head.addStatement(new Statement("OPEN", sentence, new OPEN(m.group(1).trim.split(BLANKS): _*)))
-            if (m.group(2).trim == ":") {
-                parseStatement(sentence.takeAfter(m.group(2)).trim)
-            }
+//            if (m.group(2).trim == ":") {
+//                parseStatement(sentence.takeAfter(m.group(2)).trim)
+//            }
         }
         else {
             throw new SQLParseException("Incorrect OPEN sentence: " + sentence)
@@ -523,9 +525,9 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         //save as
         if ({m = $SAVE$AS.matcher(sentence); m}.find) {
             PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE$AS(m.group(1).trim)))
-            if (m.group(2).trim == ":") {
-                parseStatement(sentence.takeAfter(":").trim)
-            }
+//            if (m.group(2).trim == ":") {
+//                parseStatement(sentence.takeAfter(":").trim)
+//            }
         }
         else {
             throw new SQLParseException("Incorrect SAVE sentence: " + sentence)
@@ -599,7 +601,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private def parseECHO(sentence: String): Unit = {
         if($ECHO.test(sentence)) {
-            PARSING.head.addStatement(new Statement("ECHO", sentence, new ECHO(sentence.takeAfter($BLANK))))
+            PARSING.head.addStatement(new Statement("ECHO", sentence, new ECHO(if ($BLANK.test(sentence)) sentence.takeAfter($BLANK) else "")))
         }
         else {
             throw new SQLParseException("Incorrect ECHO sentence: " + sentence)
@@ -667,6 +669,15 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private def parseDEBUG(sentence: String): Unit = {
         if ($DEBUG.test(sentence)) {
             PARSING.head.addStatement(new Statement("DEBUG", sentence, new DEBUG(sentence.takeAfter($DEBUG).trim())))
+        }
+        else {
+            throw new SQLParseException("Incorrect DEBUG sentence: " + sentence)
+        }
+    }
+
+    private def parseSLEEP(sentence: String): Unit = {
+        if ($SLEEP.test(sentence)) {
+            PARSING.head.addStatement(new Statement("SLEEP", sentence, new SLEEP(sentence.takeAfter($SLEEP).trim())))
         }
         else {
             throw new SQLParseException("Incorrect DEBUG sentence: " + sentence)
@@ -887,38 +898,14 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     }
 
     private def executeECHO(statement: Statement): Unit = {
-        RESULT += statement.instance.asInstanceOf[ECHO].content
+        val content = statement.instance.asInstanceOf[ECHO].content
+        if (content.nonEmpty) {
+            RESULT += content
+        }
     }
 
     private def executePRINT(statement: Statement): Unit = {
-        val $print = statement.instance.asInstanceOf[PRINT]
-        val message = {
-            if ($print.message.bracketsWith("(", ")")) {
-                $print.message
-                    .$trim("(", ")")
-                    .split(",")
-                    .map(m => {
-                        m.$eval(this).mkString("\"")
-                    })
-                    .mkString(", ")
-                    .bracket("(", ")")
-            }
-            else if ($print.message.bracketsWith("[", "]") || $print.message.bracketsWith("{", "}")) {
-                $print.message.$restore(this, "\"")
-            }
-            else {
-                $print.message.$eval(this).asText
-            }
-        }
-        $print.messageType match {
-            case "WARN" => Output.writeWarning(message)
-            case "ERROR" => Output.writeException(message)
-            case "DEBUG" => Output.writeDebugging(message)
-            case "INFO" => Output.writeMessage(message)
-            case "NONE" => Output.writeLine(message)
-            case seal: String => Output.writeLineWithSeal(seal, message)
-            case _ =>
-        }
+        statement.instance.asInstanceOf[PRINT].execute(this)
     }
 
     private def executeSHOW(statement: Statement): Unit = {
@@ -981,6 +968,10 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private def executeDEBUG(statement: Statement): Unit = {
         val $debug = statement.instance.asInstanceOf[DEBUG]
         dh.debug($debug.switch.$eval(this).asBoolean(false))
+    }
+
+    private def executeSLEEP(statement: Statement): Unit = {
+        statement.instance.asInstanceOf[SLEEP].sleep(this)
     }
 
     private def execute(statements: ArrayBuffer[Statement]): Unit = {
@@ -1119,7 +1110,9 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     }
 
     def place(queryString: String): PQL = {
-        this.SQL = this.SQL.replaceArguments(queryString.toHashMap())
+        if (queryString != "") {
+            this.SQL = this.SQL.replaceArguments(queryString.$restore(this, "").toHashMap())
+        }
         this
     }
 

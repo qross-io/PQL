@@ -148,7 +148,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     def asText: String = this.value.toText
     def asText(defaultValue: Any): String = {
         if (valid) {
-            this.valid.toText
+            this.value.toText
         }
         else {
             defaultValue.toText

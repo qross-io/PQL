@@ -6,14 +6,23 @@
 
 DEBUG ON;
 
+GET # SELECT id, title FROM qross_jobs;
+
+FOR $a, $b IN @BUFFER
+LOOP
+    PRINT ($a, $b);
+    SLEEP 2 SECONDS;
+END LOOP;
+
 --SLEEP TO NEXT MINUTE;
 --SLEEP TO NEXT SECOND;
 --SLEEP 2 SECONDS;
 --SLEEP 3 MILLISECONDS;
 
-OPEN "mysql.qross";
-
-SEND MAIL "test" CONTENT "hello world" TO "wuzheng";
+-- OPEN "mysql.qross";
+--SEND MAIL "test" CONTENT "hello world" TO "wuzheng";
+--  GET #  SELECT id, task_time FROM qross_tasks WHERE id>1000 LIMIT 20;
+--  SAVE AS NEW JSON FILE "c:/space/tasks.json";
 
 
 

@@ -72,7 +72,7 @@ class Processer(source: DataSource, sentence: String, index: Int, tanks: Int = 3
             }
 
             do {
-                Timer.sleep(0.1F)
+                Timer.sleep(100)
             }
             while (Processer.DATA(index).size() >= tanks)
         }

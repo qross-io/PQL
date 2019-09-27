@@ -25,6 +25,7 @@ object DateTime {
     def getDaysSpan(beginTime: DateTime, endTime: DateTime): Long = ChronoUnit.DAYS.between(beginTime.localDateTime, endTime.localDateTime)
     def getSecondsSpan(beginTime: String, endTime: String): Long = getSecondsSpan(new DateTime(beginTime), new DateTime(endTime))
     def getSecondsSpan(beginTime: DateTime, endTime: DateTime): Long = ChronoUnit.SECONDS.between(beginTime.localDateTime, endTime.localDateTime)
+
 }
 
 class  DateTime(private val dateTime: Any = "", private val formatStyle: String = "") {
@@ -342,7 +343,7 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
         //year=2018#month=2#day=MON
         //month+1#day=1#day=MON#day-1
         var dateTime = this
-        val sections = expression.toUpperCase().replaceAll("""\s""", "").replace("-", "=-").replace("+", "=+").split("#")
+        val sections = expression.toUpperCase().replaceAll("""\s""", "").replace("-", "=-").replace("+", "=+").split("#|&")
         for (section <- sections) {
             if (section.contains("=")) {
                 //dateTime = this.shift(section.substring(0, section.indexOf("=")), section.substring(section.indexOf("=") + 1))
@@ -387,38 +388,7 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
         }
         
         if (FILTER.nonEmpty) {
-            val cronExp =
-                if (FILTER.contains("=")) {
-                    val exp = mutable.LinkedHashMap[String, String](
-                        "SECOND" -> "*",
-                        "MINUTE" -> "*",
-                        "HOUR" -> "*",
-                        "DAY" -> "*",
-                        "MONTH" -> "*",
-                        "WEEK" -> "?",
-                        "YEAR" -> "*")
-                    FILTER.replace(" ", "").toUpperCase().split("#").foreach(item => {
-                        if (item.contains("=")) {
-                            val field = item.takeBefore("=")
-                            val value = item.takeAfter("=")
-                            if (value.nonEmpty) {
-                                exp.put(field, value)
-                                if (field == "WEEK") {
-                                    exp.put("DAY", "?")
-                                }
-                                else if (field == "DAY") {
-                                    exp.put("WEEK", "?")
-                                }
-                            }
-                        }
-                    })
-                    
-                    CronExp(exp.values.mkString(" "))
-                }
-                else {
-                    CronExp(FILTER.toUpperCase())
-                }
-            
+            val cronExp = CronExp(FILTER.toUpperCase())
             //final filter
             list.filter(item => cronExp.matches(item)).toList
         }

@@ -15,7 +15,7 @@ object Environment {
 
         var total = 0D
         for (i <- 0 to 99) {
-            Timer.sleep(0.01F)
+            Timer.sleep(10)
             total += bean.getSystemCpuLoad
         }
 

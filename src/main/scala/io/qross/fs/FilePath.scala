@@ -37,6 +37,10 @@ object FilePath {
             }
         }
 
+        def isFileExists: Boolean = {
+            new File(path.locate()).exists()
+        }
+
         def takeDir: String = {
             val full = path.toPath
             if (full.contains("/")) {

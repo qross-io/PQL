@@ -35,9 +35,9 @@ object Patterns {
     val $CONTINUE: Pattern = Pattern.compile("""^CONTINUE(\s+WHEN\s([\s\S]+))?$""", Pattern.CASE_INSENSITIVE)
     val $SET: Pattern = Pattern.compile("""^SET\s+([\s\S]+?):=([\s\S]+)$""", Pattern.CASE_INSENSITIVE)
     val $DATATYPE: Regex = """(?i)^(INT|INTEGER|DECIMAL|BOOLEAN|TEXT|DATETIME|MAP|OBJECT|ROW|TABLE|ARRAY|LIST|JSON|REGEX)\s+""".r
-    val $OPEN: Pattern = Pattern.compile("""^OPEN\s+([\s\S]+?)(:\s+|$)""", Pattern.CASE_INSENSITIVE)
+    val $OPEN: Pattern = Pattern.compile("""^OPEN\s+([\s\S]+)$""", Pattern.CASE_INSENSITIVE)
     val $USE: Pattern = Pattern.compile("""(?i)^USE\s+""")
-    val $SAVE$AS: Pattern = Pattern.compile("""^SAVE\s+AS\s+([\s\S]+?)(:\s+|$)""", Pattern.CASE_INSENSITIVE)
+    val $SAVE$AS: Pattern = Pattern.compile("""^SAVE\s+AS\s+([\s\S]+)$""", Pattern.CASE_INSENSITIVE)
     val $CACHE: Pattern = Pattern.compile("""^CACHE\s+(\S+)\s*#""", Pattern.CASE_INSENSITIVE)
     val $TEMP: Pattern = Pattern.compile("""^TEMP\s+(\S+)\s*#""", Pattern.CASE_INSENSITIVE)
     val $GET: Pattern = Pattern.compile("""^GET\s*#""", Pattern.CASE_INSENSITIVE)
@@ -56,7 +56,8 @@ object Patterns {
     val $LINK: Regex = """(?i)\s[a-z]+(\s+[a-z]+)*(\s|$)""".r
     val $LET: Regex = """(?i)^LET\s""".r
     val $DEBUG: Regex = """(?i)^DEBUG\s""".r
-    val $ECHO: Regex = """(?i)^ECHO\s""".r
+    val $ECHO: Regex = """(?i)^ECHO(\s|$)""".r
+    val $SLEEP: Regex = """(?i)^SLEEP\s""".r
 
     val $VARIABLE: Regex = """^(\$|@)\(?[A-Za-z0-9_]+\)?$""".r
     val $INTERMEDIATE$N: Regex = """^~value\[(\d+)\]$""".r

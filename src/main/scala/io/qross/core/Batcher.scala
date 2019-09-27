@@ -2,7 +2,7 @@ package io.qross.core
 
 import io.qross.jdbc.DataSource
 import io.qross.time.Timer
-import io.qross.ext._
+import io.qross.ext.Output
 
 class Batcher(source: DataSource, sentence: String) extends Thread {
 
@@ -37,7 +37,7 @@ class Batcher(source: DataSource, sentence: String) extends Thread {
                 ds.tableUpdate(sentence, table)
             }
 
-            Timer.sleep(0.1F)
+            Timer.sleep(100)
         }
 
         ds.close()

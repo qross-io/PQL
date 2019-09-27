@@ -32,7 +32,7 @@ object Solver {
     val RICH_CHAR: List[Regex] = List[Regex]("\"\"\"[\\s\\S]*?\"\"\"".r, "'''[\\s\\S]*?'''".r) //富字符串
     val CHAR$N: Regex = """~char\[(\d+)\]""".r  //字符串占位符
     val STRING$N: Regex = """~string\[(\d+)\]""".r  //富字符串占位符
-    val VALUE$N: Regex = """~value\[(\d+)\]($|\s|\S)""".r //中间结果占位符
+    val VALUE$N: Regex = """~value\[(\d+)\]""".r //中间结果占位符
     val STR$N: Regex = """~str\[(\d+)\]""".r //计算过程中的字符串占位符
 
     implicit class Sentence(var sentence: String) {
@@ -220,8 +220,19 @@ object Solver {
         def restoreValues(PQL: PQL, quote: String = "'"): String = {
             VALUE$N.findAllMatchIn(sentence)
                 .foreach(m => {
-                    val suffix = m.group(2)
-                    sentence = sentence.replace(m.group(0), PQL.values(m.group(1).toInt).mkString(if (suffix == "!") "" else quote) + (if (suffix == "!") "" else suffix))
+                    val whole = m.group(0)
+                    val index = m.group(1).toInt
+                    val suffix = {
+                        val i = sentence.indexOf(whole) + whole.length
+                        if (i == sentence.length || sentence.substring(i, i+1) != "!") {
+                            ""
+                        }
+                        else {
+                            "!"
+                        }
+
+                    }
+                    sentence = sentence.replace(whole + suffix, PQL.values(index).mkString(if (suffix == "!") "" else quote))
                 })
 
             sentence

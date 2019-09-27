@@ -26,7 +26,7 @@ class Pager(source: DataSource,
         var break = false
         do {
             while (Pager.DATA.size() >= tanks) {
-                Timer.sleep(0.5F)
+                Timer.sleep(500)
             }
 
             val table = ds.executeDataTable(selectSQL.replace(param, String.valueOf(Pager.CUBE.increase() * pageSize)))

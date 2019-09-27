@@ -675,7 +675,7 @@ class DataHub (private val defaultConnectionName: String = "") {
                         handler(table)
                         Output.writeMessage(s"$pageSize SAVED")
                     }
-                    Timer.sleep(0.1F)
+                    Timer.sleep(100)
                 }
                 parallel.waitAll()
                 Pager.CUBE.reset()
@@ -761,7 +761,7 @@ class DataHub (private val defaultConnectionName: String = "") {
                     handler(table)
                     Output.writeMessage(s"${config._4} SAVED")
                 }
-                Timer.sleep(0.1F)
+                Timer.sleep(100)
             }
             Output.writeMessage("Exit Block While")
             parallel.waitAll()
@@ -1089,9 +1089,12 @@ class DataHub (private val defaultConnectionName: String = "") {
 
     def executeDataTable(SQL: String, values: Any*): DataTable = CURRENT.executeDataTable(SQL, values: _*)
     def executeDataRow(SQL: String, values: Any*): DataRow = CURRENT.executeDataRow(SQL, values: _*)
-    def executeHashMap(SQL: String, values: Any*): java.util.Map[String, Any] = CURRENT.executeHashMap(SQL, values: _*)
-    def executeMapList(SQL: String, values: Any*): java.util.List[java.util.Map[String, Any]] = CURRENT.executeMapList(SQL, values: _*)
-    def executeSingleList(SQL: String, values: Any*): java.util.List[Any] = CURRENT.executeSingleList(SQL, values: _*)
+    def executeJavaMap(SQL: String, values: Any*): java.util.Map[String, Any] = CURRENT.executeJavaMap(SQL, values: _*)
+    def executeJavaMapList(SQL: String, values: Any*): java.util.List[java.util.Map[String, Any]] = CURRENT.executeJavaMapList(SQL, values: _*)
+    def executeJavaList(SQL: String, values: Any*): java.util.List[Any] = CURRENT.executeJavaList(SQL, values: _*)
+    def executeHashMap(SQL: String, values: Any*): Map[String, Any] = CURRENT.executeHashMap(SQL, values: _*)
+    def executeMapList(SQL: String, values: Any*): List[Map[String, Any]] = CURRENT.executeMapList(SQL, values: _*)
+    def executeSingleList(SQL: String, values: Any*): List[Any] = CURRENT.executeSingleList(SQL, values: _*)
     def executeSingleValue(SQL: String, values: Any*): DataCell = CURRENT.executeSingleValue(SQL, values: _*)
     def executeExists(SQL: String, values: Any*): Boolean = CURRENT.executeExists(SQL, values: _*)
     def executeNonQuery(SQL: String, values: Any*): Int = CURRENT.executeNonQuery(SQL, values: _*)

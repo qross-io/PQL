@@ -85,7 +85,6 @@ class DataTable() {
         val row = new DataRow()
         row.fields ++= this.fields
         row.columns ++= this.columns
-        row.table = this
         row
     }
 
@@ -99,7 +98,6 @@ class DataTable() {
                 }
             }
         }
-        row.table = this
         rows += row
 
         this
@@ -430,7 +428,6 @@ class DataTable() {
 
     //添加的行结构需要与table一致, 与newRow搭配, 与addRow不同, 不判断数据结构
     def insert(row: DataRow): DataTable = {
-        row.table = this
         rows += row
         this
     }

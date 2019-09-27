@@ -1,14 +1,11 @@
 package io.qross.ext
 
-import java.sql.{Date, Time, Timestamp}
-import java.time.{LocalDate, LocalDateTime}
-
 import io.qross.core.DataType.DataType
 import io.qross.core._
 import io.qross.net.Json
-import io.qross.setting.Global
 import io.qross.pql.SQLExecuteException
 import io.qross.pql.Solver.Sentence
+import io.qross.setting.Global
 import io.qross.time.{DateTime, Timer}
 import javax.script.{ScriptEngine, ScriptEngineManager, ScriptException}
 
@@ -100,7 +97,7 @@ object TypeExt {
                 try {
                     val data = DataCell(jse.eval(string))
                     if (data.isText) {
-                        data.value = data.value.toString.restoreSymbols()
+                        data.value = data.value.asInstanceOf[String].restoreSymbols()
                     }
                     data
                 }
@@ -360,7 +357,7 @@ object TypeExt {
                 //            if (i > 10) {
                 //                process.destroy()
                 //            }
-                Timer.sleep(1)
+                Timer.sleep(1000)
             }
 
             //println("exitValue: " + process.exitValue())

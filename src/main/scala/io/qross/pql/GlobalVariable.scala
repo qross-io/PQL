@@ -13,7 +13,7 @@ object GlobalVariable {
     //除环境全局变量的其他全局变量
     val SYSTEM: DataRow = new DataRow()
     val USER: DataRow = new DataRow()
-    val PROCESS: Set[String] = Set("NOW", "TODAY", "YESTERDAY", "COUNT", "TOTAL", "ROWS", "AFFECTED", "USER_ID", "USERNAME", "ROLE")
+    val PROCESS: Set[String] = Set("NOW", "TODAY", "YESTERDAY", "TOMORROW", "COUNT", "TOTAL", "ROWS", "AFFECTED", "RESULT", "BUFFER", "USER_ID", "USERNAME", "ROLE")
 
     //Global.getClass.getDeclaredMethods.contains()
     //Global.getClass.getMethod("").invoke(null)
@@ -83,6 +83,7 @@ object GlobalVariable {
             name match {
                 case "TODAY" => DataCell(DateTime.now.setZeroOfDay(), DataType.DATETIME)
                 case "YESTERDAY" => DataCell(DateTime.now.minusDays(1).setZeroOfDay(), DataType.DATETIME)
+                case "TOMORROW" => DataCell(DateTime.now.plusDays(1).setZeroOfDay(), DataType.DATETIME)
                 case "NOW" =>  DataCell(DateTime.now, DataType.DATETIME)
                 case "COUNT" => DataCell(PQL.dh.COUNT, DataType.INTEGER)
                 case "TOTAL" => DataCell(PQL.dh.TOTAL, DataType.INTEGER)
@@ -91,6 +92,12 @@ object GlobalVariable {
                 case "USER_ID" => DataCell(PQL.dh.userId, DataType.INTEGER)
                 case "USERNAME" => DataCell(PQL.dh.userName, DataType.TEXT)
                 case "ROLE" => DataCell(PQL.dh.roleName, DataType.TEXT)
+                case "RESULT" =>
+                    PQL.RESULT.lastOption match {
+                        case Some(v) => DataCell(v)
+                        case None => DataCell.NOT_FOUND
+                    }
+                case "BUFFER" => DataCell(PQL.dh.getData, DataType.TABLE)
                 case _ => DataCell.NOT_FOUND
             }
         }

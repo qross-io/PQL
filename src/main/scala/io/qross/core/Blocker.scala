@@ -28,7 +28,7 @@ class Blocker(source: DataSource, tanks: Int = 3) extends Thread {
             }
 
             while (Blocker.DATA.size() >= tanks) {
-                Timer.sleep(0.1F)
+                Timer.sleep(100)
             }
         }
 

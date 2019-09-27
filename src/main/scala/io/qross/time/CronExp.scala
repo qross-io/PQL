@@ -106,21 +106,25 @@ case class CronExp(expression: String = "0 * * * * ? *") {
                 "MONTH" -> "*",
                 "WEEK" -> "?",
                 "YEAR" -> "*")
-            expression.replace(" ", "").toUpperCase().split("#").foreach(item => {
-                if (item.contains("=")) {
-                    val field = item.takeBefore("=")
-                    val value = item.takeAfter("=")
-                    if (value.nonEmpty) {
-                        exp.put(field, value)
-                        if (field == "WEEK") {
-                            exp.put("DAY", "?")
+            expression
+                    .replace(" ", "")
+                    .toUpperCase()
+                    .split("#|&")
+                    .foreach(item => {
+                        if (item.contains("=")) {
+                            val field = item.takeBefore("=")
+                            val value = item.takeAfter("=")
+                            if (value.nonEmpty) {
+                                exp.put(field, value)
+                                if (field == "WEEK") {
+                                    exp.put("DAY", "?")
+                                }
+                                else if (field == "DAY") {
+                                    exp.put("WEEK", "?")
+                                }
+                            }
                         }
-                        else if (field == "DAY") {
-                            exp.put("WEEK", "?")
-                        }
-                    }
-                }
-            })
+                    })
 
             exp.values.toBuffer
         }
@@ -129,12 +133,15 @@ case class CronExp(expression: String = "0 * * * * ? *") {
         }
     }
     //check format
-    if (fields.length < 2 || fields.length > 7) {
+    if (fields.length < 1 || fields.length > 7) {
         throw new IllegalArgumentException("Incorrect corn expression format: " + expression)
     }
     else {
         if (fields.length < 7) {
             fields.+=:("0")
+        }
+        if (fields.length == 2) {
+            fields += "*"
         }
         if (fields.length == 3) {
             fields += "*"
@@ -252,8 +259,8 @@ case class CronExp(expression: String = "0 * * * * ? *") {
             tryMatch(HOUR)
         }
 
-        Output.writeMessage("AFTER HOUR " + this.nextTick)
-        
+        //Output.writeMessage("AFTER HOUR " + this.nextTick)
+
         if (!this.dayOfMonth.contains(QUESTION) && !this.dayOfMonth.contains(ASTERISK)) {
             tryMatch(DAY)
         }
@@ -262,19 +269,19 @@ case class CronExp(expression: String = "0 * * * * ? *") {
             tryMatch(WEEK)
         }
 
-        Output.writeMessage("AFTER DAY AND WEEK " + this.nextTick)
+        //Output.writeMessage("AFTER DAY AND WEEK " + this.nextTick)
         
         if (!this.month.contains(ASTERISK)) {
             tryMatch(MONTH)
         }
 
-        Output.writeMessage("AFTER MONTH " + this.nextTick)
+        //Output.writeMessage("AFTER MONTH " + this.nextTick)
         
         if (!this.year.contains(ASTERISK)) {
             tryMatch(YEAR)
         }
     
-        Output.writeMessage("AFTER YEAR " + this.nextTick)
+        //Output.writeMessage("AFTER YEAR " + this.nextTick)
     
         Option(this.nextTick)
     }

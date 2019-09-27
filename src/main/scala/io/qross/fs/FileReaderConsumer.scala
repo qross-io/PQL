@@ -14,7 +14,7 @@ class FileReaderConsumer(cube: Cube, handler: DataTable => Unit) extends Thread 
             }
             table.clear()
 
-            Timer.sleep(0.1F)
+            Timer.sleep(100)
         }
     }
 }

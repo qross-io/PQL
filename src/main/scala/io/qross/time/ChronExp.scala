@@ -66,9 +66,7 @@ case class ChronExp(expression: String) {
                     case (None, Some(t2)) => Some(t2)
                     case (None, None) => None
                 }
-            })
-
-        None
+            }).headOption
     }
 
     def getNextTickOrNone(dateTime: DateTime): String = {

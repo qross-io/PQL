@@ -1,5 +1,6 @@
 package io.qross.test
 
+import java.io.File
 import java.lang.management.ManagementFactory
 import java.sql.DriverManager
 import java.util.regex.Matcher
@@ -13,7 +14,7 @@ import io.qross.net.Json
 import io.qross.ext.TypeExt._
 import io.qross.fs.FilePath._
 import io.qross.pql.Solver._
-import io.qross.time.{CronExp, DateTime}
+import io.qross.time.{ChronExp, CronExp, DateTime}
 import io.qross.pql.Patterns._
 import io.qross.pql.PQL._
 import io.qross.pql.SAVE$AS.WITH$HEADER$
@@ -53,62 +54,11 @@ object Main {
 
         //new PQL("SELECT switch_time FROM qross_jobs LIMIT 5 -> GET LAST ROW", DataHub.QROSS).run().print
 
-        //PQL.openFile("/sql/test.sql").run()
+        PQL.openFile("/sql/test.sql").run()
 
-        /*
-        SAVE AS connectionName;
-        SAVE AS connectionName USE databaseName;
-        SAVE AS DEFAULT;
-        SAVE AS CACHE;
-        SAVE AS CACHE TABLE tableName;
-        SAVE AS TEMP;
-        SAVE AS TEMP TABLE tableName;
-
-        SAVE AS (NEW) CSV FILE "file.csv"
-        WITHOUT HEADER
-            WITH HEADER { "name": "label" };
-        SAVE AS (NEW) JSON FILE "file.json"
-        WITH HEADER
-            WITH HEADER { "name": "label" }
-        SAVE AS TXT FILE "file.log"
-        WITH HEADER
-            WITH HEADER { "name": "label" }
-        DELIMITED BY ",";
-
-        SAVE AS NEW EXCEL "abc.xlxs";
-        */
-
-        """c:\abc\1.txt""".isFile.print
-
-        //new SAVE$AS("""""")
 
         System.exit(0)
 
-        new PQL("""12"3\",4" --"--"hello
-         | 5678',90'
-         | /*
-         | '--\'na'me
-         | HELLO WORLD
-         | */
-         | """.stripMargin, new DataHub())
-
-
-        val SQL = """
-                     SET $rds := "mysql.rds";
-                     OPEN $rds:
-                        GET # SELECT
-               OUTPUT VALUE # {
-                     "test": $value{ SELECT 'A' as c FROM dt }
-                 }
-
-                 # DEFAULT 0;
-            """
-
-        val dh = new DataHub()
-
-        dh.run(SQL)
-
-        dh.close()
 //
 
 //        PQL.open(
@@ -119,7 +69,7 @@ object Main {
 
        /*
 
-               OUTPUT "obj" # { "Name": "Tom", "Age": 19 };
+        OUTPUT "obj" # { "Name": "Tom", "Age": 19 };
         OUTPUT "arr" # [1, 2, 3];
         OUTPUT "val" # "hello" + "#" + "world";
 

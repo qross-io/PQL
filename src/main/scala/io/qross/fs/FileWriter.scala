@@ -11,9 +11,17 @@ case class FileWriter(filePath: String, deleteFileIfExists: Boolean = true) {
 
     private var delimiter = "," //default delimiter when you write a collection
     private val file = new File(filePath.locate())
+    private var append = false
 
-    if (file.exists() && deleteFileIfExists) {
-        file.delete()
+    //exists, keep, >0B -> append = true
+
+    if (file.exists()) {
+        if (deleteFileIfExists) {
+            file.delete()
+        }
+        else if (file.length() > 0) {
+            append = true
+        }
     }
     if (!file.exists()) {
         file.getParentFile.mkdirs()
@@ -35,8 +43,8 @@ case class FileWriter(filePath: String, deleteFileIfExists: Boolean = true) {
         this
     }
 
-    def writeTable(table: DataTable, withHeader: Boolean): FileWriter = {
-        if (withHeader) {
+    def  writeTable(table: DataTable, withHeader: Boolean): FileWriter = {
+        if (withHeader && !append) {
             writeLine(table.getLabelNames.mkString(delimiter))
         }
         table.foreach(row => {

@@ -21,7 +21,7 @@ class Bulker(source: DataSource) extends Thread {
             }
             println("运行状态++++++++++++++++++++++++++")
             println(Bulker.QUEUE.size())
-            Timer.sleep(0.1F)
+            Timer.sleep(100)
         }
         ds.close()
     }

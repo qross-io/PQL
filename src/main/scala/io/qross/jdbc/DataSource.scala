@@ -154,7 +154,7 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
         table
     }
 
-    def executeMapList(SQL: String, values: Any*): util.List[util.Map[String, Any]] = {
+    def executeJavaMapList(SQL: String, values: Any*): util.List[util.Map[String, Any]] = {
         val mapList: util.List[util.Map[String, Any]] = new util.ArrayList[util.Map[String, Any]]()
 
         this.executeResultSet(SQL, values: _*) match {
@@ -178,17 +178,19 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
         mapList
     }
 
-    def executeDataList(SQL: String, values: Any*): util.List[util.List[Any]] = {
-        val list: util.List[util.List[Any]] = new util.ArrayList[util.List[Any]]()
+    def executeMapList(SQL: String, values: Any*): List[Map[String, Any]] = {
+        val mapList: mutable.ListBuffer[Map[String, Any]] = new mutable.ListBuffer[Map[String, Any]]()
+
         this.executeResultSet(SQL, values: _*) match {
-            case Some(rs) =>
-                val columns: Int = rs.getMetaData.getColumnCount
+            case Some (rs) =>
+                val meta = rs.getMetaData
+                val columns: Int = meta.getColumnCount
                 while (rs.next) {
-                    val row = new util.ArrayList[Any]
+                    val row: mutable.HashMap[String, Any] = new mutable.HashMap[String, Any]()
                     for (i <- 1 to columns) {
-                        row.add(rs.getObject(i))
+                        row.put(meta.getColumnLabel(i), rs.getObject(i))
                     }
-                    list.add(row)
+                    mapList += row.toMap
                 }
                 if (config.dbType != DBType.Presto) {
                     rs.getStatement.close()
@@ -196,9 +198,10 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
                 rs.close()
             case None =>
         }
-        list
+
+        mapList.toList
     }
-    
+
     def executeDataRow(SQL: String, values: Any*): DataRow = {
         val row: DataRow = new DataRow
         this.executeResultSet(SQL, values: _*) match {
@@ -219,13 +222,54 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
         row
     }
 
-    def executeHashMap(SQL: String, values: Any*): util.Map[String, Any] = {
+    def executeJavaMap(SQL: String, values: Any*): util.Map[String, Any] = {
         val map: util.Map[String, Any] = new util.HashMap[String, Any]()
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
-                val meta = rs.getMetaData
+                val meta: ResultSetMetaData = rs.getMetaData
+                val columns: Int = rs.getMetaData.getColumnCount
+                if (rs.next) {
+                    for (i <- 1 to columns) {
+                        map.put(meta.getColumnLabel(i), rs.getObject(i))
+                    }
+                    if (config.dbType != DBType.Presto) {
+                        rs.getStatement.close()
+                    }
+                    rs.close()
+                }
+            case None =>
+        }
+
+        map
+    }
+
+    def executeHashMap(SQL: String, values: Any*): Map[String, Any] = {
+        val map: mutable.HashMap[String, Any] = new mutable.HashMap[String, Any]()
+        this.executeResultSet(SQL, values: _*) match {
+            case Some(rs) =>
+                val meta: ResultSetMetaData = rs.getMetaData
+                val columns: Int = rs.getMetaData.getColumnCount
+                if (rs.next) {
+                    for (i <- 1 to columns) {
+                        map.put(meta.getColumnLabel(i), rs.getObject(i))
+                    }
+                    if (config.dbType != DBType.Presto) {
+                        rs.getStatement.close()
+                    }
+                    rs.close()
+                }
+            case None =>
+        }
+
+        map.toMap
+    }
+
+    def executeDataMap[S, T](SQL: String, values: Any*): Map[S, T] = {
+        val map: mutable.HashMap[S, T] = new mutable.HashMap[S, T]()
+        this.executeResultSet(SQL, values: _*) match {
+            case Some(rs) =>
                 while (rs.next) {
-                    map.put(meta.getColumnLabel(1), rs.getObject(1))
+                    map.put(rs.getObject(1).asInstanceOf[S], rs.getObject(2).asInstanceOf[T])
                 }
                 if (config.dbType != DBType.Presto) {
                     rs.getStatement.close()
@@ -233,11 +277,10 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
                 rs.close()
             case None =>
         }
-
-        map
+        map.toMap
     }
     
-    def executeSingleList(SQL: String, values: Any*): util.List[Any] = {
+    def executeJavaList(SQL: String, values: Any*): util.List[Any] = {
         val list: util.List[Any] = new util.ArrayList[Any]()
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
@@ -251,6 +294,22 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
             case None =>
         }
         list
+    }
+
+    def executeSingleList(SQL: String, values: Any*): List[Any] = {
+        val list: mutable.ListBuffer[Any] = new mutable.ListBuffer[Any]()
+        this.executeResultSet(SQL, values: _*) match {
+            case Some(rs) =>
+                while (rs.next) {
+                    list += rs.getObject(1)
+                }
+                if (config.dbType != DBType.Presto) {
+                    rs.getStatement.close()
+                }
+                rs.close()
+            case None =>
+        }
+        list.toList
     }
     
     def executeSingleValue(SQL: String, values: Any*): DataCell = {
@@ -555,35 +614,48 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
     def queryDataTable(SQL: String, values: Any*): DataTable = {
         val dataTable: DataTable = this.executeDataTable(SQL, values: _*)
         this.close()
-
         dataTable
     }
 
     def queryDataRow(SQL: String, values: Any*): DataRow = {
         val dataRow: DataRow = this.executeDataRow(SQL, values: _*)
         this.close()
-
         dataRow
+    }
+
+    def queryMapList(SQL: String, values: Any*): List[Map[String, Any]] = {
+        val mapList = this.executeMapList(SQL, values: _*)
+        this.close()
+        mapList
+    }
+
+    def queryHashMap(SQL: String, values: Any*): Map[String, Any] = {
+        val map = this.executeHashMap(SQL, values: _*)
+        this.close()
+        map
+    }
+
+    def queryDataMap[S, T](SQL: String, values: Any*): Map[S, T] = {
+        val map = this.executeDataMap[S, T](SQL, values: _*)
+        this.close()
+        map
     }
 
     def querySingleValue(SQL: String, values: Any*): DataCell = {
         val value: DataCell = this.executeSingleValue(SQL, values: _*)
         this.close()
-
         value
     }
 
     def queryUpdate(SQL: String, values: Any*): Int = {
         val rows: Int = this.executeNonQuery(SQL, values: _*)
         this.close()
-
         rows
     }
 
     def queryExists(SQL: String, values: Any*): Boolean = {
         val exists = this.executeExists(SQL, values: _*)
         this.close()
-
         exists
     }
 
@@ -637,7 +709,7 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
                 while (this.connection.isEmpty && (config.retryLimit == 0 || retry < config.retryLimit)) {
                     this.open()
                     if (this.connection.isEmpty) {
-                        Timer.sleep(1F)
+                        Timer.sleep(1000)
                         retry += 1
                     }
                 }

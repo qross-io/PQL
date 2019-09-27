@@ -433,7 +433,7 @@ public class DataAccess {
                 while (this.connection == null && retry < 100) {
                     this.open();
                     if (this.connection == null) {
-                        Timer.sleep(0.2F);
+                        Timer.sleep(200);
                         retry++;
                     }
                 }

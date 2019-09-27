@@ -384,7 +384,7 @@ class Email(private var title: String) {
                 case e: Exception =>
                     e.printStackTrace()
                     retry += 1
-                    Timer.sleep(1)
+                    Timer.sleep(1000)
             }
         }
 

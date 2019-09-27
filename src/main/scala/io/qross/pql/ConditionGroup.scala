@@ -27,7 +27,7 @@ class ConditionGroup(expression: String) {
             val select = findOutSelect(exp, m.group(0))
             //exp = exp.replace(select, "~select[" + selects.size + "]")
             exp = exp.replace(select, PQL.$stash(DataCell(
-                PQL.dh.executeSingleList(select.$trim("(", ")").trim().$restore(PQL)),
+                PQL.dh.executeJavaList(select.$trim("(", ")").trim().$restore(PQL)),
                 DataType.ARRAY
             )))
             //selects += select
