@@ -38,11 +38,13 @@ object DataType extends Enumeration {
     }
 
     def ofClassName(className: String): DataType = {
-        val name = if (className.contains(".")) {
-            className.substring(className.lastIndexOf(".") + 1).toLowerCase()
-        }
-        else {
-            className.toLowerCase()
+        val name = {
+            if (className.contains(".")) {
+                className.substring(className.lastIndexOf(".") + 1).toLowerCase()
+            }
+            else {
+                className.toLowerCase()
+            }
         }
 
         name match {

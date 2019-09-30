@@ -8,52 +8,7 @@ import io.qross.net.Json._
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 
-class SET(var variable: String, expression: String) {
-
-    val dataType: DataType = if (variable.contains(",")) {
-                                DataType.AUTO
-                            }
-                            else {
-                                if ($BLANK.test(variable)) {
-                                    if ($DATATYPE.test(variable)) {
-                                        val dt = variable.takeBefore($BLANK)
-                                        variable = variable.takeAfter($BLANK).trim()
-                                        DataType.ofName(dt)
-                                    }
-                                    else {
-                                        Output.writeWarning(s"Wrong data type : " + variable)
-                                        DataType.AUTO
-                                    }
-                                }
-                                else {
-                                    DataType.AUTO
-                                }
-                            }
-
-    val variables: Array[(DataType, String)] = if (variable.contains(",")) {
-                                                    if (!$SELECT.test(expression) && !$PARSE.test(expression)) {
-                                                        throw new SQLParseException("Multiple variables definition only support SELECT or PARSE sentence. " + expression)
-                                                    }
-                                                    variable.split(",")
-                                                            .map(_.trim)
-                                                            .map(v => {
-                                                                if ($BLANK.test(v)) {
-                                                                    if ($DATATYPE.test(v)) {
-                                                                        (DataType.ofName(v.takeBefore($BLANK)), v.takeAfter($BLANK).trim())
-                                                                    }
-                                                                    else {
-                                                                        Output.writeWarning(s"Wrong data type : " + v)
-                                                                        (DataType.AUTO, v)
-                                                                    }
-                                                                }
-                                                                else {
-                                                                    (DataType.AUTO, v)
-                                                                }
-                                                            })
-                                                }
-                                                else {
-                                                    new Array[(DataType, String)](0)
-                                                }
+class SET(var declare: String, expression: String) {
 
     def assign(PQL: PQL): Unit = {
         //1. SELECT查询  - 以SELECT开头 - 需要解析$开头的变量和函数
@@ -63,11 +18,31 @@ class SET(var variable: String, expression: String) {
         //5. 变量间直接赋值 - 是变量格式(有$前缀)且是存在于变量列表中的变量 - 直接赋值
         //6. 数学表达式 - 其他 - 解析函数和变量然后求值，出错则抛出异常
 
+        val variables: Array[(DataType, String)] = {
+            declare.split(",")
+                .map(_.trim)
+                .map(v => {
+                    if ($BLANK.test(v)) {
+                        val dataType = v.takeAfter($BLANK).trim()
+                        val name = v.takeBefore($BLANK).trim()
+                        if ($DATA_TYPE.test(dataType)) {
+                            (DataType.ofName(dataType), name)
+                        }
+                        else {
+                            throw new SQLParseException("Wrong data type: " + dataType)
+                        }
+                    }
+                    else {
+                        (DataType.AUTO, v)
+                    }
+                })
+        }
+
         if ($SELECT.test(expression)) { //SELECT
 
             val result = new SELECT(expression).execute(PQL)
 
-            if (variables.nonEmpty) {
+            if (variables.length > 1) {
                 result.asTable.firstRow match {
                     case Some(row) =>
                         if (row.size >= variables.length) {
@@ -86,8 +61,8 @@ class SET(var variable: String, expression: String) {
 
             }
             else {
-                PQL.updateVariable(variable,
-                        dataType match {
+                PQL.updateVariable(variables.head._2,
+                    variables.head._1 match {
                             case DataType.TABLE => result.toTable
                             case DataType.ROW => result.toRow
                             case DataType.ARRAY => result.toJavaList
@@ -123,8 +98,8 @@ class SET(var variable: String, expression: String) {
                 }
             }
             else {
-                PQL.updateVariable(variable,
-                    dataType match {
+                PQL.updateVariable(variables.head._2,
+                    variables.head._1 match {
                         case DataType.AUTO | DataType.JSON => DataCell(PQL.dh.parseNode(path), DataType.JSON)
                         case DataType.TABLE => DataCell(PQL.dh.parseTable(path), DataType.TABLE)
                         case DataType.ROW => DataCell(PQL.dh.parseRow(path), DataType.ROW)
@@ -136,11 +111,29 @@ class SET(var variable: String, expression: String) {
         }
         else if ($NON_QUERY.test(expression)) {
             //INSERT + UPDATE + DELETE
-            PQL.updateVariable(variable, DataCell(PQL.dh.executeNonQuery(expression.$restore(PQL)), DataType.INTEGER))
+            if (variables.length == 1) {
+                PQL.updateVariable(variables.head._2, DataCell(PQL.dh.executeNonQuery(expression.$restore(PQL)), variables.head._1))
+            }
+            else {
+                throw new SQLParseException("Only 1 variable name allowed when save affected rows of an INSERT/UPDATE/DELETE sentence. " + expression)
+            }
         }
         else {
             //在SHARP表达式内部再恢复字符串和中间值
-            PQL.updateVariable(variable, new SHARP(expression.$clean(PQL)).execute(PQL))
+            if (variables.length == 1) {
+                val data = new SHARP(expression.$clean(PQL)).execute(PQL)
+                PQL.updateVariable(variables.head._2, {
+                    if (variables.head._1 == DataType.AUTO) {
+                        data
+                    }
+                    else {
+                        data.to(variables.head._1)
+                    }
+                })
+            }
+            else {
+                throw new SQLParseException("Only 1 variable name allowed when declare a new variable. " + expression)
+            }
         }
     }
 }

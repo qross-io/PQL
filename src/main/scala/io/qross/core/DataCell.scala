@@ -20,9 +20,16 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     if (value != null && dataType == DataType.NULL) {
         dataType = DataType.ofValue(value)
     }
+    //DataCell存储的基本数据类型必须正确
+    dataType match {
+        case DataType.TEXT => if (!value.isInstanceOf[String] && value != null) value = value.toString
+        case DataType.INTEGER => if (!(value.isInstanceOf[Int] || value.isInstanceOf[Long]) && value != null) value = value.toInteger
+        case DataType.DECIMAL => if (!(value.isInstanceOf[Int] || value.isInstanceOf[Long] || value.isInstanceOf[Float] || value.isInstanceOf[Double]) && value != null) value = value.toDecimal
+        case DataType.BOOLEAN => if (!value.isInstanceOf[Boolean] && value != null) value = value.toBoolean
+        case DataType.DATETIME => if (!value.isInstanceOf[DateTime] && value != null) value = value.toDateTime
+        case _ =>
+    }
 
-//    def isNull: Boolean = value == null && dataType == DataType.NULL
-//    def isNotNull: Boolean = value != null || dataType != DataType.NULL
     def isNull: Boolean = value == null
     def isNotNull: Boolean = value == null
     def isEmpty: Boolean = value == ""
@@ -138,8 +145,10 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
             case DataType.DECIMAL => this.toDecimal
             case DataType.BOOLEAN => this.toBoolean
             case DataType.DATETIME => this.toDateTime
-            case DataType.JSON => this.toJson
             case DataType.TABLE => this.toTable
+            case DataType.ROW | DataType.OBJECT | DataType.MAP => this.toRow
+            case DataType.ARRAY | DataType.LIST => this.toJavaList
+            case DataType.JSON => this.toJson
             case _ => throw new ConvertFailureException("Unsupported conversion format: " + dataType)
         }
     }
@@ -222,14 +231,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def isDateTime: Boolean = this.dataType == DataType.DATETIME
     def asDateTime: DateTime = this.value.toDateTime
-    def asDateTime(defaultValue: Any): DateTime = {
-        if (valid) {
-            this.value.toDateTime(defaultValue)
-        }
-        else {
-            defaultValue.toDateTime
-        }
-    }
+    def asDateTime(format: String): DateTime = this.value.toDateTime(format)
     def toDateTime: DataCell = {
         if (!this.isDateTime) {
             DataCell(this.asDateTime, DataType.DATETIME)
@@ -257,6 +259,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable]
                 case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].toTable("field")
                 case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]].asScala.toList.toTable()
+                case DataType.TEXT => this.value.asInstanceOf[String].split("").toList.toTable()
                 case _ => new DataTable(new DataRow("value" -> this.value))
             }
         }
@@ -309,6 +312,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable].toList
                 case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].getValues
                 case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]].asScala.toList
+                case DataType.TEXT => this.valid.asInstanceOf[String].split("").asInstanceOf[List[Any]]
                 case _ => List[Any](this.value)
             }
         }
@@ -322,6 +326,10 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable].toJavaList
                 case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].toJavaList
                 case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]]
+                case DataType.TEXT =>
+                    val list = new util.ArrayList[Any]()
+                    this.value.asInstanceOf[String].split("").foreach(list.add)
+                    list
                 case _ => List[Any](this.value).asJava
             }
         }

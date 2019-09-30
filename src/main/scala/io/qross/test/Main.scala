@@ -23,6 +23,7 @@ import io.qross.setting.Environment
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
+import io.qross.time.TimeSpan._
 
 object Main {
 
@@ -54,10 +55,8 @@ object Main {
 
         //new PQL("SELECT switch_time FROM qross_jobs LIMIT 5 -> GET LAST ROW", DataHub.QROSS).run().print
 
+        //new DateTime("2019-09-29 14:00:00").earlier(DateTime.now).toDays.print
         PQL.openFile("/sql/test.sql").run()
-
-
-        System.exit(0)
 
 //
 

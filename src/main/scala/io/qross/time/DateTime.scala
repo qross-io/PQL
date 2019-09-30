@@ -58,6 +58,8 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
         case timeStamp: Timestamp => timeStamp.toLocalDateTime
         case l: Long => parseLocalDateTime(l)
         case i: Int => parseLocalDateTime(i)
+        case f: Float => parseLocalDateTime(f.toInt)
+        case d: Double => parseLocalDateTime(d.toLong)
         case localDate: LocalDate => parseLocalDateTime(localDate.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
         case localTime: LocalTime => parseLocalDateTime(LocalDate.now() + " " + localTime.toString, "yyyy-MM-dd HH:mm:ss")
         case _ =>   Output.writeWarning("Can't recognize as or convert to DateTime: " + dateTime)
@@ -150,6 +152,8 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     def getHour: Int = this.localDateTime.getHour
     def getMinute: Int = this.localDateTime.getMinute
     def getSecond: Int = this.localDateTime.getSecond
+    def getMilli: Int = this.localDateTime.getNano / 1000000
+    def getMicro: Int = this.localDateTime.getNano / 1000
     def getNano: Int = this.localDateTime.getNano
     def getTickValue: String = this.getString("yyyyMMddHHmm00")
 
@@ -161,6 +165,8 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     def hour: Int = this.localDateTime.getHour
     def minute: Int = this.localDateTime.getMinute
     def second: Int = this.localDateTime.getSecond
+    def milli: Int = this.localDateTime.getNano / 1000000
+    def micro: Int = this.localDateTime.getNano / 1000
     def nano: Int = this.localDateTime.getNano
     def tickValue: String = this.getString("yyyyMMddHHmm00")
     
@@ -222,11 +228,16 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     def setSecond(value: Int): DateTime = {
         new DateTime(this.localDateTime.withSecond(value))
     }
+    def setMilli(value: Int): DateTime = {
+        new DateTime(this.localDateTime.withNano(value * 1000000))
+    }
+    def setMicro(value: Int): DateTime = {
+        new DateTime(this.localDateTime.withNano(value * 1000))
+    }
     def setNano(value: Int): DateTime = {
         new DateTime(this.localDateTime.withNano(value))
     }
-    
-    def setZeroOfMonth(): DateTime = {
+    def setBeginningOfMonth(): DateTime = {
         new DateTime(this.localDateTime.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0))
     }
     def setZeroOfDay(): DateTime = {
@@ -257,6 +268,15 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     def plusSeconds(amount: Long): DateTime = {
         new DateTime(this.localDateTime.plusSeconds(amount))
     }
+    def plusMillis(amount: Long): DateTime = {
+        new DateTime(this.localDateTime.plusNanos(amount * 1000000))
+    }
+    def plusMicros(amount: Long): DateTime = {
+        new DateTime(this.localDateTime.plusNanos(amount * 1000))
+    }
+    def plusNanos(amount: Long): DateTime = {
+        new DateTime(this.localDateTime.plusNanos(amount))
+    }
     
     def minus(unit: ChronoUnit, amount: Int): DateTime = {
         new DateTime(this.localDateTime.minus(amount, unit))
@@ -278,6 +298,15 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     }
     def minusSeconds(amount: Long): DateTime = {
         new DateTime(this.localDateTime.minusSeconds(amount))
+    }
+    def minusMillis(amount: Long): DateTime = {
+        new DateTime(this.localDateTime.minusNanos(amount * 1000000))
+    }
+    def minusMicros(amount: Long): DateTime = {
+        new DateTime(this.localDateTime.minusNanos(amount * 1000))
+    }
+    def minusNanos(amount: Long): DateTime = {
+        new DateTime(this.localDateTime.minusNanos(amount))
     }
     
     def getString(formatStyle: String): String = {
@@ -317,6 +346,9 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
                 case ("HOUR", Success(v)) => this.plusHours(v)
                 case ("MINUTE", Success(v)) => this.plusMinutes(v)
                 case ("SECOND", Success(v)) => this.plusSeconds(v)
+                case ("MILLI", Success(v)) => this.plusMillis(v)
+                case ("MICRO", Success(v)) => this.plusMicros(v)
+                case ("NANO", Success(v)) => this.plusNanos(v)
                 case _ => this
             }
         }
@@ -332,6 +364,9 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
                 case ("HOUR", Success(v)) => this.setHour(v)
                 case ("MINUTE", Success(v)) => this.setMinute(v)
                 case ("SECOND", Success(v)) => this.setSecond(v)
+                case ("MILLI", Success(v)) => this.setMilli(v)
+                case ("MICRO", Success(v)) => this.setMicro(v)
+                case ("NANO", Success(v)) => this.setNano(v)
                 case _ => this
             }
         }
@@ -519,7 +554,7 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
             }
         }
     }
-    
+
     override def equals(other: Any): Boolean = {
         this.getString("yyyyMMddHHmmssSSS") == other.asInstanceOf[DateTime].getString("yyyyMMddHHmmssSSS")
     }

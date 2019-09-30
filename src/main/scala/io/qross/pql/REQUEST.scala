@@ -12,7 +12,7 @@ class REQUEST(var sentence: String) {
 
     val header: Map[String, String] = if ({ m = $REQUEST$HEADER.matcher(sentence); m}.find) {
         sentence = sentence.replace(m.group(0), "").trim()
-        m.group(1).toHashMap()
+        m.group(1).$split()
     }
     else {
         Map[String, String]()

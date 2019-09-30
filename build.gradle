@@ -6,7 +6,7 @@ apply plugin: 'maven'
 apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
-version = '0.6.0-21-SNAPSHOT'
+version = '0.6.0-33-SNAPSHOT'
 sourceCompatibility = 1.8
 
 archivesBaseName = "qross-pql"
@@ -95,5 +95,3 @@ artifacts {
 }
 
 build.dependsOn(shadowJar)
-
-

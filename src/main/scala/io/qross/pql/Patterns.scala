@@ -34,7 +34,7 @@ object Patterns {
     val $EXIT: Pattern = Pattern.compile("""^EXIT(\s+WHEN\s([\s\S]+))?$""", Pattern.CASE_INSENSITIVE)
     val $CONTINUE: Pattern = Pattern.compile("""^CONTINUE(\s+WHEN\s([\s\S]+))?$""", Pattern.CASE_INSENSITIVE)
     val $SET: Pattern = Pattern.compile("""^SET\s+([\s\S]+?):=([\s\S]+)$""", Pattern.CASE_INSENSITIVE)
-    val $DATATYPE: Regex = """(?i)^(INT|INTEGER|DECIMAL|BOOLEAN|TEXT|DATETIME|MAP|OBJECT|ROW|TABLE|ARRAY|LIST|JSON|REGEX)\s+""".r
+    val $DATA_TYPE: Regex = """(?i)^(INT|INTEGER|DECIMAL|BOOLEAN|TEXT|DATETIME|MAP|OBJECT|ROW|TABLE|ARRAY|LIST|JSON|REGEX)$""".r
     val $OPEN: Pattern = Pattern.compile("""^OPEN\s+([\s\S]+)$""", Pattern.CASE_INSENSITIVE)
     val $USE: Pattern = Pattern.compile("""(?i)^USE\s+""")
     val $SAVE$AS: Pattern = Pattern.compile("""^SAVE\s+AS\s+([\s\S]+)$""", Pattern.CASE_INSENSITIVE)

@@ -1111,7 +1111,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     def place(queryString: String): PQL = {
         if (queryString != "") {
-            this.SQL = this.SQL.replaceArguments(queryString.$restore(this, "").toHashMap())
+            this.SQL = this.SQL.replaceArguments(queryString.$restore(this, "").$split())
         }
         this
     }

@@ -21,5 +21,5 @@ case class TimeSpan(milli: Long) {
     def seconds: Double = milli.toDouble / 1000D
     def minutes: Double = milli.toDouble / 1000D / 60D
     def hours: Double = milli.toDouble / 1000D / 60D / 60D
-    def days: Double = milli.toDouble / 1000D / 60D / 24D
+    def days: Double = milli.toDouble / 1000D / 60D / 60D / 24D
 }

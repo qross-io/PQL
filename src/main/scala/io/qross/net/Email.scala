@@ -246,7 +246,7 @@ class Email(private var title: String) {
     }
 
     def placeData(queryString: String): Email = {
-        queryString.toHashMap()
+        queryString.$split()
             .foreach(k => {
                 this.content = this.content.replace(k._1, k._1)
             })

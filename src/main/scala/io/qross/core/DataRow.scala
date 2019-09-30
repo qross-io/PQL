@@ -58,7 +58,12 @@ class DataRow() {
         val name = fieldName.toLowerCase()
 
         if (!columns.contains(name)) {
+            //添加列
             fields += name
+            columns += name -> dataType
+        }
+        else if (columns(name) != dataType) {
+            //仅修改数据类型
             columns += name -> dataType
         }
 

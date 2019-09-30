@@ -129,7 +129,7 @@ case class CronExp(expression: String = "0 * * * * ? *") {
             exp.values.toBuffer
         }
         else {
-            expression.toUpperCase().split(" ").toBuffer
+            expression.trim().toUpperCase().split("\\s+").toBuffer
         }
     }
     //check format
@@ -381,14 +381,14 @@ case class CronExp(expression: String = "0 * * * * ? *") {
         everyMatch(DAY).clear()
         
         val begin = 1
-        val end = this.nextTick.plusMonths(1).setZeroOfMonth().plusDays(-1).getDayOfMonth
+        val end = this.nextTick.plusMonths(1).setBeginningOfMonth().plusDays(-1).getDayOfMonth
       
         var value = this.dayOfMonth
         //LW,L,W
         if (value.contains(LAST_WORK_DAY)) {
             value = value.replace(LAST_WORK_DAY,
                 {
-                    var date = this.nextTick.plusMonths(1).setZeroOfMonth().plusDays(-1)
+                    var date = this.nextTick.plusMonths(1).setBeginningOfMonth().plusDays(-1)
                     while (date.getWeekName == "Sat" || date.getWeekName == "Sun") {
                         date = date.plusDays(-1)
                     }
@@ -597,7 +597,7 @@ case class CronExp(expression: String = "0 * * * * ? *") {
     }
     
     private def getWorkDayOfMonth: List[Int] = {
-        var day = this.nextTick.setZeroOfMonth()
+        var day = this.nextTick.setBeginningOfMonth()
         val lastDay = day.plusMonths(1).plusDays(-1)
         
         var list = new ArrayBuffer[Int]

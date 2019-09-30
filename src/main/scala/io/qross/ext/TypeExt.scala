@@ -67,9 +67,9 @@ object TypeExt {
             }
         }
 
-        def toHashMap(delimiter: String = "&", terminator: String = "="): Map[String, String] = {
+        def $split(delimiter: String = "&", terminator: String = "="): Map[String, String] = {
             val params = string.split(delimiter)
-            val queries = new mutable.HashMap[String, String]()
+            val queries = new mutable.LinkedHashMap[String, String]()
             for (param <- params) {
                 if (param.contains(terminator)) {
                     queries += param.substring(0, param.indexOf(terminator)) -> param.substring(param.indexOf(terminator) + 1)
@@ -490,7 +490,7 @@ object TypeExt {
                         case Success(d) => d
                         case Failure(_) => throw new ConvertFailureException("Can't recognize as or convert to Decimal: " + any)
                     }
-                case dt: DateTime => dt.toEpochSecond
+                case dt: DateTime => dt.toEpochMilli
                 case i: Int => i
                 case l: Long => l
                 case f: Float => f
@@ -513,13 +513,8 @@ object TypeExt {
             new DateTime(any)
         }
 
-        def toDateTime(defaultValue: Any): DateTime = {
-            try {
-                any.toDateTime
-            }
-            catch {
-                case _ : ConvertFailureException => defaultValue.toDateTime
-            }
+        def toDateTime(format: String): DateTime = {
+            new DateTime(any, format)
         }
 
         def toBoolean: Boolean = {
@@ -535,10 +530,10 @@ object TypeExt {
                         throw new ConvertFailureException("Can't recognize as or convert to Boolean: " + any)
                     }
                 case b: Boolean => b
-                case i: Int => i == 1
-                case l: Long => l == 1l
-                case d: Double => d == 1d
-                case f: Float => f == 1f
+                case i: Int => i > 0
+                case l: Long => l > 0l
+                case f: Float => f > 0f
+                case d: Double => d > 0d
                 case _ => throw new ConvertFailureException("Can't recognize as or convert to Boolean: " + any)
             }
         }

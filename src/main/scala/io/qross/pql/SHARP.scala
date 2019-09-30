@@ -1,35 +1,19 @@
 package io.qross.pql
 
 import io.qross.core.{DataCell, DataRow, DataType}
-import io.qross.ext.TypeExt._
 import io.qross.ext.NumberExt._
+import io.qross.ext.TypeExt._
 import io.qross.fql.Fragment
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 import io.qross.time.TimeSpan._
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
 
 object SHARP {
 
     /*
     val reserved: Set[String] = Set[String]("SET", "GET", "FORMAT", "TAKE", "YEAR", "MONTH", "DAY", "WEEK", "WEEKNAME", "NANO", "HOUR", "MINUTE", "SECOND", "NUMBER")
-
-    val EXECUTOR: Map[String, (Any, Any) => Any] = Map[String, (Any, Any) => Any](
-        "SET" -> SET,
-        "FORMAT" -> FORMAT,
-        "GET$YEAR" -> GET$YEAR,
-        "GET$MONTH" -> GET$MONTH,
-        "GET$DAY" -> GET$DAY,
-        "GET$HOUR" -> GET$HOUR,
-        "GET$MINUTE" -> GET$MINUTE,
-        "GET$SECOND" -> GET$SECOND,
-        "GET$NANO" -> GET$NANO,
-        "GET$WEEK" -> GET$WEEK,
-        "GET$WEEKNAME" -> GET$WEEKNAME,
-        "GET$NUMBER" -> GET$NUMBER,
-    )
     */
 
     /* ---------- 日期时间 DataTime ----------- */
@@ -110,6 +94,24 @@ object SHARP {
         }
     }
 
+    def SET$MILLI(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.setMilli(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET MILLI, arguments ${args.size}, data type: ${data.dataType} ")
+        }
+    }
+
+    def SET$MICRO(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.setMicro(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET MICRO, arguments ${args.size}, data type: ${data.dataType} ")
+        }
+    }
+
     def SET$NANO(data: DataCell, args: List[DataCell]): DataCell = {
         if (args.nonEmpty) {
             DataCell(data.asDateTime.setNano(args.head.asInteger.toInt), DataType.DATETIME)
@@ -122,6 +124,19 @@ object SHARP {
     def SET$WEEK(data: DataCell, args: List[DataCell]): DataCell = {
         if (args.nonEmpty) {
             DataCell(data.asDateTime.setDayOfWeek(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET WEEK, arguments ${args.size}, data type: ${data.dataType} ")
+        }
+    }
+
+    def SET$ZERO$OF$DAY(data: DataCell, args: List[DataCell]): DataCell = {
+        DataCell(data.asDateTime.setZeroOfDay(), DataType.DATETIME)
+    }
+
+    def SET$BEGINNING$OF$MONTH(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.setBeginningOfMonth(), DataType.DATETIME)
         }
         else {
             throw new SQLExecuteException(s"Empty arguments or incorrect data type at SET WEEK, arguments ${args.size}, data type: ${data.dataType} ")
@@ -150,6 +165,14 @@ object SHARP {
 
     def GET$SECOND(data: DataCell, args: List[DataCell]): DataCell = {
         DataCell(data.asDateTime.getSecond, DataType.INTEGER)
+    }
+
+    def GET$MILLI(data: DataCell, args: List[DataCell]): DataCell = {
+        DataCell(data.asDateTime.getMilli, DataType.INTEGER)
+    }
+
+    def GET$MICRO(data: DataCell, args: List[DataCell]): DataCell = {
+        DataCell(data.asDateTime.getMicro, DataType.INTEGER)
     }
 
     def GET$NANO(data: DataCell, args: List[DataCell]): DataCell = {
@@ -218,6 +241,33 @@ object SHARP {
         }
     }
 
+    def PLUS$MILLIS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.plusMillis(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS MILLIS, arguments ${args.size}, data type: ${data.dataType} ")
+        }
+    }
+
+    def PLUS$MICROS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.plusMicros(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS MICROS, arguments ${args.size}, data type: ${data.dataType} ")
+        }
+    }
+
+    def PLUS$NANOS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.plusNanos(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at PLUS NANOS, arguments ${args.size}, data type: ${data.dataType} ")
+        }
+    }
+
     def MINUS$YEARS(data: DataCell, args: List[DataCell]): DataCell = {
         if (args.nonEmpty) {
             DataCell(data.asDateTime.minusYears(args.head.asInteger.toInt), DataType.DATETIME)
@@ -272,6 +322,33 @@ object SHARP {
         }
     }
 
+    def MINUS$MILLIS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.minusMillis(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS MILLIS, arguments ${args.size}, data type: ${data.dataType} ")
+        }
+    }
+
+    def MINUS$MICROS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.minusMillis(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS MICROS, arguments ${args.size}, data type: ${data.dataType} ")
+        }
+    }
+
+    def MINUS$NANOS(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(data.asDateTime.minusMillis(args.head.asInteger.toInt), DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments or incorrect data type at MINUS NANOS, arguments ${args.size}, data type: ${data.dataType} ")
+        }
+    }
+
     def LATER(data: DataCell, args: List[DataCell]): DataCell = {
         if (args.nonEmpty) {
             data.asDateTime.later(args.head.asDateTime).toDataCell(DataType.INTEGER)
@@ -299,12 +376,49 @@ object SHARP {
         }
     }
 
+    def TO$EPOCH(data: DataCell, args: List[DataCell]): DataCell = {
+        data.asDateTime.toEpochSecond.toDataCell(DataType.INTEGER)
+    }
+
+    def TO$EPOCH$SECOND(data: DataCell, args: List[DataCell]): DataCell = {
+        data.asDateTime.toEpochSecond.toDataCell(DataType.INTEGER)
+    }
+
+    def TO$EPOCH$MILLI(data: DataCell, args: List[DataCell]): DataCell = {
+        data.asDateTime.toEpochMilli.toDataCell(DataType.INTEGER)
+    }
+
+    def TO$DATETIME(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            data.asDateTime(args.head.asText).toDataCell(DataType.DATETIME)
+        }
+        else {
+            data.asDateTime.toDataCell(DataType.DATETIME)
+        }
+    }
+
+    def MATCHES$CRON(data: DataCell, args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            data.asDateTime.matches(args.head.asText).toDataCell(DataType.DATETIME)
+        }
+        else {
+            throw new SQLExecuteException(s"Empty arguments at MATCHES CRON. Must specify a cron expression.")
+        }
+    }
+
     /* ---------- 整数 ---------- */
 
     // 1 to 10
     def TO(data: DataCell, args: List[DataCell]): DataCell = {
         if (args.nonEmpty) {
-            data.asInteger.to(args.head.asInteger).toList.asJava.toDataCell(DataType.ARRAY)
+            val start = data.asInteger
+            val end = args.head.asInteger
+            if (start <= end) {
+                start.to(end).toList.asJava.toDataCell(DataType.ARRAY)
+            }
+            else {
+                end.to(start).reverse.toList.asJava.toDataCell(DataType.ARRAY)
+            }
         }
         else {
             throw new SQLExecuteException(s"Empty arguments or incorrect data type at TO, arguments ${args.size}, data type: ${data.dataType} ")
@@ -314,7 +428,14 @@ object SHARP {
     // 1 until 10
     def UNTIL(data: DataCell, args: List[DataCell]): DataCell = {
         if (args.nonEmpty) {
-            data.asInteger.until(args.head.asInteger).toList.asJava.toDataCell(DataType.ARRAY)
+            val start = data.asInteger
+            val end = args.head.asInteger
+            if (start <= end) {
+                start.until(end).toList.asJava.toDataCell(DataType.ARRAY)
+            }
+            else {
+                (end + 1).to(start).reverse.toList.asJava.toDataCell(DataType.ARRAY)
+            }
         }
         else {
             throw new SQLExecuteException(s"Empty arguments or incorrect data type at UNTIL, arguments ${args.size}, data type: ${data.dataType} ")
@@ -404,7 +525,12 @@ object SHARP {
                 data.asText.split(args.head.asText).toList.asJava.toDataCell(DataType.ARRAY)
             }
             else {
-                data.asText.split(args.head.asText, args(1).asInteger.toInt).toList.asJava.toDataCell(DataType.ARRAY)
+                if (args(1).isText) {
+                    data.asText.$split(args.head.asText, args(1).asText).toRow.toDataCell(DataType.ROW)
+                }
+                else {
+                    data.asText.split(args.head.asText, args(1).asInteger.toInt).toList.asJava.toDataCell(DataType.ARRAY)
+                }
             }
         }
         else {
@@ -654,6 +780,10 @@ object SHARP {
         else {
             throw new SQLExecuteException(s"Empty arguments or incorrect data type at GET, arguments ${args.size}, data type: ${data.dataType} ")
         }
+    }
+
+    def REVERSE(data: DataCell, args: List[DataCell]): DataCell = {
+        data.asList.reverse.asJava.toDataCell(DataType.ARRAY)
     }
 
     /* ---------- 通用类型 ---------- */

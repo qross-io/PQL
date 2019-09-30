@@ -7,7 +7,7 @@ import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.BLANKS
 
 class Condition(val expression: String) {
-    var field: String = null
+    var field: String = _
     var operator: String = ""
     var value: String = expression //or unary
 
