@@ -6,9 +6,20 @@ import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 
+object SLEEP {
+    def parse(sentence: String, PQL: PQL): Unit = {
+        if ($SLEEP.test(sentence)) {
+            PQL.PARSING.head.addStatement(new Statement("SLEEP", sentence, new SLEEP(sentence.takeAfter($SLEEP).trim())))
+        }
+        else {
+            throw new SQLParseException("Incorrect DEBUG sentence: " + sentence)
+        }
+    }
+}
+
 class SLEEP(timeSpan: String) {
 
-    def sleep(PQL: PQL): Unit = {
+    def execute(PQL: PQL): Unit = {
         if ("""(?i)TO\s+NEXT\s+SECOND""".r.test(timeSpan)) {
             Timer.sleepToNextSecond()
         }

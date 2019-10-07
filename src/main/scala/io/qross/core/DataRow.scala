@@ -46,7 +46,6 @@ class DataRow() {
     //insert or update
     def set(fieldName: String, value: Any): Unit = {
         set(fieldName, value, DataType.ofValue(value))
-
     }
 
      def set(fieldName: String, cell: DataCell): Unit = {
@@ -355,7 +354,7 @@ class DataRow() {
 
     def getFields: List[String] = fields.toList
     def getDataTypes: List[DataType] = columns.values.toList
-    def getValues: List[Any] = values.values.toList
+    def getValues[T]: List[T] = values.values.map(_.asInstanceOf[T]).toList
 
     def contains(fieldName: String): Boolean = this.columns.contains(fieldName.toLowerCase)
     def contains(fieldName: String, value: Any): Boolean = {

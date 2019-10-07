@@ -12,6 +12,7 @@ import io.qross.time.Timer
 import io.qross.ext._
 import io.qross.fs.FilePath._
 import io.qross.net.Json
+import io.qross.ext.TypeExt._
 
 //在hive相关的包中, 将来移到HDFSReader中
 //import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
@@ -22,30 +23,36 @@ object FileReader {
     val DATA: ConcurrentLinkedQueue[DataTable] = new ConcurrentLinkedQueue[DataTable]()
 }
 
-case class FileReader(filePath: String) {
+case class FileReader(file: File) {
+
+    def this(filePath: String) {
+        this(new File(filePath.locate()))
+    }
 
     private val CHARSET = "utf-8"
     private var delimiter: String = ","
     //field, defaultValue
     private val fields = new mutable.LinkedHashMap[String, String]()
-    
-    private val file = new File(filePath.locate())
-    if (!file.exists) throw new IOException("File not found: " + filePath)
-    private val extension = filePath.substring(filePath.lastIndexOf("."))
+
+    if (!file.exists) throw new IOException("File not found: " + file.getPath)
+    private val extension = file.getPath.takeRightAfter(".")
     
     private val scanner: Scanner =
-        if (".log".equalsIgnoreCase(extension) || ".txt".equalsIgnoreCase(extension) || ".csv".equalsIgnoreCase(extension)) {
-            new Scanner(this.file, CHARSET)
-        }
-        else if (".gz".equalsIgnoreCase(extension)) {
+//        if (".log".equalsIgnoreCase(extension) || ".txt".equalsIgnoreCase(extension) || ".csv".equalsIgnoreCase(extension)) {
+//
+//        }
+        if (".gz".equalsIgnoreCase(extension)) {
             new Scanner(new GZIPInputStream(new FileInputStream(this.file)), CHARSET)
+        }
+        else {
+            new Scanner(this.file, CHARSET)
         }
 //        else if (".bz2".equalsIgnoreCase(extension)) {
 //            new Scanner(new BZip2CompressorInputStream(new FileInputStream(this.file)), CHARSET)
 //        }
-        else {
-            throw new IOException("Unrecognized Format: " + this.filePath)
-        }
+//        else {
+//            throw new IOException("Unrecognized Format: " + file.getPath)
+//        }
 
     def delimit(delimiter: String): FileReader = {
         this.delimiter = delimiter
@@ -108,6 +115,16 @@ case class FileReader(filePath: String) {
     def hasNextLine: Boolean = scanner.hasNextLine
         
     def readLine: String = scanner.nextLine
+
+    def countLines: Int = {
+        var lines = 0
+        while(this.hasNextLine) {
+            this.readLine
+            lines += 1
+        }
+        this.close()
+        lines
+    }
 
     def parseLine: DataRow = {
         if (this.delimiter != "JSON$OBJECT$LINE") {

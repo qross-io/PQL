@@ -3,7 +3,7 @@ package io.qross.pql
 import io.qross.core.DataRow
 import io.qross.setting.Properties
 import io.qross.ext.TypeExt._
-import io.qross.pql.Patterns.{$RESERVED, BLANKS}
+import io.qross.pql.Patterns.{$RESERVED, $SAVE$AS, BLANKS}
 import io.qross.pql.Solver._
 import io.qross.fs.FilePath._
 import io.qross.fs.TextFile._
@@ -32,7 +32,7 @@ SAVE AS TXT FILE "file.log"
 SAVE AS NEW EXCEL "abc.xlxs";
 */
 
-object SAVE$AS {
+object SAVE {
 //    val DEFAULT: Regex = """(?i)^DEFAULT$""".r
 //    val CACHE: Regex = """(?i)^CACHE$""".r
 //    val CACHE$TABLE: Regex = """(?i)^CACHE\s+TABLE\s$""".r
@@ -45,15 +45,27 @@ object SAVE$AS {
     val WITH$HEADER: Regex = """(?i)\sWITH\s+HEADER\s""".r
     val WITH$HEADER$: Regex = """(?i)\sWITH\s+HEADER$""".r
     val DELIMITED$BY: Regex = """(?i)\sDELIMITED\s+BY\s""".r
+
+    def parse(sentence: String, PQL: PQL): Unit = {
+        if ($SAVE$AS.test(sentence)) {
+            PQL.PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE(sentence.takeAfter($SAVE$AS))))
+            //            if (m.group(2).trim == ":") {
+            //                parseStatement(sentence.takeAfter(":").trim)
+            //            }
+        }
+        else {
+            throw new SQLParseException("Incorrect SAVE sentence: " + sentence)
+        }
+    }
 }
 
-class SAVE$AS(var sentence: String) {
+class SAVE(var sentence: String) {
 
     def execute(PQL: PQL): Unit = {
 
         val deleteIfExists: Boolean = {
-            if (SAVE$AS.NEW.test(sentence)) {
-                sentence = sentence.takeAfter(SAVE$AS.NEW).trim()
+            if (SAVE.NEW.test(sentence)) {
+                sentence = sentence.takeAfter(SAVE.NEW).trim()
                 true
             }
             else {
@@ -100,18 +112,18 @@ class SAVE$AS(var sentence: String) {
                 }
             case "CSV" =>
                 if (sections.length > 2 && sections(1).equalsIgnoreCase("FILE")) {
-                    sentence = sentence.takeAfter(SAVE$AS.CSV$FILE).trim()
+                    sentence = sentence.takeAfter(SAVE.CSV$FILE).trim()
                     var file = ""
                     var header = "NONE"
-                    if (SAVE$AS.WITH$HEADER.test(sentence)) {
-                        file = sentence.takeBefore(SAVE$AS.WITH$HEADER).trim()
+                    if (SAVE.WITH$HEADER.test(sentence)) {
+                        file = sentence.takeBefore(SAVE.WITH$HEADER).trim()
                         if (BLANKS.r.test(file)) {
                             file = file.takeBefore(BLANKS.r)
                         }
-                        header = sentence.takeAfter(SAVE$AS.WITH$HEADER).trim()
+                        header = sentence.takeAfter(SAVE.WITH$HEADER).trim()
                     }
-                    else if (SAVE$AS.WITH$HEADER$.test(sentence)) {
-                        file = sentence.takeBefore(SAVE$AS.WITH$HEADER$).trim()
+                    else if (SAVE.WITH$HEADER$.test(sentence)) {
+                        file = sentence.takeBefore(SAVE.WITH$HEADER$).trim()
                         if (BLANKS.r.test(file)) {
                             file = file.takeBefore(BLANKS.r)
                         }
@@ -146,7 +158,7 @@ class SAVE$AS(var sentence: String) {
                 }
             case "TXT" | "TEXT" =>
                 if (sections.length > 2 && sections(1).equalsIgnoreCase("FILE")) {
-                    sentence = sentence.takeAfter(SAVE$AS.TXT$FILE).trim() + " "
+                    sentence = sentence.takeAfter(SAVE.TXT$FILE).trim() + " "
                     var file = ""
                     var header = "NONE"
                     var delimiter = ","
@@ -164,8 +176,8 @@ class SAVE$AS(var sentence: String) {
                     // DELIMITED BY "";
                     // WITH HEADER;
                     // WITH HEADER { };
-                    (SAVE$AS.WITH$HEADER.findFirstIn(sentence),
-                        SAVE$AS.DELIMITED$BY.findFirstIn(sentence)) match {
+                    (SAVE.WITH$HEADER.findFirstIn(sentence),
+                        SAVE.DELIMITED$BY.findFirstIn(sentence)) match {
                         case (Some(h), Some(d)) =>
                             //header 和 delimiter 都有
                             val i = sentence.indexOf(h)
@@ -228,7 +240,7 @@ class SAVE$AS(var sentence: String) {
                 }
             case "JSON" =>
                 if (sections.length > 2 && sections(1).equalsIgnoreCase("FILE")) {
-                    var file = sentence.takeAfter(SAVE$AS.JSON$FILE).trim()
+                    var file = sentence.takeAfter(SAVE.JSON$FILE).trim()
                     if (BLANKS.r.test(file)) {
                         file = file.takeBefore(BLANKS.r)
                     }

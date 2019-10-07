@@ -9,42 +9,82 @@ import scala.util.matching.Regex
 object Directory {
 
     def listFiles(path: String): Array[File] = {
+        listFiles(path, recursive = false)
+    }
+
+    def listFiles(path: String, recursive: Boolean): Array[File] = {
         val dir = new File(path)
         if (dir.exists()) {
             if (dir.isDirectory) {
-                dir.listFiles(
-                    new FileFilter() {
-                        override def accept(f: File): Boolean = f.isFile
+                if (!recursive) {
+                    dir.listFiles(
+                        new FileFilter() {
+                            override def accept(f: File): Boolean = f.isFile
+                        })
+                }
+                else {
+                    dir.listFiles().flatMap(f => {
+                        if (f.isFile) {
+                            Array[File](f)
+                        }
+                        else {
+                            listFiles(f.getPath, recursive = true)
+                        }
                     })
+                }
             }
             else {
                 Array[File](dir)
             }
         }
-
         else {
             new Array[File](0)
         }
     }
 
     def listFiles(path: String, filter: String): Array[File] = {
+        listFiles(path, filter, recursive = false)
+    }
+
+    def listFiles(path: String, filter: String, recursive: Boolean): Array[File] = {
         listFiles(path, filter.replace("?", "[\\s\\S]")
-                            .replace("[\\s\\S]*", "")
+                            .replace("*", "[\\s\\S]*")
                             .replace(".", "\\.")
-                            .r)
+                            .r, recursive)
     }
 
     def listFiles(path: String, filter: Regex): Array[File] = {
+        listFiles(path, filter, recursive = false)
+    }
+
+    def listFiles(path: String, filter: Regex, recursive: Boolean): Array[File] = {
         val dir = new File(path)
         if (dir.exists()) {
             if (dir.isDirectory) {
-                dir.listFiles(
-                    new FileFilter {
-                        override def accept(f: File): Boolean = {
-                            filter.test(f.getPath)
+                if (!recursive) {
+                    dir.listFiles(
+                        new FileFilter {
+                            override def accept(f: File): Boolean = {
+                                f.isFile && filter.test(f.getPath)
+                            }
                         }
-                    }
-                )
+                    )
+                }
+                else {
+                    dir.listFiles().flatMap(f => {
+                        if (f.isFile) {
+                            if (filter.test(f.getPath)) {
+                                Array[File](f)
+                            }
+                            else {
+                                new Array[File](0)
+                            }
+                        }
+                        else {
+                            listFiles(f.getPath, filter, recursive = true)
+                        }
+                    })
+                }
             }
             else if (filter.test(path)) {
                 Array[File](dir)

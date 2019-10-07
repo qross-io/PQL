@@ -7,7 +7,47 @@ import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 import io.qross.net.Json._
 
+import scala.util.control.Breaks.{break, breakable}
+
+object FOR {
+    def parse(sentence: String, PQL: PQL): Unit = {
+        val m = $FOR.matcher(sentence)
+        if (m.find) {
+            val $for: Statement = new Statement("FOR", m.group(0), new FOR(m.group(1).trim(), m.group(2).trim()))
+
+            PQL.PARSING.head.addStatement($for)
+            //只进栈
+            PQL.PARSING.push($for)
+            //待关闭的控制语句
+            PQL.TO_BE_CLOSE.push($for)
+            //继续解析子语句
+            PQL.parseStatement(sentence.takeAfter(m.group(0)).trim())
+        }
+        else {
+            throw new SQLParseException("Incorrect FOR sentence: " + sentence)
+        }
+    }
+}
+
 class FOR(var variable: String, val collection: String) {
+
+    def execute(PQL: PQL, statement: Statement): Unit = {
+        val vars: ForVariables = this.computeVariables(PQL)
+        PQL.FOR$VARIABLES.push(vars)
+        PQL.EXECUTING.push(statement)
+        //根据loopMap遍历/
+        breakable {
+            while (vars.hasNext) {
+                if (!PQL.breakCurrentLoop) {
+                    PQL.executeStatements(statement.statements)
+                }
+                else {
+                    break
+                }
+            }
+        }
+    }
+
 
     val variables: List[String] = variable.split(",").map(_.trim).toList
 
@@ -15,7 +55,7 @@ class FOR(var variable: String, val collection: String) {
         variable = variable.takeBefore(",").trim()
     }
 
-    def computeVariables(PQL: PQL): ForVariables = {
+    private def computeVariables(PQL: PQL): ForVariables = {
         val forVars = new ForVariables()
 
         val table: DataTable =
@@ -26,7 +66,7 @@ class FOR(var variable: String, val collection: String) {
                         //(PARSE...)
                         val query = collection.$trim("(", ")").trim()
                         if ($SELECT.test(query)) {
-                            new SELECT(query).execute(PQL).asTable
+                            new SELECT(query).query(PQL).asTable
                         }
                         else if ($PARSE.test(query)) {
                             PQL.dh.parseTable(query.takeAfter($PARSE).$eval(PQL).asText)

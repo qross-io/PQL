@@ -10,9 +10,10 @@ import io.qross.time.DateTime
 import scala.collection.JavaConverters._
 
 object DataCell {
-    val NOT_FOUND: DataCell = DataCell("NOT_FOUND", DataType.EXCEPTION)
-    val NULL: DataCell = DataCell(null, DataType.NULL)
-    val EMPTY: DataCell = DataCell("", DataType.TEXT)
+    val NULL: DataCell = DataCell(null, DataType.NULL) //一个DataCell的默认值, 类型未定义, 值未赋值
+    val NOT_FOUND: DataCell = DataCell("NOT_FOUND", DataType.EXCEPTION) //表示未按预期找到想要的结果
+    val ERROR: DataCell = DataCell("ERROR", DataType.EXCEPTION) //计算值时发生错误
+    val EMPTY: DataCell = DataCell("", DataType.NULL) //表示一种空状态, 比如列表为空, 字符串为空等
 }
 
 case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
@@ -30,27 +31,45 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         case _ =>
     }
 
-    def isNull: Boolean = value == null
-    def isNotNull: Boolean = value == null
-    def isEmpty: Boolean = value == ""
-    def isNotEmpty: Boolean = value != ""
-    def notFound: Boolean = dataType == DataType.EXCEPTION && value == "NOT_FOUND"
+    def isNull: Boolean = value == null && dataType == DataType.NULL
+    def nonNull: Boolean = !isNull
+    def isEmpty: Boolean = value == "" && dataType == DataType.NULL
+    def nonEmpty: Boolean = !isEmpty
     def found: Boolean = !notFound
-    def invalid: Boolean = dataType == DataType.EXCEPTION
+    def notFound: Boolean = dataType == DataType.EXCEPTION && value == "NOT_FOUND"
+    def isError: Boolean = dataType == DataType.EXCEPTION && value == "ERROR"
+    def nonError: Boolean = !isError
+    def isExceptional: Boolean = dataType == DataType.EXCEPTION
+    def nonExceptional: Boolean = dataType != DataType.EXCEPTION
+    def invalid: Boolean = dataType == DataType.EXCEPTION || dataType == DataType.NULL
     def valid: Boolean = !invalid
 
     def data: Option[Any] = Option(value)
 
+    def ifNull(handler: () => Unit): DataCell = {
+        if (isNull) {
+            handler()
+        }
+        this
+    }
+
     def ifNotNull(handler: DataCell => Unit): DataCell = {
-        if (isNotNull) {
+        if (nonNull) {
             handler(this)
         }
         this
     }
 
-    def ifNull(handler: () => Unit): DataCell = {
-        if (isNull) {
+    def ifEmpty(handler: () => Unit): DataCell = {
+        if (isEmpty) {
             handler()
+        }
+        this
+    }
+
+    def ifNotEmpty(handler: DataCell => Unit): DataCell = {
+        if (nonEmpty) {
+            handler(this)
         }
         this
     }
@@ -64,6 +83,20 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def ifNotFound(handler: () => Unit): DataCell = {
         if (notFound) {
+            handler()
+        }
+        this
+    }
+
+    def ifErrorOccurred(handler: DataCell => Unit): DataCell = {
+        if (isError) {
+            handler(this)
+        }
+        this
+    }
+
+    def ifErrorNotOccurred(handler: () => Unit): DataCell = {
+        if (nonError) {
             handler()
         }
         this
@@ -232,6 +265,8 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     def isDateTime: Boolean = this.dataType == DataType.DATETIME
     def asDateTime: DateTime = this.value.toDateTime
     def asDateTime(format: String): DateTime = this.value.toDateTime(format)
+    def asDateTimeOrElse(defaultValue: DateTime): DateTime = this.value.toDateTimeOrElse(defaultValue)
+    def asDateTimeOrElse(format: String, defaultValue: DateTime): DateTime = this.value.toDateTimeOrElse(format, defaultValue)
     def toDateTime: DataCell = {
         if (!this.isDateTime) {
             DataCell(this.asDateTime, DataType.DATETIME)
@@ -306,18 +341,18 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     }
 
     def isJavaList: Boolean = this.dataType == DataType.LIST || this.dataType == DataType.ARRAY
-    def asList: List[Any] = {
+    def asList[T]: List[T] = {
         if (valid) {
             this.dataType match {
-                case DataType.TABLE => this.value.asInstanceOf[DataTable].toList
-                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].getValues
-                case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]].asScala.toList
-                case DataType.TEXT => this.valid.asInstanceOf[String].split("").asInstanceOf[List[Any]]
-                case _ => List[Any](this.value)
+                case DataType.TABLE => this.value.asInstanceOf[DataTable].toList[T]
+                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].getValues[T]
+                case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[T]].asScala.toList
+                case DataType.TEXT => this.value.asInstanceOf[String].split("").asInstanceOf[List[T]]
+                case _ => List[T](this.value.asInstanceOf[T])
             }
         }
         else {
-            List[Any]()
+            List[T]()
         }
     }
     def asJavaList: java.util.List[Any] = {

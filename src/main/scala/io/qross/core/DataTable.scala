@@ -824,12 +824,12 @@ class DataTable() {
         rows.map(row => row.values.asJava).asJava
     }
 
-    def toList: List[Any] = {
-        rows.map(row => row.values.head._2).toList
+    def toList[T]: List[T] = {
+        rows.map(row => row.values.head._2.asInstanceOf[T]).toList
     }
 
-    def toJavaList: java.util.List[Any] = {
-        toList.asJava
+    def toJavaList[T]: java.util.List[T] = {
+        toList[T].asJava
     }
 
     def toJsonString: String = {

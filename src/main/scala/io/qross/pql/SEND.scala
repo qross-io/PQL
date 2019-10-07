@@ -7,7 +7,19 @@ import io.qross.ext.TypeExt._
 
 import scala.collection.mutable
 
-class SEND$MAIL(val info: String) {
+object SEND {
+
+    def parse(sentence: String, PQL: PQL): Unit = {
+        if ($SEND$MAIL.test(sentence)) {
+            PQL.PARSING.head.addStatement(new Statement("SEND", sentence, new SEND(sentence.takeAfter($SEND$MAIL))))
+        }
+        else {
+            throw new SQLParseException("Incorrect SEND MAIL sentence: " + sentence)
+        }
+    }
+}
+
+class SEND(val info: String) {
 
     //CONTENT
     //FROM TEMPLATE
@@ -19,7 +31,7 @@ class SEND$MAIL(val info: String) {
     //CC
     //BCC
 
-    def send(PQL: PQL): Unit = {
+    def execute(PQL: PQL): Unit = {
 
         val title = {
             if ($LINK.test(info)) {

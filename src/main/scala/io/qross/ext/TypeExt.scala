@@ -104,7 +104,8 @@ object TypeExt {
                 catch {
                     case e: ScriptException =>
                         e.printStackTrace()
-                        throw new SQLExecuteException("Can't caculate expression: " + string)
+                        throw new SQLExecuteException("Can't calculate expression: " + string)
+                        DataCell.ERROR
                 }
             }
 
@@ -517,6 +518,24 @@ object TypeExt {
             new DateTime(any, format)
         }
 
+        def toDateTimeOrElse(defaultValue: DateTime): DateTime = {
+            try {
+                new DateTime(any)
+            }
+            catch {
+                case _: Exception => defaultValue
+            }
+        }
+
+        def toDateTimeOrElse(format: String, defaultValue: DateTime): DateTime = {
+            try {
+                new DateTime(any, format)
+            }
+            catch {
+                case _: Exception => defaultValue
+            }
+        }
+
         def toBoolean: Boolean = {
             any match {
                 case str: String =>
@@ -602,6 +621,12 @@ object TypeExt {
 
         def toJsonString: String = {
             Json.serialize(list)
+        }
+
+        def delimit(delimiter: String): Map[String, String] = {
+            list.map(v => {
+                (v.asInstanceOf[String].takeBefore(delimiter), v.asInstanceOf[String].takeAfter(delimiter))
+            }).toMap
         }
     }
 

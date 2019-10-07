@@ -3,11 +3,25 @@ package io.qross.pql
 import io.qross.core.{DataCell, DataType}
 import io.qross.ext.TypeExt._
 import io.qross.net.Json._
-import io.qross.pql.Patterns.ARROW
+import io.qross.pql.Patterns.{$PARSE, ARROW}
+import io.qross.pql.Solver._
+
+object PARSE {
+    //用于PQL表达式解析
+    def parse(sentence: String, PQL: PQL): Unit = {
+        if ($PARSE.test(sentence)) {
+            PQL.PARSING.head.addStatement(new Statement("PARSE", sentence, new PARSE(sentence.takeAfter($PARSE).trim())))
+        }
+        else {
+            throw new SQLParseException("Incorrect PARSE sentence: " + sentence)
+        }
+    }
+
+}
 
 class PARSE(val path: String) {
 
-    def execute(PQL: PQL): DataCell = {
+    def parse(PQL: PQL): DataCell = {
 
         val (select, links) =
             if (path.contains(ARROW)) {
@@ -26,6 +40,12 @@ class PARSE(val path: String) {
         }
     }
 
+    def execute(PQL: PQL): Unit = {
+        val table = PQL.dh.parseTable(this.path.$eval(PQL).asText)
+        PQL.RESULT += table
+        PQL.ROWS = table.size
+        table.show()
+    }
 }
 
 /*

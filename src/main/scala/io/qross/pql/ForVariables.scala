@@ -20,16 +20,16 @@ class ForVariables {
 
     def contains(field: String): Boolean = {
         if (this.variables.nonEmpty) {
-            this.variables.head.contains(field.toUpperCase)
+            this.variables.head.contains(field)
         }
         else {
             false
         }
     }
 
-    def get(field: String): DataCell = this.variables(this.cursor).getCell(field.toUpperCase())
+    def get(field: String): DataCell = this.variables(this.cursor).getCell(field)
 
     def set(field: String, value: DataCell): Unit = {
-        this.variables(this.cursor).set(field.toUpperCase(), value)
+        this.variables(this.cursor).set(field, value)
     }
 }

@@ -1,4 +1,4 @@
-package io.qross.pql
+package io.qross.app
 
 import io.qross.time.DateTime
 

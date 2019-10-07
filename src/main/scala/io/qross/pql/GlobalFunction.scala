@@ -4,7 +4,9 @@ import io.qross.core.{DataCell, DataType}
 import io.qross.pql.Solver._
 import io.qross.ext.TypeExt._
 
-object Function {
+//全局函数
+
+object GlobalFunction {
     /*
         Set(
         "CONCAT", "CHARINDEX", "INSTR", "POSITION", "SUBSTR", "LEFT", "RIGHT", "REPLACE", "LOWER", "UPPER", "TRIM", "SPLIT", "LEN",
@@ -84,7 +86,7 @@ object Function {
     }
 }
 
-case class Function(functionName: String) {
+case class GlobalFunction(functionName: String) {
     def call(args: List[DataCell]): DataCell = {
         Class.forName("io.qross.pql.Function")
             .getDeclaredMethod(functionName, Class.forName("scala.collection.immutable.List"))
@@ -92,8 +94,8 @@ case class Function(functionName: String) {
     }
 }
 
-object FunctionNames {
-    private val NAMES: Set[String] = Function.getClass.getDeclaredMethods.map(m => m.getName).filter(n => "^[A-Z]".r.test(n)).toSet
+object GlobalFunctionNames {
+    private val NAMES: Set[String] = GlobalFunction.getClass.getDeclaredMethods.map(m => m.getName).filter(n => "^[A-Z]".r.test(n)).toSet
 
     def contains(name: String): Boolean = {
         NAMES.contains(name)

@@ -78,7 +78,7 @@ class Condition(val expression: String) {
 
             case "IS$NOT" =>
                 if (value.isNull || value.invalid) {
-                    field.isNotNull && field.valid && !field.asText.bracketsWith("#{", "}") && !field.asText.bracketsWith("&{", "}")
+                    field.nonNull && field.valid && !field.asText.bracketsWith("#{", "}") && !field.asText.bracketsWith("&{", "}")
                 }
                 else if (value.isEmpty) {
                     field.asText != ""

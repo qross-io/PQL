@@ -17,7 +17,7 @@ import io.qross.pql.Solver._
 import io.qross.time.{ChronExp, CronExp, DateTime}
 import io.qross.pql.Patterns._
 import io.qross.pql.PQL._
-import io.qross.pql.SAVE$AS.WITH$HEADER$
+import io.qross.pql.SAVE.WITH$HEADER$
 import io.qross.setting.Environment
 
 import scala.collection.mutable
@@ -56,7 +56,15 @@ object Main {
         //new PQL("SELECT switch_time FROM qross_jobs LIMIT 5 -> GET LAST ROW", DataHub.QROSS).run().print
 
         //new DateTime("2019-09-29 14:00:00").earlier(DateTime.now).toDays.print
-        PQL.openFile("/sql/test.sql").run()
+
+        """[A-Z\s^\r\n]+""".r.findAllIn(
+        """A B
+          |C    D
+          |E F
+          |G H I J
+        """.stripMargin).foreach(println)
+
+        //PQL.openFile("/sql/test.sql").run()
 
 //
 

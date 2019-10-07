@@ -32,72 +32,76 @@ object Solver {
     val RICH_CHAR: List[Regex] = List[Regex]("\"\"\"[\\s\\S]*?\"\"\"".r, "'''[\\s\\S]*?'''".r) //富字符串
     val CHAR$N: Regex = """~char\[(\d+)\]""".r  //字符串占位符
     val STRING$N: Regex = """~string\[(\d+)\]""".r  //富字符串占位符
+    val JSON$N: Regex = """~json\[(\d+)\]""".r  //JSON占位符
     val VALUE$N: Regex = """~value\[(\d+)\]""".r //中间结果占位符
     val STR$N: Regex = """~str\[(\d+)\]""".r //计算过程中的字符串占位符
 
     implicit class Sentence(var sentence: String) {
 
-        def cleanCommentsAndStashChars(PQL: PQL): String = {
+        //clear comments  --  /* */
+        //constants = char, rich string, json -> stash them to avoid conflict
+        //close examination  ( ) [ ] { } <% %>
+        def cleanCommentsAndStashConstants(PQL: PQL): String = {
+
+            //internal class
+            class Block$Range(val name: String, val start: Int, var end: Int = -1) { }
+            class Closing(val char: Char, val index: Int) { }
 
             sentence = sentence.replace("'''", "%three-single-quotes%")
                                .replace("\"\"\"", "%three-double-quotes%")
 
-            val blocks = new mutable.ArrayBuffer[(String, Int, Int)]()
-            var closing: Char = ' '
-            var start = -1
+            val blocks = new mutable.ArrayStack[Block$Range]()
+            val closing = new mutable.ArrayStack[Closing]()
+
             for (i <- sentence.indices) {
                 val c = sentence.charAt(i)
                 c match {
                     //单行注释开始
                     case '-' =>
-                        if (i > 0 && sentence.charAt(i - 1) == '-' && closing == ' ') {
-                            closing = c
-                            start = i - 1
+                        if (i > 0 && sentence.charAt(i - 1) == '-' && closing.isEmpty) {
+                            closing += new Closing('-', i)
+                            blocks += new Block$Range("SINGLE-LINE-COMMENT", i - 1)
                         }
                     //单行注释结束
                     case '\r' =>
-                        if (closing == '-') {
-                            blocks += (("SINGLE-LINE-COMMENT", start, i + 1))
-                            start = -1
-                            closing = ' '
+                        if (closing.nonEmpty && closing.head.char == '-') {
+                            blocks.head.end = i + 1
+                            closing.pop()
                         }
                     //多行注释开始
                     case '*' =>
-                        if (i > 0 && sentence.charAt(i - 1) == '/' && closing == ' ') {
-                            closing = '*'
-                            start = i - 1
+                        if (i > 0 && sentence.charAt(i - 1) == '/' && closing.isEmpty) {
+                            closing += new Closing('*', i)
+                            blocks += new Block$Range("MULTI-LINES-COMMENT", i - 1)
                         }
                     //多行注释结束
                     case '/' =>
-                        if (closing == '*' && i > 0 && sentence.charAt(i - 1) == '*') {
-                            blocks += (("MULTI-LINES-COMMENT", start, i + 1))
-                            start = -1
-                            closing = ' '
+                        if (closing.nonEmpty && closing.head.char == '*' && i > 0 && sentence.charAt(i - 1) == '*') {
+                            blocks.head.end = i + 1
+                            closing.pop()
                         }
                     //单引号字符串
                     case '\'' =>
-                        if (closing == ' ') {
-                            closing = '\''
-                            start = i
+                        if (closing.isEmpty) {
+                            closing += new Closing('\'', i)
+                            blocks += new Block$Range("SINGLE-QUOTE-STRING", i)
                         }
-                        else if (closing == '\'') {
+                        else if (closing.head.char == '\'') {
                             if (i > 0 && sentence.charAt(i - 1) != '\\') {
-                                blocks += (("SINGLE-QUOTE-STRING", start, i + 1))
-                                start = -1
-                                closing = ' '
+                                blocks.head.end = i + 1
+                                closing.pop()
                             }
                         }
                     //双引号字符串
                     case '"' =>
-                        if (closing == ' ') {
-                            closing = '"'
-                            start = i
+                        if (closing.isEmpty) {
+                            closing += new Closing('"', i)
+                            blocks += new Block$Range("DOUBLE-QUOTE-STRING", i)
                         }
-                        else if (closing == '"') {
+                        else if (closing.head.char == '"') {
                             if (i > 0 && sentence.charAt(i - 1) != '\\') {
-                                blocks += (("DOUBLE-QUOTE-STRING", start, i + 1))
-                                start = -1
-                                closing = ' '
+                                blocks.head.end = i + 1
+                                closing.pop()
                             }
                         }
                     case _ =>
@@ -105,38 +109,26 @@ object Solver {
             }
 
             //最后一行是注释
-            if (start > -1) {
-                closing match {
-                    case '-' => blocks += (("SINGLE-LINE-COMMENT", start, sentence.length))
-                    case '*' => throw new SQLParseException("Multi-lines comment isn't closed: " + sentence.takeAfter(start - 1).take(20))
-                    case '\'' => throw new SQLParseException("Char isn't closed: " + sentence.takeAfter(start - 1).take(20))
-                    case '"' => throw new SQLParseException("String isn't closed: " + sentence.takeAfter(start - 1).take(20))
+            if (closing.nonEmpty) {
+                val clip = sentence.takeAfter(closing.head.index - 1).take(20)
+                closing.head.char match {
+                    case '-' => blocks.head.end = sentence.length
+                    case '*' => throw new SQLParseException("Multi-lines comment isn't closed. " + clip)
+                    case '\'' => throw new SQLParseException("Char isn't closed. " + clip)
+                    case '"' => throw new SQLParseException("String isn't closed. " + clip)
                 }
-                start = -1
-                closing = ' '
+                closing.pop()
             }
 
-            /* 闭合检查
-            case '(' =>
-            case ')' =>
-            case '{' =>
-            case '}' =>
-            //<% %>
-            case '%' =>
-            case '>' =>
-            */
-
-            blocks
-                .reverse
-                .foreach(closed => {
-                    val before = sentence.takeBefore(closed._2)
-                    val after = sentence.takeAfter(closed._3 - 1)
+            blocks.foreach(closed => {
+                    val before = sentence.takeBefore(closed.start)
+                    val after = sentence.takeAfter(closed.end - 1)
                     val replacement = {
-                        if (closed._1 == "SINGLE-LINE-COMMENT" || closed._1 == "MULTI-LINES-COMMENT") {
+                        if (closed.name == "SINGLE-LINE-COMMENT" || closed.name == "MULTI-LINES-COMMENT") {
                             ""
                         }
                         else {
-                            PQL.chars += sentence.substring(closed._2, closed._3)
+                            PQL.chars += sentence.substring(closed.start, closed.end)
                             "~char[" + (PQL.chars.size - 1) + "]"
                         }
                     }
@@ -156,11 +148,131 @@ object Solver {
                     })
             })
 
+            blocks.clear()
+            closing.clear()
+
+
+            for (i <- sentence.indices) {
+                val c = sentence.charAt(i)
+                c match {
+                    //左小括号, 只检查闭合
+                    case '(' =>
+                        closing += new Closing('(', i)
+                    //右小括号, 闭合检查
+                    case ')' =>
+                        if (closing.nonEmpty && closing.head.char == '(') {
+                            closing.pop()
+                        }
+                        else {
+                            throw new SQLParseException("Miss left round bracket '('." + sentence.substring(0, i).takeRight(20))
+                        }
+                    //左中括号, JSON数组, 闭合检查
+                    case '[' =>
+                        if (i > 0 && sentence.charAt(i - 1).isLower) {
+                            //占位符
+                            closing += new Closing('~', i)
+                        }
+                        else {
+                            blocks += new Block$Range("JSON-ARRAY-SQUARE-BRACKET", i)
+                            closing += new Closing('[', i)
+                        }
+                    //右中括号, JSON数组, 闭合检查
+                    case ']' =>
+                        if (closing.nonEmpty && closing.head.char == '~') {
+                            closing.pop()
+                        }
+                        else if (closing.nonEmpty && closing.head.char == '[') {
+                            blocks.head.end = i + 1
+                            closing.pop()
+                        }
+                        else {
+                            throw new SQLParseException("Miss left square bracket '['." + sentence.substring(0, i).takeRight(20))
+                        }
+                    //左大括号, JSON对象, 闭合检查
+                    case '{' =>
+                        //${ }  ${{ }}  ~{ } ~{{ }}
+                        if (i > 0 && sentence.charAt(i - 1) == '$' || sentence.charAt(i - 1) == '~' ) {
+                            //嵌入式变量
+                            closing += new Closing('$', i)
+                        }
+                        else if (i > 0 && sentence.charAt(i - 1) == '{') {
+                            //${{ 或 ~{{ 第二个括号, 啥也不干, 忽略
+                        }
+                        else {
+                            if (blocks.isEmpty || blocks.head.name != "JSON-ARRAY-SQUARE-BRACKET" || blocks.head.end > -1) {
+                                blocks += new Block$Range("JSON-OBJECT-CURLY-BRACKET", i)
+                            }
+                            closing += new Closing('{', i)
+                        }
+                    //右大括号, JSON对象, 闭合检查
+                    case '}' =>
+                        if (i > 0 && sentence.charAt(i - 1) == '}') {
+                            //}}的第二个括号, 啥也不做, 忽略
+                        }
+                        else if (closing.nonEmpty && closing.head.char == '$') {
+                            closing.pop()
+                        }
+                        else if (closing.nonEmpty && closing.head.char == '{') {
+                            if (blocks.nonEmpty && blocks.head.name == "JSON-OBJECT-CURLY-BRACKET") {
+                                blocks.head.end = i + 1
+                            }
+                            closing.pop()
+                        }
+                        else {
+                            throw new SQLParseException("Miss left curly bracket '{'." + sentence.substring(0, i).takeRight(20))
+                        }
+                    //<% %>
+                    case '%' =>
+                        if (i > 0 && sentence.charAt(i - 1) == '<') {
+                            closing += new Closing('%', i)
+                        }
+                    case '>' =>
+                        if (i > 0 && sentence.charAt(i - 1) == '%') {
+                            if (closing.nonEmpty && closing.head.char == '%') {
+                                closing.pop()
+                            }
+                            else {
+                                throw new SQLParseException("Miss left server bracket '<%'." + sentence.substring(0, i).takeRight(20))
+                            }
+                        }
+                    case _ =>
+                }
+            }
+
+            if (closing.nonEmpty) {
+                val clip = sentence.takeAfter(closing.head.index - 1).take(20)
+                closing.head.char match {
+                    case '(' => throw new SQLParseException("Round bracket isn't closed. " + clip)
+                    case '[' => throw new SQLParseException("Square bracket isn't closed. " + clip)
+                    case '$' => throw new SQLParseException("Embedded bracket isn't closed. " + clip)
+                    case '{' => throw new SQLParseException("Curly bracket isn't closed. " + clip)
+                    case '%' => throw new SQLParseException("Server bracket isn't closed. " + clip)
+                }
+            }
+
+            blocks.foreach(closed => {
+                val before = sentence.takeBefore(closed.start)
+                val after = sentence.takeAfter(closed.end - 1)
+                val replacement = "~json[" + PQL.chars.size + "]"
+                PQL.jsons += sentence.substring(closed.start, closed.end)
+
+                sentence = before + replacement + after
+            })
+
             sentence.trim
         }
 
         //恢复字符串
-        def restoreChars(PQL: PQL, quote: String = ""): String = {
+        def restoreConstants(PQL: PQL, quote: String = ""): String = {
+
+            JSON$N
+                .findAllMatchIn(sentence)
+                .foreach(m => {
+                    val i = m.group(1).toInt
+                    if (i < PQL.jsons.size) {
+                        sentence = sentence.replace(m.group(0), PQL.jsons(i))
+                    }
+                })
 
             CHAR$N
                 .findAllMatchIn(sentence)
@@ -239,7 +351,7 @@ object Solver {
         }
 
         def popStash(PQL: PQL, quote: String = "'"): String = {
-            sentence.restoreChars(PQL, quote)
+            sentence.restoreConstants(PQL, quote)
                     .restoreValues(PQL, quote)
                     .restoreSymbols()
         }
@@ -359,7 +471,7 @@ object Solver {
                         val funArgs = m.group(2).trim().toArgs(PQL)
 
                         if (FUNCTION_NAMES.contains(funName)) {
-                            new Function(funName).call(funArgs).ifValid(data => {
+                            new GlobalFunction(funName).call(funArgs).ifValid(data => {
                                 sentence = sentence.replace(m.group(0), PQL.$stash(data))
                             })
                         }
@@ -418,8 +530,8 @@ object Solver {
 
                     sentence = sentence.replace(m.group(0), PQL.$stash(
                         caption match {
-                            case "SELECT" => new SELECT(query.$express(PQL)).execute(PQL)
-                            case "PARSE" => new PARSE(query.takeAfter("""^PARSE\s""".r).$express(PQL).eval().asText).execute(PQL)
+                            case "SELECT" => new SELECT(query.$express(PQL)).query(PQL)
+                            case "PARSE" => new PARSE(query.takeAfter("""^PARSE\s""".r).$express(PQL).eval().asText).parse(PQL)
                             case _ => DataCell(PQL.dh.executeNonQuery(query), DataType.INTEGER)
                         }))
                 })

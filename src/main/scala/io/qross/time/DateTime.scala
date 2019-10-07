@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.{ChronoField, ChronoUnit}
 import java.util.regex.Pattern
 
+import io.qross.core.ConvertFailureException
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 
@@ -62,8 +63,7 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
         case d: Double => parseLocalDateTime(d.toLong)
         case localDate: LocalDate => parseLocalDateTime(localDate.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
         case localTime: LocalTime => parseLocalDateTime(LocalDate.now() + " " + localTime.toString, "yyyy-MM-dd HH:mm:ss")
-        case _ =>   Output.writeWarning("Can't recognize as or convert to DateTime: " + dateTime)
-                    LocalDateTime.of(1970, 1, 1, 0, 0, 0)
+        case _ =>   throw new ConvertFailureException("Can't recognize as or convert to DateTime: " + dateTime)
     }
 
     private def parseLocalDateTime(dateTime: String, format: String = ""): LocalDateTime = {

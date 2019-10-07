@@ -73,10 +73,7 @@ class ConditionGroup(expression: String) {
                             else if (value.equalsIgnoreCase("EMPTY")) {
                                 DataCell.EMPTY
                             }
-                            else if (value.equalsIgnoreCase("UNDEFINED")) {
-                                DataCell.NOT_FOUND
-                            }
-                            else if (value.equalsIgnoreCase("NULL") || value == "()") {
+                            else if (value.equalsIgnoreCase("UNDEFINED") || value.equalsIgnoreCase("NULL") || value == "()") {
                                 DataCell.NULL
                             }
                             else {

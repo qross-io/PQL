@@ -1,13 +1,15 @@
 package io.qross.core
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.qross.ext.Output
+import io.qross.pql.SQLParseException
 
 //case class DataType(className: String, typeName: String)
 
 object DataType extends Enumeration {
     type DataType = Value
     val INTEGER: DataType = Value("INTEGER")
-    val DECIMAL: DataType = Value("REAL")
+    val DECIMAL: DataType = Value("DECIMAL")
     val TEXT: DataType = Value("TEXT")
     val BLOB: DataType = Value("BLOB")
     val NULL: DataType = Value("NULL")
@@ -22,21 +24,31 @@ object DataType extends Enumeration {
     val JSON: DataType = Value("JSON")
     val AUTO: DataType = Value("AUTO")
     val EXCEPTION: DataType = Value("EXCEPTION")
-    //val NUMBER: DataType = Value("REAL")
 
+    //database data type name
     def ofTypeName(typeName: String, className: String = ""): DataType = {
         typeName.toUpperCase match {
-            case "VARCHAR" | "CHAR" | "NVARCHAR" | "TEXT" | "TINYTEXT" | "SMALLTEXT" | "MEDIUMTEXT" | "LONGTEXT" => DataType.TEXT
-            case "INT" | "BIGINT" | "TINYINT" | "SMALLINT" | "MEDIUMINT" => DataType.INTEGER
-            case "FLOAT" | "DOUBLE" | "DECIMAL" => DataType.DECIMAL
+            case "TEXT" | "VARCHAR" | "CHAR" | "NVARCHAR" | "TINYTEXT" | "SMALLTEXT" | "MEDIUMTEXT" | "LONGTEXT" | "STRING" | "NVARCHAR" | "NCHAR" => DataType.TEXT
+            case "INT" | "INTEGER" | "BIGINT" | "TINYINT" | "SMALLINT" | "MEDIUMINT" | "LONG" | "SHORT" => DataType.INTEGER
+            case "FLOAT" | "DOUBLE" | "DECIMAL" | "DOUBLE" | "REAL" | "NUMBER" => DataType.DECIMAL
             case "DATE" | "TIME" | "DATETIME" | "TIMESTAMP" | "YEAR" => DataType.DATETIME
+            case "BIT" | "BOOL" | "BOOLEAN" => DataType.BOOLEAN
+            case "MAP" | "ROW" | "OBJECT" | "DATAROW" => DataType.ROW
+            case "TABLE" | "DATATABLE" => DataType.TABLE
+            case "NULL" | "EMPTY" => DataType.NULL
             case "JSON" => DataType.JSON
-            case "BIT" => DataType.BOOLEAN
             case "BLOB" | "TINYBLOB" | "MEDIUMBLOB" | "VARBINARY" | "BINARY" => DataType.BLOB
-            case _ => ofClassName(className)
+            case _ =>
+                if (className != "") {
+                    ofClassName(className)
+                }
+                else {
+                    DataType.NULL
+                }
         }
     }
 
+    //java type name
     def ofClassName(className: String): DataType = {
         val name = {
             if (className.contains(".")) {
@@ -62,7 +74,8 @@ object DataType extends Enumeration {
             case _ => DataType.TEXT
         }
     }
-   
+
+    //data value
     def ofValue(value: Any): DataType = {
         if (value != null) {
             ofClassName(value.getClass.getName)
@@ -72,22 +85,6 @@ object DataType extends Enumeration {
         }
     }
 
-    def ofName(name: String): DataType = {
-        name.trim.toUpperCase() match {
-            case "INT" | "INTEGER" | "LONG" | "BIGINT" | "TINYINT" | "SMALLINT" | "MEDIUMINT" | "SHORT" => DataType.INTEGER
-            case "TEXT" | "VARCHAR" | "CHAR" | "STRING" | "MEDIUMTEXT" | "LONGTEXT" => DataType.TEXT
-            case "DECIMAL" | "FLOAT" | "DOUBLE" | "NUMBER" => DataType.DECIMAL
-            case "DATE" | "TIME" | "DATETIME" => DataType.DATETIME
-            case "BOOL" | "BIT" | "BOOLEAN" => DataType.BOOLEAN
-            case "LIST" | "ARRAY" => DataType.ARRAY
-            case "NULL" | "EMPTY" => DataType.NULL
-            case "MAP" | "ROW" | "OBJECT" | "DATAROW" => DataType.ROW
-            case "TABLE" | "DATATABLE" => DataType.TABLE
-            case "JSON" => DataType.JSON
-            case _ => DataType.AUTO
-        }
-    }
-    
     def from(node: JsonNode): DataType = {
         if (node.isIntegralNumber || node.isInt || node.isLong || node.isShort || node.isBigInteger) {
             DataType.INTEGER
