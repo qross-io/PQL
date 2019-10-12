@@ -59,7 +59,6 @@ class FOR(var variable: String, val collection: String) {
         val forVars = new ForVariables()
 
         val table: DataTable =
-
                     if (collection.bracketsWith("(", ")")) {
                         //集合查询语句
                         //(SELECT...)
@@ -69,7 +68,7 @@ class FOR(var variable: String, val collection: String) {
                             new SELECT(query).query(PQL).asTable
                         }
                         else if ($PARSE.test(query)) {
-                            PQL.dh.parseTable(query.takeAfter($PARSE).$eval(PQL).asText)
+                            new PARSE(query).parse(PQL).asTable
                         }
                         else {
                             throw new SQLExecuteException("Only supports SELECT or PARSE sentence in FOR loop query mode.")

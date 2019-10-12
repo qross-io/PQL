@@ -7,9 +7,8 @@ import io.qross.ext.TypeExt._
 object CACHE {
 
     def parse(sentence: String, PQL: PQL): Unit = {
-        val m = $CACHE.matcher(sentence)
-        if (m.find) {
-            val $cache = new Statement("CACHE", sentence.takeBefore("#"), new CACHE(m.group(1).trim, sentence.takeAfter("#").trim))
+        if ($CACHE.matches(sentence)) {
+            val $cache = new Statement("CACHE", sentence.takeBefore("#"), new CACHE($m.group(1).trim, sentence.takeAfter("#").trim))
             PQL.PARSING.head.addStatement($cache)
         }
         else {

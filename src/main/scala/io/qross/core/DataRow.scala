@@ -3,7 +3,7 @@ package io.qross.core
 import java.util.Objects
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import DataType.DataType
+
 import io.qross.net.Json
 import io.qross.time.DateTime
 import io.qross.ext.TypeExt._
@@ -22,6 +22,7 @@ object DataRow {
             fieldNames.foreach(fieldName => newRow.set(fieldName, row.getCell(fieldName)))
         }
         else {
+            newRow.fields ++= row.fields
             newRow.values ++= row.values
             newRow.columns ++= row.columns
         }
@@ -57,11 +58,11 @@ class DataRow() {
         val name = fieldName.toLowerCase()
 
         if (!columns.contains(name)) {
-            //添加列
+            //不存在则添加列
             fields += name
             columns += name -> dataType
         }
-        else if (columns(name) != dataType) {
+        else if (columns(name) != dataType && dataType != DataType.NULL) {
             //仅修改数据类型
             columns += name -> dataType
         }
@@ -101,16 +102,6 @@ class DataRow() {
 
     def alter(fieldName: String, newFieldName: String): Unit = {
         updateFieldName(fieldName, newFieldName)
-    }
-
-    def getDataType(fieldName: String): Option[DataType] = {
-        val name = fieldName.toLowerCase()
-        if (this.columns.contains(name)) {
-            Some(this.columns(name))
-        }
-        else {
-            None
-        }
     }
 
     def foreach(callback: (String, Any) => Unit): Unit = {
@@ -355,6 +346,9 @@ class DataRow() {
     def getFields: List[String] = fields.toList
     def getDataTypes: List[DataType] = columns.values.toList
     def getValues[T]: List[T] = values.values.map(_.asInstanceOf[T]).toList
+    def getFieldName(index: Int): Option[String] = if (index < fields.length) Some(fields(index)) else None
+    def getDataType(index: Int): Option[DataType] = if (index < fields.length) Some(columns(fields(index))) else None
+    def getDataType(fieldName: String): Option[DataType] = this.columns.get(fieldName.toLowerCase())
 
     def contains(fieldName: String): Boolean = this.columns.contains(fieldName.toLowerCase)
     def contains(fieldName: String, value: Any): Boolean = {

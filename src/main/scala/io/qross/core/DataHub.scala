@@ -1,6 +1,5 @@
 package io.qross.core
 
-import io.qross.core.DataType.DataType
 import io.qross.ext.Output
 import io.qross.fs.FilePath._
 import io.qross.jdbc.{DataSource, JDBC}
@@ -367,6 +366,10 @@ class DataHub (private val defaultConnectionName: String = "") {
         $TOTAL += TABLE.count()
         $COUNT = TABLE.count()
 
+        if (DEBUG) {
+            TABLE.show(10)
+        }
+
         this
     }
 
@@ -396,6 +399,10 @@ class DataHub (private val defaultConnectionName: String = "") {
         }
         TABLE.cut(CURRENT.tableSelect(querySentence, TABLE))
 
+        if (DEBUG) {
+            TABLE.show(10)
+        }
+
         this
     }
 
@@ -411,7 +418,6 @@ class DataHub (private val defaultConnectionName: String = "") {
     def put(nonQuerySQL: String): DataHub = {
 
         if (DEBUG) {
-            TABLE.show(10)
             println(nonQuerySQL)
         }
 
@@ -789,9 +795,19 @@ class DataHub (private val defaultConnectionName: String = "") {
         TABLE.copy(table)
         this
     }
-    
+
+    //逻辑同GET
     def buffer(table: DataTable): DataHub = {
-        TABLE.copy(table)
+        reset()
+
+        TABLE.merge(table)
+        $TOTAL += TABLE.count()
+        $COUNT = TABLE.count()
+
+        if (DEBUG) {
+            TABLE.show(10)
+        }
+
         this
     }
     

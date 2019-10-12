@@ -4,7 +4,7 @@ import java.util.regex.Matcher
 
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
-import io.qross.pql.Patterns.$PRINT
+import io.qross.pql.Patterns.{$PRINT, $PRINT$SEAL, $BLANK}
 import io.qross.pql.Solver._
 
 object PRINT {
@@ -15,29 +15,28 @@ object PRINT {
     val NONE: String = "NONE"
 
     def parse(sentence: String, PQL: PQL): Unit = {
-        val m: Matcher = $PRINT.matcher(sentence)
-        if (m.find) {
-            PQL.PARSING.head.addStatement(new Statement("PRINT", sentence, new PRINT(m.group(1), m.group(2).trim)))
-        }
-        else {
-            throw new SQLParseException("Incorrect PRINT sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("PRINT", sentence, new PRINT(sentence.takeAfter($PRINT))))
     }
 }
 
-class PRINT(var messageType: String, val message: String) {
-    if (messageType == null) {
-        messageType = "NONE"
-    }
-    else {
-        messageType = messageType.trim.toUpperCase()
+class PRINT(var message: String) {
+
+    val messageType: String = {
+        if ($PRINT$SEAL.test(message)) {
+            val seal = message.takeBefore($BLANK).trim()
+            message = message.takeAfter($PRINT$SEAL).trim()
+            seal
+        }
+        else {
+            "NONE"
+        }
     }
 
     def execute(PQL: PQL): Unit = {
 
-        val message = {
-            if (this.message.bracketsWith("(", ")")) {
-                this.message
+        val info = {
+            if (message.bracketsWith("(", ")")) {
+                message
                         .$trim("(", ")")
                         .split(",")
                         .map(m => {
@@ -46,20 +45,21 @@ class PRINT(var messageType: String, val message: String) {
                         .mkString(", ")
                         .bracket("(", ")")
             }
-            else if (this.message.bracketsWith("[", "]") || this.message.bracketsWith("{", "}")) {
-                this.message.$restore(PQL, "\"")
+            else if (message.bracketsWith("[", "]") || this.message.bracketsWith("{", "}")) {
+                message.$restore(PQL, "\"")
             }
             else {
-                this.message.$eval(PQL).asText
+                message.$eval(PQL).asText
             }
         }
+
         this.messageType match {
-            case "WARN" => Output.writeWarning(message)
-            case "ERROR" => Output.writeException(message)
-            case "DEBUG" => Output.writeDebugging(message)
-            case "INFO" => Output.writeMessage(message)
-            case "NONE" => Output.writeLine(message)
-            case seal: String => Output.writeLineWithSeal(seal, message)
+            case "WARN" => Output.writeWarning(info)
+            case "ERROR" => Output.writeException(info)
+            case "DEBUG" => Output.writeDebugging(info)
+            case "INFO" => Output.writeMessage(info)
+            case "NONE" => Output.writeLine(info)
+            case seal: String => Output.writeLineWithSeal(seal, info)
             case _ =>
         }
     }

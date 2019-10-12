@@ -3,12 +3,12 @@ package io.qross.test
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.sql.DriverManager
-import java.util.regex.Matcher
+import java.util.regex.{Matcher, Pattern}
 import java.util.{Date, Properties}
 
 import io.qross.core._
 import io.qross.pql._
-import io.qross.fs.{ResourceDir, ResourceFile}
+import io.qross.fs.{FileReader, ResourceDir, ResourceFile}
 import io.qross.jdbc.DataSource
 import io.qross.net.Json
 import io.qross.ext.TypeExt._
@@ -57,16 +57,7 @@ object Main {
 
         //new DateTime("2019-09-29 14:00:00").earlier(DateTime.now).toDays.print
 
-        """[A-Z\s^\r\n]+""".r.findAllIn(
-        """A B
-          |C    D
-          |E F
-          |G H I J
-        """.stripMargin).foreach(println)
-
-        //PQL.openFile("/sql/test.sql").run()
-
-//
+        PQL.openFile("/sql/test.sql").run()
 
 //        PQL.open(
 //            """

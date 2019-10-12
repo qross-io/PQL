@@ -28,8 +28,8 @@ object FilePath {
         def isFile: Boolean = {
             val full = path.toPath
             if (full.contains("/")) {
-                val p = full.takeRightBefore("/") + "/"
-                val f = full.takeRightAfter("/")
+                val p = full.takeBeforeLast("/") + "/"
+                val f = full.takeAfterLast("/")
                 p.isDir && f.isFile
             }
             else {
@@ -44,7 +44,7 @@ object FilePath {
         def takeDir: String = {
             val full = path.toPath
             if (full.contains("/")) {
-                full.takeRightBefore("/") + "/"
+                full.takeBeforeLast("/") + "/"
             }
             else {
                 ""
@@ -54,7 +54,7 @@ object FilePath {
         def takeFile: String = {
             val full = path.toPath
             if (full.contains("/")) {
-                full.takeRightAfter("/")
+                full.takeAfterLast("/")
             }
             else {
                 full

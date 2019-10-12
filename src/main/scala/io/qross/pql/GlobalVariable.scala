@@ -13,7 +13,6 @@ object GlobalVariable {
     //除环境全局变量的其他全局变量
     val SYSTEM: DataRow = new DataRow()
     val USER: DataRow = new DataRow()
-    val PROCESS: Set[String] = Set("NOW", "TODAY", "YESTERDAY", "TOMORROW", "COUNT", "TOTAL", "ROWS", "AFFECTED", "RESULT", "BUFFER", "USER_ID", "USERNAME", "ROLE")
 
     //Global.getClass.getDeclaredMethods.contains()
     //Global.getClass.getMethod("").invoke(null)
@@ -35,7 +34,7 @@ object GlobalVariable {
     //更新用户变量
     def set(name: String, value: Any, user: Int = 0, role: String = "WORKER"): Unit = {
 
-        if (PROCESS.contains(name)) {
+        if (Patterns.GLOBAL_VARIABLES.contains(name)) {
             throw new SQLExecuteException("Can't update process variable. This variable is readonly.")
         }
         else if (FUNCTION_NAMES.contains(name)) {
@@ -79,27 +78,10 @@ object GlobalVariable {
 
     //得到全局变量的值
     def get(name: String, PQL: PQL ): DataCell = {
-        if (PROCESS.contains(name)) {
-            name match {
-                case "TODAY" => DataCell(DateTime.now.setZeroOfDay(), DataType.DATETIME)
-                case "YESTERDAY" => DataCell(DateTime.now.minusDays(1).setZeroOfDay(), DataType.DATETIME)
-                case "TOMORROW" => DataCell(DateTime.now.plusDays(1).setZeroOfDay(), DataType.DATETIME)
-                case "NOW" =>  DataCell(DateTime.now, DataType.DATETIME)
-                case "COUNT" => DataCell(PQL.dh.COUNT, DataType.INTEGER)
-                case "TOTAL" => DataCell(PQL.dh.TOTAL, DataType.INTEGER)
-                case "ROWS" => DataCell(PQL.ROWS, DataType.INTEGER)
-                case "AFFECTED" => DataCell(PQL.AFFECTED, DataType.INTEGER)
-                case "USER_ID" => DataCell(PQL.dh.userId, DataType.INTEGER)
-                case "USERNAME" => DataCell(PQL.dh.userName, DataType.TEXT)
-                case "ROLE" => DataCell(PQL.dh.roleName, DataType.TEXT)
-                case "RESULT" =>
-                    PQL.RESULT.lastOption match {
-                        case Some(v) => DataCell(v)
-                        case None => DataCell.NOT_FOUND
-                    }
-                case "BUFFER" => DataCell(PQL.dh.getData, DataType.TABLE)
-                case _ => DataCell.NOT_FOUND
-            }
+        if (Patterns.GLOBAL_VARIABLES.contains(name)) {
+            Class.forName("io.qross.pql.GlobalVariableDeclaration")
+                .getDeclaredMethod(name, Class.forName("io.qross.pql.PQL"))
+                .invoke(null, PQL).asInstanceOf[DataCell]
         }
         else if (USER.contains(name)) {
             USER.getCell(name)
@@ -114,4 +96,26 @@ object GlobalVariable {
             DataCell.NOT_FOUND
         }
     }
+}
+
+object GlobalVariableDeclaration {
+    def TODAY(PQL: PQL): DataCell = DataCell(DateTime.now.setZeroOfDay(), DataType.DATETIME)
+    def YESTERDAY(PQL: PQL): DataCell = DataCell(DateTime.now.minusDays(1).setZeroOfDay(), DataType.DATETIME)
+    def TOMORROW(PQL: PQL): DataCell = DataCell(DateTime.now.plusDays(1).setZeroOfDay(), DataType.DATETIME)
+    def NOW(PQL: PQL): DataCell = DataCell(DateTime.now, DataType.DATETIME)
+    def COUNT(PQL: PQL): DataCell = DataCell(PQL.dh.COUNT, DataType.INTEGER)
+    def TOTAL(PQL: PQL): DataCell = DataCell(PQL.dh.TOTAL, DataType.INTEGER)
+    def ROWS(PQL: PQL): DataCell = DataCell(PQL.ROWS, DataType.INTEGER)
+    def AFFECTED(PQL: PQL): DataCell = DataCell(PQL.AFFECTED, DataType.INTEGER)
+    def USER_ID(PQL: PQL): DataCell = DataCell(PQL.dh.userId, DataType.INTEGER)
+    def USERNAME(PQL: PQL): DataCell = DataCell(PQL.dh.userName, DataType.TEXT)
+    def ROLE(PQL: PQL): DataCell = DataCell(PQL.dh.roleName, DataType.TEXT)
+    def RESULT(PQL: PQL): DataCell = {
+        PQL.RESULT.lastOption match {
+            case Some(v) => DataCell(v)
+            case None => DataCell.NOT_FOUND
+        }
+    }
+    def BUFFER(PQL: PQL): DataCell = DataCell(PQL.dh.getData, DataType.TABLE)
+    def CLEAN_PQL_BODY(PQL: PQL): DataCell = DataCell(PQL.SQL, DataType.TEXT)
 }

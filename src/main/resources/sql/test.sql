@@ -6,21 +6,45 @@
 
 DEBUG ON;
 
-SET $d := 1569814678642 TO DATETIME;
-SET $e DATETIME := "2019-12-31 11:22:29";
 
-IF true THEN
-    PRINT "hello";
-ELSE
-    PRINT "world";
-END IF;
 
-EXIT PROCEDURE 0;
+--SET $d := 1569814678642 TO DATETIME;
+--SET $e := "2019-12-31 11:22:29";
 
-PRINT $d LATER $e TO DAYS;
+-- 循环部分,正式上线后注释掉-----------------------------------------------------------------------------------------------
+
+--SET $a := @NOW SET "DAY=1" SET "DAY-1" FORMAT "yyyy-MM-dd";
+
+-- 循环部分,正式上线后注释掉-----------------------------------------------------------------------------------------------
+
+OPEN QROSS;
+
+var $s := "abc123def";
+
+-- PRINT $s TAKE BEFORE /\d+/;
+-- PRINT $s TAKE AFTER /\d+/;
+-- PRINT $s TAKE BEFORE LAST /\d/;
+-- PRINT $s TAKE AFTER LAST /\d/;
+-- PRINT $s TAKE BETWEEN /\d/ AND /\d/;
+-- PRINT $s REPLACE ALL /\d/ TO "Z";
+-- PRINT $s MATCHES /\d/;
+-- PRINT $s WHOLE MATCHES /^[a-z0-9]+$/i;
+-- PRINT /z/ TEST $s;
+-- RINT /z/ FIND FIRST IN $s;
+
+-- print /abc/i TEST 'ABc';
+
+
+        print "dfavrABCDEsaBCfdcdf" TAKE AFTER LAST  'ABC';
+        print "dfavrAbCDEsaBCfdcdf" TAKE AFTER LAST  /abc/i;
+        print "dfavrAbCDEsaBCfdcdf" TAKE AFTER LAST  /a/i;
+        print '--------------------TAKE BEFORE LAST---------------------------------';
+
+        print "dfavrABCDEsaBCfdcdf" TAKE BEFORE LAST  'ABC';
+        print "dfavrAbCDEsaBCfdcdf" TAKE BEFORE LAST  /abc/i;
+        print "dfavrAbCDEsaBCfdcdf" TAKE BEFORE LAST  /a/i;
+
 --PRINT $e;
-
-
 
 
 --SLEEP TO NEXT MINUTE;
@@ -33,9 +57,8 @@ PRINT $d LATER $e TO DAYS;
 --  GET #  SELECT id, task_time FROM qross_tasks WHERE id>1000 LIMIT 20;
 --  SAVE AS NEW JSON FILE "c:/space/tasks.json";
 
+-- 循环部分,正式上线后注释掉-----------------------------------------------------------------------------------------------
 
-
---SET $a := @NOW SET "DAY=1" SET "DAY-1" FORMAT "yyyy-MM-dd";
 --set $a := @now PLUS DAYS $b * - 2;
 --TEMP hello # SELECT * FROM test.wz;
 --

@@ -15,7 +15,7 @@ object ELSE {
             PQL.PARSING.head.addStatement($else)
             PQL.PARSING.push($else)
             //继续解析子语句
-            PQL.parseStatement(sentence.takeAfter($ELSE))
+            PQL.parseStatement(sentence.takeAfter($ELSE).trim())
 
         }
         else {

@@ -4,7 +4,6 @@ import java.io.{File, FileInputStream, FileOutputStream}
 import java.nio.file.Files
 
 import io.qross.core.{DataHub, DataTable, DataType, ExtensionNotFoundException}
-import io.qross.core.DataType.DataType
 import io.qross.net.{Email, HttpClient, Json}
 import io.qross.setting.Global
 import io.qross.fs.FilePath._

@@ -2,12 +2,12 @@ package io.qross.core
 
 import java.util
 
-import io.qross.core.DataType.DataType
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.time.DateTime
 
 import scala.collection.JavaConverters._
+import scala.util.matching.Regex
 
 object DataCell {
     val NULL: DataCell = DataCell(null, DataType.NULL) //一个DataCell的默认值, 类型未定义, 值未赋值
@@ -33,7 +33,16 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def isNull: Boolean = value == null && dataType == DataType.NULL
     def nonNull: Boolean = !isNull
-    def isEmpty: Boolean = value == "" && dataType == DataType.NULL
+    def isEmpty: Boolean = {
+        dataType match {
+            case DataType.TEXT => asText == ""
+            case DataType.ARRAY | DataType.LIST => asJavaList.size() == 0
+            case DataType.ROW | DataType.MAP | DataType.OBJECT => asRow.isEmpty
+            case DataType.TABLE => asTable.isEmpty
+            case DataType.NULL | DataType.EXCEPTION => true
+            case _ => value == null
+        }
+    }
     def nonEmpty: Boolean = !isEmpty
     def found: Boolean = !notFound
     def notFound: Boolean = dataType == DataType.EXCEPTION && value == "NOT_FOUND"
@@ -149,7 +158,12 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         }
     }
 
-    def update(value: Any, dataType: DataType = DataType.NULL): DataCell = {
+    def update(value: Any): DataCell = {
+        this.value = value
+        this
+    }
+
+    def update(value: Any, dataType: DataType): DataCell = {
         this.value = value
         //更新类型
         if (this.dataType != dataType) {
@@ -172,7 +186,6 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def to(dataType: DataType): DataCell = {
         dataType match {
-            case DataType.AUTO => this
             case DataType.TEXT => this.toText
             case DataType.INTEGER => this.toInteger
             case DataType.DECIMAL => this.toDecimal
@@ -199,6 +212,17 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     def toText: DataCell = {
         if (!this.isText) {
             DataCell(this.asText, DataType.TEXT)
+        }
+        else {
+            this
+        }
+    }
+
+    def isRegex: Boolean = this.dataType == DataType.REGEX
+    def asRegex: Regex = this.value.toRegex
+    def toRegex: DataCell = {
+        if (!this.isRegex) {
+            DataCell(this.asRegex, DataType.REGEX)
         }
         else {
             this
@@ -378,6 +402,54 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         }
         else {
             this
+        }
+    }
+
+    def >(implicit other: DataCell): Boolean = {
+        if (this.isInteger || this.isDecimal || other.isInteger || other.isDecimal) {
+            this.asDecimal > other.asDecimal
+        }
+        else if (this.isDateTime || other.isDateTime) {
+            this.asDateTime.after(other.asDateTime)
+        }
+        else {
+            this.asText > other.asText
+        }
+    }
+
+    def >=(implicit other: DataCell): Boolean = {
+        if (this.isInteger || this.isDecimal || other.isInteger || other.isDecimal) {
+            this.asDecimal >= other.asDecimal
+        }
+        else if (this.isDateTime || other.isDateTime) {
+            this.asDateTime.afterOrEquals(other.asDateTime)
+        }
+        else {
+            this.asText >= other.asText
+        }
+    }
+
+    def <(implicit other: DataCell): Boolean = {
+        if (this.isInteger || this.isDecimal || other.isInteger || other.isDecimal) {
+            this.asDecimal < other.asDecimal
+        }
+        else if (this.isDateTime || other.isDateTime) {
+            this.asDateTime.before(other.asDateTime)
+        }
+        else {
+            this.asText < other.asText
+        }
+    }
+
+    def <=(implicit other: DataCell): Boolean = {
+        if (this.isInteger || this.isDecimal || other.isInteger || other.isDecimal) {
+            this.asDecimal <= other.asDecimal
+        }
+        else if (this.isDateTime || other.isDateTime) {
+            this.asDateTime.beforeOrEquals(other.asDateTime)
+        }
+        else {
+            this.asText <= other.asText
         }
     }
 

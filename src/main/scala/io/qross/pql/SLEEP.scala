@@ -28,7 +28,7 @@ class SLEEP(timeSpan: String) {
         }
         else if ($BLANK.test(timeSpan)) {
             val m = timeSpan.takeBefore($BLANK).$eval(PQL).asDecimal
-            timeSpan.takeRightAfter($BLANK).trim().toUpperCase match {
+            timeSpan.takeAfterLast($BLANK).trim().toUpperCase match {
                 case "MILLIS" | "MILLISECONDS" | "MILLISECOND" => Timer.sleep(m millis)
                 case "SECONDS" | "SECOND" => Timer.sleep(m seconds)
                 case "MINUTES" | "MINUTE" => Timer.sleep(m minutes)

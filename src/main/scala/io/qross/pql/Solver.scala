@@ -253,7 +253,7 @@ object Solver {
             blocks.foreach(closed => {
                 val before = sentence.takeBefore(closed.start)
                 val after = sentence.takeAfter(closed.end - 1)
-                val replacement = "~json[" + PQL.chars.size + "]"
+                val replacement = "~json[" + PQL.jsons.size + "]"
                 PQL.jsons += sentence.substring(closed.start, closed.end)
 
                 sentence = before + replacement + after
@@ -262,17 +262,26 @@ object Solver {
             sentence.trim
         }
 
-        //恢复字符串
-        def restoreConstants(PQL: PQL, quote: String = ""): String = {
-
+        def restoreJsons(PQL: PQL): String = {
             JSON$N
                 .findAllMatchIn(sentence)
                 .foreach(m => {
                     val i = m.group(1).toInt
                     if (i < PQL.jsons.size) {
-                        sentence = sentence.replace(m.group(0), PQL.jsons(i))
+                        sentence = sentence.replace(m.group(0),
+                            PQL.jsons(i)
+                                .$clean(PQL)
+                                .restoreChars(PQL, "\"")
+                                .restoreValues(PQL, "\"")
+                                .restoreSymbols())
                     }
                 })
+
+            sentence
+        }
+
+        //恢复字符串
+        def restoreChars(PQL: PQL, quote: String = ""): String = {
 
             CHAR$N
                 .findAllMatchIn(sentence)
@@ -351,7 +360,8 @@ object Solver {
         }
 
         def popStash(PQL: PQL, quote: String = "'"): String = {
-            sentence.restoreConstants(PQL, quote)
+            sentence.restoreJsons(PQL)
+                    .restoreChars(PQL, quote)
                     .restoreValues(PQL, quote)
                     .restoreSymbols()
         }
@@ -489,6 +499,7 @@ object Solver {
             SHARP_EXPRESSION
                 .findAllMatchIn(sentence)
                 .foreach(m => {
+                    //已在clean过程中, 不需要clean
                     new SHARP(m.group(1)).execute(PQL).ifValid(data => {
                         sentence = sentence.replace(m.group(0), PQL.$stash(data))
                     })
@@ -530,8 +541,8 @@ object Solver {
 
                     sentence = sentence.replace(m.group(0), PQL.$stash(
                         caption match {
-                            case "SELECT" => new SELECT(query.$express(PQL)).query(PQL)
-                            case "PARSE" => new PARSE(query.takeAfter("""^PARSE\s""".r).$express(PQL).eval().asText).parse(PQL)
+                            case "SELECT" => new SELECT(query).query(PQL, express = true)
+                            case "PARSE" => new PARSE(query).parse(PQL, express = true)
                             case _ => DataCell(PQL.dh.executeNonQuery(query), DataType.INTEGER)
                         }))
                 })

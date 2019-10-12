@@ -44,15 +44,15 @@ class Condition(val expression: String) {
     NOT
     */
 
-    private val $OPERATOR = Pattern.compile("""===|!==|==|!=|<>|>=|<=|\^=|=\^|\$=|=\$|\*=|=\*|#=|=#|>|<|=|\sNOT\sIN\s|\sIS\s+NOT\s|^IS\s+NOT\s|\sIN\s|\sIS\s|^IS\s|\sAND\s|\sOR\s|\sNOT\s+EXISTS|^NOT\s+EXISTS\s|\sEXISTS\s|^EXISTS\s|\sLIKE\s|\sNOT\sLIKE\s|^NOT\s|\sNOT\s""", Pattern.CASE_INSENSITIVE)
+    private val $OPERATOR = """(?i)===|!==|==|!=|<>|>=|<=|>|<|=|\sNOT\sIN\s|\sIS\s+NOT\s|^IS\s+NOT\s|\sIN\s|\sIS\s|^IS\s|\sAND\s|\sOR\s|\sNOT\s+EXISTS|^NOT\s+EXISTS\s|\sEXISTS\s|^EXISTS\s|\sLIKE\s|\sNOT\sLIKE\s|^NOT\s|\sNOT\s""".r
 
-    private val m: Matcher = $OPERATOR.matcher(expression)
-    if (m.find) {
-        this.field = expression.takeBefore(m.group(0)).trim
-        this.value = expression.takeAfter(m.group(0)).trim
-        this.operator = m.group(0).trim.toUpperCase.replaceAll(BLANKS, "\\$")
+    $OPERATOR.findFirstIn(expression) match {
+        case Some(opt) =>
+            this.field = expression.takeBefore(opt).trim
+            this.value = expression.takeAfter(opt).trim
+            this.operator = opt.trim.toUpperCase.replaceAll(BLANKS, "\\$")
+        case None =>
     }
-
 
     def eval(field: DataCell, value: DataCell): Unit = {
         this.result = this.operator match {
@@ -63,69 +63,14 @@ class Condition(val expression: String) {
             case "NOT$EXISTS" => value.asText.$trim("(", ")").trim() == ""
             case "IN" => value.asList.toSet.contains(field.value)
             case "NOT$IN" => !value.asList.toSet.contains(field.value)
-            case "LIKE" => { "(?i)" + value.asText.replace("%", """[\s\S]*""").replace("?", """[\s\S]""").bracket("^", "$") }.r.test(field.asText)
-            case "NOT$LIKE" => !{ "(?i)" + value.asText.replace("%", """[\s\S]*""").replace("?", """[\s\S]""").bracket("^", "$") }.r.test(field.asText)
-            case "IS" =>
-                if (value.isNull || value.invalid) {
-                    field.isNull || field.invalid || field.asText.bracketsWith("#{", "}") || field.asText.bracketsWith("&{", "}")
-                }
-                else if (value.isEmpty) {
-                    field.asText == ""
-                }
-                else {
-                    field.asText == value.asText
-                }
-
-            case "IS$NOT" =>
-                if (value.isNull || value.invalid) {
-                    field.nonNull && field.valid && !field.asText.bracketsWith("#{", "}") && !field.asText.bracketsWith("&{", "}")
-                }
-                else if (value.isEmpty) {
-                    field.asText != ""
-                }
-                else {
-                    field.asText != value.asText
-                }
             case "===" => field.asText == value.asText
             case "!==" => field.asText != value.asText
             case "=" | "==" => field.asText.equalsIgnoreCase(value.asText)
             case "!=" | "<>" => !field.asText.equalsIgnoreCase(value.asText)
-            case "^=" => field.asText.toLowerCase.startsWith(value.asText.toLowerCase)
-            case "=^" => !field.asText.toLowerCase.startsWith(value.asText.toLowerCase)
-            case "$=" => field.asText.toLowerCase.endsWith(value.asText.toLowerCase)
-            case "=$" => !field.asText.toLowerCase.endsWith(value.asText.toLowerCase)
-            case "*=" => field.asText.toLowerCase.contains(value.asText.toLowerCase)
-            case "=*" => !field.asText.toLowerCase.contains(value.asText.toLowerCase)
-            case "#=" => Pattern.compile(value.asText, Pattern.CASE_INSENSITIVE).matcher(field.asText).find
-            case "=#" => !Pattern.compile(value.asText, Pattern.CASE_INSENSITIVE).matcher(field.asText).find
-            case ">=" =>
-                try
-                    field.asDecimal >= value.asDecimal
-                catch {
-                    case e: Exception =>
-                        throw new SQLParseException("Value must be number on >= compare: " + field + " >= " + value)
-                }
-            case "<=" =>
-                try
-                    field.asDecimal <= value.asDecimal
-                catch {
-                    case e: Exception =>
-                        throw new SQLParseException("Value must be number on >= compare: " + field + " <= " + value)
-                }
-            case ">" =>
-                try
-                    field.asDecimal > value.asDecimal
-                catch {
-                    case e: Exception =>
-                        throw new SQLParseException("Value must be number on >= compare: " + field + " > " + value)
-                }
-            case "<" =>
-                try
-                    field.asDecimal < value.asDecimal
-                catch {
-                    case _: Exception =>
-                        throw new SQLParseException("Value must be number on >= compare: " + field + " < " + value)
-                }
+            case ">=" => field >= value
+            case "<=" => field <= value
+            case ">" => field > value
+            case "<" => field < value
             case _ => value.asBoolean
         }
     }

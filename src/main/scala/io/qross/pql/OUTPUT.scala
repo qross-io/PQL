@@ -24,7 +24,7 @@ class OUTPUT(val content: String) {
                 new SELECT(content).query(PQL).value
             }
             else if ($PARSE.test(content)) {
-                new PARSE(content.takeAfter($PARSE).trim.$eval(PQL).asText).parse(PQL).value
+                new PARSE(content).parse(PQL).value
             }
             else if ($NON_QUERY.test(content)) {
                 PQL.AFFECTED = PQL.dh.executeNonQuery(content.$restore(PQL))

@@ -13,16 +13,6 @@ import scala.collection.mutable
 
 object SHARP {
 
-    val MULTI$ARGS$LINKS: Map[String, Set[String]] = Map[String, Set[String]](
-        "SUBSTRING" -> Set[String]("TO"),
-                "TAKE$BETWEEN" -> Set[String]("AND"),
-                "PLUS" -> Set[String]("DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
-                "MINUS" -> Set[String]("DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"))
-
-    /*
-    val reserved: Set[String] = Set[String]("SET", "GET", "FORMAT", "TAKE", "YEAR", "MONTH", "DAY", "WEEK", "WEEKNAME", "NANO", "HOUR", "MINUTE", "SECOND", "NUMBER")
-    */
-
     /* ---------- 日期时间 DataTime ----------- */
 
     def EXPRESS(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -142,12 +132,7 @@ object SHARP {
     }
 
     def SET$BEGINNING$OF$MONTH(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (arg.valid) {
-            DataCell(data.asDateTime.setBeginningOfMonth(), DataType.DATETIME)
-        }
-        else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at SET WEEK. " + origin)
-        }
+        DataCell(data.asDateTime.setBeginningOfMonth(), DataType.DATETIME)
     }
 
     def GET$YEAR(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -196,10 +181,18 @@ object SHARP {
 
     def PLUS(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            DataCell(data.asDateTime.plusMillis(arg.asInteger), DataType.DATETIME)
+            if (arg.isInteger) {
+                DataCell(data.asDateTime.plusMillis(arg.asInteger), DataType.DATETIME)
+            }
+            else {
+                $DATETIME_UNITS.findFirstMatchIn(arg.asText) match {
+                    case Some(m) => data.asDateTime.plus(m.group(1), m.group(2).toInt).toDataCell(DataType.DATETIME)
+                    case None => throw SharpLinkArgumentException.occur("MINUS", origin)
+                }
+            }
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at PLUS. " + origin)
+            throw SharpLinkArgumentException.occur("MINUS", origin)
         }
     }
 
@@ -286,10 +279,18 @@ object SHARP {
 
     def MINUS(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            DataCell(data.asDateTime.minusMillis(arg.asInteger), DataType.DATETIME)
+            if (arg.isInteger) {
+                DataCell(data.asDateTime.minusMillis(arg.asInteger), DataType.DATETIME)
+            }
+            else {
+                $DATETIME_UNITS.findFirstMatchIn(arg.asText) match {
+                    case Some(m) => data.asDateTime.minus(m.group(1), m.group(2).toInt).toDataCell(DataType.DATETIME)
+                    case None => throw SharpLinkArgumentException.occur("MINUS", origin)
+                }
+            }
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at MINUS. " + origin)
+            throw SharpLinkArgumentException.occur("MINUS", origin)
         }
     }
 
@@ -401,6 +402,42 @@ object SHARP {
         }
     }
 
+    def BEFORE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asDateTime.before(arg.asDateTime).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur(s"BEFORE", origin)
+        }
+    }
+
+    def BEFORE$OR$EQUALS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asDateTime.beforeOrEquals(arg.asDateTime).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur(s"BEFORE", origin)
+        }
+    }
+
+    def AFTER(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asDateTime.after(arg.asDateTime).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur(s"AFTER", origin)
+        }
+    }
+
+    def AFTER$OR$EQUALS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asDateTime.afterOrEquals(arg.asDateTime).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur(s"BEFORE", origin)
+        }
+    }
+
     def TO$EPOCH(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asDateTime.toEpochSecond.toDataCell(DataType.INTEGER)
     }
@@ -424,25 +461,61 @@ object SHARP {
 
     def MATCHES$CRON(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            data.asDateTime.matches(arg.asText).toDataCell(DataType.DATETIME)
+            data.asDateTime.matches(arg.asText).toDataCell(DataType.BOOLEAN)
         }
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at MATCHES CRON. Must specify a cron expression." + origin)
         }
     }
 
-    /* ---------- 整数 ---------- */
+    /* ---------- 介词 ---------- */
+
+    def AND(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.isInteger && arg.isInteger) {
+                List[Int](data.asInteger.toInt, arg.asInteger.toInt).asJava.toDataCell(DataType.ARRAY)
+            }
+            else if (data.isBoolean || arg.isBoolean) {
+                DataCell(data.asBoolean && arg.asBoolean, DataType.BOOLEAN)
+            }
+            else {
+                List[Any](data.value, arg.value).asJava.toDataCell(DataType.ARRAY)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("AND", origin)
+        }
+    }
+
+    def OR(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.isBoolean || arg.isBoolean) {
+                DataCell(data.asBoolean || arg.asBoolean, DataType.BOOLEAN)
+            }
+            else {
+                DataCell(data.asBoolean || arg.asBoolean, DataType.BOOLEAN)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("OR", origin)
+        }
+    }
 
     // 1 to 10
     def TO(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            val start = data.asInteger
-            val end = arg.asInteger
-            if (start <= end) {
-                start.to(end).toList.asJava.toDataCell(DataType.ARRAY)
+            if (data.isInteger && arg.isInteger) {
+                val start = data.asInteger
+                val end = arg.asInteger
+                if (start <= end) {
+                    start.to(end).toList.asJava.toDataCell(DataType.ARRAY)
+                }
+                else {
+                    end.to(start).reverse.toList.asJava.toDataCell(DataType.ARRAY)
+                }
             }
             else {
-                end.to(start).reverse.toList.asJava.toDataCell(DataType.ARRAY)
+                List[String](data.asText, arg.asText).asJava.toDataCell(DataType.ARRAY)
             }
         }
         else {
@@ -467,7 +540,8 @@ object SHARP {
         }
     }
 
-    //Timer
+    /* ---------- Timer ---------- */
+
     def MILLI(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asInteger.toDataCell(DataType.INTEGER)
     }
@@ -512,6 +586,22 @@ object SHARP {
         data.asDecimal.days.toDataCell(DataType.INTEGER)
     }
 
+    def MONTH(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell("MONTH=" + data.asText, DataType.TEXT)
+    }
+
+    def MONTHS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell("MONTH=" + data.asText, DataType.TEXT)
+    }
+
+    def YEAR(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell("YEAR=" + data.asText, DataType.TEXT)
+    }
+
+    def YEARS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell("YEAR=" + data.asText, DataType.TEXT)
+    }
+
     // TimeSpan
     def TO$SECONDS(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asInteger.toSeconds.toDataCell(DataType.DECIMAL)
@@ -529,47 +619,20 @@ object SHARP {
         data.asInteger.toDays.toDataCell(DataType.DECIMAL)
     }
 
-    /* 小数 */
-
-    def FLOOR(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (arg.valid) {
-            data.asDecimal.floor(arg.asInteger.toInt).toDataCell(DataType.DECIMAL)
-        }
-        else {
-            data.asDecimal.floor(0).toDataCell(DataType.DECIMAL)
-        }
-    }
-
-    def ROUND(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (arg.valid) {
-            data.asDecimal.round(arg.asInteger.toInt).toDataCell(DataType.DECIMAL)
-        }
-        else {
-            data.asDecimal.round(0).toDataCell(DataType.DECIMAL)
-        }
-    }
-
-    def POW(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (arg.valid) {
-            data.asDecimal.pow(arg.asInteger.toInt).toDataCell(DataType.DECIMAL)
-        }
-        else {
-            data.asDecimal.pow(0).toDataCell(DataType.DECIMAL)
-        }
-    }
-
-    def PERCENT(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        data.asDecimal.percent.toDataCell(DataType.TEXT)
-    }
-
     /* ---------- 字符串处理 ---------- */
 
     def SPLIT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            data.asText.split(arg.asText).toList.asJava.toDataCell(DataType.ARRAY)
+            if (arg.isJavaList) {
+                val delimiter = arg.asList[String]
+                data.asText.$split(delimiter.head, delimiter.last).toRow.toDataCell(DataType.ROW)
+            }
+            else {
+                data.asText.split(arg.asText).toList.asJava.toDataCell(DataType.ARRAY)
+            }
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at SPLIT. " + origin)
+            throw SharpLinkArgumentException.occur("SPLIT", origin)
         }
     }
 
@@ -593,27 +656,45 @@ object SHARP {
 
     def TAKE$BEFORE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            data.asText.takeBefore(arg.asText).toDataCell(DataType.TEXT)
+            data.asText.takeBefore(arg.value).toDataCell(DataType.TEXT)
         }
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at TAKE BEFORE. " + origin)
         }
     }
 
+    def TAKE$BEFORE$FIRST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        TAKE$BEFORE(data, arg, origin)
+    }
+
     def TAKE$AFTER(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            data.asText.takeAfter(arg.asText).toDataCell(DataType.TEXT)
+            data.asText.takeAfter(arg.value).toDataCell(DataType.TEXT)
         }
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at TAKE AFTER. " + origin)
         }
     }
 
+    def TAKE$AFTER$FIRST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        TAKE$AFTER(data, arg, origin)
+    }
+
+    def TAKE$BETWEEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid && arg.isJavaList) {
+            val between = arg.asList
+            data.asText.takeBetween(between.head, between.last).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw SharpLinkArgumentException.occur(s"TAKE BETWEEN", origin)
+        }
+    }
+
     def SUBSTRING(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (arg.isJavaList) {
-                val list = arg.asList[Int]
-                data.asText.substring(list.head - 1, list.last - 1).toDataCell(DataType.TEXT)
+                val list = arg.asList[Long]
+                data.asText.substring(list.head.toInt - 1, list.last.toInt - 1).toDataCell(DataType.TEXT)
             }
             else {
                 data.asText.substring(arg.asInteger.toInt - 1).toDataCell(DataType.TEXT)
@@ -622,6 +703,410 @@ object SHARP {
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at SUBSTRING. " + origin)
         }
+    }
+
+    def SUBSTR(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (arg.isJavaList) {
+                val list = arg.asList[Long]
+                data.asText.substring(list.head.toInt - 1).take(list.last.toInt - 1).toDataCell(DataType.TEXT)
+            }
+            else {
+                data.asText.substring(arg.asInteger.toInt - 1).toDataCell(DataType.TEXT)
+            }
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at SUBSTRING. " + origin)
+        }
+    }
+
+    def TAKE$BEFORE$LAST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.takeBeforeLast(arg.value).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at TAKE RIGHT BEFORE. " + origin)
+        }
+    }
+
+    def TAKE$AFTER$LAST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.takeAfterLast(arg.value).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at TAKE RIGHT AFTER. " + origin)
+        }
+    }
+
+    def STARTS$WITH(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.startsWith(arg.asText).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at STARTS WITH. " + origin)
+        }
+    }
+
+    def STARTS$IGNORE$CASE$WITH(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.toLowerCase().startsWith(arg.asText.toLowerCase()).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("STARTS IGNORE CASE WITH", origin)
+        }
+    }
+
+    def EQUALS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(data.asText == arg.asText, DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("EQUALS", origin)
+        }
+    }
+
+    def EQUALS$IGNORE$CASE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(data.asText.equalsIgnoreCase(arg.asText), DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("EQUALS IGNORE CASE", origin)
+        }
+    }
+
+    def ENDS$WITH(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.endsWith(arg.asText).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at ENDS WITH. " + origin)
+        }
+    }
+
+    def ENDS$IGNORE$CASE$WITH(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.toLowerCase().endsWith(arg.asText.toLowerCase()).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("ENDS IGNORE CASE WITH", origin)
+        }
+    }
+
+    def CONTAINS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.contains(arg.asText).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("CONTAINS", origin)
+        }
+    }
+
+    def CONTAINS$IGNORE$CASE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.toLowerCase().contains(arg.asText.toLowerCase()).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("CONTAINS IGNORE CASE", origin)
+        }
+    }
+
+    def BRACKETS$WITH(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (arg.isText) {
+                val brackets = arg.asText
+                data.asText.bracketsWith(brackets, brackets).toDataCell(DataType.BOOLEAN)
+            }
+            else {
+                val brackets = arg.asList[String]
+                data.asText.bracketsWith(brackets.head, brackets.last).toDataCell(DataType.BOOLEAN)
+            }
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at BRACKETS WITH. " + origin)
+        }
+    }
+
+    def INDEX$OF(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(data.asText.indexOf(arg.asText) + 1, DataType.INTEGER)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at INDEX OF. " + origin)
+        }
+    }
+
+    def LAST$INDEX$OF(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(data.asText.lastIndexOf(arg.asText) + 1, DataType.INTEGER)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at LAST INDEX OF. " + origin)
+        }
+    }
+
+    def CONCAT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.concat(arg.asText).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at CONCAT. " + origin)
+        }
+    }
+
+    def REPLACE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid && arg.isJavaList) {
+            val list = arg.asList[String]
+            data.asText.replace(list.head, list.last).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("REPLACE", origin)
+        }
+    }
+
+    def REPLACE$FIRST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid && arg.isJavaList) {
+            val list = arg.asList[String]
+            val text = data.asText
+            if (text.contains(list.head)) {
+                DataCell(text.takeBefore(list.head) + list.last + text.takeAfter(list.head), DataType.TEXT)
+            }
+            else {
+                data
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("REPLACE FIRST", origin)
+        }
+    }
+
+    def REPLACE$ALL(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid && arg.isJavaList) {
+            val list = arg.asList[String]
+            data.asText.replaceAll(list.head, list.last).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("REPLACE ALL", origin)
+        }
+    }
+
+    def TO$UPPER(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        data.asText.toUpperCase().toDataCell(DataType.TEXT)
+    }
+
+    def TO$LOWER(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        data.asText.toLowerCase().toDataCell(DataType.TEXT)
+    }
+
+    def TO$UPPER$CASE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        data.asText.toUpperCase().toDataCell(DataType.TEXT)
+    }
+
+    def TO$LOWER$CASE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        data.asText.toLowerCase().toDataCell(DataType.TEXT)
+    }
+
+    def TRIM(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (arg.isJavaList) {
+                val brackets = arg.asList[String]
+                data.asText.$trim(brackets.head, brackets.last).toDataCell(DataType.TEXT)
+            }
+            else {
+                data.asText.$trim(arg.asText).toDataCell(DataType.TEXT)
+            }
+        }
+        else {
+            data.asText.trim().toDataCell(DataType.TEXT)
+        }
+    }
+
+    def CHAR$AT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid && arg.isInteger) {
+            data.asText.charAt(arg.asInteger.toInt - 1).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("CHAR AT", origin)
+        }
+    }
+
+    def MATCHES(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            arg.asText.r.findAllIn(data.asText).nonEmpty.toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("MATCHES", origin)
+        }
+    }
+
+    def WHOLE$MATCHES(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.matches(arg.asText).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("WHOLE MATCHES", origin)
+        }
+    }
+
+    /* ---------- 正则表达式 ---------- */
+
+    def TEST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asRegex.test(arg.asText).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("TEST", origin)
+        }
+    }
+
+    def FIND$FIRST$IN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asRegex.findFirstIn(arg.asText) match {
+                case Some(value) => DataCell(value, DataType.TEXT)
+                case None => DataCell.NULL
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("TEST", origin)
+        }
+    }
+
+    //def FIND$LAST$IN
+    //def FIND$ALL$IN
+
+    /* ---------- 数字 ---------- */
+
+    def FLOOR(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asDecimal.floor(arg.asInteger.toInt).toDataCell(DataType.DECIMAL)
+        }
+        else {
+            data.asDecimal.floor(0).toDataCell(DataType.INTEGER)
+        }
+    }
+
+    def ROUND(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asDecimal.round(arg.asInteger.toInt).toDataCell(DataType.DECIMAL)
+        }
+        else {
+            data.asDecimal.round(0).toDataCell(DataType.INTEGER)
+        }
+    }
+
+    def POW(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asDecimal.pow(arg.asInteger.toInt).toDataCell(DataType.DECIMAL)
+        }
+        else {
+            data.asDecimal.pow(0).toDataCell(DataType.DECIMAL)
+        }
+    }
+
+    def PERCENT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        data.asDecimal.percent.toDataCell(DataType.TEXT)
+    }
+
+    /* ---------- 判断操作 IS ---------- */
+
+    def IS$NULL(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isNull || data.invalid || data.asText.bracketsWith("#{", "}") || data.asText.bracketsWith("&{", "}"), DataType.BOOLEAN)
+    }
+
+    def IS$NOT$NULL(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.nonNull && data.valid && !data.asText.bracketsWith("#{", "}") && !data.asText.bracketsWith("&{", "}"), DataType.BOOLEAN)
+    }
+
+    def IS$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isEmpty, DataType.BOOLEAN)
+    }
+
+    def IS$NOT$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.nonEmpty, DataType.BOOLEAN)
+    }
+
+    def LIKE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            { "(?i)" + arg.asText.replace("%", """[\s\S]*""").replace("?", """[\s\S]""").bracket("^", "$") }.r.test(data.asText).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("LIKE", origin)
+        }
+    }
+
+    def NOT$LIKE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        LIKE(data, arg, origin).update(!data.value.asInstanceOf[Boolean])
+    }
+
+    def IS$TEXT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isText, DataType.BOOLEAN)
+    }
+
+    def IS$NOT$TEXT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(!data.isText, DataType.BOOLEAN)
+    }
+
+    def IS$INTEGER(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isInteger, DataType.BOOLEAN)
+    }
+
+    def IS$NOT$INTEGER(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(!data.isInteger, DataType.BOOLEAN)
+    }
+
+    def IS$INT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        IS$INTEGER(data, arg, origin)
+    }
+
+    def IS$NOT$INT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        IS$NOT$INTEGER(data, arg, origin)
+    }
+
+    def IS$DECIMAL(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isDecimal, DataType.BOOLEAN)
+    }
+
+    def IS$NOT$DECIMAL(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(!data.isDecimal, DataType.BOOLEAN)
+    }
+
+    def IS$LIST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isJavaList, DataType.BOOLEAN)
+    }
+
+    def IS$NOT$LIST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(!data.isJavaList, DataType.BOOLEAN)
+    }
+
+    def IS$ARRAY(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isJavaList, DataType.BOOLEAN)
+    }
+
+    def IS$NOT$ARRAY(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isJavaList, DataType.BOOLEAN)
+    }
+
+    def IS$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isRow, DataType.BOOLEAN)
+    }
+
+    def IS$NOT$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isRow, DataType.BOOLEAN)
+    }
+
+    def IS$TABLE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isTable, DataType.BOOLEAN)
+    }
+
+    def IS$NOT$TABLE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(!data.isTable, DataType.BOOLEAN)
+    }
+
+    def IS$REGEX(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.isRegex, DataType.BOOLEAN)
+    }
+
+    def IS$NOT$REGEX(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(!data.isRegex, DataType.BOOLEAN)
     }
 
     /* ---------- DataTable ---------- */
@@ -782,16 +1267,19 @@ object SHARP {
    /* ---------- DataRow ---------- */
 
     def GET$DATA(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (arg.valid) {
-            if (arg.isInteger) {
+        if (data.isRow) {
+            if (arg.valid && arg.isInteger) {
                 data.asRow.getCell(arg.asInteger.toInt - 1)
             }
-            else {
+            else if (arg.valid && arg.isText) {
                 data.asRow.getCell(arg.asText)
+            }
+            else {
+                throw SharpLinkArgumentException.occur("GET DATA", origin)
             }
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at GET DATA. " + origin)
+            throw SharpInapplicableLinkNameException.occur("SIZE", origin)
         }
     }
 
@@ -809,7 +1297,13 @@ object SHARP {
     }
 
     def SIZE(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.asList.size, DataType.INTEGER)
+        DataCell(data.dataType match {
+            case DataType.TEXT => data.asText.length
+            case DataType.ARRAY => data.asList.size
+            case DataType.ROW => data.asRow.size
+            case DataType.TABLE => data.asTable.size
+            case _ => throw new SharpInapplicableLinkNameException("Inapplicable data type for link name SIZE. " + origin)
+        }, DataType.INTEGER)
     }
 
     def LENGTH(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -867,11 +1361,6 @@ object SHARP {
     def TO$INT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         TO$INTEGER(data, arg, origin)
     }
-
-    //表示子项
-    def %(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell.NULL
-    }
 }
 
 class SHARP(private val expression: String, private var data: DataCell = DataCell.ERROR) {
@@ -902,92 +1391,62 @@ class SHARP(private val expression: String, private var data: DataCell = DataCel
 
         val links = new mutable.ListBuffer[Link$Argument]()
 
-        $LINK.findAllIn(sentence)
-                .reduce((m, n) => {
-                    links += new Link$Argument(m, sentence.takeBetween(m, n))
-                    n
-                })
+        val matches = $LINK.findAllIn(sentence).toArray
+        for (i <- matches.indices) {
+            if (i + 1 == matches.length) {
+                links += new Link$Argument(matches(i), sentence.takeAfter(matches(i)))
+            }
+            else {
+                links += new Link$Argument(matches(i), sentence.takeBetween(matches(i), matches(i+1)))
+            }
+        }
+
+        if (data.invalid) {
+            data = {
+                if (matches.nonEmpty) {
+                    sentence.takeBefore(matches.head).$sharp(PQL)
+                }
+                else {
+                    sentence.$sharp(PQL)
+                }
+            }
+        }
 
         for (i <- links.indices) {
             if (SHARP_LINKS.contains(links(i).linkName)) {
-                data =  Class.forName("io.qross.pql.SHARP").getDeclaredMethod(links(i).linkName,
-                            Class.forName("io.qross.core.DataCell"),
-                            Class.forName("io.qross.core.DataCell"),
-                            Class.forName("java.lang.String"))
+                data =  Class.forName("io.qross.pql.SHARP")
+                            .getDeclaredMethod(links(i).linkName,
+                                Class.forName("io.qross.core.DataCell"),
+                                Class.forName("io.qross.core.DataCell"),
+                                Class.forName("java.lang.String"))
                                 .invoke(null,
                                     data,
-                                    if (i + 1 < links.length) {
-                                        if (SHARP.MULTI$ARGS$LINKS.contains(links(i).linkName) && i + 1 < links.length && SHARP.MULTI$ARGS$LINKS(links(i).linkName).contains(links(i+1).linkName)) {
-                                            val name = links(i+1).linkName
-                                            links(i+1).linkName = "" //executed
-                                            Class.forName("io.qross.pql.SHARP").getDeclaredMethod(name,
+                                    if (i + 1 < links.length &&
+                                        Patterns.MULTI$ARGS$LINKS.contains(links(i).linkName) &&
+                                        Patterns.MULTI$ARGS$LINKS(links(i).linkName).contains(links(i+1).linkName)) {
+                                        val name = links(i+1).linkName
+                                        links(i+1).linkName = "" //executed
+                                        Class.forName("io.qross.pql.SHARP")
+                                            .getDeclaredMethod(name,
                                                 Class.forName("io.qross.core.DataCell"),
-                                                Class.forName("io.qross.pql.Link$Argument"))
-                                                    .invoke(null,
-                                                        links(i).solve(PQL),
-                                                        links(i+1).solve(PQL),
-                                                        links(i+1).originate(PQL)
-                                                    )
-                                        }
-                                        else {
-                                            links(i).solve(PQL)
-                                        }
+                                                Class.forName("io.qross.core.DataCell"),
+                                                Class.forName("java.lang.String"))
+                                                .invoke(null,
+                                                    links(i).solve(PQL),
+                                                    links(i+1).solve(PQL),
+                                                    links(i+1).originate(PQL)
+                                                )
                                     }
                                     else {
-                                        DataCell.NULL
+                                        links(i).solve(PQL)
                                     },
                                     links(i).originate(PQL)
                                 ).asInstanceOf[DataCell]
             }
-            else {
+            else if (links(i).linkName != "") {
                 throw new SharpLinkArgumentException("Wrong link name: " + links(i).originalLinkName)
             }
         }
-
-        /*
-
-        val values = sentence.split($LINK.regex, -1).map(_.trim()).map(v => if (v == "#" || v == "->") "" else v)
-        val links = $LINK.findAllIn(sentence).map(l => l.trim().replaceAll(BLANKS, "\\$").toUpperCase()).toArray
-
-        if (data.invalid) {
-            data = values.head.$sharp(PQL, quote)
-        }
-
-        for (i <- links.indices) {
-            if (SHARP_LINKS.contains(links(i))) {
-                data =
-                    Class.forName("io.qross.pql.SHARP").getDeclaredMethod(links(i),
-                    Class.forName("io.qross.core.DataCell"),
-                    Class.forName("io.qross.core.DataCell"))
-                        .invoke(null, data,
-                                if (i + 1 < values.length) {
-                                    if (SHARP.MULTI$ARGS$LINKS.contains(links(i)) && i + 1 < links.length && SHARP.MULTI$ARGS$LINKS(links(i)).contains(links(i+1))) {
-                                        val name = links(i+1)
-                                        links(i+1) = "" //executed
-                                        Class.forName("io.qross.pql.SHARP").getDeclaredMethod(name,
-                                            Class.forName("io.qross.core.DataCell"),
-                                            Class.forName("io.qross.core.DataCell"))
-                                                .invoke(null,
-                                                    values(i+1).$sharp(PQL),
-                                                    if (i + 2 < values.length) values(i+2).$sharp(PQL) else DataCell.NULL)
-                                    }
-                                    else if(values(i+1) != "") {
-                                        values(i+1).$sharp(PQL)
-                                    }
-                                    else {
-                                        DataCell.NULL
-                                    }
-                                }
-                                else {
-                                    DataCell.NULL
-                                }
-                            ).asInstanceOf[DataCell]
-            }
-            else {
-                throw new SharpLinkArgumentException("Wrong link name: " + links(i).replace("$", " "))
-            }
-        }
-        */
 
         data
     }

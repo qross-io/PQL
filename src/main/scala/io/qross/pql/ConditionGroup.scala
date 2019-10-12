@@ -50,7 +50,7 @@ class ConditionGroup(expression: String) {
                                 DataCell.NULL
                             }
                             else if ($CONDITION.test(field)) {
-                                conditions(value.$trim("~condition[", "]").toInt).result.toDataCell(DataType.BOOLEAN)
+                                conditions(field.$trim("~condition[", "]").toInt).result.toDataCell(DataType.BOOLEAN)
                             }
                             else if ($VARIABLE.test(field)) {
                                 PQL.findVariable(field)
@@ -75,6 +75,14 @@ class ConditionGroup(expression: String) {
                             }
                             else if (value.equalsIgnoreCase("UNDEFINED") || value.equalsIgnoreCase("NULL") || value == "()") {
                                 DataCell.NULL
+                            }
+                            else if (condition.operator == "NOT") {
+                                value.replace("==", "DOUBLE$EQUALITY$SIGN")
+                                    .replace("!=", "INEQUALITY$SIGN")
+                                    .replace("=", "==")
+                                    .replace("DOUBLE$EQUALITY$SIGN", "==")
+                                    .replace("INEQUALITY$SIGN", "!=")
+                                    .replace("<>", "!=").$sharp(PQL, "\"")
                             }
                             else {
                                 value.$sharp(PQL, "\"")
@@ -132,13 +140,22 @@ class ConditionGroup(expression: String) {
         var clause = ""
         var exp = expression
 
+//        A$AND$Z.findAllIn(exp).foreach($and => {
+//            exp = exp.replace($and, $and.replace(BLANKS, "\\$"))
+//        })
+
+        //SHARP表达式可能包含OR关键词
+        A$OR$Z.findAllIn(exp).foreach($or => {
+            exp = exp.replace($or, $or.replaceAll(BLANKS, "\\$"))
+        })
+
         //AND
-        while ({m = $AND.matcher(exp); m}.find) {
+        while ({m = $AND$.matcher(exp); m}.find) {
             clause = m.group(2)
             left = m.group(3)
             right = m.group(4)
 
-            while ({n = $_OR.matcher(clause); n}.find) {
+            while ({n = $OR.matcher(clause); n}.find) {
                 clause = clause.substring(clause.indexOf(n.group) + n.group.length)
                 left = left.substring(left.indexOf(n.group) + n.group.length)
             }
@@ -160,7 +177,7 @@ class ConditionGroup(expression: String) {
 
         }
         //OR
-        while ({m = $OR.matcher(expression); m}.find) {
+        while ({m = $OR$.matcher(exp); m}.find) {
             clause = m.group(2)
             left = m.group(3)
             right = m.group(4)

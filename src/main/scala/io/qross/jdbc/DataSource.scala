@@ -131,15 +131,35 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
                     if (fieldName.contains(".")) fieldName = fieldName.substring(fieldName.lastIndexOf(".") + 1)
                     if (!Pattern.matches("^[a-zA-Z_][a-zA-Z0-9_]*$", fieldName) || table.contains(fieldName)) fieldName = "column" + i
                     //println(meta.getColumnLabel(i) + ": " + meta.getColumnTypeName(i) + ", " + meta.getColumnClassName(i))
-                    table.addFieldWithLabel(fieldName, meta.getColumnLabel(i), DataType.ofTypeName(meta.getColumnTypeName(i), meta.getColumnClassName(i))) //meta.getColumnTypeName(i)
+                    table.addFieldWithLabel(fieldName, meta.getColumnLabel(i), DataType.ofTypeName(meta.getColumnTypeName(i), meta.getColumnClassName(i)))
                 }
 
                 val fields = table.getFieldNames
                 while (rs.next) {
                     val row = table.newRow()
                     for (i <- 1 to columns) {
-                        //row.set(fields(i-1)._1, if (fields(i-1)._2 != DataType.BLOB) rs.getObject(i) else rs.getString(i))
-                        row.set(fields(i-1), rs.getObject(i))
+                        val dataType = table.getFieldDataType(fields(i-1))
+                        row.set(fields(i-1), {
+                            if (dataType == DataType.INTEGER) {
+                                if (dataType.originalName == "BIGINT" || dataType.originalName == "LONG" || dataType.className == "java.math.bigInteger") {
+                                    rs.getLong(i)
+                                }
+                                else {
+                                    rs.getInt(i)
+                                }
+                            }
+                            else if (dataType == DataType.DECIMAL) {
+                                if (dataType.originalName == "DOUBLE" || dataType.className == "java.math.bigDecimal") {
+                                    rs.getDouble(i)
+                                }
+                                else {
+                                    rs.getFloat(i)
+                                }
+                            }
+                            else {
+                                rs.getObject(i)
+                            }
+                        }, dataType)
                     }
                     table.insert(row)
                 }

@@ -79,19 +79,19 @@ object PQL {
             }
         }
 
-        def openSQL(SQL: String): DataHub = {
+        def openPQL(SQL: String): DataHub = {
             dh.plug("PQL", new PQL(SQL, dh))
         }
 
-        def openEmbeddedSQL(SQL: String): DataHub = {
+        def openEmbeddedPQL(SQL: String): DataHub = {
             dh.plug("PQL", new PQL(EMBEDDED + SQL, dh))
         }
 
-        def openFileSQL(filePath: String): DataHub = {
+        def openFilePQL(filePath: String): DataHub = {
             dh.plug("PQL", new PQL(SourceFile.read(filePath), dh))
         }
 
-        def openEmbeddedFileSQL(filePath: String): DataHub = {
+        def openEmbeddedFilePQL(filePath: String): DataHub = {
             dh.plug("PQL", new PQL(EMBEDDED + SourceFile.read(filePath), dh))
         }
 
@@ -158,7 +158,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     //计算过程中的中间结果~value[n]
     private[pql] val values = new ArrayBuffer[DataCell]()
 
-    private var SQL: String = originalSQL
+    private[pql] var SQL: String = originalSQL
 
     val embedded: Boolean = SQL.startsWith(EMBEDDED) || SQL.bracketsWith("<", ">") || (SQL.contains("<%") && SQL.contains("%>"))
     if (embedded && SQL.startsWith(EMBEDDED)) {
@@ -297,7 +297,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 }
                 else {
                     Class.forName(s"io.qross.pql.${statement.caption}")
-                            .getDeclaredMethod("execute", Class.forName(s"io.qross.pql.PQL"))
+                            .getDeclaredMethod("execute",
+                                Class.forName(s"io.qross.pql.PQL"))
                             .invoke(statement.instance, this)
                 }
             }

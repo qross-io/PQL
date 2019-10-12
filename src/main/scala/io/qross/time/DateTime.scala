@@ -250,6 +250,20 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     def plus(unit: ChronoUnit, amount: Int): DateTime = {
         new DateTime(this.localDateTime.plus(amount, unit))
     }
+    def plus(unit: String, amount: Int): DateTime = {
+        unit.toUpperCase() match {
+            case "YEAR" => plusYears(amount)
+            case "MONTH" => plusMonths(amount)
+            case "DAY" => plusDays(amount)
+            case "HOUR" => plusHours(amount)
+            case "MINUTE" => plusMinutes(amount)
+            case "SECOND" => plusSeconds(amount)
+            case "MILLI" => plusMillis(amount)
+            case "MICRO" => plusMicros(amount)
+            case "NANO" => plusNanos(amount)
+            case _ => this
+        }
+    }
     def plusYears(amount: Long): DateTime = {
         new DateTime(this.localDateTime.plusYears(amount))
     }
@@ -280,6 +294,20 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     
     def minus(unit: ChronoUnit, amount: Int): DateTime = {
         new DateTime(this.localDateTime.minus(amount, unit))
+    }
+    def minus(unit: String, amount: Int): DateTime = {
+        unit.toUpperCase() match {
+            case "YEAR" => minusYears(amount)
+            case "MONTH" => minusMonths(amount)
+            case "DAY" => minusDays(amount)
+            case "HOUR" => minusHours(amount)
+            case "MINUTE" => minusMinutes(amount)
+            case "SECOND" => minusSeconds(amount)
+            case "MILLI" => minusMillis(amount)
+            case "MICRO" => minusMicros(amount)
+            case "NANO" => minusNanos(amount)
+            case _ => this
+        }
     }
     def minusYears(amount: Long): DateTime = {
         new DateTime(this.localDateTime.minusYears(amount))

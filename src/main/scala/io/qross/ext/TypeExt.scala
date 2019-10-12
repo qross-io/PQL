@@ -1,6 +1,7 @@
 package io.qross.ext
 
-import io.qross.core.DataType.DataType
+import java.util.regex.Pattern
+
 import io.qross.core._
 import io.qross.net.Json
 import io.qross.pql.SQLExecuteException
@@ -18,6 +19,8 @@ import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 object TypeExt {
+
+    var $m: Regex.Match = _
 
     implicit class StringExt(var string: String) {
 
@@ -46,7 +49,7 @@ object TypeExt {
 
         def toByteLength: Long = {
             var number = string.dropRight(1)
-            var times: Long = string.takeRight(1).toUpperCase() match {
+            val times: Long = string.takeRight(1).toUpperCase() match {
                 case "B" => 1
                 case "K" => 1024
                 case "M" => 1024 * 1024
@@ -91,6 +94,9 @@ object TypeExt {
             }
             else if (string.bracketsWith("[", "]")) {
                 DataCell(Json(string).parseJavaList("/"), DataType.ARRAY)
+            }
+            else if (string.isJsRegex) {
+                DataCell(string.toRegex, DataType.REGEX)
             }
             else {
                 val jse: ScriptEngine = new ScriptEngineManager().getEngineByName("JavaScript")
@@ -219,7 +225,7 @@ object TypeExt {
             }
         }
 
-        def takeRightBefore(value: Any): String = {
+        def takeBeforeLast(value: Any): String = {
             value match {
                 case char: String =>
                     if (char == "" || !string.contains(char)) {
@@ -238,7 +244,7 @@ object TypeExt {
             }
         }
 
-        def takeRightAfter(value: Any): String = {
+        def takeAfterLast(value: Any): String = {
             value match {
                 case char: String =>
                     if (char == "" || !string.contains(char)) {
@@ -280,7 +286,15 @@ object TypeExt {
                 case _ => string.length - 1
             }
 
-            string.substring(li, ri)
+            if (ri > li) {
+                string.substring(li, ri)
+            }
+            else if (ri == li) {
+                string.substring(li)
+            }
+            else {
+                string.substring(ri, li)
+            }
         }
 
         def bracketsWith(left: String, right: String): Boolean = {
@@ -304,6 +318,7 @@ object TypeExt {
             found
         }
 
+        def isJsRegex: Boolean = string.startsWith("/") && string.indexOf("/") < string.lastIndexOf("/") && "/[ig]*$".r.test(string)
 
         def ifEmpty(defaultValue: String): String = {
             if (string == "") {
@@ -429,6 +444,14 @@ object TypeExt {
             regex.findFirstIn(str).nonEmpty
         }
 
+        def matches(str: String): Boolean = {
+            //将最后一次匹配的结果保存到全局变量$m
+            regex.findFirstMatchIn(str) match {
+                case Some(m) => $m = m; true
+                case None => $m = null; false
+            }
+        }
+
         def exec(str: String): Array[String] = {
             regex.findFirstMatchIn(str) match {
                 case Some(m) =>
@@ -453,8 +476,39 @@ object TypeExt {
         def toText: String = {
             any match {
                 case str: String => str
+                case rex: Regex => rex.regex
                 case null => null
                 case _ => any.toString
+            }
+        }
+
+        def toRegex: Regex = {
+            any match {
+                case rex: Regex => rex
+                case pattern: Pattern => {
+                        if (pattern.flags() == 2) {
+                            "(?i)"
+                        }
+                        else {
+                            ""
+                        } + pattern.pattern()
+                    }.r
+                case str: String => {
+                    if (str.isJsRegex) {
+                        if (str.takeAfterLast("/")
+                            .toLowerCase()
+                            .contains("i")) {
+                            "(?i)" + str.takeBetween("/", "/")
+                        }
+                        else {
+                            str.takeBetween("/", "/")
+                        }
+                    }
+                    else {
+                        str
+                    }
+                }.r
+                case x => x.toString.r
             }
         }
 
@@ -471,6 +525,7 @@ object TypeExt {
                 case f: Float => Math.round(f)
                 case d: Double => Math.round(d)
                 case b: Boolean => if (b) 1 else 0
+                case bi: java.math.BigInteger => bi.longValue()
                 case _ => throw new ConvertFailureException("Can't recognize as or convert to Integer: " + any)
             }
         }
@@ -487,6 +542,7 @@ object TypeExt {
         def toDecimal: Double = {
             any match {
                 case str: String =>
+
                     Try(str.toDouble) match {
                         case Success(d) => d
                         case Failure(_) => throw new ConvertFailureException("Can't recognize as or convert to Decimal: " + any)
@@ -497,6 +553,7 @@ object TypeExt {
                 case f: Float => f
                 case d: Double => d
                 case b: Boolean => if (b) 1 else 0
+                case bd: java.math.BigDecimal => bd.doubleValue()
                 case _ => throw new ConvertFailureException("Can't recognize as or convert to Decimal: " + any)
             }
         }

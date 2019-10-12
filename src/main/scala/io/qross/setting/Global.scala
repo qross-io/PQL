@@ -11,7 +11,7 @@ object Global {
 
     def COMPANY_NAME: String = Configurations.getOrProperty("COMPANY_NAME", "company.name")
 
-    def CHARSET: String = Configurations.getOrProperty("CHARSET", "charset")
+    def CHARSET: String = Configurations.getOrProperty("CHARSET", "charset").ifNullOrEmpty("UTF-8")
 
     def USER_HOME: String = System.getProperty("user.dir").toDir
 

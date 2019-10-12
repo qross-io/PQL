@@ -23,6 +23,7 @@ class SourceFile(val path: String) {
         else {
             val file = new File(path.locate())
             if (file.exists()) {
+                //如果不加编码读取不了中文
                 Source.fromFile(file, "UTF-8").mkString
             }
             else {

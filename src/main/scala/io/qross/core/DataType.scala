@@ -7,45 +7,47 @@ import io.qross.pql.SQLParseException
 //case class DataType(className: String, typeName: String)
 
 object DataType extends Enumeration {
-    type DataType = Value
-    val INTEGER: DataType = Value("INTEGER")
-    val DECIMAL: DataType = Value("DECIMAL")
-    val TEXT: DataType = Value("TEXT")
-    val BLOB: DataType = Value("BLOB")
-    val NULL: DataType = Value("NULL")
-    val DATETIME: DataType = Value("DATETIME")
-    val BOOLEAN: DataType = Value("BOOLEAN")
-    val TABLE: DataType = Value("TABLE")
-    val ROW: DataType = Value("ROW")
-    val MAP: DataType = Value("MAP")
-    val LIST: DataType = Value("LIST")
-    val ARRAY: DataType = Value("ARRAY")
-    val OBJECT: DataType = Value("OBJECT")
-    val JSON: DataType = Value("JSON")
-    val AUTO: DataType = Value("AUTO")
-    val EXCEPTION: DataType = Value("EXCEPTION")
+    val INTEGER: DataType = DataType("INTEGER")
+    val DECIMAL: DataType = DataType("DECIMAL")
+    val TEXT: DataType = DataType("TEXT")
+    val BLOB: DataType = DataType("BLOB")
+    val NULL: DataType = DataType("NULL")
+    val DATETIME: DataType = DataType("DATETIME")
+    val BOOLEAN: DataType = DataType("BOOLEAN")
+    val TABLE: DataType = DataType("TABLE")
+    val ROW: DataType = DataType("ROW")
+    val MAP: DataType = DataType("MAP")
+    val LIST: DataType = DataType("LIST")
+    val ARRAY: DataType = DataType("ARRAY")
+    val OBJECT: DataType = DataType("OBJECT")
+    val JSON: DataType = DataType("JSON")
+    val EXCEPTION: DataType = DataType("EXCEPTION")
+    val REGEX: DataType = DataType("REGEX")
 
     //database data type name
     def ofTypeName(typeName: String, className: String = ""): DataType = {
-        typeName.toUpperCase match {
-            case "TEXT" | "VARCHAR" | "CHAR" | "NVARCHAR" | "TINYTEXT" | "SMALLTEXT" | "MEDIUMTEXT" | "LONGTEXT" | "STRING" | "NVARCHAR" | "NCHAR" => DataType.TEXT
-            case "INT" | "INTEGER" | "BIGINT" | "TINYINT" | "SMALLINT" | "MEDIUMINT" | "LONG" | "SHORT" => DataType.INTEGER
-            case "FLOAT" | "DOUBLE" | "DECIMAL" | "DOUBLE" | "REAL" | "NUMBER" => DataType.DECIMAL
-            case "DATE" | "TIME" | "DATETIME" | "TIMESTAMP" | "YEAR" => DataType.DATETIME
-            case "BIT" | "BOOL" | "BOOLEAN" => DataType.BOOLEAN
-            case "MAP" | "ROW" | "OBJECT" | "DATAROW" => DataType.ROW
-            case "TABLE" | "DATATABLE" => DataType.TABLE
-            case "NULL" | "EMPTY" => DataType.NULL
-            case "JSON" => DataType.JSON
-            case "BLOB" | "TINYBLOB" | "MEDIUMBLOB" | "VARBINARY" | "BINARY" => DataType.BLOB
-            case _ =>
-                if (className != "") {
-                    ofClassName(className)
-                }
-                else {
-                    DataType.NULL
-                }
-        }
+        {
+            typeName.toUpperCase match {
+                case "TEXT" | "VARCHAR" | "CHAR" | "NVARCHAR" | "TINYTEXT" | "SMALLTEXT" | "MEDIUMTEXT" | "LONGTEXT" | "STRING" | "NVARCHAR" | "NCHAR" => DataType.TEXT
+                case "INT" | "INTEGER" | "BIGINT" | "TINYINT" | "SMALLINT" | "MEDIUMINT" | "LONG" | "SHORT" => DataType.INTEGER
+                case "FLOAT" | "DOUBLE" | "DECIMAL" | "DOUBLE" | "REAL" | "NUMBER" => DataType.DECIMAL
+                case "DATE" | "TIME" | "DATETIME" | "TIMESTAMP" | "YEAR" => DataType.DATETIME
+                case "BIT" | "BOOL" | "BOOLEAN" => DataType.BOOLEAN
+                case "MAP" | "ROW" | "OBJECT" | "DATAROW" => DataType.ROW
+                case "TABLE" | "DATATABLE" => DataType.TABLE
+                case "NULL" | "EMPTY" => DataType.NULL
+                case "JSON" => DataType.JSON
+                case "BLOB" | "TINYBLOB" | "MEDIUMBLOB" | "VARBINARY" | "BINARY" => DataType.BLOB
+                case _ =>
+                    if (className != "") {
+                        ofClassName(className)
+                    }
+                    else {
+                        DataType.NULL
+                    }
+            }
+        }.of(typeName.toUpperCase())
+            .from(className)
     }
 
     //java type name
@@ -59,20 +61,23 @@ object DataType extends Enumeration {
             }
         }
 
-        name match {
-            case "string" => DataType.TEXT
-            case "bit" | "int" | "integer" | "long" | "timestamp" => DataType.INTEGER
-            case "float" | "double" | "bigdecimal"  => DataType.DECIMAL
-            case "boolean" => DataType.BOOLEAN
-            case "datetime" | "date" | "time" | "timestamp" => DataType.DATETIME
-            case "list" | "array" | "arraylist" => DataType.ARRAY
-            case "map" => DataType.MAP
-            case "datarow" => DataType.ROW
-            case "datatable" => DataType.TABLE
-            case "json" => DataType.JSON
-            case "[B" => DataType.BLOB
-            case _ => DataType.TEXT
-        }
+        {
+            name match {
+                case "string" => DataType.TEXT
+                case "bit" | "int" | "integer" | "long" | "timestamp" => DataType.INTEGER
+                case "float" | "double" | "bigdecimal" => DataType.DECIMAL
+                case "boolean" => DataType.BOOLEAN
+                case "datetime" | "date" | "time" | "timestamp" => DataType.DATETIME
+                case "list" | "array" | "arraylist" => DataType.ARRAY
+                case "map" => DataType.MAP
+                case "datarow" => DataType.ROW
+                case "datatable" => DataType.TABLE
+                case "regex" | "pattern" => DataType.REGEX
+                case "json" => DataType.JSON
+                case "[B" => DataType.BLOB
+                case _ => DataType.TEXT
+            }
+        }.from(className)
     }
 
     //data value
@@ -85,38 +90,53 @@ object DataType extends Enumeration {
         }
     }
 
-    def from(node: JsonNode): DataType = {
-        if (node.isIntegralNumber || node.isInt || node.isLong || node.isShort || node.isBigInteger) {
-            DataType.INTEGER
-        }
-        else if (node.isFloatingPointNumber || node.isDouble || node.isFloat || node.isBigDecimal) {
-            DataType.DECIMAL
-        }
-        else if (node.isBoolean) {
-            DataType.BOOLEAN
-        }
-        else if (node.isArray) {
-            DataType.ARRAY
-        }
-        else if (node.isBinary) {
-            DataType.BLOB
-        }
-        else if (node.isNull) {
-            DataType.NULL
-        }
-        else if (node.isObject) {
-            DataType.ROW
-        }
-        else {
-            DataType.TEXT
-        }
+    def ofJsonNodeType(node: JsonNode): DataType = {
+        {
+            if (node.isIntegralNumber || node.isInt || node.isLong || node.isShort || node.isBigInteger) {
+                DataType.INTEGER
+            }
+            else if (node.isFloatingPointNumber || node.isDouble || node.isFloat || node.isBigDecimal) {
+                DataType.DECIMAL
+            }
+            else if (node.isBoolean) {
+                DataType.BOOLEAN
+            }
+            else if (node.isArray) {
+                DataType.ARRAY
+            }
+            else if (node.isBinary) {
+                DataType.BLOB
+            }
+            else if (node.isNull) {
+                DataType.NULL
+            }
+            else if (node.isObject) {
+                DataType.ROW
+            }
+            else {
+                DataType.TEXT
+            }
+        }.from(node.getNodeType.name())
+    }
+}
+
+case class DataType(typeName: String) {
+    //来自数据库的原始类型, 如INT, VARCHAR等
+    var originalName: String = ""
+    //语言类类型, 如java.lang.String
+    var className: String = ""
+
+    def of(originalName: String): DataType = {
+        this.originalName = originalName
+        this
     }
 
-    implicit class ValueExt(value: Value) {
-        def needsQuotes: Boolean = {
-            value == DataType.TEXT || value == DataType.DATETIME
-        }
+    def from(className: String): DataType = {
+        this.className = className
+        this
     }
+
+    override def toString: String = typeName
 }
 
 /*

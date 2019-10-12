@@ -19,7 +19,8 @@ object GET {
 class GET(val selectSQL: String) {
 
     def execute(PQL: PQL): Unit = {
-        PQL.dh.buffer(new SELECT(this.selectSQL.$restore(PQL)).query(PQL).asTable)
+        //为了支持sharp表达式, 所以用buffer
+        PQL.dh.buffer(new SELECT(this.selectSQL).query(PQL).asTable)
         //dh.get($get.selectSQL.$restore(this))
     }
 }

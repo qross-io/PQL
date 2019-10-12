@@ -10,10 +10,15 @@ object CodeCounter {
     }
 
     def main(args: Array[String]): Unit = {
+
+        //val path = "c:/io.qross/"
+        val path = "f:/"
+
         Map[String, Int](
-            "PQL" -> count("c:/io.qross/PQL/src/main/scala/"),
-                "Keeper" -> count("c:/io.qross/Keeper/src/main/scala/"),
-                "Master" -> count("c:/io.qross/Master/src/main/")
+            "PQL" -> count(path + "PQL/src/main/scala/"),
+                "Keeper" -> count(path + "Keeper/src/main/scala/"),
+                "Master" -> count(path + "Master/src/main/"),
+                "Worker" -> count(path + "Worker/src/main/")
         ).foreach(k => {
             println(k._1 + ": " + k._2)
         })

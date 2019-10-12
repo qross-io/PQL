@@ -67,7 +67,8 @@ object END {
 }
 
 class END {
-    def execute(PQL: PQL, statement: Statement): Unit = {
-
+    def execute(PQL: PQL): Unit = {
+        //退出CALL FUNCTION
+        PQL.EXECUTING.pop()
     }
 }

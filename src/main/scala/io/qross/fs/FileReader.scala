@@ -29,23 +29,22 @@ case class FileReader(file: File) {
         this(new File(filePath.locate()))
     }
 
-    private val CHARSET = "utf-8"
     private var delimiter: String = ","
     //field, defaultValue
     private val fields = new mutable.LinkedHashMap[String, String]()
 
     if (!file.exists) throw new IOException("File not found: " + file.getPath)
-    private val extension = file.getPath.takeRightAfter(".")
+    private val extension = file.getPath.takeAfterLast(".")
     
     private val scanner: Scanner =
 //        if (".log".equalsIgnoreCase(extension) || ".txt".equalsIgnoreCase(extension) || ".csv".equalsIgnoreCase(extension)) {
 //
 //        }
         if (".gz".equalsIgnoreCase(extension)) {
-            new Scanner(new GZIPInputStream(new FileInputStream(this.file)), CHARSET)
+            new Scanner(new GZIPInputStream(new FileInputStream(this.file)), Global.CHARSET)
         }
         else {
-            new Scanner(this.file, CHARSET)
+            new Scanner(this.file, Global.CHARSET)
         }
 //        else if (".bz2".equalsIgnoreCase(extension)) {
 //            new Scanner(new BZip2CompressorInputStream(new FileInputStream(this.file)), CHARSET)
@@ -147,6 +146,28 @@ case class FileReader(file: File) {
             row
         }
     }
+
+    def readToEnd: String = {
+        var lines = new mutable.ArrayBuffer[String]()
+        while(this.hasNextLine) {
+            lines += this.readLine
+        }
+        this.close()
+        lines.mkString("\r\n")
+    }
+
+    def readToEnd(filter: String => Boolean): String = {
+        var lines = new mutable.ArrayBuffer[String]()
+        while(this.hasNextLine) {
+            val line = this.readLine
+            if (filter(line)) {
+                lines += line
+            }
+        }
+        this.close()
+        lines.mkString("\r\n")
+    }
+
     /*
     def readAsTable(fields: String*): DataTable = {
         val table = new DataTable()

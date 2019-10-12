@@ -9,22 +9,34 @@ import io.qross.pql.Solver._
 object SELECT {
 
     def parse(sentence: String, PQL: PQL): Unit = {
-        PQL.PARSING.head.addStatement(new Statement("SELECT", sentence))
+        PQL.PARSING.head.addStatement(new Statement("SELECT", sentence, new SELECT(sentence)))
     }
 }
 
 class SELECT(val sentence: String) {
 
-    val (select, links) =
-        if (sentence.contains(ARROW)) {
-            (sentence.takeBefore(ARROW), sentence.takeAfter(ARROW))
-        }
-        else {
-            (sentence, "")
+    def query(PQL: PQL, express: Boolean = false): DataCell = {
+
+        if (PQL.dh.debugging) {
+            println(sentence.take(100))
         }
 
-    def query(PQL: PQL): DataCell = {
-       val data = PQL.dh.executeDataTable(select.$restore(PQL)).toDataCell(DataType.TABLE)
+        val (select, links) =
+            if (sentence.contains(ARROW)) {
+                (sentence.takeBefore(ARROW), sentence.takeAfter(ARROW))
+            }
+            else {
+                (sentence, "")
+            }
+
+        val data = PQL.dh.executeDataTable({
+            if (express) {
+                select.$express(PQL).popStash(PQL)
+            }
+            else {
+                select.$restore(PQL)
+            }
+        }).toDataCell(DataType.TABLE)
         if (links != "") {
             new SHARP(links, data).execute(PQL)
         }

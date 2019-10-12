@@ -2,36 +2,69 @@ package io.qross.pql
 
 import io.qross.core.{DataCell, DataType}
 import io.qross.ext.TypeExt._
+import io.qross.net.Json
 import io.qross.net.Json._
-import io.qross.pql.Patterns.{$PARSE, ARROW}
+import io.qross.pql.Patterns.{$PARSE, $AS, ARROW}
 import io.qross.pql.Solver._
 
 object PARSE {
     //用于PQL表达式解析
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($PARSE.test(sentence)) {
-            PQL.PARSING.head.addStatement(new Statement("PARSE", sentence, new PARSE(sentence.takeAfter($PARSE).trim())))
-        }
-        else {
-            throw new SQLParseException("Incorrect PARSE sentence: " + sentence)
+        $PARSE.findFirstMatchIn(sentence) match {
+            case Some(m) => PQL.PARSING.head.addStatement(new Statement("PARSE", sentence, new PARSE(sentence)))
+            case None => throw new SQLParseException("Incorrect PARSE sentence: " + sentence)
         }
     }
 
 }
 
-class PARSE(val path: String) {
+class PARSE(var sentence: String) {
 
-    def parse(PQL: PQL): DataCell = {
+    //express 是否支持嵌入式查询语句, 即 ${{ }} v
+    def parse(PQL: PQL, express: Boolean = false): DataCell = {
 
-        val (select, links) =
-            if (path.contains(ARROW)) {
-                (path.takeBefore(ARROW), path.takeAfter(ARROW))
+        val (select, links) = {
+            if (sentence.contains(ARROW)) {
+                (sentence.takeBefore(ARROW), sentence.takeAfter(ARROW))
             }
             else {
-                (path, "")
+                (sentence, "")
             }
+        }
 
-        val data = DataCell(PQL.dh.parseTable(select), DataType.TABLE)
+        var dataType = ""
+        var path = {
+            if ($AS.test(select)) {
+                dataType = select.takeAfter($AS).trim()
+                select.takeBetween($PARSE, $AS).trim()
+            }
+            else {
+                select.takeAfter($PARSE).trim()
+            }
+        }
+
+        if (express) {
+            path = path.$express(PQL).$sharp(PQL).asText
+        }
+        else {
+            path = path.$eval(PQL).asText
+        }
+
+        val data = {
+            if (dataType != null) {
+                dataType.trim().toUpperCase match {
+                    case "TABLE" => PQL.dh.parseTable(path)
+                    case "ROW" | "MAP" | "OBJECT" => PQL.dh.parseRow(path)
+                    case "LIST" | "ARRAY" => PQL.dh.parseList(path)
+                    case "VALUE" | "SINGLE" => PQL.dh.parseValue(path)
+                    case _ => PQL.dh.parseTable(path)
+                }
+            }
+            else {
+                PQL.dh.parseTable(path)
+            }
+        }.toDataCell
+
         if (links != "") {
             new SHARP(links, data).execute(PQL)
         }
@@ -41,10 +74,24 @@ class PARSE(val path: String) {
     }
 
     def execute(PQL: PQL): Unit = {
-        val table = PQL.dh.parseTable(this.path.$eval(PQL).asText)
-        PQL.RESULT += table
-        PQL.ROWS = table.size
-        table.show()
+        val data = this.parse(PQL)
+        PQL.RESULT += data
+        PQL.ROWS = if (data.isTable) data.asTable.size else if (data.isJavaList) data.asJavaList.size() else 1
+
+        if (PQL.dh.debugging) {
+            if (data.isTable) {
+                data.asTable.show()
+            }
+            else if (data.isRow) {
+                println(data.asRow.toString)
+            }
+            else if(data.isJavaList) {
+                Json.serialize(data.asJavaList).print
+            }
+            else {
+                println(data.asText)
+            }
+        }
     }
 }
 

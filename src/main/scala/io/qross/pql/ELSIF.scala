@@ -6,7 +6,7 @@ object ELSIF {
     def parse(sentence: String, PQL: PQL): Unit = {
         val m = $ELSIF.matcher(sentence)
         if (m.find) {
-            val $elsif: Statement = new Statement("ELSIF", sentence, new ELSIF(m.group(2)))
+            val $elsif: Statement = new Statement("ELSIF", sentence, new ELSIF(m.group(1)))
             if (PQL.PARSING.isEmpty || (!(PQL.PARSING.head.caption == "IF") && !(PQL.PARSING.head.caption == "ELSIF"))) {
                 throw new SQLParseException("Can't find previous IF or ELSE IF clause: " + m.group(0))
             }
