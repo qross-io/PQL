@@ -2,6 +2,7 @@ package io.qross.pql
 
 import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.ext.NumberExt._
+import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.fql.Fragment
 import io.qross.pql.Patterns._
@@ -11,7 +12,7 @@ import io.qross.time.TimeSpan._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-object SHARP {
+object Sharp {
 
     /* ---------- 日期时间 DataTime ----------- */
 
@@ -636,6 +637,15 @@ object SHARP {
         }
     }
 
+    def TAKE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.take(arg.asInteger.toInt).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at TAKE. " + origin)
+        }
+    }
+
     def TAKE$LEFT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             data.asText.take(arg.asInteger.toInt).toDataCell(DataType.TEXT)
@@ -709,7 +719,7 @@ object SHARP {
         if (arg.valid) {
             if (arg.isJavaList) {
                 val list = arg.asList[Long]
-                data.asText.substring(list.head.toInt - 1).take(list.last.toInt - 1).toDataCell(DataType.TEXT)
+                data.asText.substring(list.head.toInt - 1).take(list.last.toInt).toDataCell(DataType.TEXT)
             }
             else {
                 data.asText.substring(arg.asInteger.toInt - 1).toDataCell(DataType.TEXT)
@@ -920,6 +930,14 @@ object SHARP {
         }
     }
 
+    def TRIM$LEFT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        data.asText.$trimLeft(if (arg.valid) arg.asText else "").toDataCell(DataType.TEXT)
+    }
+
+    def TRIM$RIGHT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        data.asText.$trimRight(if (arg.valid) arg.asText else "").toDataCell(DataType.TEXT)
+    }
+
     def CHAR$AT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid && arg.isInteger) {
             data.asText.charAt(arg.asInteger.toInt - 1).toDataCell(DataType.TEXT)
@@ -975,6 +993,24 @@ object SHARP {
 
     /* ---------- 数字 ---------- */
 
+    def IF$ZERO$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.asInteger == 0) arg else data
+        }
+        else {
+            throw SharpLinkArgumentException.occur("IF ZERO THEN", origin)
+        }
+    }
+
+    def IF$NOT$ZERO$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.asInteger != 0) arg else data
+        }
+        else {
+            throw SharpLinkArgumentException.occur("IF NOT ZERO THEN", origin)
+        }
+    }
+
     def FLOOR(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             data.asDecimal.floor(arg.asInteger.toInt).toDataCell(DataType.DECIMAL)
@@ -1007,6 +1043,42 @@ object SHARP {
     }
 
     /* ---------- 判断操作 IS ---------- */
+
+    def IF$EMPTY$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.asText == "") arg else data
+        }
+        else {
+            throw SharpLinkArgumentException.occur("IF EMPTY", origin)
+        }
+    }
+
+    def IF$NOT$EMPTY$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.asText != "") arg else data
+        }
+        else {
+            throw SharpLinkArgumentException.occur("IF NOT EMPTY", origin)
+        }
+    }
+
+    def IF$NULL$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.invalid) arg else data
+        }
+        else {
+            throw SharpLinkArgumentException.occur("IF NULL", origin)
+        }
+    }
+
+    def IF$NOT$NULL$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.valid) arg else data
+        }
+        else {
+            throw SharpLinkArgumentException.occur("IF NOT NULL", origin)
+        }
+    }
 
     def IS$NULL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         DataCell(data.isNull || data.invalid || data.asText.bracketsWith("#{", "}") || data.asText.bracketsWith("&{", "}"), DataType.BOOLEAN)
@@ -1279,7 +1351,7 @@ object SHARP {
             }
         }
         else {
-            throw SharpInapplicableLinkNameException.occur("SIZE", origin)
+            throw SharpInapplicableLinkNameException.occur("GET DATA", origin)
         }
     }
 
@@ -1343,7 +1415,25 @@ object SHARP {
             data.asList[String].delimit(arg.asText).toRow.toDataCell(DataType.ROW)
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at DELIMIT. " + origin)
+            throw SharpLinkArgumentException.occur(s"DELIMIT", origin)
+        }
+    }
+
+    def IN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            arg.asList.toSet.contains(data.value).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur(s"IN", origin)
+        }
+    }
+
+    def NOT$IN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(!arg.asList.toSet.contains(data.value), DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur(s"IN", origin)
         }
     }
 
@@ -1363,7 +1453,7 @@ object SHARP {
     }
 }
 
-class SHARP(private val expression: String, private var data: DataCell = DataCell.ERROR) {
+class Sharp(private val expression: String, private var data: DataCell = DataCell.ERROR) {
 
     //LET @NOW EXPRESS "DAY=1#DAY-1" FORMAT "yyyyMMdd" TO DECIMAL # ROUND # POW 2
 
@@ -1381,7 +1471,7 @@ class SHARP(private val expression: String, private var data: DataCell = DataCel
 
     def execute(PQL: PQL, quote: String = "'"): DataCell = {
 
-        val sentence =
+        var sentence =
             if (data.invalid) {
                 expression.takeAfter($LET).trim()
             }
@@ -1392,16 +1482,9 @@ class SHARP(private val expression: String, private var data: DataCell = DataCel
         val links = new mutable.ListBuffer[Link$Argument]()
 
         val matches = $LINK.findAllIn(sentence).toArray
-        for (i <- matches.indices) {
-            if (i + 1 == matches.length) {
-                links += new Link$Argument(matches(i), sentence.takeAfter(matches(i)))
-            }
-            else {
-                links += new Link$Argument(matches(i), sentence.takeBetween(matches(i), matches(i+1)))
-            }
-        }
 
         if (data.invalid) {
+            //必须是等号, 不能用replace方法, 否则变量内容会保存
             data = {
                 if (matches.nonEmpty) {
                     sentence.takeBefore(matches.head).$sharp(PQL)
@@ -1412,9 +1495,20 @@ class SHARP(private val expression: String, private var data: DataCell = DataCel
             }
         }
 
+        for (i <- matches.indices) {
+            if (i == matches.length - 1) {
+                links += new Link$Argument(matches(i), sentence.takeAfter(matches(i)))
+            }
+            else {
+                sentence = sentence.takeAfter(matches(i))
+                links += new Link$Argument(matches(i), sentence.takeBefore(matches(i+1)))
+            }
+        }
+
         for (i <- links.indices) {
             if (SHARP_LINKS.contains(links(i).linkName)) {
-                data =  Class.forName("io.qross.pql.SHARP")
+                //必须是等号, 不能用replace方法, 否则变量内容会保存
+                data = Class.forName("io.qross.pql.Sharp")
                             .getDeclaredMethod(links(i).linkName,
                                 Class.forName("io.qross.core.DataCell"),
                                 Class.forName("io.qross.core.DataCell"),
@@ -1426,7 +1520,7 @@ class SHARP(private val expression: String, private var data: DataCell = DataCel
                                         Patterns.MULTI$ARGS$LINKS(links(i).linkName).contains(links(i+1).linkName)) {
                                         val name = links(i+1).linkName
                                         links(i+1).linkName = "" //executed
-                                        Class.forName("io.qross.pql.SHARP")
+                                        Class.forName("io.qross.pql.Sharp")
                                             .getDeclaredMethod(name,
                                                 Class.forName("io.qross.core.DataCell"),
                                                 Class.forName("io.qross.core.DataCell"),

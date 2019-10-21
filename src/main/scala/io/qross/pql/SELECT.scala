@@ -37,8 +37,9 @@ class SELECT(val sentence: String) {
                 select.$restore(PQL)
             }
         }).toDataCell(DataType.TABLE)
+
         if (links != "") {
-            new SHARP(links, data).execute(PQL)
+            new Sharp(links, data).execute(PQL)
         }
         else {
             data

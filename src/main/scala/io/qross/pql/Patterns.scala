@@ -33,8 +33,10 @@ object Patterns {
     val $CONDITION: Regex = """(?i)^~condition\[(\d+)\]$""".r
 
     val STATEMENTS: Set[String] = Set[String]("IF", "ELSIF", "ELSE", "FOR", "WHILE", "CALL")
-    val NON_QUERY_CAPTIONS: Set[String] = Set[String]("INSERT", "UPDATE", "DELETE", "CREATE", "ALTER", "DROP", "TRUNCATE")
+    val NON_QUERY_CAPTIONS: Set[String] = Set[String]("INSERT", "UPDATE", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT")
     val $SELECT: Regex = """(?i)^SELECT\s""".r
+    val $DELETE: Regex = """(?i)^DELETE\s""".r
+    val $DELETE$FILE: Regex = """(?i)^DELETE\s+FILE\s""".r
     val $NON_QUERY: Regex = s"(?i)^(${NON_QUERY_CAPTIONS.mkString("|")})\\s".r
 
     val $FOR: Pattern = Pattern.compile("""^FOR\s+([\s\S]+?)\s+IN\s+([\s\S]+?)\s+LOOP""", Pattern.CASE_INSENSITIVE)
@@ -79,15 +81,14 @@ object Patterns {
     val $RESERVED: Regex = """^[_A-Za-z0-9\.]+$""".r
     val $CONSTANT: Regex = """^[A-Za-z_][A-Za-z0-9_]+$""".r
 
-    val SHARP_LINKS: Set[String] = SHARP.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z]$""".r.test(n)).toSet
+    val SHARP_LINKS: Set[String] = Sharp.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z]$""".r.test(n)).toSet
     val MULTI$ARGS$LINKS: Map[String, Set[String]] = Map[String, Set[String]](
         "SUBSTRING" -> Set[String]("TO"),
-        "TAKE$BETWEEN" -> Set[String]("AND"),
-        "BRACKETS$WITH" -> Set[String]("AND"),
         "SPLIT" -> Set[String]("AND"),
         "REPLACE" -> Set[String]("TO"),
         "REPLACE$FIRST" -> Set[String]("TO"),
         "REPLACE$ALL" -> Set[String]("TO"),
+        "SUBSTRING" -> Set[String]("TO"),
         "PLUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
         "MINUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"))
     val $DATETIME_UNITS: Regex = """^(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND|MILLI|MICRO|NONA)=(\d+)$""".r

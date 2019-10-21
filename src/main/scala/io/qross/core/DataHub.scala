@@ -813,6 +813,9 @@ class DataHub (private val defaultConnectionName: String = "") {
     
     def buffer(tableName: String): DataHub = {
         BUFFER += tableName -> DataTable.from(TABLE)
+
+        TO_BE_CLEAR = true
+
         this
     }
     
@@ -1110,7 +1113,7 @@ class DataHub (private val defaultConnectionName: String = "") {
     def executeJavaList(SQL: String, values: Any*): java.util.List[Any] = CURRENT.executeJavaList(SQL, values: _*)
     def executeHashMap(SQL: String, values: Any*): Map[String, Any] = CURRENT.executeHashMap(SQL, values: _*)
     def executeMapList(SQL: String, values: Any*): List[Map[String, Any]] = CURRENT.executeMapList(SQL, values: _*)
-    def executeSingleList(SQL: String, values: Any*): List[Any] = CURRENT.executeSingleList(SQL, values: _*)
+    def executeSingleList[T](SQL: String, values: Any*): List[Any] = CURRENT.executeSingleList[T](SQL, values: _*)
     def executeSingleValue(SQL: String, values: Any*): DataCell = CURRENT.executeSingleValue(SQL, values: _*)
     def executeExists(SQL: String, values: Any*): Boolean = CURRENT.executeExists(SQL, values: _*)
     def executeNonQuery(SQL: String, values: Any*): Int = CURRENT.executeNonQuery(SQL, values: _*)

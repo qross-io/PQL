@@ -66,13 +66,7 @@ object FilePath {
             var full = path.toPath
 
             if (!full.startsWith("/") && !full.contains(":/")) {
-//                if (Global.QROSS_SYSTEM == "WORKER") {
-//                    full = Global.QROSS_WORKER_HOME  + full
-//                }
-//                else {
-//                    full = Global.QROSS_KEEPER_HOME  + full
-//                }
-                full = Global.QROSS_WORKER_HOME + "temp/" + full
+                full = Global.QROSS_HOME + "temp/" + full
             }
 
             val parent = new File(full).getParentFile

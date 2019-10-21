@@ -316,12 +316,12 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
         list
     }
 
-    def executeSingleList(SQL: String, values: Any*): List[Any] = {
-        val list: mutable.ListBuffer[Any] = new mutable.ListBuffer[Any]()
+    def executeSingleList[T](SQL: String, values: Any*): List[T] = {
+        val list: mutable.ListBuffer[T] = new mutable.ListBuffer[T]()
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
                 while (rs.next) {
-                    list += rs.getObject(1)
+                    list += rs.getObject(1).asInstanceOf[T]
                 }
                 if (config.dbType != DBType.Presto) {
                     rs.getStatement.close()
@@ -337,7 +337,7 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
                 if (rs.next()) {
-                    data = DataCell(rs.getObject(1), DataType.ofTypeName(rs.getMetaData.getColumnTypeName(1)))
+                    data = DataCell(rs.getObject(1), DataType.ofTypeName(rs.getMetaData.getColumnTypeName(1), rs.getMetaData.getColumnClassName(1)))
                     if (config.dbType != DBType.Presto) {
                         rs.getStatement.close()
                     }
@@ -659,6 +659,12 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
         val map = this.executeDataMap[S, T](SQL, values: _*)
         this.close()
         map
+    }
+
+    def querySingleList[T](SQL: String, values: Any*): List[T] = {
+        val value: List[T] = this.executeSingleList[T](SQL, values: _*)
+        this.close()
+        value
     }
 
     def querySingleValue(SQL: String, values: Any*): DataCell = {

@@ -27,14 +27,6 @@ object VAR {
             case None => throw new SQLParseException("Incorrect VAR sentence: " + sentence)
         }
     }
-
-    def main(args: Array[String]): Unit = {
-        new VAR("""$m := 2,
-                  $n := SELECT $y, $z FROM table1 WHERE a In ($a, $b),
-                  $x := SELECT $y, $z FROM table2 WHERE a In ($a, $b),
-                  $y,
-                  $z := PARSE "/0";""").execute(null)
-    }
 }
 
 class VAR(val assignments: String) {
@@ -45,17 +37,17 @@ class VAR(val assignments: String) {
         val aps = new mutable.LinkedHashMap[String, String]()
 
         while (assigns != "") {
-            """(?i),\s*\$[a-z0-9_]$""".r.findFirstIn(assigns) match {
+            """(?i),\s*\$[a-z0-9_]+$""".r.findFirstIn(assigns) match {
                 case Some(v) =>
                     aps += v.takeAfter(",").trim() -> null
                     assigns = assigns.takeBeforeLast(v).trim()
                 case None =>
-                    """(?i),\s*\$[a-z0-9_]\s*:=""".r.findAllIn(assigns).toList.lastOption match  {
+                    """(?i),\s*\$[a-z0-9_]+\s*:=""".r.findAllIn(assigns).toList.lastOption match  {
                         case Some(v) =>
                             aps += v.takeBetween(",", ":=").trim() -> assigns.takeAfterLast(v).trim()
                             assigns = assigns.takeBeforeLast(v).trim()
                         case None =>
-                            throw new SQLParseException("Worng assignment sentence: " + assigns.substring(1))
+                            throw new SQLParseException("Wrong assignment sentence: " + assigns.substring(1))
                     }
             }
         }
@@ -72,11 +64,14 @@ class VAR(val assignments: String) {
                 else if ($PARSE.test(value)) {
                     new PARSE(value).parse(PQL)
                 }
+                else if ($DELETE.test(value)) {
+                    new DELETE(value).commit(PQL)
+                }
                 else if ($NON_QUERY.test(value)) {
                     DataCell(PQL.dh.executeNonQuery(value.$restore(PQL)), DataType.INTEGER)
                 }
                 else {
-                    new SHARP(value.$clean(PQL)).execute(PQL)
+                    new Sharp(value.$clean(PQL)).execute(PQL)
                 }
             })
         })

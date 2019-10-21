@@ -4,6 +4,7 @@ import java.io._
 
 import io.qross.fs.FilePath._
 import io.qross.core.DataTable
+import io.qross.setting.Global
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -33,7 +34,7 @@ case class FileWriter(filePath: String, deleteFileIfExists: Boolean = true) {
     if (filePath.toLowerCase().endsWith(".csv")) {
         fos.write(Array[Byte](0xEF.toByte, 0xBB.toByte, 0xBF.toByte))
     }
-    private val output: BufferedWriter = new BufferedWriter(new OutputStreamWriter(fos, "utf-8"))
+    private val output: BufferedWriter = new BufferedWriter(new OutputStreamWriter(fos, Global.CHARSET))
     //PrintWriter and FileWriter is advanced implements of OutputStreamWriter
     //private val output = new PrintWriter(file)
     //private val output = new BufferedWriter(new java.io.FileWriter(file))

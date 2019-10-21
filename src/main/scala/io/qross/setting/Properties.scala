@@ -23,8 +23,8 @@ object Properties {
 
     private val props = new java.util.Properties()
 
-    loadLocalFile(new File(BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath).getParentFile.getAbsolutePath.replace("\\", "/") + "/qross.properties")
     loadResourcesFile("/conf.properties")
+    loadLocalFile(new File(BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath).getParentFile.getAbsolutePath.replace("\\", "/") + "/qross.properties")
 
     checkReferrer("mysql.qross", "jdbc.default")
     checkReferrer("jdbc.default", "mysql.qross")

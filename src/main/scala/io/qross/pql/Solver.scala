@@ -367,6 +367,11 @@ object Solver {
         }
 
         //替换外部变量
+        def replaceArguments(args: (String, String)*): String = {
+            replaceArguments(args.toMap)
+        }
+
+        //替换外部变量
         def replaceArguments(map: Map[String, String]): String = {
             ARGUMENT
                 .findAllMatchIn(sentence)
@@ -500,7 +505,7 @@ object Solver {
                 .findAllMatchIn(sentence)
                 .foreach(m => {
                     //已在clean过程中, 不需要clean
-                    new SHARP(m.group(1)).execute(PQL).ifValid(data => {
+                    new Sharp(m.group(1)).execute(PQL).ifValid(data => {
                         sentence = sentence.replace(m.group(0), PQL.$stash(data))
                     })
                 })
@@ -543,6 +548,7 @@ object Solver {
                         caption match {
                             case "SELECT" => new SELECT(query).query(PQL, express = true)
                             case "PARSE" => new PARSE(query).parse(PQL, express = true)
+                            case "DELETE" => new DELETE(query).commit(PQL, express = true)
                             case _ => DataCell(PQL.dh.executeNonQuery(query), DataType.INTEGER)
                         }))
                 })
@@ -562,7 +568,7 @@ object Solver {
             }
             //SHARP表达式
             else if ($LINK.test(sentence)) {
-                new SHARP(sentence).execute(PQL, quote)
+                new Sharp(sentence).execute(PQL, quote)
             }
             //最短表达式
             else {

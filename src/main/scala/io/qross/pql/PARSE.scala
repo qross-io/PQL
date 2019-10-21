@@ -11,7 +11,7 @@ object PARSE {
     //用于PQL表达式解析
     def parse(sentence: String, PQL: PQL): Unit = {
         $PARSE.findFirstMatchIn(sentence) match {
-            case Some(m) => PQL.PARSING.head.addStatement(new Statement("PARSE", sentence, new PARSE(sentence)))
+            case Some(_) => PQL.PARSING.head.addStatement(new Statement("PARSE", sentence, new PARSE(sentence)))
             case None => throw new SQLParseException("Incorrect PARSE sentence: " + sentence)
         }
     }
@@ -66,7 +66,7 @@ class PARSE(var sentence: String) {
         }.toDataCell
 
         if (links != "") {
-            new SHARP(links, data).execute(PQL)
+            new Sharp(links, data).execute(PQL)
         }
         else {
             data

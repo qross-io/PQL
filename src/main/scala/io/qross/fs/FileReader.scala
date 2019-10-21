@@ -53,28 +53,48 @@ case class FileReader(file: File) {
 //            throw new IOException("Unrecognized Format: " + file.getPath)
 //        }
 
-    def delimit(delimiter: String): FileReader = {
+    def delimitedBy(delimiter: String): FileReader = {
         this.delimiter = delimiter
         this
     }
 
-    def jsonObjectLine: FileReader = {
+    //file is json
+    //readLineAsJsonObject
+    def asJsonLines: FileReader = {
         this.delimiter = "JSON$OBJECT$LINE"
         this
     }
 
     //field, defaultValue
-    def withDefaultValues(fields: (String, String)*): FileReader = {
+    def mapColumnsWithDefaultValues(fields: (String, String)*): FileReader = {
         this.fields ++= fields
         this
     }
 
-    def withColumns(fields: String*): FileReader = {
+    def mapColumns(fields: String*): FileReader = {
         fields.foreach(field => this.fields += field -> null)
         this
     }
 
-    def etl(handler: DataTable => Unit): FileReader = {
+    def readAsTable(handler: DataTable => Unit): FileReader = {
+
+        val table = new DataTable()
+        while (this.hasNextLine) {
+            table.addRow(this.parseLine)
+            if (table.count() >= 10000) {
+                handler(table)
+                table.clear()
+            }
+        }
+
+        if (table.count() > 0) {
+            handler(table)
+        }
+
+        this
+    }
+
+    def consumeAsTable(handler: DataTable => Unit): FileReader = {
 
         val cube = new Cube()
         val parallel = new Parallel()
@@ -110,7 +130,7 @@ case class FileReader(file: File) {
 
         this
     }
-        
+
     def hasNextLine: Boolean = scanner.hasNextLine
         
     def readLine: String = scanner.nextLine
@@ -167,22 +187,6 @@ case class FileReader(file: File) {
         this.close()
         lines.mkString("\r\n")
     }
-
-    /*
-    def readAsTable(fields: String*): DataTable = {
-        val table = new DataTable()
-        while (this.hasNextLine) {
-            val line = this.readLine.split(this.delimiter, -1)
-            val row = DataRow()
-            for (i <- 0 until fields.length) {
-                if (i < line.length) {
-                    row.set(fields(i), line(i))
-                }
-            }
-            table.addRow(row)
-        }
-        table
-    }*/
 
     //field, defaultValue
     def readAllAsTable(fields: String*): DataTable = {

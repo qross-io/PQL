@@ -125,6 +125,21 @@ object PQL {
             dh
         }
 
+        def setVariables(queryString: String): DataHub = {
+            PQL.set(queryString)
+            dh
+        }
+
+        def setVariable(variables: (String, Any)*): DataHub = {
+            PQL.set(variables: _*)
+            dh
+        }
+
+        def setVariable(variables: DataRow): DataHub = {
+            PQL.set(variables)
+            dh
+        }
+
         def run(): Any = {
             PQL.$run().$return
         }
@@ -366,12 +381,19 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 }
             }
 
-            breakable {
-                for (i <- EXECUTING.indices) {
-                    if (EXECUTING(i).containsVariable(name)) {
-                        cell = EXECUTING(i).getVariable(name)
-                        break
+            if (EXECUTING.nonEmpty) {
+                breakable {
+                    for (i <- EXECUTING.indices) {
+                        if (EXECUTING(i).containsVariable(name)) {
+                            cell = EXECUTING(i).getVariable(name)
+                            break
+                        }
                     }
+                }
+            }
+            else {
+                if (root.containsVariable(name)) {
+                    cell = root.getVariable(name)
                 }
             }
         }
@@ -400,7 +422,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     }
 
     def place(queries: java.util.Map[String, Array[String]]): PQL = {
-        this.SQL = this.SQL.replaceArguments(queries.asScala.map(kv => (kv._1, kv._2(0))).toMap)
+        this.SQL = this.SQL.replaceArguments(queries.asScala.map(kv => (kv._1, kv._2(0))).toMap[String, String])
         this
     }
 
@@ -417,8 +439,29 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     }
 
     //设置单个变量的值
-    def set(globalVariableName: String, value: Any): PQL = {
-        root.setVariable(globalVariableName, value)
+    def set(variableName: String, value: Any): PQL = {
+        root.setVariable(variableName, value)
+        this
+    }
+
+    //设置多个变量的值
+    def set(variables: (String, Any)*): PQL = {
+        variables.foreach(variable => {
+            root.setVariable(variable._1, variable._2)
+        })
+        this
+    }
+
+    //设置多个变量的值
+    def set(row: DataRow): PQL = {
+        root.variables.combine(row)
+        this
+    }
+
+    def set(queryString: String): PQL = {
+        if (queryString != "") {
+            set(queryString.$split().toRow)
+        }
         this
     }
 

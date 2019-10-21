@@ -46,7 +46,7 @@ class SET(var declare: String, val symbol: String, val expression: String) {
                         }
                     case None =>
                         for (i <- variables.indices) {
-                            PQL.updateVariable(variables(i), null)
+                            PQL.updateVariable(variables(i), DataCell.NULL)
                         }
                 }
 
@@ -78,6 +78,14 @@ class SET(var declare: String, val symbol: String, val expression: String) {
                 PQL.updateVariable(variables.head, data)
             }
         }
+        else if ($DELETE.test(expression)) {
+            if (variables.length == 1) {
+                PQL.updateVariable(variables.head, new DELETE(expression).commit(PQL))
+            }
+            else {
+                throw new SQLParseException("Only 1 variable name allowed when save affected rows of a DELETE sentence. " + expression)
+            }
+        }
         else if ($NON_QUERY.test(expression)) {
             //INSERT + UPDATE + DELETE
             if (variables.length == 1) {
@@ -90,7 +98,7 @@ class SET(var declare: String, val symbol: String, val expression: String) {
         else {
             //在SHARP表达式内部再恢复字符串和中间值
             if (variables.length == 1) {
-                PQL.updateVariable(variables.head, new SHARP(expression.$clean(PQL)).execute(PQL))
+                PQL.updateVariable(variables.head, new Sharp(expression.$clean(PQL)).execute(PQL))
             }
             else {
                 throw new SQLParseException("Only 1 variable name allowed when declare a new variable. " + expression)

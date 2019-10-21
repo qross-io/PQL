@@ -6,43 +6,37 @@
 
 DEBUG ON;
 
+--sum(task_logs_space_usage) as abc
+
+SELECT sum(task_logs_space_usage) as abc FROM qross_space_monitor where task_logs_space_usage > 0;
 
 
---SET $d := 1569814678642 TO DATETIME;
---SET $e := "2019-12-31 11:22:29";
+--VAR $TO_CLEAR := SELECT B.job_id, A.keep_x_task_records FROM qross_jobs A
+--                                        INNER JOIN (SELECT job_id, COUNT(0) AS task_amount FROM qross_tasks GROUP BY job_id) B ON A.id=B.job_id
+--                                            WHERE A.keep_x_task_records>0 AND B.task_amount>A.keep_x_task_records;
+--
+--FOR $job_id, $keep_tasks IN $TO_CLEAR LOOP
+--    SET $task_id := SELECT id AS task_id FROM qross_tasks WHERE job_id=$job_id ORDER BY id DESC LIMIT $keep_tasks,1;
+--    PRINT $task_id;
+--    VAR $count := 0;
+--    FOR $id, $create_time IN (SELECT id, create_time FROM qross_tasks WHERE job_id=$job_id AND id<=$task_id) LOOP
+--        PRINT $id;
+--        DELETE FILE @QROSS_HOME + "tasks/" + $job_id + "/" + ${ $create_time REPLACE "-" TO "" SUBSTRING 1 TO 9 } + "/" + $id + ".log";
+--        SET $count := $count + 1;
+--    END LOOP;
 
--- 循环部分,正式上线后注释掉-----------------------------------------------------------------------------------------------
+--    DELETE FROM qross_tasks_logs WHERE job_id=$job_id AND task_id<=$task_id;
+--    DELETE FROM qross_tasks_dependencies WHERE job_id=$job_id AND task_id<=$task_id;
+--    DELETE FROM qross_tasks_dags WHERE job_id=$job_id AND task_id<=$task_id;
+--    DELETE FROM qross_tasks_events WHERE job_id=$job_id AND task_id<=$task_id;
+--    DELETE FROM qross_tasks_records WHERE job_id=$job_id AND task_id<=$task_id;
+--    SET $rows := DELETE FROM qross_tasks WHERE job_id=$job_id AND id<=$task_id;
+--    INSERT INTO qross_jobs_clean_records (job_id, amount) VALUES ($job_id, $rows);
 
---SET $a := @NOW SET "DAY=1" SET "DAY-1" FORMAT "yyyy-MM-dd";
-
--- 循环部分,正式上线后注释掉-----------------------------------------------------------------------------------------------
-
-OPEN QROSS;
-
-var $s := "abc123def";
-
--- PRINT $s TAKE BEFORE /\d+/;
--- PRINT $s TAKE AFTER /\d+/;
--- PRINT $s TAKE BEFORE LAST /\d/;
--- PRINT $s TAKE AFTER LAST /\d/;
--- PRINT $s TAKE BETWEEN /\d/ AND /\d/;
--- PRINT $s REPLACE ALL /\d/ TO "Z";
--- PRINT $s MATCHES /\d/;
--- PRINT $s WHOLE MATCHES /^[a-z0-9]+$/i;
--- PRINT /z/ TEST $s;
--- RINT /z/ FIND FIRST IN $s;
-
--- print /abc/i TEST 'ABc';
+--    PRINT DEBUG $rows + ' tasks of job $job_id has been deleted.';
+--END LOOP;
 
 
-        print "dfavrABCDEsaBCfdcdf" TAKE AFTER LAST  'ABC';
-        print "dfavrAbCDEsaBCfdcdf" TAKE AFTER LAST  /abc/i;
-        print "dfavrAbCDEsaBCfdcdf" TAKE AFTER LAST  /a/i;
-        print '--------------------TAKE BEFORE LAST---------------------------------';
-
-        print "dfavrABCDEsaBCfdcdf" TAKE BEFORE LAST  'ABC';
-        print "dfavrAbCDEsaBCfdcdf" TAKE BEFORE LAST  /abc/i;
-        print "dfavrAbCDEsaBCfdcdf" TAKE BEFORE LAST  /a/i;
 
 --PRINT $e;
 

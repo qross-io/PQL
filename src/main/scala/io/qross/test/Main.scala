@@ -37,25 +37,6 @@ object Main {
 //        connectionProps.put("user", username)
 //        connectionProps.put("password", password)
 
-//        Class.forName("com.mysql.jdbc.Driver").newInstance()
-//        val conn = DriverManager.getConnection(url)
-//        val prest = conn.createStatement
-//        val rs = prest.executeQuery("select 18 from dual")
-//        rs.close()
-//        prest.close()
-//        conn.close()
-
-
-
-        //CronExp.parse("0 0 6-23/1 * * ? *").getNextTick(DateTime.now).print
-
-//        val array = new Array[Class[_]](2)
-//        array(0) = Class[DataCell]
-//        array(1) = Class[List[DataCell]]
-
-        //new PQL("SELECT switch_time FROM qross_jobs LIMIT 5 -> GET LAST ROW", DataHub.QROSS).run().print
-
-        //new DateTime("2019-09-29 14:00:00").earlier(DateTime.now).toDays.print
 
         PQL.openFile("/sql/test.sql").run()
 

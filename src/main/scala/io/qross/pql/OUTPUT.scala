@@ -26,6 +26,9 @@ class OUTPUT(val content: String) {
             else if ($PARSE.test(content)) {
                 new PARSE(content).parse(PQL).value
             }
+            else if ($DELETE.test(content)) {
+                new DELETE(content).commit(PQL)
+            }
             else if ($NON_QUERY.test(content)) {
                 PQL.AFFECTED = PQL.dh.executeNonQuery(content.$restore(PQL))
                 PQL.AFFECTED
@@ -35,7 +38,7 @@ class OUTPUT(val content: String) {
                 Json.fromText(content.$restore(PQL, "\"")).findNode("/")
             }
             else {
-                new SHARP(content.$clean(PQL)).execute(PQL).value
+                new Sharp(content.$clean(PQL)).execute(PQL).value
             }
         }
     }

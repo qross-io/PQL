@@ -87,7 +87,7 @@ class FOR(var variable: String, val collection: String) {
                     }
                     else {
                         //SHARP表达式
-                        new SHARP(collection.$clean(PQL)).execute(PQL).asTable
+                        new Sharp(collection.$clean(PQL)).execute(PQL).asTable
                     }
 
         if (variables.length <= table.columnCount) {

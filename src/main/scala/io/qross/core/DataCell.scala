@@ -405,6 +405,15 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         }
     }
 
+    def toOption[T]: Option[T] = {
+        if (this.valid) {
+            Some(this.value.asInstanceOf[T])
+        }
+        else {
+            None
+        }
+    }
+
     def >(implicit other: DataCell): Boolean = {
         if (this.isInteger || this.isDecimal || other.isInteger || other.isDecimal) {
             this.asDecimal > other.asDecimal

@@ -17,9 +17,11 @@ object Global {
 
     def QROSS_HOME: String = Configurations.getOrProperty("QROSS_HOME", "qross.home").ifNullOrEmpty(USER_HOME).toDir.replace("%USER_HOME", USER_HOME).replace("//", "/")
 
-    def QROSS_WORKER_HOME: String = Configurations.getOrProperty("QROSS_WORKER_HOME", "qross.worker.home").ifNullOrEmpty(QROSS_HOME + "/worker/").toDir.replace("%QROSS_HOME", QROSS_HOME).replace("%USER_HOME", USER_HOME).replace("//", "/")
+    //def QROSS_WORKER_HOME: String = Configurations.getOrProperty("QROSS_WORKER_HOME", "qross.worker.home").ifNullOrEmpty(QROSS_HOME + "/worker/").toDir.replace("%QROSS_HOME", QROSS_HOME).replace("%USER_HOME", USER_HOME).replace("//", "/")
 
-    def QROSS_KEEPER_HOME: String = Configurations.getOrProperty("QROSS_KEEPER_HOME", "qross.keeper.home").ifNullOrEmpty(QROSS_HOME + "/keeper/").toDir.replace("%QROSS_HOME", QROSS_HOME).replace("%USER_HOME", USER_HOME).replace("//", "/")
+    //def QROSS_KEEPER_HOME: String = Configurations.getOrProperty("QROSS_KEEPER_HOME", "qross.keeper.home").ifNullOrEmpty(QROSS_HOME + "/keeper/").toDir.replace("%QROSS_HOME", QROSS_HOME).replace("%USER_HOME", USER_HOME).replace("//", "/")
+
+    def PQL: String = Global.JAVA_BIN_HOME + s"java -jar ${Global.QROSS_HOME}qross-worker-${Global.QROSS_VERSION}.jar "
 
     def JAVA_BIN_HOME: String = Configurations.getOrProperty("JAVA_BIN_HOME", "java.bin.home")
 
@@ -59,6 +61,20 @@ object Global {
 
     def KEEPER_USER_GROUP: String = Configurations.get("KEEPER_USER_GROUP")
 
+    def EXCEL_TEMPLATES_PATH: String = Configurations.getOrProperty("EXCEL_TEMPLATES_PATH", "excel.templates.path")
+
+    def EMAIL_TEMPLATES_PATH: String = Configurations.getOrProperty("EMAIL_TEMPLATES_PATH", "email.templates.path")
+
+    def KERBEROS_AUTH: Boolean = Configurations.getOrProperty("KERBEROS_AUTH", "kerberos.auth").toBoolean(false)
+
+    def KRB_USER_PRINCIPAL: String = Configurations.getOrProperty("KRB_USER_PRINCIPAL", "krb.user.principal")
+
+    def KRB_KEYTAB_PATH: String = Configurations.getOrProperty("KRB_KEYTAB_PATH", "krb.keytab.path")
+
+    def KRB_KRB5CONF_PATH: String = Configurations.getOrProperty("KRB_KRB5CONF_PATH", "krb.krb5conf.path")
+
+    //Keeper专用
+
     def API_ON_TASK_NEW: String = Configurations.get("API_ON_TASK_NEW")
 
     def API_ON_TASK_CHECKING_LIMIT: String = Configurations.get("API_ON_TASK_CHECKING_LIMIT")
@@ -75,21 +91,11 @@ object Global {
 
     def CLEAN_TASK_RECORDS_FREQUENCY: String = Configurations.getOrProperty("CLEAN_TASK_RECORDS_FREQUENCY", "clean.task.records.frequency")
 
+    def CLEAN_TASK_LOGS_FREQUENCY: String = Configurations.getOrProperty("CLEAN_TASK_LOGS_FREQUENCY", "clean.task.logs.frequency")
+
     def BEATS_MAILING_FREQUENCY: String = Configurations.getOrProperty("BEATS_MAILING_FREQUENCY", "beats.mailing.frequency")
 
     def DISK_MONITOR_FREQUENCY: String = Configurations.getOrProperty("DISK_MONITOR_FREQUENCY", "disk.monitor.frequency")
-
-    def EXCEL_TEMPLATES_PATH: String = Configurations.getOrProperty("EXCEL_TEMPLATES_PATH", "excel.templates.path")
-
-    def EMAIL_TEMPLATES_PATH: String = Configurations.getOrProperty("EMAIL_TEMPLATES_PATH", "email.templates.path")
-
-    def KERBEROS_AUTH: Boolean = Configurations.getOrProperty("KERBEROS_AUTH", "kerberos.auth").toBoolean(false)
-
-    def KRB_USER_PRINCIPAL: String = Configurations.getOrProperty("KRB_USER_PRINCIPAL", "krb.user.principal")
-
-    def KRB_KEYTAB_PATH: String = Configurations.getOrProperty("KRB_KEYTAB_PATH", "krb.keytab.path")
-
-    def KRB_KRB5CONF_PATH: String = Configurations.getOrProperty("KRB_KRB5CONF_PATH", "krb.krb5conf.path")
 
     def KEEPER_HTTP_ADDRESS: String = {
         var address = Configurations.getOrProperty("KEEPER_HTTP_ADDRESS", "keeper.http.address")

@@ -42,8 +42,8 @@ object TypeExt {
                     .replace("%USER_HOME", Global.USER_HOME)
                     .replace("%JAVA_BIN_HOME", Global.JAVA_BIN_HOME)
                     .replace("%QROSS_HOME", Global.QROSS_HOME)
-                    .replace("%QROSS_KEEPER_HOME", Global.QROSS_KEEPER_HOME)
-                    .replace("%QROSS_WORKER_HOME", Global.QROSS_WORKER_HOME)
+//                    .replace("%QROSS_KEEPER_HOME", Global.QROSS_KEEPER_HOME)
+//                    .replace("%QROSS_WORKER_HOME", Global.QROSS_WORKER_HOME)
                     .replace("//", "/")
         }
 
@@ -185,14 +185,30 @@ object TypeExt {
             }
         }
 
-        def $trim(prefix: String, suffix: String = "NULL"): String = {
+        def $trim(prefix: String, suffix: String = ""): String = {
             string = string.trim
             if (string.startsWith(prefix)) {
                 string = string.drop(prefix.length)
             }
-            val sfx = if (suffix == "NULL") prefix else suffix
+            val sfx = if (suffix == "") prefix else suffix
             if (string.endsWith(sfx)) {
                 string = string.dropRight(sfx.length)
+            }
+            string
+        }
+
+        def $trimLeft(prefix: String = ""): String = {
+            string = string.drop("^\\s*".r.findFirstIn(string).getOrElse("").length)
+            if (prefix != "" && string.startsWith(prefix)) {
+                string = string.drop(prefix.length)
+            }
+            string
+        }
+
+        def $trimRight(suffix: String = ""): String = {
+            string = string.dropRight("\\s*$".r.findFirstIn(string).getOrElse("").length)
+            if (suffix != "" && string.endsWith(suffix)) {
+                string = string.dropRight(suffix.length)
             }
             string
         }
