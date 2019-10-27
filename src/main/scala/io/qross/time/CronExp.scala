@@ -475,10 +475,27 @@ case class CronExp(expression: String = "0 * * * * ? *") {
             }
         }
     }
-    
-    private def resetMatchFrom(chronoName: String): Unit = {
+
+    private def resetPreviousMatchFrom(chronoName: String): Unit = {
         chronoName match  {
             case YEAR =>
+                resetMatchFrom(MONTH)
+            case MONTH =>
+                resetMatchFrom(DAY)
+            case DAY | WEEK =>
+                    resetMatchFrom(HOUR)
+            case HOUR =>
+                resetMatchFrom(MINUTE)
+            case MINUTE =>
+                resetMatchFrom(SECOND)
+            case SECOND => //没有上一级, 所以不可能有这种情况
+            case _ =>
+
+        }
+    }
+    private def resetMatchFrom(chronoName: String): Unit = {
+        chronoName match  {
+            case YEAR => //不可能有这种情况
             case MONTH =>
                     this.nextTick = this.nextTick.set(ChronoField.MONTH_OF_YEAR, if (this.month.contains(ASTERISK)) 1 else this.everyMatch(MONTH).head)
                     resetMatchFrom(DAY)
@@ -586,7 +603,7 @@ case class CronExp(expression: String = "0 * * * * ? *") {
                 else {
                     matched = true
                     this.nextTick = this.nextTick.set(chronoField, next)
-                    //resetMatchFrom(chronoName)
+                    resetPreviousMatchFrom(chronoName)
                 }
             }
             //found

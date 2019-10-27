@@ -15,13 +15,9 @@ object SELECT {
 
 class SELECT(val sentence: String) {
 
-    def query(PQL: PQL, express: Boolean = false): DataCell = {
+    def select(PQL: PQL, express: Boolean = false): DataCell = {
 
-        if (PQL.dh.debugging) {
-            println(sentence.take(100))
-        }
-
-        val (select, links) =
+        val (_select, links) =
             if (sentence.contains(ARROW)) {
                 (sentence.takeBefore(ARROW), sentence.takeAfter(ARROW))
             }
@@ -31,12 +27,18 @@ class SELECT(val sentence: String) {
 
         val data = PQL.dh.executeDataTable({
             if (express) {
-                select.$express(PQL).popStash(PQL)
+                _select.$express(PQL).popStash(PQL)
             }
             else {
-                select.$restore(PQL)
+                _select.$restore(PQL)
             }
         }).toDataCell(DataType.TABLE)
+
+        PQL.ROWS = data.dataType match {
+            case DataType.TABLE => data.asTable.size
+            case DataType.ARRAY | DataType.LIST => data.asList.size
+            case _ => 1
+        }
 
         if (links != "") {
             new Sharp(links, data).execute(PQL)
@@ -47,17 +49,14 @@ class SELECT(val sentence: String) {
     }
 
     def execute(PQL: PQL): Unit = {
-        val result = this.query(PQL)
+
+        val result = this.select(PQL)
+
         PQL.RESULT += result.value
-        PQL.ROWS = result.dataType match {
-            case DataType.TABLE => result.asTable.size
-            case DataType.ARRAY | DataType.LIST => result.asList.size
-            case _ => 1
-        }
 
         if (PQL.dh.debugging) {
             Output.writeLine("                                                                        ")
-            Output.writeLine(sentence.popStash(PQL).take(100))
+            Output.writeLine(sentence.popStash(PQL))
             result.asTable.show()
         }
     }

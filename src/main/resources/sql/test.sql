@@ -6,9 +6,27 @@
 
 DEBUG ON;
 
---sum(task_logs_space_usage) as abc
+VAR $a := SELECT * FROM td;
+IF $a IS NOT EMPTY THEN
+    OUTPUT $a TO HTML TABLE;
+END IF;
 
-SELECT sum(task_logs_space_usage) as abc FROM qross_space_monitor where task_logs_space_usage > 0;
+--SEND MAIL/EMAIL "hello world"
+--    (SET) CONTENT ""
+--    FROM DEFAULT TEMPLATE #
+--    FROM TEMPLATE "/templates/example.html"
+--    WITH DEFAULT SIGNATURE
+--    WITH SIGNATURE "/templates/signature.html"
+--    PLACE "hello" AT "${placeholder}"
+--    PLACE DATA "a=1&b=2&c=d"
+--    ATTACH "file.excel"
+--    TO "wuzheng"
+--    CC ""
+--    BCC "";
+
+    --FROM TEMPLATE abc.html
+    --FROM DEFAULT TEMPLATE
+
 
 
 --VAR $TO_CLEAR := SELECT B.job_id, A.keep_x_task_records FROM qross_jobs A

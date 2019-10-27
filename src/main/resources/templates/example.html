@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<%
+DEBUG ON;
+OPEN DEFAULT;
+%>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>Hello World &nbsp; <%=@NOW FORMAT "yyyy-MM-dd" %></h1>
+#{a}
+<hr/>
+<% =SELECT * FROM tc -> TO HTML TABLE %>
+<hr/>
+<%
+OUTPUT # SELECT * FROM td -> TO HTML TABLE;
+%>
+<br/>
+#{b}
+<br/>
+&{c}
+</body>
+</html>

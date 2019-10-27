@@ -1,24 +1,31 @@
 package io.qross.pql
 
-import io.qross.core.DataRow
 import io.qross.setting.Properties
 import io.qross.ext.TypeExt._
-import io.qross.pql.Patterns.{$RESERVED, $SAVE$AS, BLANKS}
+import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 import io.qross.fs.FilePath._
 import io.qross.fs.TextFile._
 
-import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 
 /*
 SAVE AS connectionName;
 SAVE AS connectionName USE databaseName;
 SAVE AS DEFAULT;
+SAVE AS QROSS;
+
 SAVE AS CACHE;
 SAVE AS CACHE TABLE tableName;
+SAVE AS CACHE TABLE tableName
+    PRIMARY KEY id;
+
 SAVE AS TEMP;
 SAVE AS TEMP TABLE tableName;
+SAVE AS TEMP TABLE tableName
+    PRIMARY KEY id
+    UNIQUE KEY (a, b, c)
+    KEY (c,d);
 
 SAVE AS (NEW) CSV FILE "file.csv"
     WITHOUT HEADER
@@ -30,6 +37,8 @@ SAVE AS TXT FILE "file.log"
     DELIMITED BY ",";
 
 SAVE AS NEW EXCEL "abc.xlxs";
+
+
 */
 
 object SAVE {
@@ -45,18 +54,27 @@ object SAVE {
     val WITH$HEADER: Regex = """(?i)\sWITH\s+HEADER\s""".r
     val WITH$HEADER$: Regex = """(?i)\sWITH\s+HEADER$""".r
     val DELIMITED$BY: Regex = """(?i)\sDELIMITED\s+BY\s""".r
+    val EXCEL: Regex = """(?i)EXCEL\s""".r
+    val FROM$TEMPLATE: Regex = """(?i)\sFROM\s+TEMPLATE\s""".r
+    val FROM$DEFAULT$TEMPLATE: Regex = """(?i)\sFROM\s+DEFAULT\s+TEMPLATE$""".r
 
     def parse(sentence: String, PQL: PQL): Unit = {
         if ($SAVE$AS.test(sentence)) {
             PQL.PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE(sentence.takeAfter($SAVE$AS))))
-            //            if (m.group(2).trim == ":") {
-            //                parseStatement(sentence.takeAfter(":").trim)
-            //            }
         }
         else {
             throw new SQLParseException("Incorrect SAVE sentence: " + sentence)
         }
     }
+
+    val LINKS: Map[String, Set[String]] =
+        Map[String, Set[String]](
+            "CACHE" -> Set[String]("TABLE", "PRIMARY$KEY", "PRIMARY"),
+            "TEMP" -> Set[String]("TABLE", "PRIMARY$KEY", "PRIMARY", "UNIQUE$KEY", "UNIQUE", "KEY"),
+            "TEXT" -> Set[String]("FILE", "WITH$HEADER", "DELIMITED$BY"),
+            "CSV" -> Set[String]("FILE", "WITH$HEADER"),
+            "JSON" -> Set[String]("FILE")
+        )
 }
 
 class SAVE(var sentence: String) {
@@ -73,6 +91,39 @@ class SAVE(var sentence: String) {
             }
         }
 
+        sentence = sentence.$restore(PQL)
+//
+//        var initial = sentence
+//        $BLANK.findFirstIn(sentence) match {
+//            case Some(blank) =>
+//                initial = sentence.takeBefore(blank)
+//                sentence = sentence.takeAfter(blank)
+//            case None => sentence = ""
+//        }
+//
+//        initial.trim.toUpperCase match {
+//            case "CACHE" =>
+//                if (sentence == "") {
+//                    PQL.dh.saveAsCache()
+//                }
+//                else {
+//
+//                }
+//            case "TEMP" =>
+//                if (sentence == "") {
+//
+//                }
+//                else {
+//
+//                }
+//            case "EXCEL" =>
+//            case "CSV" =>
+//            case "TEXT" | "TXT" =>
+//            case "DEFAULT" =>
+//            case "QROSS" =>
+//            case _ =>
+//        }
+
         val sections = sentence.split(BLANKS)
 
         sections(0).toUpperCase() match {
@@ -80,35 +131,59 @@ class SAVE(var sentence: String) {
                 if (sections.length == 1) {
                     PQL.dh.saveAsCache()
                 }
-                else {
+                else if (sections.length == 3) {
                     if (sections(1).equalsIgnoreCase("TABLE")) {
-                        if (sections.length > 2) {
-                            PQL.dh.cache(sections(2).$eval(PQL).asText)
-                        }
-                        else {
-                            throw new SQLParseException("Empty CACHE TABLE name at SAVE AS.")
-                        }
+                        PQL.dh.cache(sections(2))
                     }
                     else {
-                        throw new SQLParseException("Wrong CACHE type: " + sections(1))
+                        throw new SQLParseException("Wrong type name at SAVE AS CACHE: " + sections(1))
                     }
+                }
+                else if (sections.length > 3) {
+                    PRIMARY$KEY.findFirstIn(sentence) match {
+                        case Some(primaryKey) =>
+                            val key = sentence.takeAfter(primaryKey).trim()
+                            if (!key.contains(",") || !$BLANK.test(key)) {
+                                PQL.dh.cache(sections(2), key)
+                            }
+                            else {
+                                throw new SQLParseException("Wrong primary key name at SAVE AS CACHE TABLE: " + key)
+                            }
+                        case None => throw new SQLParseException("Unrecognized sentence at SAVE AS CACHE TABLE: " + sentence.takeAfter(sections(2)))
+                    }
+                }
+                else {
+                    throw new SQLParseException("Empty CACHE TABLE name at SAVE AS.")
                 }
             case "TEMP" =>
                 if (sections.length == 1) {
                     PQL.dh.saveAsTemp()
                 }
-                else {
+                else if (sections.length == 3) {
                     if (sections(1).equalsIgnoreCase("TABLE")) {
-                        if (sections.length > 2) {
+                        if (sections(1).equalsIgnoreCase("TABLE")) {
                             PQL.dh.temp(sections(2).$eval(PQL).asText)
                         }
                         else {
-                            throw new SQLParseException("Empty TEMP TABLE name at SAVE AS.")
+                            throw new SQLParseException("Wrong TEMP type at SAVE AS: " + sections(1))
                         }
                     }
-                    else {
-                        throw new SQLParseException("Wrong TEMP type at SAVE AS: " + sections(1))
+                }
+                else if (sections.length > 3) {
+                    sentence = sentence.takeAfter(sections(2))
+                    PRIMARY$KEY.findFirstIn(sentence) match {
+                        case Some(primaryKey) =>
+                            var key = sentence.takeAfter(PRIMARY$KEY).trim()
+                            $BLANK.findFirstIn(key) match {
+                                case Some(blank) => key = key.takeBefore(blank)
+                                case None =>
+                            }
+                            //sentence = sentence.takeBefore()
+                        case None =>
                     }
+                }
+                else {
+                    throw new SQLParseException("Empty TEMP TABLE name at SAVE AS.")
                 }
             case "CSV" =>
                 if (sections.length > 2 && sections(1).equalsIgnoreCase("FILE")) {
@@ -154,7 +229,7 @@ class SAVE(var sentence: String) {
                     }
                 }
                 else {
-                    throw new SQLParseException("Incorrect sentence SAVE AS CSV FILE or miss argument")
+                    throw new SQLParseException("Incorrect sentence SAVE AS CSV FILE or miss arguments.")
                 }
             case "TXT" | "TEXT" =>
                 if (sections.length > 2 && sections(1).equalsIgnoreCase("FILE")) {
@@ -236,7 +311,7 @@ class SAVE(var sentence: String) {
                     }
                 }
                 else {
-                    throw new SQLParseException("Incorrect sentence SAVE AS TXT FILE or miss argument")
+                    throw new SQLParseException("Incorrect sentence SAVE AS TXT FILE or miss arguments.")
                 }
             case "JSON" =>
                 if (sections.length > 2 && sections(1).equalsIgnoreCase("FILE")) {
@@ -261,35 +336,42 @@ class SAVE(var sentence: String) {
                     }
                 }
                 else {
-                    throw new SQLParseException("Incorrect sentence SAVE AS JSON FILE or miss argument")
+                    throw new SQLParseException("Incorrect sentence SAVE AS JSON FILE or miss arguments.")
                 }
             case "EXCEL" =>
+                if (sections.length >= 2) {
+                    var template = ""
+                    if (SAVE.FROM$TEMPLATE.test(sentence)) {
+                        template = sentence.takeAfter(SAVE.FROM$TEMPLATE).trim()
+                    }
+                    else if (SAVE.FROM$DEFAULT$TEMPLATE.test(sentence)) {
 
-            case _ =>
-                if (sections(0).equalsIgnoreCase("DEFAULT")) {
-                    PQL.dh.saveAsDefault()
-                }
-                else if (sections(0).equalsIgnoreCase("QROSS")) {
-                    PQL.dh.saveAsQross()
+                    }
                 }
                 else {
-                    val connectionName =
-                        if ($RESERVED.test(sections(0))) {
-                            if (!Properties.contains(sections(0))) {
-                                throw new SQLExecuteException("Wrong connection name: " + sections(0))
-                            }
-                            sections(0)
+                    throw new SQLParseException("Incorrect sentence SAVE AS EXCEL or miss arguments.")
+                }
+            case "DEFAULT" =>
+                PQL.dh.saveAsDefault()
+            case "QROSS" =>
+                PQL.dh.saveAsQross()
+            case _ =>
+                val connectionName =
+                    if ($RESERVED.test(sections(0))) {
+                        if (!Properties.contains(sections(0))) {
+                            throw new SQLExecuteException("Wrong connection name: " + sections(0))
                         }
-                        else {
-                            sections(0).$eval(PQL).asText
-                        }
-
-                    if (sections.length > 2 && sections(1).equalsIgnoreCase("USE")) {
-                        PQL.dh.saveAs(connectionName, sections(2).$eval(PQL).asText)
+                        sections(0)
                     }
                     else {
-                        PQL.dh.saveAs(connectionName)
+                        sections(0).$eval(PQL).asText
                     }
+
+                if (sections.length > 2 && sections(1).equalsIgnoreCase("USE")) {
+                    PQL.dh.saveAs(connectionName, sections(2).$eval(PQL).asText)
+                }
+                else {
+                    PQL.dh.saveAs(connectionName)
                 }
         }
     }

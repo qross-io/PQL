@@ -106,7 +106,7 @@ object Email {
 
         def placeEmailContentWithRow(i: Int = 0): DataHub = {
             dh.getData.getRow(i) match {
-                case Some(row) => EMAIL.placeDataWithRow(row)
+                case Some(row) => EMAIL.placeData(row)
                 case None =>
             }
 
@@ -115,7 +115,7 @@ object Email {
 
         def placeEmailContentWithFirstRow(): DataHub = {
             dh.getData.firstRow match {
-                case Some(row) => EMAIL.placeDataWithRow(row)
+                case Some(row) => EMAIL.placeData(row)
                 case _ =>
             }
 
@@ -166,6 +166,7 @@ class Email(private var title: String) {
     private var ccReceivers = new mutable.HashMap[String, String]()
     private var bccReceivers = new mutable.HashMap[String, String]()
     private var content: String = ""
+    private var placement: String = "NOTHING"
 
     def fromTemplate(template: String): Email = {
 
@@ -191,12 +192,12 @@ class Email(private var title: String) {
     }
 
     def fromDefaultTemplate(): Email = {
-        fromTemplate(Global.EMAIL_DEFAULT_TEMPLATE)
+        fromTemplate(Global.EMAIL_DEFAULT_TEMPLATE.toPath)
         this
     }
 
     def withDefaultSignature(): Email = {
-        withSignature(Global.EMAIL_DEFAULT_SIGNATURE)
+        withSignature(Global.EMAIL_DEFAULT_SIGNATURE.toPath)
     }
 
     def withSignature(signature: String): Email = {
@@ -219,8 +220,11 @@ class Email(private var title: String) {
             if (this.content.contains("#{signature}")) {
                 this.content.replace("#{signature}", code)
             }
+            else if (this.content.contains("&{signature}")) {
+                this.content.replace("&{signature}", code)
+            }
             else if ("""(?i)</body>""".r.test(this.content)) {
-                this.content.replaceAll("""</body>""", code)
+                this.content.replaceAll("""</body>""", code + "</body>")
             }
             else {
                 this.content + code
@@ -240,20 +244,25 @@ class Email(private var title: String) {
         this
     }
 
+    def place(replacement: String): Email = {
+        this.placement = replacement
+        this
+    }
+
+    def at(placeHolder: String): Email = {
+        this.placeData(placeHolder, this.placement)
+    }
+
     def placeData(placeHolder: String, replacement: String): Email = {
         this.content = this.content.replace(placeHolder, replacement)
         this
     }
 
     def placeData(queryString: String): Email = {
-        queryString.$split()
-            .foreach(k => {
-                this.content = this.content.replace(k._1, k._1)
-            })
-        this
+        placeData(queryString.$split().toRow)
     }
 
-    def placeDataWithRow(row: DataRow): Email = {
+    def placeData(row: DataRow): Email = {
         this.content = this.content.replaceArguments(row)
         this
     }
@@ -310,14 +319,22 @@ class Email(private var title: String) {
         this
     }
 
-    def send(): Unit = {
+    def send(): String = {
         if (toReceivers.nonEmpty || ccReceivers.nonEmpty || bccReceivers.nonEmpty) {
-            this.content = PQL.runEmbedded(this.content).toString
+            if (this.content != "") {
+                this.content = PQL.openEmbedded(this.content).run().toString
+            }
             transfer()
+        }
+        else {
+            "No receivers."
         }
     }
     
-    def transfer(): Unit = {
+    def transfer(): String = {
+
+        val result = new mutable.ArrayBuffer[String]()
+
         val props = new java.util.Properties()
         props.setProperty("mail.transport.protocol", "smtp")
         props.setProperty("mail.smtp.host", Global.EMAIL_SMTP_HOST)
@@ -389,20 +406,32 @@ class Email(private var title: String) {
         }
 
         if (!connected) {
-            throw new Exception("Connect mail server failed! Please retry or check your username and password.");
+            result += "Connect mail server failed! Please retry or check your username and password."
         }
 
         try {
-            transport.sendMessage(message, message.getAllRecipients)
+            val allRecipients = message.getAllRecipients
+            transport.sendMessage(message, allRecipients)
+            result += "Sent to " + allRecipients.mkString(", ")
         }
         catch {
             case se: SendFailedException =>
-                    se.getInvalidAddresses
-                        .foreach(address => {
-                        Output.writeException(s"Invalid email address $address")
-                    })
-                    transport.sendMessage(message, se.getValidUnsentAddresses)
-            case e: Exception => e.printStackTrace()
+                val invalidAddresses = se.getInvalidAddresses
+                if (invalidAddresses != null && invalidAddresses.nonEmpty) {
+                    result += "Invalid address(es) " + invalidAddresses.mkString(", ")
+                }
+                val validAddresses = se.getValidSentAddresses
+                if (validAddresses != null && validAddresses.nonEmpty) {
+                    transport.sendMessage(message, validAddresses)
+                    result += "Resend to valid address(es) " + validAddresses.mkString(", ")
+                }
+                val sentAddresses = se.getValidSentAddresses
+                if (validAddresses != null && validAddresses.nonEmpty) {
+                    result += "Send to valid address(es) " + sentAddresses.mkString(", ")
+                }
+            case e: Exception =>
+                result += e.getMessage
+                e.printStackTrace()
         }
         transport.close()
         
@@ -413,6 +442,13 @@ class Email(private var title: String) {
         ccReceivers.clear()
         bccReceivers.clear()
         attachments.clear()
+
+        if (result.nonEmpty) {
+            result.mkString("\r\n")
+        }
+        else {
+            "Sent but maybe something wrong."
+        }
     }
 }
 

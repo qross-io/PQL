@@ -2,6 +2,7 @@ package io.qross.setting
 
 import io.qross.ext.TypeExt._
 import io.qross.fs.FilePath._
+import io.qross.jdbc.{DataSource, JDBC}
 
 object Global {
 
@@ -57,9 +58,29 @@ object Global {
 
     def QUIT_ON_NEXT_BEAT: Boolean = Configurations.get("QUIT_ON_NEXT_BEAT").toBoolean(false)  //for keeper only
 
-    def MASTER_USER_GROUP: String = Configurations.get("MASTER_USER_GROUP")
+    def MASTER_USER_GROUP: String = {
+        if (!Configurations.contains("MASTER_USER_GROUP")) {
+            if (JDBC.hasQrossSystem) {
+                Configurations.set("MASTER_USER_GROUP",
+                    DataSource.QROSS.querySingleValue("SELECT GROUP_CONCAT(CONCAT(fullname, '<', email, '>')) AS addresses FROM qross_users WHERE role='master'").asText
+                )
+            }
+        }
 
-    def KEEPER_USER_GROUP: String = Configurations.get("KEEPER_USER_GROUP")
+        Configurations.get("MASTER_USER_GROUP")
+    }
+
+    def KEEPER_USER_GROUP: String = {
+        if (!Configurations.contains("KEEPER_USER_GROUP")) {
+            if (JDBC.hasQrossSystem) {
+                Configurations.set("KEEPER_USER_GROUP",
+                    DataSource.QROSS.querySingleValue("SELECT GROUP_CONCAT(CONCAT(fullname, '<', email, '>')) AS addresses FROM qross_users WHERE role='keeper'").asText
+                )
+            }
+        }
+
+        Configurations.get("KEEPER_USER_GROUP")
+    }
 
     def EXCEL_TEMPLATES_PATH: String = Configurations.getOrProperty("EXCEL_TEMPLATES_PATH", "excel.templates.path")
 

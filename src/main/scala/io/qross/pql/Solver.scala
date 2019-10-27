@@ -546,9 +546,9 @@ object Solver {
 
                     sentence = sentence.replace(m.group(0), PQL.$stash(
                         caption match {
-                            case "SELECT" => new SELECT(query).query(PQL, express = true)
+                            case "SELECT" => new SELECT(query).select(PQL, express = true)
                             case "PARSE" => new PARSE(query).parse(PQL, express = true)
-                            case "DELETE" => new DELETE(query).commit(PQL, express = true)
+                            case "DELETE" => new DELETE(query).delete(PQL, express = true)
                             case _ => DataCell(PQL.dh.executeNonQuery(query), DataType.INTEGER)
                         }))
                 })

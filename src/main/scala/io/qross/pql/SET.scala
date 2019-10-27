@@ -31,7 +31,7 @@ class SET(var declare: String, val symbol: String, val expression: String) {
 
         if ($SELECT.test(expression)) { //SELECT
 
-            val result = new SELECT(expression).query(PQL)
+            val result = new SELECT(expression).select(PQL)
 
             if (symbol == ":=") {
                 result.asTable.firstRow match {
@@ -80,7 +80,7 @@ class SET(var declare: String, val symbol: String, val expression: String) {
         }
         else if ($DELETE.test(expression)) {
             if (variables.length == 1) {
-                PQL.updateVariable(variables.head, new DELETE(expression).commit(PQL))
+                PQL.updateVariable(variables.head, new DELETE(expression).delete(PQL))
             }
             else {
                 throw new SQLParseException("Only 1 variable name allowed when save affected rows of a DELETE sentence. " + expression)

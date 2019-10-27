@@ -216,7 +216,7 @@ class DataHub (private val defaultConnectionName: String = "") {
 
         //var createSQL = "" + tableName + " (__pid INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE"
         var createSQL = s"CREATE TABLE IF NOT EXISTS $tableName ("
-        if (primaryKey != "") {
+        if (primaryKey != "" && !table.contains(primaryKey)) {
             createSQL += s" $primaryKey INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE, "
         }
         val placeHolders = new mutable.ArrayBuffer[String]()
@@ -230,8 +230,8 @@ class DataHub (private val defaultConnectionName: String = "") {
         fields.clear()
     
         if (DEBUG) {
-            table.show(10)
-            Output.writeMessage(createSQL)
+            Output.writeDebugging(createSQL)
+            Output.writeDebugging(s"${table.size} rows has been saved in temp table $tableName.")
         }
 
         if (table.nonEmpty) {
@@ -246,7 +246,7 @@ class DataHub (private val defaultConnectionName: String = "") {
 
     // ---------- temp ----------
 
-    def temp(tableName: String, keys: String*): DataHub = {
+    def temp(tableName: String, keys: (String, String)*): DataHub = {
 
         if (TABLE.nonEmptySchema) {
             temp(tableName, TABLE, keys: _*)
@@ -262,7 +262,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         this
     }
 
-    def temp(tableName: String, table: DataTable, keys: String*): DataHub = {
+    def temp(tableName: String, table: DataTable, keys: (String, String)*): DataHub = {
 
         /*
         keys format
@@ -271,31 +271,20 @@ class DataHub (private val defaultConnectionName: String = "") {
         UNIQUE [KEY] keyName[,keyName2,...] - unique index, fields must exists
         */
         var primaryKey = ""
-        val indexSQL = s"CREATE #{unique}INDEX IF NOT EXISTS idx_${tableName}_#{fields} ON $tableName (#{keys})"
+        val indexSQL = s"CREATE #{unique} INDEX IF NOT EXISTS idx_${tableName}_#{fields} ON $tableName (#{keys})"
         val indexes = new mutable.ArrayBuffer[String]()
         keys.foreach(key => {
-            var index = key.trim()
-            var unique = ""
-
-            if (index.toUpperCase().startsWith("PRIMARY ")) {
-                index = index.substring(index.indexOf(" ") + 1).trim()
-            }
-            if (index.toUpperCase().startsWith("UNIQUE ")) {
-                index = index.substring(index.indexOf(" ") + 1).trim()
-                unique = "UNIQUE "
-            }
-            if (index.toUpperCase().startsWith("KEY ")) {
-                index = index.substring(index.indexOf(" ") + 1).trim()
-            }
-            index = index.replace(" ", "")
-
-            if (!index.contains(",") && !table.contains(index)) {
-                primaryKey = index
+            val index = key._1.trim().toUpperCase().replaceAll("\\s+", "$")
+            val keys = key._2.trim()
+            if (index.startsWith("PRIMARY")) {
+                if (!index.contains(",") && !table.contains(keys)) {
+                    primaryKey = keys
+                }
             }
             else {
-                indexes += indexSQL.replace("#{unique}", unique)
-                    .replace("#{fields}", index.replace(",", "_"))
-                    .replace("#{keys}", index)
+                indexes += indexSQL.replace("#{unique}", if (index.startsWith("UNIQUE")) "UNIQUE" else "")
+                        .replace("#{fields}", keys.replaceAll("\\s+", "").replace(",", "_"))
+                        .replace("#{keys}", keys)
             }
         })
 
@@ -319,8 +308,8 @@ class DataHub (private val defaultConnectionName: String = "") {
         fields.clear()
 
         if (DEBUG) {
-            table.show(10)
-            Output.writeMessage(createSQL)
+            Output.writeDebugging(createSQL)
+            Output.writeDebugging(s"${table.size} rows has been saved in temp table $tableName.")
         }
 
         if (table.nonEmpty) {
@@ -330,7 +319,6 @@ class DataHub (private val defaultConnectionName: String = "") {
 
         if (indexes.nonEmpty) {
             indexes.foreach(SQL => {
-                println(SQL)
                 SOURCES("TEMP").executeNonQuery(SQL)
             })
         }

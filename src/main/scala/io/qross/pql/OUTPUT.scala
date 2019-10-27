@@ -21,13 +21,13 @@ class OUTPUT(val content: String) {
     def execute(PQL: PQL): Unit = {
         PQL.RESULT += {
             if ($SELECT.test(content)) {
-                new SELECT(content).query(PQL).value
+                new SELECT(content).select(PQL).value
             }
             else if ($PARSE.test(content)) {
                 new PARSE(content).parse(PQL).value
             }
             else if ($DELETE.test(content)) {
-                new DELETE(content).commit(PQL)
+                new DELETE(content).delete(PQL)
             }
             else if ($NON_QUERY.test(content)) {
                 PQL.AFFECTED = PQL.dh.executeNonQuery(content.$restore(PQL))

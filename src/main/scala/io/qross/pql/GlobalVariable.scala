@@ -107,6 +107,7 @@ object GlobalVariableDeclaration {
     def TOTAL(PQL: PQL): DataCell = DataCell(PQL.dh.TOTAL, DataType.INTEGER)
     def ROWS(PQL: PQL): DataCell = DataCell(PQL.ROWS, DataType.INTEGER)
     def AFFECTED(PQL: PQL): DataCell = DataCell(PQL.AFFECTED, DataType.INTEGER)
+    def BOOL(PQL: PQL): DataCell = DataCell(PQL.BOOL, DataType.BOOLEAN)
     def USER_ID(PQL: PQL): DataCell = DataCell(PQL.dh.userId, DataType.INTEGER)
     def USERNAME(PQL: PQL): DataCell = DataCell(PQL.dh.userName, DataType.TEXT)
     def ROLE(PQL: PQL): DataCell = DataCell(PQL.dh.roleName, DataType.TEXT)

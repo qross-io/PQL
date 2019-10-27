@@ -186,6 +186,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private[pql] val RESULT: ArrayBuffer[Any] = new ArrayBuffer[Any]()
     private[pql] var ROWS: Int = -1 //最后一个SELECT返回的结果数量
     private[pql] var AFFECTED: Int = -1  //最后一个非SELECT语句影响的数据表行数
+    private[pql] var BOOL: Boolean = false //最后一个可返回Boolean类型的语句的执行结果
 
     //正在解析的所有语句, 控制语句包含ELSE和ELSIF
     private[pql] val PARSING = new mutable.ArrayStack[Statement]()
@@ -206,7 +207,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private def parseAll(): Unit = {
 
         //check arguments
-        ARGUMENT.findAllMatchIn(SQL).foreach(m => Output.writeWarning(s"Argument ${m.group(0)} is not assigned."))
+        //ARGUMENT.findAllMatchIn(SQL).foreach(m => Output.writeWarning(s"Argument ${m.group(0)} is not assigned."))
 
         //开始解析
         PARSING.push(root)
@@ -221,7 +222,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                     .flatMap(block => {
                         if (block.contains(EM$LEFT)) {
                             val s = new ArrayBuffer[String]()
-                            val p1 = block.takeBefore(EM$LEFT).trim()
+                            val p1 = block.takeBefore(EM$LEFT)
                             if (p1.nonEmpty) {
                                 s += "ECHO " + p1
                             }
@@ -288,7 +289,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
                     if (dh.debugging) {
                         Output.writeLine("                                                                        ")
-                        Output.writeLine(SQL.take(100))
+                        Output.writeLine(SQL)
                         Output.writeLine("------------------------------------------------------------------------")
                         Output.writeLine(s"$AFFECTED row(s) affected. ")
                     }

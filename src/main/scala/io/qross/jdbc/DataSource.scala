@@ -140,24 +140,35 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
                     for (i <- 1 to columns) {
                         val dataType = table.getFieldDataType(fields(i-1))
                         row.set(fields(i-1), {
+                            val value = rs.getObject(i)
                             if (dataType == DataType.INTEGER) {
-                                if (dataType.originalName == "BIGINT" || dataType.originalName == "LONG" || dataType.className == "java.math.bigInteger") {
-                                    rs.getLong(i)
+                                if (value != null) {
+                                    if (dataType.originalName == "BIGINT" || dataType.originalName == "LONG" || dataType.className == "java.math.bigInteger") {
+                                        rs.getLong(i)
+                                    }
+                                    else {
+                                        rs.getInt(i)
+                                    }
                                 }
                                 else {
-                                    rs.getInt(i)
+                                    value
                                 }
                             }
                             else if (dataType == DataType.DECIMAL) {
-                                if (dataType.originalName == "DOUBLE" || dataType.className == "java.math.bigDecimal") {
-                                    rs.getDouble(i)
+                                if (value != null) {
+                                    if (dataType.originalName == "DOUBLE" || dataType.className == "java.math.bigDecimal") {
+                                        rs.getDouble(i)
+                                    }
+                                    else {
+                                        rs.getFloat(i)
+                                    }
                                 }
                                 else {
-                                    rs.getFloat(i)
+                                    value
                                 }
                             }
                             else {
-                                rs.getObject(i)
+                                value
                             }
                         }, dataType)
                     }

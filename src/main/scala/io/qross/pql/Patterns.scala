@@ -21,6 +21,7 @@ object Patterns {
 
     val $BLANK: Regex = """\s""".r
     val BLANKS: String = """\s+"""
+    val $PHRASE: Regex = """(?i)(^|\s)[a-z]+(\s+[a-z]+)+(\s|$)""".r
 
     val $BRACKET: Pattern = Pattern.compile("""\(([^\)]+)\)""", Pattern.CASE_INSENSITIVE)
     val $AND$: Pattern = Pattern.compile("""(^|\sOR\s)(([\s\S]+?)\s+AND\s+([\s\S]+?))($|\sAND|\sOR)""", Pattern.CASE_INSENSITIVE)
@@ -52,6 +53,7 @@ object Patterns {
     val $SAVE$AS: Regex = """(?i)^SAVE\s+AS\s+""".r
     val $CACHE: Regex = """(?i)^CACHE\s+(\S+)\s*#""".r
     val $TEMP: Regex = """(?i)^TEMP\s+(\S+)\s*#""".r
+    val PRIMARY$KEY: Regex = """(?i)\sPRIMARY(\s+KEY)?\s""".r
     val $GET: Regex = """(?i)^GET\s*#""".r
     val $PASS: Regex = """(?i)^PASS\s*#""".r
     val $PUT: Regex = """(?i)^PUT\s*#""".r
@@ -64,7 +66,7 @@ object Patterns {
     val $REQUEST: Regex = """(?i)^REQUEST\s+JSON\s+API\s+""".r
     val $REQUEST$METHOD: Pattern = Pattern.compile("""\s+(POST|PUT|DELETE)(\s+(\S+))?""", Pattern.CASE_INSENSITIVE)
     val $REQUEST$HEADER: Pattern = Pattern.compile("""\s+SET\s+HEADER\s+(\S+)""", Pattern.CASE_INSENSITIVE)
-    val $SEND$MAIL: Regex = """(?i)^SEND\s+MAIL\s+""".r
+    val $SEND$MAIL: Regex = """(?i)^SEND\s+E?MAIL\s+""".r
     val $PARSE: Regex = """(?i)^PARSE\s""".r
     val $AS: Regex = """(?i)\sAS\s""".r
     val $LINK: Regex = """(?i)\s[A-Z][A-Z\$]+([ \t]+[A-Z\$]+[A-Z])*(\s|$)|\s%\s""".r

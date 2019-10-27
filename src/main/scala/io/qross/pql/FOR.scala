@@ -65,7 +65,7 @@ class FOR(var variable: String, val collection: String) {
                         //(PARSE...)
                         val query = collection.$trim("(", ")").trim()
                         if ($SELECT.test(query)) {
-                            new SELECT(query).query(PQL).asTable
+                            new SELECT(query).select(PQL).asTable
                         }
                         else if ($PARSE.test(query)) {
                             new PARSE(query).parse(PQL).asTable

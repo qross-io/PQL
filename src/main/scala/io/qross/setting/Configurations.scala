@@ -23,15 +23,10 @@ object Configurations {
     }
 
     def set(name: String, value: Any): Unit = {
-        if (CONFIG.contains(name)) {
-            CONFIG.set(name, value)
+        CONFIG.set(name, value)
 
-            if (JDBC.hasQrossSystem) {
-                DataSource.QROSS.queryUpdate("UPDATE qross_conf SET conf_value=? WHERE conf_name=?", value, name)
-            }
-        }
-        else {
-            throw new Exception("Wrong configuration name: " + name)
+        if (JDBC.hasQrossSystem) {
+            DataSource.QROSS.queryUpdate("UPDATE qross_conf SET conf_value=? WHERE conf_key=?", value, name)
         }
     }
 

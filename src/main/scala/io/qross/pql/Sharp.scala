@@ -1049,7 +1049,7 @@ object Sharp {
             if (data.asText == "") arg else data
         }
         else {
-            throw SharpLinkArgumentException.occur("IF EMPTY", origin)
+            throw SharpLinkArgumentException.occur("IF EMPTY THEN", origin)
         }
     }
 
@@ -1058,7 +1058,7 @@ object Sharp {
             if (data.asText != "") arg else data
         }
         else {
-            throw SharpLinkArgumentException.occur("IF NOT EMPTY", origin)
+            throw SharpLinkArgumentException.occur("IF NOT EMPTY THEN", origin)
         }
     }
 
@@ -1067,7 +1067,7 @@ object Sharp {
             if (data.invalid) arg else data
         }
         else {
-            throw SharpLinkArgumentException.occur("IF NULL", origin)
+            throw SharpLinkArgumentException.occur("IF NULL THEN", origin)
         }
     }
 
@@ -1076,7 +1076,25 @@ object Sharp {
             if (data.valid) arg else data
         }
         else {
-            throw SharpLinkArgumentException.occur("IF NOT NULL", origin)
+            throw SharpLinkArgumentException.occur("IF NOT NULL THEN", origin)
+        }
+    }
+
+    def IF$TRUE$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.asBoolean) arg else data
+        }
+        else {
+            throw SharpLinkArgumentException.occur("IF TRUE THEN", origin)
+        }
+    }
+
+    def IF$FALSE$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (!data.asBoolean) arg else data
+        }
+        else {
+            throw SharpLinkArgumentException.occur("IF FALSE THEN", origin)
         }
     }
 
@@ -1094,6 +1112,14 @@ object Sharp {
 
     def IS$NOT$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
         DataCell(data.nonEmpty, DataType.BOOLEAN)
+    }
+
+    def IS$TRUE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asBoolean, DataType.BOOLEAN)
+    }
+
+    def IS$FALSE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(!data.asBoolean, DataType.BOOLEAN)
     }
 
     def LIKE(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -1334,6 +1360,10 @@ object Sharp {
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at INSERT IF EMPTY. " + origin)
         }
+    }
+
+    def TO$HTML$TABLE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asTable.toHtmlString, DataType.TEXT)
     }
 
    /* ---------- DataRow ---------- */

@@ -76,7 +76,7 @@ class DataRow() {
                 }
             }
             else {
-                null
+                value
             }
         }
     }

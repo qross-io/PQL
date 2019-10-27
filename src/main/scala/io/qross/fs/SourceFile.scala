@@ -1,7 +1,9 @@
 package io.qross.fs
 
 import java.io.{File, FileNotFoundException}
+
 import io.qross.fs.FilePath._
+import io.qross.setting.Global
 
 import scala.io.Source
 
@@ -16,15 +18,20 @@ object SourceFile {
 class SourceFile(val path: String) {
 
     def content: String = {
-        val resource = ResourceFile.open(path)
-        if (resource.exists) {
-            resource.output
+
+        val file = new File(path.locate())
+        if (file.exists()) {
+            //如果不加编码读取不了中文
+            Source.fromFile(file, Global.CHARSET).mkString
         }
         else {
-            val file = new File(path.locate())
-            if (file.exists()) {
-                //如果不加编码读取不了中文
-                Source.fromFile(file, "UTF-8").mkString
+            val resource = ResourceFile.open(path)
+            if (resource.exists) {
+                resource.output
+            }
+            else if (path.toLowerCase.endsWith(".html") || path.toLowerCase.endsWith(".htm")) {
+                //可能是邮件模板
+                Source.fromFile(s"%EMAIL_TEMPLATES_PATH$path".toPath, Global.CHARSET).mkString
             }
             else {
                 throw new FileNotFoundException(s"File or Resource file $path doesn't exists.")

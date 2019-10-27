@@ -6,7 +6,7 @@ apply plugin: 'maven'
 apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
-version = '0.6.0-135-SNAPSHOT'
+version = '0.6.0-18-RELEASE'
 sourceCompatibility = 1.8
 
 archivesBaseName = "qross-pql"
@@ -68,12 +68,12 @@ dependencies {
 uploadArchives {
     repositories {
         mavenDeployer {
-             repository(url: "https://repo.rdc.aliyun.com/repository/75742-snapshot-Xkjz8l/") {
-                authentication(userName: 'zRjGml', password: 'aqGluc43el')
-            }
-//            repository(url: "https://repo.rdc.aliyun.com/repository/75742-release-biEMxs/") {
+//             repository(url: "https://repo.rdc.aliyun.com/repository/75742-snapshot-Xkjz8l/") {
 //                authentication(userName: 'zRjGml', password: 'aqGluc43el')
 //            }
+            repository(url: "https://repo.rdc.aliyun.com/repository/75742-release-biEMxs/") {
+                authentication(userName: 'zRjGml', password: 'aqGluc43el')
+            }
             //构造项目的Pom文件
             pom.project {
                 name = project.name

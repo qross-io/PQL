@@ -30,7 +30,7 @@ object DataType extends Enumeration {
             typeName.toUpperCase match {
                 case "TEXT" | "VARCHAR" | "CHAR" | "NVARCHAR" | "TINYTEXT" | "SMALLTEXT" | "MEDIUMTEXT" | "LONGTEXT" | "STRING" | "NVARCHAR" | "NCHAR" => DataType.TEXT
                 case "INT" | "INTEGER" | "BIGINT" | "TINYINT" | "SMALLINT" | "MEDIUMINT" | "LONG" | "SHORT" => DataType.INTEGER
-                case "FLOAT" | "DOUBLE" | "DECIMAL" | "DOUBLE" | "REAL" | "NUMBER" => DataType.DECIMAL
+                case "FLOAT" | "DOUBLE" | "DECIMAL" | "REAL" | "NUMBER" | "NUMERIC" | "MONEY" | "SMALLMONEY" => DataType.DECIMAL
                 case "DATE" | "TIME" | "DATETIME" | "TIMESTAMP" | "YEAR" => DataType.DATETIME
                 case "BIT" | "BOOL" | "BOOLEAN" => DataType.BOOLEAN
                 case "MAP" | "ROW" | "OBJECT" | "DATAROW" => DataType.ROW

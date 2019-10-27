@@ -226,7 +226,7 @@ object Excel {
                 dh.pick("EXCEL$R").asInstanceOf[Excel]
             }
             else {
-                throw new ExtensionNotFoundException("Must open an excel first.")
+                throw new ExtensionNotFoundException("Must open an excel file first.")
             }
         }
 
@@ -235,7 +235,7 @@ object Excel {
                 dh.pick("EXCEL$W").asInstanceOf[Excel]
             }
             else {
-                throw new ExtensionNotFoundException("Must save as an excel first.")
+                throw new ExtensionNotFoundException("Must save as an excel file first.")
             }
         }
 
@@ -416,6 +416,53 @@ object Excel {
         //    }
     }
 }
+
+object Excel1 {
+    val FASHION = "2007+"
+    val CLASSIC = "2003-"
+    val WRONG = "not a excel file"
+
+    def open(fileName: String): Excel1 = {
+        new Excel1(fileName)
+    }
+}
+
+class Excel1(val fileName: String) {
+    val templatePath: String = ""
+    val sheet: String = ""
+    val autoClose: Boolean = false //是否自动关闭文件, 在单线程模式下, 查询或修改一次即关闭, 在多线程模式下需要手动关闭
+
+    val file: File = null
+    val path: String = ""
+
+    val workbook: Workbook = null
+
+}
+
+/*
+    Excel.open("fileNameOrPath")
+        .fromTemplate()
+        .fromDefaultTemplate()
+            .update("UPDATE sheet1 SET A=1,A=B WHERE ROW=1 AND abc=123")
+            .insert("")
+            .delete("")
+            .select("")
+
+            .edit()
+            .mergeCells("A1", "B2")
+            .splitMergedCell("A2")
+            .setStyle("A1", "B2", "styles")
+            .setStyle("A2", "styles")
+
+            .dropSheet()
+            .createSheet()
+            .renameSheet().to()
+            .moveSheet().Behind()
+            .moveSheet().Ahead()
+
+            .setAutoClose(false/true)
+            .close
+*/
 
 class Excel(val fileName: String) {
 

@@ -63,6 +63,26 @@ class Condition(val expression: String) {
             case "NOT$EXISTS" => value.asText.$trim("(", ")").trim() == ""
             case "IN" => value.asList.toSet.contains(field.value)
             case "NOT$IN" => !value.asList.toSet.contains(field.value)
+            case "IS$NOT" =>
+                if (value.asText.equalsIgnoreCase("NULL")) {
+                    field.nonNull
+                }
+                else if (value.asText.equalsIgnoreCase("EMPTY")) {
+                    field.nonEmpty
+                }
+                else {
+                    field.value != value.value
+                }
+            case "IS" =>
+                if (value.asText.equalsIgnoreCase("NULL")) {
+                    field.isNull
+                }
+                else if (value.asText.equalsIgnoreCase("EMPTY")) {
+                    field.isEmpty
+                }
+                else {
+                    field.value == value.value
+                }
             case "===" => field.asText == value.asText
             case "!==" => field.asText != value.asText
             case "=" | "==" => field.asText.equalsIgnoreCase(value.asText)

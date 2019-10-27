@@ -1,5 +1,6 @@
 package io.qross.pql
 
+import io.qross.ext.Output
 import io.qross.net.Email
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
@@ -26,6 +27,8 @@ class SEND(val info: String) {
     //FROM DEFAULT TEMPLATE    @DEFAULT_EMAIL_TEMPLATE
     //WITH DEFAULT SIGNATURE    @DEFAULT_EMAIL_SIGNATURE
     //WITH SIGNATURE
+    //PLACE
+    //AT
     //ATTACH
     //TO
     //CC
@@ -46,16 +49,17 @@ class SEND(val info: String) {
 
         val links = new mutable.ArrayBuffer[(String, String)]()
 
-
         $LINK.findAllIn(options)
                     .toArray
                     .reverse
                     .map(l => {
-                        val args = options.takeAfter(l)
+                        val arg = options.takeAfter(l).trim()
                         options = options.takeBefore(l)
-                        (l.trim().replaceAll(BLANKS, "#").toUpperCase().split("#"), args)
+                        (l.trim().replaceAll(BLANKS, "#").toUpperCase().split("#"), arg)
                     })
+                    .reverse
                     .foreach(vs => {
+                        //检查超过3个单词的link
                         if (vs._1.length > 3) {
                             links += ((vs._1.take(3).mkString("$"), ""))
                             links += ((vs._1.takeRight(vs._1.length - 3).mkString("$"), ""))
@@ -65,42 +69,38 @@ class SEND(val info: String) {
                         }
                     })
 
+
         val email = new Email(if (title != "") title.$eval(PQL).asText else "")
 
         for (i <- links.indices) {
-            val args = links(i)._2.toArgs(PQL)
+            val arg = links(i)._2.$eval(PQL)
             links(i)._1 match {
-                case "CONTENT" => if (args.nonEmpty) email.setContent(args.head.asText)
-                case "FROM$TEMPLATE" => if (args.nonEmpty) email.fromTemplate(args.head.asText)
+                case "CONTENT" | "SET$CONTENT" => email.setContent(arg.asText)
+                case "FROM$TEMPLATE" => email.fromTemplate(arg.asText)
                 case "FROM$DEFAULT$TEMPLATE" => email.fromDefaultTemplate()
-                case "WITH$SIGNATURE" => if (args.nonEmpty) email.withSignature(args.head.asText)
+                case "WITH$SIGNATURE" => email.withSignature(arg.asText)
                 case "WITH$DEFAULT$SIGNATURE" => email.withDefaultSignature()
-                case "REPLACE" =>
-                    if (args.size == 1) {
-                        email.placeData(args.head.asText)
-                    }
-                    else if (args.size > 1) {
-                        email.placeData(args.head.asText, args(1).asText)
-                    }
+                case "PLACE$DATA" => email.placeData(arg.asText)
+                case "PLACE" => email.place(arg.asText)
+                case "AT" => email.at(arg.asText)
                 case "ATTACH" =>
-                    if (args.nonEmpty) {
-                        email.attach(args.map(_.asText): _*)
+                    if (arg.isJavaList) {
+                        email.attach(arg.asList[String]: _*)
                     }
-                case "TO" =>
-                    if (args.nonEmpty) {
-                        email.to(args.map(_.asText).mkString(";"))
+                    else {
+                        email.attach(arg.asText.split(",|;"): _*)
                     }
-                case "CC" =>
-                    if (args.nonEmpty) {
-                        email.cc(args.map(_.asText).mkString(";"))
-                    }
-                case "BCC" =>
-                    if (args.nonEmpty) {
-                        email.bcc(args.map(_.asText).mkString(";"))
-                    }
+                case "TO" => email.to(arg.asText)
+                case "CC" => email.cc(arg.asText)
+                case "BCC" => email.bcc(arg.asText)
+                case _ =>
             }
         }
 
-        email.send()
+        val result = email.send()
+
+        if (PQL.dh.debugging) {
+            Output.writeDebugging(result)
+        }
     }
 }

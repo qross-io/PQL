@@ -28,7 +28,7 @@ class ResourceFile(path: String) {
                 }
                 catch {
                     case _: Exception =>
-                        Output.writeException(s"Resource file $path doesn't exist.")
+                        //Output.writeWarning(s"Resource file $path doesn't exist.")
                         ("", false)
                 }
     var output: String = content
