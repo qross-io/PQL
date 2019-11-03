@@ -91,7 +91,7 @@ class SAVE(var sentence: String) {
             }
         }
 
-        sentence = sentence.$restore(PQL)
+        //sentence = sentence.$restore(PQL)
 //
 //        var initial = sentence
 //        $BLANK.findFirstIn(sentence) match {
@@ -124,6 +124,7 @@ class SAVE(var sentence: String) {
 //            case _ =>
 //        }
 
+        /*
         val sections = sentence.split(BLANKS)
 
         sections(0).toUpperCase() match {
@@ -374,5 +375,6 @@ class SAVE(var sentence: String) {
                     PQL.dh.saveAs(connectionName)
                 }
         }
+        */
     }
 }

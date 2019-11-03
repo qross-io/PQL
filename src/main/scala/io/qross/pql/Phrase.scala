@@ -51,3 +51,6 @@ object Phrase {
         sections
     }
 }
+
+//phrase = "", 表示仅仅是参数
+class Phrase(words: String, args: String) { }

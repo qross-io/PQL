@@ -411,7 +411,7 @@ object TypeExt {
                             pre = '\''
                             pri = i
                         }
-                        else if (pre == '\'' && string.charAt(i - 1) != '\\') {
+                        else if (pre == '\'' && (if (i > 0) string.charAt(i - 1) != '\\' else true)) {
                             chars += string.substring(pri, i + 1)
                             pre = ' '
                         }
@@ -421,7 +421,7 @@ object TypeExt {
                             pre = '"'
                             pri = i
                         }
-                        else if (pre == '"' && string.charAt(i - 1) != '\\') {
+                        else if (pre == '"' && (if (i > 0) string.charAt(i - 1) != '\\' else true)) {
                             chars += string.substring(pri, i + 1)
                             pre = ' '
                         }
@@ -432,6 +432,19 @@ object TypeExt {
                     string = string.takeBefore(chars(i)) + s"~str[$i]" + string.takeAfter(chars(i))
                 }
             }
+
+            string
+        }
+
+        def restoreChars(chars: ListBuffer[String]): String = {
+            """~str\[(\d+)\]""".r
+                .findAllMatchIn(string)
+                .foreach(m => {
+                    val i = m.group(1).toInt
+                    if (i < chars.size) {
+                        string = string.replace(m.group(0), chars(i))
+                    }
+                })
 
             string
         }

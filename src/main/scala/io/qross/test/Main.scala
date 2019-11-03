@@ -47,7 +47,11 @@ object Main {
 //                .print
 
 
-        PQL.openFile("/sql/test.sql").run()
+       """\b[\$a-z]+\b""".r.findAllIn("$hell$o-1(a)b'world'nux").foreach(println)
+
+
+
+        //PQL.openFile("/sql/test.sql").run()
 
 //        PQL.open(
 //            """
