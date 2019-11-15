@@ -26,12 +26,15 @@ class OUTPUT(val content: String) {
             else if ($PARSE.test(content)) {
                 new PARSE(content).parse(PQL).value
             }
+            else if ($INSERT$INTO.test(content)) {
+                new INSERT(content).insert(PQL)
+            }
             else if ($DELETE.test(content)) {
                 new DELETE(content).delete(PQL)
             }
-            else if ($NON_QUERY.test(content)) {
-                PQL.AFFECTED = PQL.dh.executeNonQuery(content.$restore(PQL))
-                PQL.AFFECTED
+            else if ($NON$QUERY.test(content)) {
+                PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY = PQL.dh.executeNonQuery(content.$restore(PQL))
+                PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY
             }
             else if (content.bracketsWith("[", "]") || content.bracketsWith("{", "}")) {
                 //对象或数组类型不能eval

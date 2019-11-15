@@ -8,16 +8,15 @@ import java.util.{Date, Properties}
 
 import io.qross.core._
 import io.qross.pql._
-import io.qross.fs.{FileReader, ResourceDir, ResourceFile}
+import io.qross.fs.{Excel, FileReader, ResourceDir, ResourceFile}
 import io.qross.jdbc.DataSource
 import io.qross.net.{Email, Json}
 import io.qross.ext.TypeExt._
-import io.qross.fs.FilePath._
+import io.qross.fs.Path._
 import io.qross.pql.Solver._
 import io.qross.time.{ChronExp, CronExp, DateTime}
 import io.qross.pql.Patterns._
 import io.qross.pql.PQL._
-import io.qross.pql.SAVE.WITH$HEADER$
 import io.qross.setting.{Environment, Global}
 
 import scala.collection.mutable
@@ -46,12 +45,20 @@ object Main {
 //                .send()
 //                .print
 
+//        val ds = DataSource.QROSS
+//        val table = ds.executeDataTable("SELECT id, title FROM qross_jobs")
+//        ds.close()
+//        val excel = new Excel("f:/table.xlsx")
+//        excel.createSheet("sheet4")
+//        excel.cloneSheet("sheet1", "sheet7")
+//        excel.dropSheet("sheet3")
+//        excel.renameSheet("sheet2", "sheet5")
+//        excel.moveSheetTo("sheet4", 4)
+//        excel.insert("insert into sheet '2018-2020年Job数据' (A, B) values ('Job ID', 'Job Title')")
+//        excel.insert("insert into sheet '2018-2020年Job数据' (A, B) values (#id, '#title')", table)
+//        excel.close()
 
-       """\b[\$a-z]+\b""".r.findAllIn("$hell$o-1(a)b'world'nux").foreach(println)
-
-
-
-        //PQL.openFile("/sql/test.sql").run()
+        PQL.openFile("/sql/test.sql").run()
 
 //        PQL.open(
 //            """

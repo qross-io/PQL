@@ -21,8 +21,7 @@ object Patterns {
 
     val $BLANK: Regex = """\s""".r
     val BLANKS: String = """\s+"""
-    val $CAPTION: Regex = """(?i)^\b[a-z]+\b(\s+\b[a-z]+\b)+""".r
-    val $PHRASE: Regex = """(?i)\b[a-z]+\b(\s+\b[a-z]+\b)+""".r
+    val $PHRASE: Regex = """(?i)^\b[a-z]+\b(\s+\b[a-z]+\b)*""".r
 
     val $BRACKET: Pattern = Pattern.compile("""\(([^\)]+)\)""", Pattern.CASE_INSENSITIVE)
     val $AND$: Pattern = Pattern.compile("""(^|\sOR\s)(([\s\S]+?)\s+AND\s+([\s\S]+?))($|\sAND|\sOR)""", Pattern.CASE_INSENSITIVE)
@@ -35,11 +34,14 @@ object Patterns {
     val $CONDITION: Regex = """(?i)^~condition\[(\d+)\]$""".r
 
     val STATEMENTS: Set[String] = Set[String]("IF", "ELSIF", "ELSE", "FOR", "WHILE", "CALL")
-    val NON_QUERY_CAPTIONS: Set[String] = Set[String]("INSERT", "UPDATE", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT")
+    val NON_QUERY_CAPTIONS: Set[String] = Set[String]("UPDATE", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT")
+    val $INSERT$INTO: Regex = """(?i)^INSERT\s+INTO\s""".r
+    val $VALUES: Regex = """(?i)\bVALUES\b""".r
     val $SELECT: Regex = """(?i)^SELECT\s""".r
     val $DELETE: Regex = """(?i)^DELETE\s""".r
     val $DELETE$FILE: Regex = """(?i)^DELETE\s+FILE\s""".r
-    val $NON_QUERY: Regex = s"(?i)^(${NON_QUERY_CAPTIONS.mkString("|")})\\s".r
+    val $NON$QUERY: Regex = s"(?i)^(${NON_QUERY_CAPTIONS.mkString("|")})\\s".r
+    val $SHEET$NONE$QUERY: Regex = """^(INSERT\s+INTO|UPDATE|DELETE|DELETE\s+FROM)\s+SHEET\s""".r
 
     val $FOR: Pattern = Pattern.compile("""^FOR\s+([\s\S]+?)\s+IN\s+([\s\S]+?)\s+LOOP""", Pattern.CASE_INSENSITIVE)
     val $EXIT: Pattern = Pattern.compile("""^EXIT(\s+WHEN\s([\s\S]+))?$""", Pattern.CASE_INSENSITIVE)
@@ -101,4 +103,7 @@ object Patterns {
     val EMBEDDED: String = "EMBEDDED:"
     val EM$LEFT: String = "<%"
     val EM$RIGHT: String = "%>"
+
+    val $INTEGER: Regex = """^-?\d+$""".r
+    val $DECIMAL: Regex = """^-?\d+\.\d+$""".r
 }

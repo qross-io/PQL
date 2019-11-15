@@ -3,7 +3,7 @@ package io.qross.net
 import io.qross.core._
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
-import io.qross.fs.FilePath._
+import io.qross.fs.Path._
 import io.qross.fs.SourceFile
 import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.pql.PQL
@@ -44,11 +44,9 @@ object Email {
     implicit class DataHub$Email(val dh: DataHub) {
 
         def EMAIL: Email = {
-            if (dh.slots("EMAIL")) {
-                dh.pick("EMAIL").asInstanceOf[Email]
-            }
-            else {
-                throw new SlotObjectNotFoundException("Must use writeEmail method to write an email first.")
+            dh.pick[Email]("EMAIL") match {
+                case Some(email) => email
+                case None => throw new ExtensionNotFoundException("Must use writeEmail method to write an email first.")
             }
         }
 

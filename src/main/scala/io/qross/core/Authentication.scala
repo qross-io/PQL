@@ -7,30 +7,15 @@ object Authentication {
     implicit class DataHub$Auth(val dh: DataHub) {
 
         def userId: Int = {
-            if (dh.slots("USER_ID")) {
-                dh.pick("USER_ID").asInstanceOf[Int]
-            }
-            else {
-                0
-            }
+            dh.pick[Int]("USER_ID").getOrElse(0)
         }
 
         def userName: String = {
-            if (dh.slots("USER_NAME")) {
-                dh.pick("USER_NAME").asInstanceOf[String]
-            }
-            else {
-                "anonymous"
-            }
+            dh.pick[String]("USER_NAME").getOrElse("anonymous")
         }
 
         def roleName: String = {
-            if (dh.slots("ROLE_NAME")) {
-                dh.pick("ROLE_NAME").asInstanceOf[String]
-            }
-            else {
-                "WORKER"
-            }
+            dh.pick[String]("ROLE_NAME").getOrElse("WORKER")
         }
 
         def signIn(userId: Int, userName: String, roleName: String = "WORKER"): DataHub = {

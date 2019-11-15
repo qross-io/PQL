@@ -64,10 +64,13 @@ class VAR(val assignments: String) {
                 else if ($PARSE.test(value)) {
                     new PARSE(value).parse(PQL)
                 }
+                else if ($INSERT$INTO.test(value)) {
+                    new INSERT(value).insert(PQL)
+                }
                 else if ($DELETE.test(value)) {
                     new DELETE(value).delete(PQL)
                 }
-                else if ($NON_QUERY.test(value)) {
+                else if ($NON$QUERY.test(value)) {
                     DataCell(PQL.dh.executeNonQuery(value.$restore(PQL)), DataType.INTEGER)
                 }
                 else {

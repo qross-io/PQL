@@ -5,9 +5,10 @@ import java.util.regex.Pattern
 import io.qross.core._
 import io.qross.net.Json
 import io.qross.pql.SQLExecuteException
-import io.qross.pql.Solver.Sentence
 import io.qross.setting.Global
 import io.qross.time.{DateTime, Timer}
+import io.qross.pql.Solver._
+
 import javax.script.{ScriptEngine, ScriptEngineManager, ScriptException}
 
 import scala.collection.JavaConverters._
@@ -179,6 +180,9 @@ object TypeExt {
             }
             else if (string.bracketsWith("'", "'")) {
                 string.substring(1, string.length - 1).replace("\\'", "'")
+            }
+            else if (string.bracketsWith("`", "`")) {
+                string.$trim("`", "`")
             }
             else {
                 string
@@ -396,6 +400,10 @@ object TypeExt {
             //process.destroy()
 
             process.exitValue()
+        }
+
+        def pickChars(): String = {
+            pickChars(new ListBuffer[String]())
         }
 
         //处理字符串

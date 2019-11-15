@@ -36,7 +36,7 @@ object Solver {
     val VALUE$N: Regex = """~value\[(\d+)\]""".r //中间结果占位符
     val STR$N: Regex = """~str\[(\d+)\]""".r //计算过程中的字符串占位符
 
-    implicit class Sentence(var sentence: String) {
+    implicit class Sentence$Solver(var sentence: String) {
 
         //clear comments  --  /* */
         //constants = char, rich string, json -> stash them to avoid conflict
@@ -548,6 +548,7 @@ object Solver {
                         caption match {
                             case "SELECT" => new SELECT(query).select(PQL, express = true)
                             case "PARSE" => new PARSE(query).parse(PQL, express = true)
+                            case "INSERT" => new INSERT(query).insert(PQL, express = true)
                             case "DELETE" => new DELETE(query).delete(PQL, express = true)
                             case _ => DataCell(PQL.dh.executeNonQuery(query), DataType.INTEGER)
                         }))

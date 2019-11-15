@@ -5,7 +5,7 @@ import java.io.File
 import io.qross.ext.TypeExt._
 import io.qross.setting.Global
 
-object FilePath {
+object Path {
 
     implicit class PathExt(path: String) {
 

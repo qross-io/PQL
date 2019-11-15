@@ -5,7 +5,7 @@ import io.qross.ext.Output
 import io.qross.pql.Patterns.{$DEBUG, $DELETE, $DELETE$FILE, ARROW}
 import io.qross.pql.Solver._
 import io.qross.ext.TypeExt._
-import io.qross.fs.FilePath._
+import io.qross.fs.Path._
 
 object DELETE {
     def parse(sentence: String, PQL: PQL): Unit = {
@@ -36,7 +36,7 @@ class DELETE(var sentence: String) {
                         (sentence, "")
                     }
 
-                val data = PQL.dh.executeNonQuery({
+                PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY = PQL.dh.set({
                     if (express) {
                         _delete.$express(PQL).popStash(PQL)
                     }
@@ -44,10 +44,9 @@ class DELETE(var sentence: String) {
                         _delete.$restore(PQL)
                     }
 
-                }).toDataCell(DataType.INTEGER)
+                }).AFFECTED_ROWS_OF_LAST_SET
 
-                PQL.AFFECTED = data.value.asInstanceOf[Int]
-
+                val data = DataCell(PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY, DataType.INTEGER)
                 if (links != "") {
                     new Sharp(links, data).execute(PQL)
                 }
@@ -79,7 +78,7 @@ class DELETE(var sentence: String) {
                     Output.writeLine("                                                                        ")
                     Output.writeLine(sentence)
                     Output.writeLine("------------------------------------------------------------------------")
-                    Output.writeLine(s"${PQL.AFFECTED} row(s) affected. ")
+                    Output.writeLine(s"${PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY} row(s) affected. ")
                 }
             case _ =>
         }

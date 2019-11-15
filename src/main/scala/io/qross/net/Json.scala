@@ -31,11 +31,9 @@ object Json {
         // ---------- Json & Api ---------
 
         def JSON: Json = {
-            if (dh.slots("JSON")) {
-                dh.pick("JSON").asInstanceOf[Json]
-            }
-            else {
-                throw new ExtensionNotFoundException("Must open a json string or api first.")
+            dh.pick[Json]("JSON") match {
+                case Some(json) => json
+                case None => throw new ExtensionNotFoundException("Must open a json string or api first.")
             }
         }
 

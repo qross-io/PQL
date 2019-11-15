@@ -2,7 +2,7 @@ package io.qross.fs
 
 import java.io.{File, FileNotFoundException}
 
-import io.qross.fs.FilePath._
+import io.qross.fs.Path._
 import io.qross.setting.Global
 
 import scala.io.Source

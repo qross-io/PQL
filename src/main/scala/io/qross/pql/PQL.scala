@@ -71,11 +71,9 @@ object PQL {
     implicit class DataHub$PQL(private[pql] val dh: DataHub) {
 
         def PQL: PQL = {
-            if (dh.slots("PQL")) {
-                dh.pick("PQL").asInstanceOf[PQL]
-            }
-            else {
-                throw new ExtensionNotFoundException("Must use openSQL/openFileSQL/openResourceSQL method to open a PQL first.")
+            dh.pick[PQL]("PQL") match {
+                case Some(pql) => pql
+                case None => throw new ExtensionNotFoundException("Must use openSQL/openFileSQL/openResourceSQL method to open a PQL first.")
             }
         }
 
@@ -184,8 +182,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     //结果集
     private[pql] val RESULT: ArrayBuffer[Any] = new ArrayBuffer[Any]()
-    private[pql] var ROWS: Int = -1 //最后一个SELECT返回的结果数量
-    private[pql] var AFFECTED: Int = -1  //最后一个非SELECT语句影响的数据表行数
+    private[pql] var COUNT_OF_LAST_QUERY: Int = -1 //最后一个SELECT返回的结果数量
+    private[pql] var AFFECTED_ROWS_OF_LAST_NON_QUERY: Int = -1  //最后一个非SELECT语句影响的数据表行数
     private[pql] var BOOL: Boolean = false //最后一个可返回Boolean类型的语句的执行结果
 
     //正在解析的所有语句, 控制语句包含ELSE和ELSIF
@@ -285,13 +283,13 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 else */
                 if (NON_QUERY_CAPTIONS.contains(statement.caption)) {
                     val SQL = statement.sentence.$restore(this)
-                    AFFECTED = dh.executeNonQuery(SQL)
+                    AFFECTED_ROWS_OF_LAST_NON_QUERY = dh.set(SQL).AFFECTED_ROWS_OF_LAST_SET
 
                     if (dh.debugging) {
                         Output.writeLine("                                                                        ")
                         Output.writeLine(SQL)
                         Output.writeLine("------------------------------------------------------------------------")
-                        Output.writeLine(s"$AFFECTED row(s) affected. ")
+                        Output.writeLine(s"$AFFECTED_ROWS_OF_LAST_NON_QUERY row(s) affected. ")
                     }
                 }
                 else if (statement.caption == "CONTINUE") {
@@ -505,8 +503,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 }.asJava
             }
         }
-        else if (AFFECTED > -1) {
-            AFFECTED
+        else if (AFFECTED_ROWS_OF_LAST_NON_QUERY > -1) {
+            AFFECTED_ROWS_OF_LAST_NON_QUERY
         }
         else {
             null

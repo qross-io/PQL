@@ -1,6 +1,6 @@
 package io.qross.core
 
-import io.qross.fs.FilePath._
+import io.qross.fs.Path._
 import io.qross.ext.TypeExt._
 
 object Mesc {

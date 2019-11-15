@@ -1,7 +1,7 @@
 package io.qross.setting
 
 import io.qross.ext.TypeExt._
-import io.qross.fs.FilePath._
+import io.qross.fs.Path._
 import io.qross.jdbc.{DataSource, JDBC}
 
 object Global {
@@ -44,6 +44,8 @@ object Global {
 
     def EMAIL_SSL_AUTH_ENABLED: Boolean = Configurations.getOrProperty("EMAIL_SSL_AUTH_ENABLED", "email.ssl.auth.enabled").toBoolean(false)
 
+    def EMAIL_TEMPLATES_PATH: String = Configurations.getOrProperty("EMAIL_TEMPLATES_PATH", "email.templates.path")
+
     def EMAIL_DEFAULT_TEMPLATE: String = Configurations.getOrProperty("EMAIL_DEFAULT_TEMPLATE", "email.default.template")
 
     def EMAIL_DEFAULT_SIGNATURE: String = Configurations.getOrProperty("EMAIL_DEFAULT_SIGNATURE", "email.default.signature")
@@ -84,7 +86,7 @@ object Global {
 
     def EXCEL_TEMPLATES_PATH: String = Configurations.getOrProperty("EXCEL_TEMPLATES_PATH", "excel.templates.path")
 
-    def EMAIL_TEMPLATES_PATH: String = Configurations.getOrProperty("EMAIL_TEMPLATES_PATH", "email.templates.path")
+    def EXCEL_DEFAULT_TEMPLATE: String = Configurations.getOrProperty("EXCEL_DEFAULT_TEMPLATE", "excel.default.template")
 
     def KERBEROS_AUTH: Boolean = Configurations.getOrProperty("KERBEROS_AUTH", "kerberos.auth").toBoolean(false)
 

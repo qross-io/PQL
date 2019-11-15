@@ -586,15 +586,16 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
     def tableSelect(SQL: String, table: DataTable): DataTable = {
         val result = new DataTable()
 
-        if (SQL.contains("?")) {
+        if (SQL.hasQuestionMark) {
             table.foreach(row => {
                 result.merge(this.executeDataTable(SQL, row.getValues: _*))
             })
         }
         else {
-            if (SQL.hasParameters) {
+            val params = SQL.pickParameters()
+            if (params.nonEmpty) {
                 table.foreach(row => {
-                    result.merge(this.executeDataTable(SQL.replaceParameters(row)))
+                    result.merge(this.executeDataTable(SQL.replaceParameters(params, row)))
                 })
             }
             else {
@@ -605,11 +606,11 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
         result
     }
 
-    def tableUpdate(SQL: String, table: DataTable): Long = {
+    def tableUpdate(SQL: String, table: DataTable): Int = {
         var count = -1
 
         if (table.nonEmpty) {
-            if (SQL.contains("?")) {
+            if (SQL.hasQuestionMark) {
                 this.setBatchCommand(SQL)
                 table.foreach(row => {
                     this.addBatch(row.getValues)
@@ -617,7 +618,8 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
                 count = this.executeBatchUpdate()
             }
             else {
-                if (SQL.hasParameters) {
+                val params = SQL.pickParameters()
+                if (params.nonEmpty) {
                     table.foreach(row => {
                         this.addBatchCommand(SQL.replaceParameters(row))
                     })

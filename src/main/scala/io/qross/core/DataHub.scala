@@ -1,12 +1,15 @@
 package io.qross.core
 
+import io.qross.core.Parameter._
 import io.qross.ext.Output
-import io.qross.fs.FilePath._
+import io.qross.ext.TypeExt._
+import io.qross.fs.Excel
+import io.qross.fs.Path._
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.setting.{Environment, Global}
+import io.qross.pql.Patterns.$SHEET$NONE$QUERY
+import io.qross.setting.Environment
 import io.qross.thread.Parallel
 import io.qross.time.{DateTime, Timer}
-import io.qross.core.Parameter._
 
 import scala.collection.mutable
 import scala.collection.parallel.mutable.ParArray
@@ -36,7 +39,7 @@ class DataHub (private val defaultConnectionName: String = "") {
     private var CURRENT: DataSource = SOURCES("DEFAULT")   //current dataSource - open
     private var TARGET: DataSource = SOURCES("DEFAULT")    //current dataDestination - saveAs
 
-    private var DEBUG = false
+    private var DEBUG: Boolean = false
     
     private val TABLE = new DataTable()  //current buffer
     private val BUFFER = new mutable.HashMap[String, DataTable]() //all buffer
@@ -47,8 +50,12 @@ class DataHub (private val defaultConnectionName: String = "") {
     private val SLOTS: mutable.HashMap[String, Any] = new mutable.HashMap[String, Any]()
 
     //全局变量-最后一次get方法的结果集数量
-    private var $COUNT: Int = 0
-    private var $TOTAL: Int = 0
+    var COUNT_OF_LAST_GET: Int = 0
+    var TOTAL_COUNT_OF_RECENT_GET: Int = 0
+    var AFFECTED_ROWS_OF_LAST_PUT: Int = 0
+    var TOTAL_AFFECTED_ROWS_OF_RECENT_PUT: Int = 0
+    var AFFECTED_ROWS_OF_LAST_SET: Int = 0
+    var AFFECTED_ROWS_OF_LAST_PREP: Int = 0
 
     //producers/consumers amount
     private var LINES: Int = Environment.cpuThreads
@@ -61,7 +68,7 @@ class DataHub (private val defaultConnectionName: String = "") {
     private var processSQLs = new mutable.ArrayBuffer[String]()
 
     // ---------- system ----------
-    
+
     def debug(enabled: Boolean = true): DataHub = {
         DEBUG = enabled
         this
@@ -70,7 +77,7 @@ class DataHub (private val defaultConnectionName: String = "") {
     def debugging: Boolean = DEBUG
 
     // ---------- open ----------
-    
+
     def openCache(): DataHub = {
         reset()
         if (!SOURCES.contains("CACHE")) {
@@ -88,7 +95,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         CURRENT = SOURCES("TEMP")
         this
     }
-    
+
     def openDefault(): DataHub = {
         reset()
         CURRENT = SOURCES("DEFAULT")
@@ -103,7 +110,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         CURRENT = SOURCES("QROSS")
         this
     }
-    
+
     def open(connectionNameOrDataSource: Any, database: String = ""): DataHub = {
         reset()
         connectionNameOrDataSource match {
@@ -128,9 +135,9 @@ class DataHub (private val defaultConnectionName: String = "") {
         this
     }
 
-    
+
     // ---------- save as ----------
-    
+
     def saveAsCache(): DataHub = {
         if (!SOURCES.contains("CACHE")) {
             SOURCES += "CACHE" -> DataSource.MEMORY
@@ -159,7 +166,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         TARGET = SOURCES("QROSS")
         this
     }
-    
+
     def saveAs(connectionName: String, database: String = ""): DataHub = {
         if (!SOURCES.contains(connectionName)) {
             SOURCES += connectionName -> new DataSource(connectionName, database)
@@ -176,12 +183,13 @@ class DataHub (private val defaultConnectionName: String = "") {
             pageSQLs.clear()
             blockSQLs.clear()
             processSQLs.clear()
-            $TOTAL = 0
+            TOTAL_COUNT_OF_RECENT_GET = 0
+            TOTAL_AFFECTED_ROWS_OF_RECENT_PUT = 0
             TO_BE_CLEAR = false
         }
         this
     }
-    
+
     // ---------- cache ----------
 
     def cache(tableName: String): DataHub = {
@@ -207,7 +215,7 @@ class DataHub (private val defaultConnectionName: String = "") {
     def cache(tableName: String, table: DataTable): DataHub = {
         cache(tableName, table, "")
     }
-    
+
     def cache(tableName: String, table: DataTable, primaryKey: String): DataHub = {
 
         if (!SOURCES.contains("CACHE")) {
@@ -228,7 +236,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         createSQL += fields.mkString(", ") + ")"
         SOURCES("CACHE").executeNonQuery(createSQL)
         fields.clear()
-    
+
         if (DEBUG) {
             Output.writeDebugging(createSQL)
             Output.writeDebugging(s"${table.size} rows has been saved in temp table $tableName.")
@@ -238,9 +246,9 @@ class DataHub (private val defaultConnectionName: String = "") {
             SOURCES("CACHE").tableUpdate("INSERT INTO " + tableName + " (" + table.getFieldNames.mkString(",") + ") VALUES (" + placeHolders.mkString(",") + ")", table)
         }
         placeHolders.clear()
-        
+
         TO_BE_CLEAR = true
-        
+
         this
     }
 
@@ -333,10 +341,19 @@ class DataHub (private val defaultConnectionName: String = "") {
     //execute SQL on target dataSource
     def set(nonQuerySQL: String, values: Any*): DataHub = {
         if (DEBUG) {
-              println(nonQuerySQL)
-          }
+            println(nonQuerySQL)
+        }
 
-        CURRENT.executeNonQuery(nonQuerySQL, values: _*)
+        if ($SHEET$NONE$QUERY.test(nonQuerySQL)) {
+            this.pick[Excel]("EXCEL$R") match {
+                case Some(excel) => AFFECTED_ROWS_OF_LAST_SET = excel.executeNonQuery(nonQuerySQL)
+                case None => throw new ExtensionNotFoundException("Must open an excel file first.")
+            }
+        }
+        else {
+            AFFECTED_ROWS_OF_LAST_SET = CURRENT.executeNonQuery(nonQuerySQL, values: _*)
+        }
+
         this
     }
 
@@ -351,8 +368,8 @@ class DataHub (private val defaultConnectionName: String = "") {
         }
 
         TABLE.merge(CURRENT.executeDataTable(selectSQL, values: _*))
-        $TOTAL += TABLE.count()
-        $COUNT = TABLE.count()
+        TOTAL_COUNT_OF_RECENT_GET += TABLE.count()
+        COUNT_OF_LAST_GET = TABLE.count()
 
         if (DEBUG) {
             TABLE.show(10)
@@ -361,19 +378,11 @@ class DataHub (private val defaultConnectionName: String = "") {
         this
     }
 
-    def COUNT: Int = {
-        $COUNT
-    }
-
-    def TOTAL: Int = {
-        $TOTAL
-    }
 
     def join(selectSQL: String, on: (String, String)*): DataHub = {
         TABLE.join(CURRENT.executeDataTable(selectSQL), on: _*)
         this
     }
-
 
     def pass(querySentence: String, default:(String, Any)*): DataHub = {
         if (DEBUG) println(querySentence)
@@ -396,10 +405,19 @@ class DataHub (private val defaultConnectionName: String = "") {
 
     //execute SQL on target dataSource
     def prep(nonQuerySQL: String, values: Any*): DataHub = {
-        TARGET.executeNonQuery(nonQuerySQL, values: _*)
+        if ($SHEET$NONE$QUERY.test(nonQuerySQL)) {
+            this.pick[Excel]("EXCEL$W") match {
+                case Some(excel) => AFFECTED_ROWS_OF_LAST_PREP = excel.executeNonQuery(nonQuerySQL)
+                case None => throw new ExtensionNotFoundException("Must save as an excel file first.")
+            }
+        }
+        else {
+            AFFECTED_ROWS_OF_LAST_PREP = TARGET.executeNonQuery(nonQuerySQL, values: _*)
+        }
+
         this
     }
-   
+
     def insert(insertSQL: String): DataHub = put(insertSQL)
     def update(updateSQL: String): DataHub = put(updateSQL)
     def delete(deleteSQL: String): DataHub = put(deleteSQL)
@@ -410,7 +428,21 @@ class DataHub (private val defaultConnectionName: String = "") {
         }
 
         if (TABLE.nonEmpty) {
-            TARGET.tableUpdate(nonQuerySQL, TABLE)
+            AFFECTED_ROWS_OF_LAST_PUT = {
+                if ($SHEET$NONE$QUERY.test(nonQuerySQL)) {
+                    this.pick[Excel]("EXCEL$W") match {
+                        case Some(excel) => excel.tableUpdate(nonQuerySQL, TABLE)
+                        case None => throw new ExtensionNotFoundException("Must save as an excel file first.")
+                    }
+                }
+                else {
+                    TARGET.tableUpdate(nonQuerySQL, TABLE)
+                }
+            }
+            TOTAL_AFFECTED_ROWS_OF_RECENT_PUT += AFFECTED_ROWS_OF_LAST_PUT
+        }
+        else {
+            AFFECTED_ROWS_OF_LAST_PUT = 0
         }
 
         if (pageSQLs.nonEmpty || blockSQLs.nonEmpty) {
@@ -428,13 +460,24 @@ class DataHub (private val defaultConnectionName: String = "") {
     def insert(insertSQL: String, table: DataTable): DataHub = put(insertSQL, table)
     def update(updateSQL: String, table: DataTable): DataHub = put(updateSQL, table)
     def delete(deleteSQL: String, table: DataTable): DataHub = put(deleteSQL, table)
-    def put(nonQuerySentence: String, table: DataTable): DataHub = {
+    def put(nonQuerySQL: String, table: DataTable): DataHub = {
 
         if (DEBUG) {
-            println(nonQuerySentence)
+            println(nonQuerySQL)
         }
 
-        TARGET.tableUpdate(nonQuerySentence, table)
+        if (TABLE.nonEmpty) {
+            if ($SHEET$NONE$QUERY.test(nonQuerySQL)) {
+                this.pick[Excel]("EXCEL$W") match {
+                    case Some(excel) => excel.tableUpdate(nonQuerySQL, TABLE)
+                    case None => throw new ExtensionNotFoundException("Must save as an excel file first.")
+                }
+            }
+            else {
+                TARGET.tableUpdate(nonQuerySQL, TABLE)
+            }
+        }
+
         this
     }
 
@@ -464,7 +507,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         }
 
         selectSQL.matchParameters.headOption match {
-            case Some(param) => pageSQLs += selectSQL -> param.group(0)
+            case Some(param) => pageSQLs += selectSQL -> param
             case None => TABLE.merge(CURRENT.executeDataTable(selectSQL))
         }
 
@@ -489,7 +532,7 @@ class DataHub (private val defaultConnectionName: String = "") {
 
         selectSQL.matchParameters.headOption match {
             case Some(param) =>
-                blockSQLs += selectSQL -> (param.group(0),
+                blockSQLs += selectSQL -> (param,
                         beginKeyOrSQL match {
                             case sentence: String => CURRENT.executeDataRow(sentence).getLong(0)
                             case key: Long => key
@@ -533,7 +576,7 @@ class DataHub (private val defaultConnectionName: String = "") {
                 }
 
                 while (begin < end) {
-                    Bulker.QUEUE.add(nonQuerySQL.replaceFirst(param.group(0), begin.toString).replace(param.group(0), (if (begin + bulkSize >= end) end else begin + bulkSize).toString))
+                    Bulker.QUEUE.add(nonQuerySQL.replaceFirst(param, begin.toString).replace(param, (if (begin + bulkSize >= end) end else begin + bulkSize).toString))
                     begin += bulkSize
                 }
 
@@ -664,8 +707,8 @@ class DataHub (private val defaultConnectionName: String = "") {
                 while(Pager.DATA.size() > 0 || parallel.running) {
                     val table = Pager.DATA.poll()
                     if (table != null) {
-                        $TOTAL += table.count()
-                        $COUNT = table.count()
+                        TOTAL_COUNT_OF_RECENT_GET += table.count()
+                        COUNT_OF_LAST_GET = table.count()
                         handler(table)
                         Output.writeMessage(s"$pageSize SAVED")
                     }
@@ -699,8 +742,8 @@ class DataHub (private val defaultConnectionName: String = "") {
                 var continue = true
                 do {
                     val table = CURRENT.executeDataTable(selectSQL.replace(param, String.valueOf(id)))
-                    $TOTAL += table.count()
-                    $COUNT = table.count()
+                    TOTAL_COUNT_OF_RECENT_GET += table.count()
+                    COUNT_OF_LAST_GET = table.count()
                     if (table.nonEmpty) {
                         //dataSource.tableUpdate(nonQuerySQL, table)
                         if (table.contains(param)) {
@@ -750,8 +793,8 @@ class DataHub (private val defaultConnectionName: String = "") {
             while(!Blocker.CUBE.closed || Blocker.DATA.size() > 0 || parallel.running) {
                 val table = Blocker.DATA.poll()
                 if (table != null) {
-                    $TOTAL += table.count()
-                    $COUNT = table.count()
+                    TOTAL_COUNT_OF_RECENT_GET += table.count()
+                    COUNT_OF_LAST_GET = table.count()
                     handler(table)
                     Output.writeMessage(s"${config._4} SAVED")
                 }
@@ -789,8 +832,8 @@ class DataHub (private val defaultConnectionName: String = "") {
         reset()
 
         TABLE.merge(table)
-        $TOTAL += TABLE.count()
-        $COUNT = TABLE.count()
+        TOTAL_COUNT_OF_RECENT_GET += TABLE.count()
+        COUNT_OF_LAST_GET = TABLE.count()
 
         if (DEBUG) {
             TABLE.show(10)
@@ -969,6 +1012,16 @@ class DataHub (private val defaultConnectionName: String = "") {
         this
     }
 
+    def label(alias: String): DataHub = {
+        TABLE.label(alias.split(","))
+        this
+    }
+
+    def label(alias: Array[String]): DataHub = {
+        TABLE.label(alias)
+        this
+    }
+
     def foreach(callback: DataRow => Unit): DataHub = {
         TABLE.foreach(callback)
         this
@@ -1078,10 +1131,6 @@ class DataHub (private val defaultConnectionName: String = "") {
         this
     }
 
-    def pick(func: String): Any = {
-        SLOTS(func)
-    }
-
     def slots(func: String): Boolean = {
         SLOTS.contains(func)
     }
@@ -1091,6 +1140,14 @@ class DataHub (private val defaultConnectionName: String = "") {
         this
     }
 
+    def pick[T](func: String): Option[T] = {
+        if (SLOTS.contains(func)) {
+            Some(SLOTS(func).asInstanceOf[T])
+        }
+        else {
+            None
+        }
+    }
 
     // ---------- DataSource ----------
 
@@ -1106,14 +1163,15 @@ class DataHub (private val defaultConnectionName: String = "") {
     def executeExists(SQL: String, values: Any*): Boolean = CURRENT.executeExists(SQL, values: _*)
     def executeNonQuery(SQL: String, values: Any*): Int = CURRENT.executeNonQuery(SQL, values: _*)
 
-
     def close(): Unit = {
         SOURCES.values.foreach(_.close())
         SOURCES.clear()
         BUFFER.clear()
         TABLE.clear()
-        SLOTS.clear()
 
+        if (SLOTS.contains("EXCEL$R")) pick[Excel]("EXCEL$R").orNull.close()
+        if (SLOTS.contains("EXCEL$W")) pick[Excel]("EXCEL$W").orNull.close()
+        SLOTS.clear()
         holder.delete()
     }
 }

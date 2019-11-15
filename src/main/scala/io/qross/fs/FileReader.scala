@@ -10,7 +10,7 @@ import io.qross.setting.{Environment, Global}
 import io.qross.thread.{Cube, Parallel}
 import io.qross.time.Timer
 import io.qross.ext._
-import io.qross.fs.FilePath._
+import io.qross.fs.Path._
 import io.qross.net.Json
 import io.qross.ext.TypeExt._
 

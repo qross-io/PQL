@@ -1,6 +1,6 @@
 package io.qross.fs
 
-import io.qross.core.{DataHub, SlotObjectNotFoundException}
+import io.qross.core.{DataHub, ExtensionNotFoundException}
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
 
@@ -11,7 +11,7 @@ object TextFile {
             if (!dh.slots("WITH_HEADER")) {
                 dh.plug("WITH_HEADER", false)
             }
-            dh.pick("WITH_HEADER").asInstanceOf[Boolean]
+            dh.pick[Boolean]("WITH_HEADER").getOrElse(true)
         }
 
         //private var READER: FileReader = _
@@ -89,12 +89,24 @@ object TextFile {
             dh.plug("WRITER", FileWriter(fileNameOrFullPath, deleteFileIfExists = false).delimit(","))
         }
 
-        def withHeader(): DataHub = {
-            dh.plug("WITH_HEADER", true)
+        def delimit(delimiter: String): DataHub = {
+            dh.plug("DELIMITER", delimiter)
         }
 
-        def withHeader(labels: String): DataHub = {
-            dh.plug("WITH_HEADER", true)
+        def withHeaders(): DataHub = {
+            dh.plug("WITH_HEADERS", true)
+        }
+
+        def withoutHeaders(): DataHub = {
+            dh.plug("WITH_HEADERS", false)
+        }
+
+        def withHeaders(labels: Array[String]): DataHub = {
+            dh.label(labels)
+        }
+
+        def withHeaders(labels: String): DataHub = {
+            dh.plug("WITH_HEADERS", true)
             if (labels.bracketsWith("{", "}")) {
                 dh.label(
                     Json(labels)
@@ -102,25 +114,24 @@ object TextFile {
                         .toSeq
                         .map(alias => (alias._1, alias._2.asInstanceOf[String])): _*)
             }
-            dh
+            else if (labels.bracketsWith("(", ")")) {
+                dh.label(labels.$trim("(", ")").split(",").map(_.trim()))
+            }
+            else {
+                dh.label(labels)
+            }
         }
 
-        def withHeader(labels: (String, String)*): DataHub = {
-            dh.plug("WITH_HEADER", true)
+        def withHeaders(labels: (String, String)*): DataHub = {
+            dh.plug("WITH_HEADERS", true)
               .label(labels: _*)
         }
 
         def write(): DataHub = {
             if (dh.slots("WRITER")) {
-                val writer = dh.pick("WRITER").asInstanceOf[FileWriter]
-                val format = {
-                    if (dh.slots("WRITER_FORMAT")) {
-                        dh.pick("WRITER_FORMAT").asInstanceOf[String]
-                    }
-                    else {
-                        "STRING_LINE"
-                    }
-                }
+                val writer = dh.pick[FileWriter]("WRITER").orNull
+                val format = dh.pick[String]("WRITER_FORMAT").getOrElse("STRING_LINE")
+
                 if (format == "JSON_LINE") {
                     writer.writeTableAsJsonLine(dh.getData)
                 }
@@ -133,11 +144,11 @@ object TextFile {
                 dh.pull("WRITER_FORMAT")
 
                 if (dh.slots("ZIP")) {
-                    dh.pick("ZIP").asInstanceOf[Zip].addFile(writer.filePath)
+                    dh.pick[Zip]("ZIP").orNull.addFile(writer.filePath)
                 }
             }
             else {
-                throw new SlotObjectNotFoundException("Must use SAVE AS method to save file first.")
+                throw new ExtensionNotFoundException("Must use SAVE AS method to save file first.")
             }
             dh
         }

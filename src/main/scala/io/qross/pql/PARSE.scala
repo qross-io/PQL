@@ -76,7 +76,7 @@ class PARSE(var sentence: String) {
     def execute(PQL: PQL): Unit = {
         val data = this.parse(PQL)
         PQL.RESULT += data
-        PQL.ROWS = if (data.isTable) data.asTable.size else if (data.isJavaList) data.asJavaList.size() else 1
+        PQL.COUNT_OF_LAST_QUERY = if (data.isTable) data.asTable.size else if (data.isJavaList) data.asJavaList.size() else 1
 
         if (PQL.dh.debugging) {
             if (data.isTable) {

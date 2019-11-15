@@ -80,6 +80,17 @@ class DataTable() {
         this
     }
 
+    def label(alias: Array[String]): DataTable = {
+        var i = 0
+        for (key <- labels.keys.toList) {
+            if (i < alias.length) {
+                labels += key -> alias(i).removeQuotes()
+            }
+            i += 1
+        }
+        this
+    }
+
     def newRow(): DataRow = {
         val row = new DataRow()
         row.fields ++= this.fields

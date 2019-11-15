@@ -17,7 +17,7 @@ object DateTime {
     
     def now: DateTime = new DateTime()
     def from(dateTime: DateTime): DateTime = new DateTime(dateTime.localDateTime)
-    def ofTimestamp(epochSecond: Long): DateTime = new DateTime(epochSecond.toString, "EPOCH")
+    def ofTimestamp(epochSecond: Long): DateTime = new DateTime(epochSecond)
     def of(year: Int, month: Int, dayOfMonth: Int, hourOfDay: Int = 0, minute: Int = 0, second: Int = 0): DateTime = {
         new DateTime(f"$year-$month%02d-$dayOfMonth%02d $hourOfDay%02d:$minute%02d:$second%02d", "yyyy-MM-dd HH:mm:ss")
     }
@@ -129,15 +129,15 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
         val (second: Long, nano: Long) = {
             //10位 秒
             if (timestamp < 10000000000L) {
-                (timestamp, 0)
+                (timestamp, 0L)
             }
             //17位 纳秒
             else if (timestamp > 9999999999999L) {
-                (timestamp / 10000000, timestamp % 10000000)
+                (timestamp / 10000000L, timestamp % 10000000L)
             }
             //13位 毫秒
             else {
-                (timestamp / 1000, timestamp % 1000 * 10000)
+                (timestamp / 1000L, timestamp % 1000L * 10000L)
             }
         }
         LocalDateTime.ofEpochSecond(second, nano.toInt, OffsetDateTime.now.getOffset)

@@ -4,7 +4,7 @@ import java.io.{File, FileInputStream, FileOutputStream}
 import java.util.zip.{ZipEntry, ZipOutputStream}
 
 import io.qross.core.DataHub
-import io.qross.fs.FilePath._
+import io.qross.fs.Path._
 import io.qross.net.Email
 
 import scala.collection.mutable
@@ -17,7 +17,7 @@ object Zip {
             if (!dh.slots("ZIP")) {
                 dh.plug("ZIP", new Zip())
             }
-            dh.pick("ZIP").asInstanceOf[Zip]
+            dh.pick[Zip]("ZIP").orNull
         }
 
         def andZip(fileNameOrFullPath: String): DataHub = {
@@ -54,7 +54,8 @@ object Zip {
 
         def attachZipToEmail(title: String): DataHub = {
             dh.plug("EMAIL", new Email(title))
-              .pick("EMAIL").asInstanceOf[Email].attach(ZIP.zipFile)
+              .pick[Email]("EMAIL").orNull
+              .attach(ZIP.zipFile)
             dh
         }
     }

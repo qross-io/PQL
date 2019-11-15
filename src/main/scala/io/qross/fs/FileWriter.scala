@@ -2,7 +2,7 @@ package io.qross.fs
 
 import java.io._
 
-import io.qross.fs.FilePath._
+import io.qross.fs.Path._
 import io.qross.core.DataTable
 import io.qross.setting.Global
 
@@ -44,8 +44,8 @@ case class FileWriter(filePath: String, deleteFileIfExists: Boolean = true) {
         this
     }
 
-    def  writeTable(table: DataTable, withHeader: Boolean): FileWriter = {
-        if (withHeader && !append) {
+    def  writeTable(table: DataTable, withHeaders: Boolean): FileWriter = {
+        if (withHeaders && !append) {
             writeLine(table.getLabelNames.mkString(delimiter))
         }
         table.foreach(row => {

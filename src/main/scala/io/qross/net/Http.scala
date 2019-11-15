@@ -4,7 +4,7 @@ import java.io._
 import java.net.{HttpURLConnection, URL}
 
 import io.qross.core.{DataHub, ExtensionNotFoundException}
-import io.qross.fs.FilePath._
+import io.qross.fs.Path._
 import org.apache.commons.codec.binary.Base64
 
 object Http {
@@ -27,11 +27,9 @@ object Http {
     implicit class DataHub$Http(val dh: DataHub) {
 
         def HTTP: Http = {
-            if (dh.slots("HTTP")) {
-                dh.pick("HTTP").asInstanceOf[Http]
-            }
-            else {
-                throw new ExtensionNotFoundException("Must use GET/POST/PUT/DELETE method to open a http request.")
+            dh.pick[Http]("HTTP") match {
+                case Some(http) => http
+                case None => throw new ExtensionNotFoundException("Must use GET/POST/PUT/DELETE method to open a http request.")
             }
         }
 

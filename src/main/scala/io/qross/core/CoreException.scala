@@ -11,7 +11,3 @@ class ConvertFailureException(val s: String) extends RuntimeException(s) {
 class ExtensionNotFoundException(val s: String) extends RuntimeException(s) {
 
 }
-
-class SlotObjectNotFoundException(val s: String) extends RuntimeException(s) {
-
-}
