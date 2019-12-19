@@ -6,7 +6,7 @@ apply plugin: 'maven'
 apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
-version = '0.6.1-16-SNAPSHOT'
+version = '0.6.1-38-SNAPSHOT'
 sourceCompatibility = 1.8
 
 archivesBaseName = "qross-pql"
@@ -62,6 +62,10 @@ dependencies {
 
     compile group: 'javax.mail', name: 'mail', version: '1.4.7'
     compile group: 'org.apache.poi', name: 'poi-ooxml', version: '3.17'
+
+    compile group: 'javax.servlet', name: 'javax.servlet-api', version: '4.0.1'
+    implementation group: 'org.springframework', name: 'spring-web', version: '5.1.5.RELEASE'
+    implementation group: 'org.springframework', name: 'spring-webmvc', version: '5.1.5.RELEASE'
 }
 
 //打包上传

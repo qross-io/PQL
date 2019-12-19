@@ -58,7 +58,7 @@ object Parameter {
 
                 if (symbol == "#") {
                     if (row.contains(field)) {
-                        sentence = sentence.replace(whole, row.getString(field))
+                        sentence = sentence.replace(whole, row.getString(field).ifNull("NULL"))
                     }
                 }
                 else if (symbol == "&") {

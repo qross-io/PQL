@@ -21,16 +21,16 @@ object Email {
     
     //username/fullname -> (email, fullname)
     val RECEIVERS: Map[String, (String, String)] = {
-        //get all receivers
+        //get all recipients
         if (JDBC.hasQrossSystem) {
-            val receivers = new mutable.HashMap[String, (String, String)]()
+            val recipients = new mutable.HashMap[String, (String, String)]()
             DataSource.QROSS.queryDataTable("SELECT username, fullname, email FROM qross_users WHERE enabled='yes'")
                     .foreach(row => {
-                        receivers += row.getString("username") -> (row.getString("email"), row.getString("fullname"))
-                        receivers += row.getString("fullname") -> (row.getString("email"), row.getString("fullname"))
+                        recipients += row.getString("username") -> (row.getString("email"), row.getString("fullname"))
+                        recipients += row.getString("fullname") -> (row.getString("email"), row.getString("fullname"))
                     }).clear()
 
-            receivers.toMap
+            recipients.toMap
         }
         else {
             Map[String, (String, String)]()
@@ -120,20 +120,20 @@ object Email {
             dh.preclear()
         }
 
-        def to(receivers: String): DataHub = {
-            EMAIL.to(receivers)
+        def to(recipients: String): DataHub = {
+            EMAIL.to(recipients)
 
             dh
         }
 
-        def cc(receivers: String): DataHub = {
-            EMAIL.cc(receivers)
+        def cc(recipients: String): DataHub = {
+            EMAIL.cc(recipients)
 
             dh
         }
 
-        def bcc(receivers: String): DataHub = {
-            EMAIL.bcc(receivers)
+        def bcc(recipients: String): DataHub = {
+            EMAIL.bcc(recipients)
 
             dh
         }
@@ -160,9 +160,9 @@ class Email(private var title: String) {
     private var attachments: ArrayBuffer[String] = new mutable.ArrayBuffer[String]()
 
     //email -> fullname
-    private var toReceivers = new mutable.HashMap[String, String]()
-    private var ccReceivers = new mutable.HashMap[String, String]()
-    private var bccReceivers = new mutable.HashMap[String, String]()
+    private var toRecipients = new mutable.HashMap[String, String]()
+    private var ccRecipients = new mutable.HashMap[String, String]()
+    private var bccRecipients = new mutable.HashMap[String, String]()
     private var content: String = ""
     private var placement: String = "NOTHING"
 
@@ -272,9 +272,9 @@ class Email(private var title: String) {
         this
     }
     
-    private def parseReceivers(receivers: String): mutable.HashMap[String, String] = {
+    private def parseRecipients(recipients: String): mutable.HashMap[String, String] = {
         val map = new mutable.HashMap[String, String]()
-        receivers.replace(",", ";").split(";").foreach(receiver => {
+        recipients.replace(",", ";").split(";").foreach(receiver => {
             var personal = ""
             var address = receiver.trim
             if (address.contains("<") && address.endsWith(">")) {
@@ -296,36 +296,36 @@ class Email(private var title: String) {
         map
     }
     
-    def to(receivers: String): Email = {
-        if (receivers != "") {
-            this.toReceivers ++= parseReceivers(receivers)
+    def to(recipients: String): Email = {
+        if (recipients != "") {
+            this.toRecipients ++= parseRecipients(recipients)
         }
         this
     }
     
-    def cc(receivers: String): Email = {
-        if (receivers != "") {
-            this.ccReceivers ++= parseReceivers(receivers)
+    def cc(recipients: String): Email = {
+        if (recipients != "") {
+            this.ccRecipients ++= parseRecipients(recipients)
         }
         this
     }
     
-    def bcc(receivers: String): Email = {
-        if (receivers != "") {
-            this.bccReceivers ++= parseReceivers(receivers)
+    def bcc(recipients: String): Email = {
+        if (recipients != "") {
+            this.bccRecipients ++= parseRecipients(recipients)
         }
         this
     }
 
     def send(): String = {
-        if (toReceivers.nonEmpty || ccReceivers.nonEmpty || bccReceivers.nonEmpty) {
+        if (toRecipients.nonEmpty || ccRecipients.nonEmpty || bccRecipients.nonEmpty) {
             if (this.content != "") {
                 this.content = PQL.openEmbedded(this.content).run().toString
             }
             transfer()
         }
         else {
-            "No receivers."
+            "No recipients."
         }
     }
     
@@ -351,13 +351,13 @@ class Email(private var title: String) {
         val message = new MimeMessage(session)
     
         message.setFrom(new InternetAddress(Global.EMAIL_SENDER_ACCOUNT, Global.EMAIL_SENDER_PERSONAL, "UTF-8"))
-        for((address, personal) <- toReceivers) {
+        for((address, personal) <- toRecipients) {
             message.addRecipient(Message.RecipientType.TO, new InternetAddress(address, personal, "UTF-8"))
         }
-        for((address, personal) <- ccReceivers) {
+        for((address, personal) <- ccRecipients) {
             message.addRecipient(Message.RecipientType.CC, new InternetAddress(address, personal, "UTF-8"))
         }
-        for((address, personal) <- bccReceivers) {
+        for((address, personal) <- bccRecipients) {
             message.addRecipient(Message.RecipientType.BCC, new InternetAddress(address, personal, "UTF-8"))
         }
         message.setSubject(title, "UTF-8")
@@ -418,14 +418,14 @@ class Email(private var title: String) {
                 if (invalidAddresses != null && invalidAddresses.nonEmpty) {
                     result += "Invalid address(es) " + invalidAddresses.mkString(", ")
                 }
-                val validAddresses = se.getValidSentAddresses
+                val sentAddresses = se.getValidSentAddresses
+                if (sentAddresses != null && sentAddresses.nonEmpty) {
+                    result += "Send to valid address(es) " + sentAddresses.mkString(", ")
+                }
+                val validAddresses = se.getValidUnsentAddresses
                 if (validAddresses != null && validAddresses.nonEmpty) {
                     transport.sendMessage(message, validAddresses)
                     result += "Resend to valid address(es) " + validAddresses.mkString(", ")
-                }
-                val sentAddresses = se.getValidSentAddresses
-                if (validAddresses != null && validAddresses.nonEmpty) {
-                    result += "Send to valid address(es) " + sentAddresses.mkString(", ")
                 }
             case e: Exception =>
                 result += e.getMessage
@@ -436,13 +436,13 @@ class Email(private var title: String) {
         title = ""
         content = ""
 
-        toReceivers.clear()
-        ccReceivers.clear()
-        bccReceivers.clear()
+        toRecipients.clear()
+        ccRecipients.clear()
+        bccRecipients.clear()
         attachments.clear()
 
         if (result.nonEmpty) {
-            result.mkString("\r\n")
+            result.mkString("; ")
         }
         else {
             "Sent but maybe something wrong."

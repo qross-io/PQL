@@ -178,7 +178,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         SQL = SQL.drop(9)
     }
 
-    private val root: Statement = new Statement("ROOT", SQL)
+    private[pql] val root: Statement = new Statement("ROOT", SQL)
 
     //结果集
     private[pql] val RESULT: ArrayBuffer[Any] = new ArrayBuffer[Any]()
@@ -422,6 +422,10 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     def place(queries: java.util.Map[String, Array[String]]): PQL = {
         this.SQL = this.SQL.replaceArguments(queries.asScala.map(kv => (kv._1, kv._2(0))).toMap[String, String])
+
+        queries.keySet().forEach(key => {
+            root.setVariable(key, queries.get(key).headOption.getOrElse(""))
+        })
         this
     }
 
@@ -461,6 +465,13 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         if (queryString != "") {
             set(queryString.$split().toRow)
         }
+        this
+    }
+
+    def set(model: java.util.Map[String, Any]): PQL = {
+        model.keySet().forEach(key => {
+            root.setVariable(key, model.get(key))
+        })
         this
     }
 

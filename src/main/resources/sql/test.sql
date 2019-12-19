@@ -7,10 +7,16 @@
 DEBUG ON;
 
 OPEN QROSS;
-    GET # SELECT id, title FROM qross_jobs;
-SAVE AS NEW EXCEL "f:/abc.xlsx";  -- NEW 可选, 是否在文件存在时先删除
-    PREP # INSERT INTO SHEET sheet1 (A, B) VALUES ('JobID', 'JobTitle'); --SHEET必须有
-    PUT # INSERT INTO SHEET sheet1 (A, B) VALUES (#id, '#title');
+
+SEND MAIL "hello" TO "zhangli01@zichan360.com; wuzheng@zichan360.com";
+
+
+
+--OPEN QROSS;
+--    GET # SELECT * FROM qross_users;
+--SAVE AS NEW EXCEL "f:/abc.xlsx";  -- NEW 可选, 是否在文件存在时先删除
+--    PREP # INSERT INTO SHEET sheet1 (A, B) VALUES ('Initial', 'LastLoginTime'); --SHEET必须有
+--    PUT # INSERT INTO SHEET sheet1 (A, B) VALUES ('#initial', &last_login_time);
 
 --VAR $a := SELECT * FROM td;
 --IF $a IS NOT EMPTY THEN

@@ -5,6 +5,7 @@ import java.io._
 import io.qross.fs.Path._
 import io.qross.core.DataTable
 import io.qross.setting.Global
+import io.qross.net.Json
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -70,6 +71,11 @@ case class FileWriter(filePath: String, deleteFileIfExists: Boolean = true) {
 
     def writeLine(line: Any*): FileWriter = {
         output.append(line.mkString(this.delimiter) + System.getProperty("line.separator"))
+        this
+    }
+
+    def writeJsonLine[T](line: AnyRef): FileWriter = {
+        output.append(Json.serialize(line))
         this
     }
 

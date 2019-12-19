@@ -59,22 +59,30 @@ class Condition(val expression: String) {
             case "AND" => field.asBoolean && value.asBoolean
             case "OR" => field.asBoolean || value.asBoolean
             case "NOT" => !value.asBoolean
-            case "EXISTS" => value.asText.$trim("(", ")").trim() != ""
-            case "NOT$EXISTS" => value.asText.$trim("(", ")").trim() == ""
+            case "EXISTS" => value.asText.$trim("(", ")").$trim("[", "]").trim() != ""
+            case "NOT$EXISTS" => value.asText.$trim("(", ")").$trim("[", "]").trim() == ""
             case "IN" => value.asList.toSet.contains(field.value)
             case "NOT$IN" => !value.asList.toSet.contains(field.value)
             case "IS$NOT" =>
-                if (value.asText.equalsIgnoreCase("NULL")) {
+                val v = value.asText
+                if (v == null) {
+                    false
+                }
+                else if (v.equalsIgnoreCase("NULL")) {
                     field.nonNull
                 }
-                else if (value.asText.equalsIgnoreCase("EMPTY")) {
+                else if (v.equalsIgnoreCase("EMPTY")) {
                     field.nonEmpty
                 }
                 else {
                     field.value != value.value
                 }
             case "IS" =>
-                if (value.asText.equalsIgnoreCase("NULL")) {
+                val v = value.asText
+                if (v == null) {
+                    true
+                }
+                else if (v.equalsIgnoreCase("NULL")) {
                     field.isNull
                 }
                 else if (value.asText.equalsIgnoreCase("EMPTY")) {

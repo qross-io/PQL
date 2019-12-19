@@ -111,6 +111,13 @@ class SAVE(var sentence: String) {
                     else {
                         PQL.dh.saveAsExcel(file)
                     }
+
+                    plan.iterate(phrase => {
+                        phrase.words match {
+                            case "USE DEFAULT TEMPLATE" => PQL.dh.useDefaultTemplate()
+                            case "USE TEMPLATE" => PQL.dh.useTemplate(phrase.oneArgs)
+                        }
+                    })
                 }
             case "DEFAULT" =>
                 PQL.dh.saveAsDefault()

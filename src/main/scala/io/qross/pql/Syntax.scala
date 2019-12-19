@@ -33,6 +33,8 @@ object Syntax {
             INSERT INTO  SHEET [sheetName]  ROW [startRow]  (A, B, C, ...)  VALUES (value1, value2, ...), (value1, value2, ...);
             UPDATE  SHEET [sheetName]  SET [field1=value1,field2=value2,...]  WHERE {conditions};
             DELETE  FROM SHEET [sheetName]  WHERE {conditions};
+
+            REQUEST  JSON API [url];
         """
 
     sentences.split(";")
@@ -68,7 +70,7 @@ object Syntax {
     }
 
     def showSentences(caption: String): Unit = {
-        val word = caption.toUpperCase.trim() + "  "
+        val word = caption.toUpperCase.trim() + " "
         sentences.split("\r")
                  .map(_.trim())
                  .filter(_.startsWith(word))
@@ -178,9 +180,10 @@ case class Syntax(caption: String) {
     }
 }
 
+//使用?表示可选，使用+表示一个或多个
 object Args {
     val None = 0 //无参数
-    val One = 1 //一个参数, 参数名字中无空格
+    val One = 1 //一个参数, 参数名字中无空格, 和方括号包围
     val Multi = 2 //多参, 用小括号包围
     val More = 3  //one or more, 必须是最后一个参数
     val Set = 4 //一整套参数, 主要是update中的set, 依靠下一个phrase的名字识别

@@ -26,7 +26,7 @@ object Solver {
     val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\s*\(([^\)]*)\)""".r //系统函数
     val JS_EXPRESSION: Regex = """\~\{([\s\S]+?)}""".r //js表达式
     val JS_STATEMENT: Regex = """\~\{\{([\s\S]+?)}}""".r// js语句块
-    val SHARP_EXPRESSION: Regex = """(?i)\$\{([^{][\s\S]+?)\}""".r //Sharp表达式
+    val SHARP_EXPRESSION: Regex = """(?i)\$\{([^\{\}]+?)\}""".r //Sharp表达式
     val QUERY_EXPRESSION: Regex = """(?i)\$\{\{\s*((SELECT|DELETE|INSERT|UPDATE|PARSE)\s[\s\S]+?)\}\}""".r //查询表达式
 
     val RICH_CHAR: List[Regex] = List[Regex]("\"\"\"[\\s\\S]*?\"\"\"".r, "'''[\\s\\S]*?'''".r) //富字符串
@@ -429,7 +429,9 @@ object Solver {
                     PQL.findVariable(whole).ifFound(data => {
                         sentence = sentence.replace(whole, PQL.$stash(data))
                     }).ifNotFound(() => {
-                        Output.writeWarning(s"The variable $whole has not been assigned.")
+                        if (PQL.dh.debugging) {
+                            Output.writeWarning(s"The variable $whole has not been assigned.")
+                        }
                     })
                 })
 
@@ -504,10 +506,20 @@ object Solver {
             SHARP_EXPRESSION
                 .findAllMatchIn(sentence)
                 .foreach(m => {
-                    //已在clean过程中, 不需要clean
-                    new Sharp(m.group(1)).execute(PQL).ifValid(data => {
-                        sentence = sentence.replace(m.group(0), PQL.$stash(data))
-                    })
+                    $CONSTANT.findFirstIn(m.group(1)) match {
+                        case Some(name) =>
+                            //如果内容是变量形式
+                            PQL.findVariable("$" + m.group(1))
+                                .ifFound(data => {
+                                    sentence = sentence.replace(m.group(0), PQL.$stash(data))
+                                })
+                        case None =>
+                            //已在clean过程中, 不需要clean
+                            new Sharp(m.group(1)).execute(PQL).ifValid(data => {
+                                sentence = sentence.replace(m.group(0), PQL.$stash(data))
+                            })
+                    }
+
                 })
 
             sentence

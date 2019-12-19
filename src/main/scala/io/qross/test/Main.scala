@@ -46,7 +46,7 @@ object Main {
 //                .print
 
 //        val ds = DataSource.QROSS
-//        val table = ds.executeDataTable("SELECT id, title FROM qross_jobs")
+//        val table = ds.executeDataTable("SELECT id, title FROM jobs")
 //        ds.close()
 //        val excel = new Excel("f:/table.xlsx")
 //        excel.createSheet("sheet4")
@@ -57,6 +57,19 @@ object Main {
 //        excel.insert("insert into sheet '2018-2020年Job数据' (A, B) values ('Job ID', 'Job Title')")
 //        excel.insert("insert into sheet '2018-2020年Job数据' (A, B) values (#id, '#title')", table)
 //        excel.close()
+
+        //val PQL = new PQL("", DataHub.QROSS)
+        //"<div><%=@MASTER_LOG_HTML%></div>".replaceSharpExpressions(PQL).popStash(PQL, "").print
+
+//        val str = "HELLX WORLD123 HELLO WORLD JERRY 4567 TOM 12345 JERRY"
+//        """[A-Z]+ (WORLD)(?!\d+)""".r.findAllMatchIn(str).foreach(m => println(m.group(0)))
+
+        //"""HELLO(?= TOM)""" => HELLO
+        //"""HELLO(?= TOM)""" => HELLO TOM
+
+        //PQL.openFile("/sql/test.sql").place("parent=0&projectName=HELLO").run().print
+
+        //PQL.runEmbedded("<div><%=@MASTER_LOG_HTML%></div>").print
 
         PQL.openFile("/sql/test.sql").run()
 

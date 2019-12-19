@@ -34,7 +34,7 @@ object Patterns {
     val $CONDITION: Regex = """(?i)^~condition\[(\d+)\]$""".r
 
     val STATEMENTS: Set[String] = Set[String]("IF", "ELSIF", "ELSE", "FOR", "WHILE", "CALL")
-    val NON_QUERY_CAPTIONS: Set[String] = Set[String]("UPDATE", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT")
+    val NON_QUERY_CAPTIONS: Set[String] = Set[String]("UPDATE", "REPLACE", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT")
     val $INSERT$INTO: Regex = """(?i)^INSERT\s+INTO\s""".r
     val $VALUES: Regex = """(?i)\bVALUES\b""".r
     val $SELECT: Regex = """(?i)^SELECT\s""".r
@@ -84,7 +84,7 @@ object Patterns {
     val $INTERMEDIATE$N: Regex = """^~value\[(\d+)\]$""".r
     val FUNCTION_NAMES: Set[String] = GlobalFunction.getClass.getDeclaredMethods.map(m => m.getName).filter(n => "^[A-Z]".r.test(n)).toSet
     val $RESERVED: Regex = """^[_A-Za-z0-9\.]+$""".r
-    val $CONSTANT: Regex = """^[A-Za-z_][A-Za-z0-9_]+$""".r
+    val $CONSTANT: Regex = """^[A-Za-z][A-Za-z0-9_]*$|^[_][A-Za-z0-9_]+$""".r
 
     val SHARP_LINKS: Set[String] = Sharp.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z]$""".r.test(n)).toSet
     val MULTI$ARGS$LINKS: Map[String, Set[String]] = Map[String, Set[String]](

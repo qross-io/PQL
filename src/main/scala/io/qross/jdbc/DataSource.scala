@@ -20,15 +20,23 @@ object DataSource {
 
 }
 
-class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: String = "") {
+class DataSource (var connectionName: String, var databaseName: String) {
 
     private val batchSQLs = new mutable.ArrayBuffer[String]()
     private val batchValues = new mutable.ArrayBuffer[Vector[Any]]()
 
-    private val config = JDBC.get(connectionName)
+    private[jdbc] var config = JDBC.get(connectionName)
 
     private var connection: Option[Connection] = None //current connection
     private var tick: Long = -1L //not opened
+
+    def this() {
+        this(connectionName = JDBC.DEFAULT, databaseName = "")
+    }
+
+    def this(connectionName: String) {
+        this(connectionName, databaseName = "")
+    }
     
     def testConnection(): Boolean = {
         var connected = false
@@ -115,7 +123,7 @@ class DataSource (val connectionName: String = JDBC.DEFAULT, var databaseName: S
     }
     
     // ---------- basic command ----------
-    
+
     def executeDataTable(SQL: String, values: Any*): DataTable = {
         
         val table: DataTable = new DataTable()

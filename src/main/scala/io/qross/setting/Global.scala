@@ -96,7 +96,18 @@ object Global {
 
     def KRB_KRB5CONF_PATH: String = Configurations.getOrProperty("KRB_KRB5CONF_PATH", "krb.krb5conf.path")
 
-    //Keeper专用
+    def KEEPER_HTTP_ADDRESS: String = {
+        var address = Configurations.getOrProperty("KEEPER_HTTP_ADDRESS", "keeper.http.address")
+        if (address == "") {
+            address = Environment.localHostAddress
+            Configurations.set("KEEPER_HTTP_ADDRESS", address)
+        }
+        address
+    }
+
+    def KEEPER_HTTP_PORT: Int = Configurations.getOrProperty("KEEPER_HTTP_PORT", "keeper.http.port", "7700").toInt
+
+    //for Keeper
 
     def API_ON_TASK_NEW: String = Configurations.get("API_ON_TASK_NEW")
 
@@ -120,14 +131,7 @@ object Global {
 
     def DISK_MONITOR_FREQUENCY: String = Configurations.getOrProperty("DISK_MONITOR_FREQUENCY", "disk.monitor.frequency")
 
-    def KEEPER_HTTP_ADDRESS: String = {
-        var address = Configurations.getOrProperty("KEEPER_HTTP_ADDRESS", "keeper.http.address")
-        if (address == "") {
-            address = Environment.localHostAddress
-            Configurations.set("KEEPER_HTTP_ADDRESS", address)
-        }
-        address
-    }
+    //for Master
 
-    def KEEPER_HTTP_PORT: Int = Configurations.getOrProperty("KEEPER_HTTP_PORT", "keeper.http.port", "7700").toInt
+    def MASTER_LOGO_HTML: String = Configurations.getOrElse("MASTER_LOGO_HTML", """<span class="logo"><span style="color: var(--lighter); text-shadow: 1px 0px 0px #999999; ">io</span><span style="color: #FFCC33; text-shadow: 1px 0px 0px #999999; ">.</span><span style="color: #FFFFFF; text-shadow: 1px 0px 0px var(--lighter); ">Qross</span></span>""").asInstanceOf[String]
 }

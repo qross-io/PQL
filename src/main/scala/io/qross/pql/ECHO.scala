@@ -2,11 +2,18 @@ package io.qross.pql
 
 import io.qross.pql.Patterns.{$BLANK, $ECHO}
 import io.qross.ext.TypeExt._
+import io.qross.pql.Solver._
 
 object ECHO {
     def parse(sentence: String, PQL: PQL): Unit = {
         if($ECHO.test(sentence)) {
-            PQL.PARSING.head.addStatement(new Statement("ECHO", sentence, new ECHO(if ($BLANK.test(sentence)) sentence.takeAfter($BLANK) else "")))
+            PQL.PARSING.head.addStatement(new Statement("ECHO", sentence,
+                new ECHO({
+                    $BLANK.findFirstIn(sentence) match {
+                        case Some(blank) => sentence.takeAfter(blank)
+                        case None => ""
+                    }
+                })))
         }
         else {
             throw new SQLParseException("Incorrect ECHO sentence: " + sentence)
@@ -18,7 +25,7 @@ class ECHO(val content: String) {
 
     def execute(PQL: PQL): Unit = {
         if (content.nonEmpty) {
-            PQL.RESULT += content
+            PQL.RESULT += content.replaceSharpExpressions(PQL).popStash(PQL, "")
         }
     }
 }

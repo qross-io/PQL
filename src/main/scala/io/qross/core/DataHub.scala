@@ -50,8 +50,8 @@ class DataHub (private val defaultConnectionName: String = "") {
     private val SLOTS: mutable.HashMap[String, Any] = new mutable.HashMap[String, Any]()
 
     //全局变量-最后一次get方法的结果集数量
-    var COUNT_OF_LAST_GET: Int = 0
-    var TOTAL_COUNT_OF_RECENT_GET: Int = 0
+    var COUNT_OF_LAST_QUERY: Int = 0
+    var TOTAL_COUNT_OF_RECENT_QUERY: Int = 0
     var AFFECTED_ROWS_OF_LAST_PUT: Int = 0
     var TOTAL_AFFECTED_ROWS_OF_RECENT_PUT: Int = 0
     var AFFECTED_ROWS_OF_LAST_SET: Int = 0
@@ -183,7 +183,7 @@ class DataHub (private val defaultConnectionName: String = "") {
             pageSQLs.clear()
             blockSQLs.clear()
             processSQLs.clear()
-            TOTAL_COUNT_OF_RECENT_GET = 0
+            TOTAL_COUNT_OF_RECENT_QUERY = 0
             TOTAL_AFFECTED_ROWS_OF_RECENT_PUT = 0
             TO_BE_CLEAR = false
         }
@@ -368,8 +368,8 @@ class DataHub (private val defaultConnectionName: String = "") {
         }
 
         TABLE.merge(CURRENT.executeDataTable(selectSQL, values: _*))
-        TOTAL_COUNT_OF_RECENT_GET += TABLE.count()
-        COUNT_OF_LAST_GET = TABLE.count()
+        TOTAL_COUNT_OF_RECENT_QUERY += TABLE.count()
+        COUNT_OF_LAST_QUERY = TABLE.count()
 
         if (DEBUG) {
             TABLE.show(10)
@@ -395,6 +395,8 @@ class DataHub (private val defaultConnectionName: String = "") {
             }
         }
         TABLE.cut(CURRENT.tableSelect(querySentence, TABLE))
+        TOTAL_COUNT_OF_RECENT_QUERY = TABLE.count()
+        COUNT_OF_LAST_QUERY = TABLE.count()
 
         if (DEBUG) {
             TABLE.show(10)
@@ -707,8 +709,8 @@ class DataHub (private val defaultConnectionName: String = "") {
                 while(Pager.DATA.size() > 0 || parallel.running) {
                     val table = Pager.DATA.poll()
                     if (table != null) {
-                        TOTAL_COUNT_OF_RECENT_GET += table.count()
-                        COUNT_OF_LAST_GET = table.count()
+                        TOTAL_COUNT_OF_RECENT_QUERY += table.count()
+                        COUNT_OF_LAST_QUERY = table.count()
                         handler(table)
                         Output.writeMessage(s"$pageSize SAVED")
                     }
@@ -742,8 +744,8 @@ class DataHub (private val defaultConnectionName: String = "") {
                 var continue = true
                 do {
                     val table = CURRENT.executeDataTable(selectSQL.replace(param, String.valueOf(id)))
-                    TOTAL_COUNT_OF_RECENT_GET += table.count()
-                    COUNT_OF_LAST_GET = table.count()
+                    TOTAL_COUNT_OF_RECENT_QUERY += table.count()
+                    COUNT_OF_LAST_QUERY = table.count()
                     if (table.nonEmpty) {
                         //dataSource.tableUpdate(nonQuerySQL, table)
                         if (table.contains(param)) {
@@ -793,8 +795,8 @@ class DataHub (private val defaultConnectionName: String = "") {
             while(!Blocker.CUBE.closed || Blocker.DATA.size() > 0 || parallel.running) {
                 val table = Blocker.DATA.poll()
                 if (table != null) {
-                    TOTAL_COUNT_OF_RECENT_GET += table.count()
-                    COUNT_OF_LAST_GET = table.count()
+                    TOTAL_COUNT_OF_RECENT_QUERY += table.count()
+                    COUNT_OF_LAST_QUERY = table.count()
                     handler(table)
                     Output.writeMessage(s"${config._4} SAVED")
                 }
@@ -807,11 +809,11 @@ class DataHub (private val defaultConnectionName: String = "") {
     }
 
     // ---------- buffer basic ----------
-    
+
     //switch table
     def from(tableName: String): DataHub = {
         TABLE.clear()
-        
+
         if (BUFFER.contains(tableName)) {
             TABLE.union(BUFFER(tableName))
         }
@@ -820,7 +822,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         }
         this
     }
-    
+
     def buffer(tableName: String, table: DataTable): DataHub = {
         BUFFER += tableName -> table
         TABLE.copy(table)
@@ -832,8 +834,8 @@ class DataHub (private val defaultConnectionName: String = "") {
         reset()
 
         TABLE.merge(table)
-        TOTAL_COUNT_OF_RECENT_GET += TABLE.count()
-        COUNT_OF_LAST_GET = TABLE.count()
+        TOTAL_COUNT_OF_RECENT_QUERY += TABLE.count()
+        COUNT_OF_LAST_QUERY = TABLE.count()
 
         if (DEBUG) {
             TABLE.show(10)
