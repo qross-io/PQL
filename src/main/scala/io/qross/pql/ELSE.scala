@@ -27,7 +27,7 @@ object ELSE {
 class ELSE {
 
     def execute(PQL: PQL, statement: Statement): Unit = {
-        if (!PQL.IF$BRANCHES.last) {
+        if (!PQL.IF$BRANCHES.head) {
             PQL.IF$BRANCHES.pop()
             PQL.IF$BRANCHES.push(true)
             PQL.EXECUTING.push(statement)

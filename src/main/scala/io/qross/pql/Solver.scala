@@ -4,10 +4,11 @@ import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
-import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, FUNCTION_NAMES, $LINK}
+import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, $LINK, FUNCTION_NAMES}
 
 import scala.collection.mutable
 import scala.util.matching.Regex
+import scala.util.matching.Regex.Match
 
 object Solver {
 
@@ -151,6 +152,7 @@ object Solver {
             blocks.clear()
             closing.clear()
 
+            val ranges = new mutable.ArrayBuffer[Block$Range]()
 
             for (i <- sentence.indices) {
                 val c = sentence.charAt(i)
@@ -184,6 +186,7 @@ object Solver {
                         else if (closing.nonEmpty && closing.head.char == '[') {
                             blocks.head.end = i + 1
                             closing.pop()
+                            ranges += blocks.pop()
                         }
                         else {
                             throw new SQLParseException("Miss left square bracket '['." + sentence.substring(0, i).takeRight(20))
@@ -213,10 +216,9 @@ object Solver {
                             closing.pop()
                         }
                         else if (closing.nonEmpty && closing.head.char == '{') {
-                            if (blocks.nonEmpty && blocks.head.name == "JSON-OBJECT-CURLY-BRACKET") {
-                                blocks.head.end = i + 1
-                            }
+                            blocks.head.end = i + 1
                             closing.pop()
+                            ranges += blocks.pop()
                         }
                         else {
                             throw new SQLParseException("Miss left curly bracket '{'." + sentence.substring(0, i).takeRight(20))
@@ -250,32 +252,35 @@ object Solver {
                 }
             }
 
-            blocks.foreach(closed => {
-                val before = sentence.takeBefore(closed.start)
-                val after = sentence.takeAfter(closed.end - 1)
+            val jsons = ranges.map(closed => sentence.substring(closed.start, closed.end))
+            for (i <- jsons.indices) {
                 val replacement = "~json[" + PQL.jsons.size + "]"
-                PQL.jsons += sentence.substring(closed.start, closed.end)
-
-                sentence = before + replacement + after
-            })
+                PQL.jsons += jsons(i)
+                sentence = sentence.replace(jsons(i), replacement)
+                if (i + 1 < jsons.length) {
+                    jsons(i+1) = jsons(i+1).replace(jsons(i), replacement)
+                }
+            }
+//                .foreach(json => {
+//                    PQL.jsons += json
+//                    sentence = sentence.replace(json, "~json[" + PQL.jsons.size + "]")
+//                })
 
             sentence.trim
         }
 
         def restoreJsons(PQL: PQL): String = {
-            JSON$N
-                .findAllMatchIn(sentence)
-                .foreach(m => {
-                    val i = m.group(1).toInt
-                    if (i < PQL.jsons.size) {
-                        sentence = sentence.replace(m.group(0),
-                            PQL.jsons(i)
-                                .$clean(PQL)
-                                .restoreChars(PQL, "\"")
-                                .restoreValues(PQL, "\"")
-                                .restoreSymbols())
-                    }
-                })
+            var mch: Option[Match] = null
+            while({mch = JSON$N.findFirstMatchIn(sentence); mch}.nonEmpty) {
+                mch match {
+                    case Some(m) =>
+                        val i = m.group(1).toInt
+                        if (i < PQL.jsons.size) {
+                            sentence = sentence.replace(m.group(0), PQL.jsons(i).$clean(PQL))
+                        }
+                    case None =>
+                }
+            }
 
             sentence
         }

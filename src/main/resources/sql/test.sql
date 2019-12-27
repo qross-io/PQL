@@ -8,9 +8,43 @@ DEBUG ON;
 
 OPEN QROSS;
 
-SEND MAIL "hello" TO "zhangli01@zichan360.com; wuzheng@zichan360.com";
+IF '#{parent}' == '0' THEN
+    OUTPUT {
+        "projects": ${{
+           SELECT A.order_index, A.id, A.project_name, A.parent_project_id, A.description, IFNULL(B.amount, 0) AS amount
+              FROM (
+                        SELECT 4 AS order_index, id, project_name, parent_project_id, description FROM qross_projects WHERE parent_project_id=0
+                            UNION ALL
+                        SELECT 3 AS order_index, -1 AS id, 'Unclassified' AS project_name, 0 AS parent_project_id, 'Unclassified Jobs' AS description FROM dual) A
+                LEFT JOIN (SELECT project_id, COUNT(0) AS amount FROM qross_jobs GROUP BY project_id) B ON A.id=B.project_id
+                            UNION ALL
+                        SELECT 1 AS order_index, -3 AS id, 'All' AS project_name, 0 AS parent_project_id,'All Jobs' AS description, COUNT(0) AS amount FROM qross_jobs
+                            UNION ALL
+                    SELECT 2 AS order_index, -2 AS id, 'Exceptional' AS project_name, 0 AS parent_project_id, 'Exceptional Jobs' AS description, count(id) AS amount FROM qross_jobs WHERE unchecked_exceptional_tasks<>''
+                  ORDER BY order_index ASC, project_name ASC
+          }},
+          "jobs": []
+      };
+ELSE
+    SET $where := '';
+    IF #{parent} > 0 THEN
+        SET $where := "WHERE project_id=#{parent}";
+    ELSIF #{parent} == -2 THEN
+        SET $where := "WHERE unchecked_exceptional_tasks<>''";
+    ELSIF #{parent} == -3 THEN
+        SET $where := "WHERE 1=1";
+    ELSIF #{parent} == -1 THEN
+        SET $where := "WHERE project_id=0";
+    END IF;
 
-
+    OUTPUT {
+        "projects": ${{
+            SELECT A.id, A.project_name, A.parent_project_id, IFNULL(B.amount, 0) AS amount, A.description FROM qross_projects A
+             LEFT JOIN (SELECT project_id, COUNT(0) AS amount FROM qross_jobs GROUP BY project_id) B ON A.id=B.project_id
+             WHERE parent_project_id=#{parent} ORDER BY project_name ASC }},
+        "jobs": ${{ SELECT id, title, description FROM qross_jobs $where! }}
+    };
+END IF;
 
 --OPEN QROSS;
 --    GET # SELECT * FROM qross_users;
@@ -96,15 +130,3 @@ SEND MAIL "hello" TO "zhangli01@zichan360.com; wuzheng@zichan360.com";
 --    PRINT INFO 'CORRECT;
 --END IF;
 
--- day_start_datetime = basecommand.dayStart(date)#获取传入时间参数+
--- js_end_dat1=day_start_datetime[0:4]+day_start_datetime[5:7]+day_start_datetime[8:10]#结束日期不带'-'
---    js_end_dat=js_end_dat1[0:4]+'-'+js_end_dat1[4:6]+'-'+js_end_dat1[6:8]#结束日期带'-'
---    js_start_time_rz=js_end_dat+' 00:00:00'#一天开始时间
---    js_end_time_rz=js_end_dat+' 23:59:59'#一天结束时间
-
---    stat_mon=day_start_datetime[0:4]+day_start_datetime[5:7]#获取统计月份
---    d=datetime(int(day_start_datetime[0:4]),int(day_start_datetime[5:7]),int(day_start_datetime[8:10]))
---    d1 = d + timedelta(days=-37)#当天时间向前推37天
---    js_start_dat1=d1.strftime('%Y%m%d')#传入计算开始日期
---    js_start_dat=js_start_dat1[0:4]+'-'+js_start_dat1[4:6]+'-'+js_start_dat1[6:8]#传入开始日期带'-'
---    target_table='data_analy_agent_rate'

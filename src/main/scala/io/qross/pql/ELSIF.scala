@@ -23,7 +23,7 @@ object ELSIF {
 class ELSIF(conditions: String) {
 
     def execute(PQL: PQL, statement: Statement): Unit = {
-        if (!PQL.IF$BRANCHES.last) {
+        if (!PQL.IF$BRANCHES.head) {
             if (new ConditionGroup(conditions).evalAll(PQL)) {
                 PQL.IF$BRANCHES.pop()
                 PQL.IF$BRANCHES.push(true)

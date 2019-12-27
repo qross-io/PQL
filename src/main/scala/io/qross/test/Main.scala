@@ -71,7 +71,7 @@ object Main {
 
         //PQL.runEmbedded("<div><%=@MASTER_LOG_HTML%></div>").print
 
-        PQL.openFile("/sql/test.sql").run()
+        PQL.openFile("/sql/test.sql").place("parent", "-3").run().print
 
 //        PQL.open(
 //            """
