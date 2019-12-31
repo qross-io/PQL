@@ -78,7 +78,6 @@ object Main {
 //               SELECT b, c FROM dt;
 //            """.stripMargin).run()
 
-
        /*
 
         OUTPUT "obj" # { "Name": "Tom", "Age": 19 };

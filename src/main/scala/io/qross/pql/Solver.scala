@@ -586,7 +586,7 @@ object Solver {
             }
             //SHARP表达式
             else if ($LINK.test(sentence)) {
-                new Sharp(sentence).execute(PQL, quote)
+                new Sharp(sentence).execute(PQL)
             }
             //最短表达式
             else {

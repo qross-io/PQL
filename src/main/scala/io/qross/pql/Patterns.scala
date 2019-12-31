@@ -73,7 +73,7 @@ object Patterns {
     val $PARSE: Regex = """(?i)^PARSE\s""".r
     val $AS: Regex = """(?i)\sAS\s""".r
     val $LINK: Regex = """(?i)\s[A-Z][A-Z\$]+([ \t]+[A-Z\$]+[A-Z])*(\s|$)|\s%\s""".r
-    val $LET: Regex = """(?i)^LET\s""".r
+    val $LET: Regex = """(?i)^LET\s+""".r
     val $DEBUG: Regex = """(?i)^DEBUG\s""".r
     val $ECHO: Regex = """(?i)^ECHO(\s|$)""".r
     val $SLEEP: Regex = """(?i)^SLEEP\s""".r

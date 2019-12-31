@@ -7,6 +7,7 @@ import io.qross.ext.TypeExt._
 import io.qross.fql.Fragment
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
+import io.qross.time.ChronExp
 import io.qross.time.TimeSpan._
 
 import scala.collection.JavaConverters._
@@ -965,6 +966,18 @@ object Sharp {
         }
     }
 
+    def TICK$BY(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            ChronExp(data.asText).getNextTick(arg.asDateTime) match {
+                case Some(dt) => DataCell(dt, DataType.DATETIME)
+                case None => DataCell.NOT_FOUND
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("TICK$BY", origin)
+        }
+    }
+
     /* ---------- 正则表达式 ---------- */
 
     def TEST(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -1387,6 +1400,21 @@ object Sharp {
 
     /* ---------- DataList ---------- */
 
+    def ADD(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isJavaList) {
+            if (arg.valid) {
+                data.asJavaList.add(arg.value)
+                data
+            }
+            else {
+                throw SharpLinkArgumentException.occur("GET DATA", origin)
+            }
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("ADD", origin)
+        }
+    }
+
     def JOIN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         val sep = if (arg.valid) {
                             arg.asText
@@ -1488,7 +1516,7 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
     //LET @NOW EXPRESS "DAY=1#DAY-1" FORMAT "yyyyMMdd" TO DECIMAL # ROUND # POW 2
 
     /*
-    SHARP表达式以LET开头, LET可以省略
+    SHARP表达式以LET开头, LET在独立语句中不可以省略
     处理数据的方法称为“连接”
     连接由多个单词组成，某此情况下可以是特殊字符 % (属性连接符)
     连接可以没有参数或有一个参数
@@ -1499,7 +1527,50 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
     // VALUE LINK  v = l
     // VALUE LINK ARG  v > l
 
-    def execute(PQL: PQL, quote: String = "'"): DataCell = {
+    def update(PQL: PQL): Unit = {
+
+        val links = new mutable.ListBuffer[Link$Argument]()
+        val matches = $LINK.findAllIn(" " + expression).toArray
+
+        for (i <- links.indices) {
+            if (SHARP_LINKS.contains(links(i).linkName)) {
+                //必须是等号, 不能用replace方法, 否则变量内容会保存
+                data = Class.forName("io.qross.pql.Sharp")
+                    .getDeclaredMethod(links(i).linkName,
+                        Class.forName("io.qross.core.DataCell"),
+                        Class.forName("io.qross.core.DataCell"),
+                        Class.forName("java.lang.String"))
+                    .invoke(null,
+                        data,
+                        if (i + 1 < links.length &&
+                            Patterns.MULTI$ARGS$LINKS.contains(links(i).linkName) &&
+                            Patterns.MULTI$ARGS$LINKS(links(i).linkName).contains(links(i+1).linkName)) {
+                            val name = links(i+1).linkName
+                            links(i+1).linkName = "" //executed
+                            Class.forName("io.qross.pql.Sharp")
+                                .getDeclaredMethod(name,
+                                    Class.forName("io.qross.core.DataCell"),
+                                    Class.forName("io.qross.core.DataCell"),
+                                    Class.forName("java.lang.String"))
+                                .invoke(null,
+                                    links(i).solve(PQL),
+                                    links(i+1).solve(PQL),
+                                    links(i+1).originate(PQL)
+                                )
+                        }
+                        else {
+                            links(i).solve(PQL)
+                        },
+                        links(i).originate(PQL)
+                    ).asInstanceOf[DataCell]
+            }
+            else if (links(i).linkName != "") {
+                throw new SharpLinkArgumentException("Wrong link name: " + links(i).originalLinkName)
+            }
+        }
+    }
+
+    def execute(PQL: PQL): DataCell = {
 
         var sentence =
             if (data.invalid) {

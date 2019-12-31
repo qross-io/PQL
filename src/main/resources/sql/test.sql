@@ -8,43 +8,17 @@ DEBUG ON;
 
 OPEN QROSS;
 
-IF '#{parent}' == '0' THEN
-    OUTPUT {
-        "projects": ${{
-           SELECT A.order_index, A.id, A.project_name, A.parent_project_id, A.description, IFNULL(B.amount, 0) AS amount
-              FROM (
-                        SELECT 4 AS order_index, id, project_name, parent_project_id, description FROM qross_projects WHERE parent_project_id=0
-                            UNION ALL
-                        SELECT 3 AS order_index, -1 AS id, 'Unclassified' AS project_name, 0 AS parent_project_id, 'Unclassified Jobs' AS description FROM dual) A
-                LEFT JOIN (SELECT project_id, COUNT(0) AS amount FROM qross_jobs GROUP BY project_id) B ON A.id=B.project_id
-                            UNION ALL
-                        SELECT 1 AS order_index, -3 AS id, 'All' AS project_name, 0 AS parent_project_id,'All Jobs' AS description, COUNT(0) AS amount FROM qross_jobs
-                            UNION ALL
-                    SELECT 2 AS order_index, -2 AS id, 'Exceptional' AS project_name, 0 AS parent_project_id, 'Exceptional Jobs' AS description, count(id) AS amount FROM qross_jobs WHERE unchecked_exceptional_tasks<>''
-                  ORDER BY order_index ASC, project_name ASC
-          }},
-          "jobs": []
-      };
-ELSE
-    SET $where := '';
-    IF #{parent} > 0 THEN
-        SET $where := "WHERE project_id=#{parent}";
-    ELSIF #{parent} == -2 THEN
-        SET $where := "WHERE unchecked_exceptional_tasks<>''";
-    ELSIF #{parent} == -3 THEN
-        SET $where := "WHERE 1=1";
-    ELSIF #{parent} == -1 THEN
-        SET $where := "WHERE project_id=0";
-    END IF;
+SET $C := "0";
+SET $T := @NOW;
+SET $RECENT := [];
+SET $M := $C TICK BY $T;
+WHILE $M IS NOT NULL LOOP
+    LET $RECENT ADD $M;
+    LET $T PLUS 1 SECOND;
+    SET $M :=  $C TICK BY $T;
+END LOOP;
 
-    OUTPUT {
-        "projects": ${{
-            SELECT A.id, A.project_name, A.parent_project_id, IFNULL(B.amount, 0) AS amount, A.description FROM qross_projects A
-             LEFT JOIN (SELECT project_id, COUNT(0) AS amount FROM qross_jobs GROUP BY project_id) B ON A.id=B.project_id
-             WHERE parent_project_id=#{parent} ORDER BY project_name ASC }},
-        "jobs": ${{ SELECT id, title, description FROM qross_jobs $where! }}
-    };
-END IF;
+OUTPUT $RECENT;
 
 --OPEN QROSS;
 --    GET # SELECT * FROM qross_users;
