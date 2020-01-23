@@ -1,4 +1,4 @@
-package io.qross.pql
+ackage io.qross.pql
 
 import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.ext.Output
@@ -59,7 +59,7 @@ object Solver {
                 c match {
                     //单行注释开始
                     case '-' =>
-                        if (i > 0 && sentence.charAt(i - 1) == '-' && closing.isEmpty) {
+                       if (i > 0 && sentence.charAt(i - 1) == '-' && closing.isEmpty) {
                             closing += new Closing('-', i)
                             blocks += new Block$Range("SINGLE-LINE-COMMENT", i - 1)
                         }

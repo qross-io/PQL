@@ -30,6 +30,8 @@ object Syntax {
             SAVE AS  EXCEL [fileName]  USE DEFAULT TEMPLATE  USE TEMPLATE [templateName];
             SAVE AS  NEW EXCEL [fileName]  USE DEFAULT TEMPLATE  USE TEMPLATE [templateName];
 
+            SELECT  *  FROM JSON FILE [fileName]  WHERE {conditions}  LIMIT m|m,n;
+
             INSERT INTO  SHEET [sheetName]  ROW [startRow]  (A, B, C, ...)  VALUES (value1, value2, ...), (value1, value2, ...);
             UPDATE  SHEET [sheetName]  SET [field1=value1,field2=value2,...]  WHERE {conditions};
             DELETE  FROM SHEET [sheetName]  WHERE {conditions};
@@ -185,8 +187,9 @@ object Args {
     val None = 0 //无参数
     val One = 1 //一个参数, 参数名字中无空格, 和方括号包围
     val Multi = 2 //多参, 用小括号包围
-    val More = 3  //one or more, 必须是最后一个参数
-    val Set = 4 //一整套参数, 主要是update中的set, 依靠下一个phrase的名字识别
-    val Condition = 5 //条件, 主要是where, 依靠下一个phrase的名字识别
-    val Char = 6 //字符串
+    val More = 3  //one or more, Multi的多个重复,  必须是最后一个参数
+    val Select = 4 //一个参数或多个参数, 参数之间使用逗号隔开, 可包含单词，主要是SELECT语句中的select和limit, 依靠下一个phrase的名字识别
+    val Set = 5 //一整套参数, 主要是update中的set, 依靠下一个phrase的名字识别
+    val Condition = 6 //条件, 主要是where, 依靠下一个phrase的名字识别
+    val Char = 7 //字符串
 }
