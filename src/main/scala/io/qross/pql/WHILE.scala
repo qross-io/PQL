@@ -15,7 +15,10 @@ object WHILE {
             //待关闭的控制语句
             PQL.TO_BE_CLOSE.push($while)
             //继续解析子语句
-            PQL.parseStatement(sentence.substring(m.group(0).length).trim)
+            val first = sentence.substring(m.group(0).length).trim()
+            if (first != "") {
+                PQL.parseStatement(first)
+            }
         }
         else {
             throw new SQLParseException("Incorrect WHILE sentence: " + sentence)

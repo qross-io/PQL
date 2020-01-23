@@ -338,6 +338,8 @@ object TypeExt {
             found
         }
 
+        def initCap: String = string.take(1).toUpperCase + string.substring(1)
+
         def isJsRegex: Boolean = string.startsWith("/") && string.indexOf("/") < string.lastIndexOf("/") && "/[ig]*$".r.test(string)
 
         def ifEmpty(defaultValue: String): String = {

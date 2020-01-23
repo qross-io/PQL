@@ -15,7 +15,10 @@ object ELSIF {
             PQL.PARSING.head.addStatement($elsif)
             PQL.PARSING.push($elsif)
             //继续解析子语句
-            PQL.parseStatement(sentence.substring(m.group(0).length).trim)
+            val first = sentence.substring(m.group(0).length).trim()
+            if (first != "") {
+                PQL.parseStatement(first)
+            }
         }
     }
 }

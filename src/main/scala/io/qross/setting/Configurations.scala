@@ -22,9 +22,13 @@ object Configurations {
         CONFIG.getString(name)
     }
 
+    //只更新内存中的配置
     def set(name: String, value: Any): Unit = {
         CONFIG.set(name, value)
+    }
 
+    //更新数据库项
+    def update(name: String, value: Any): Unit = {
         if (JDBC.hasQrossSystem) {
             DataSource.QROSS.queryUpdate("UPDATE qross_conf SET conf_value=? WHERE conf_key=?", value, name)
         }

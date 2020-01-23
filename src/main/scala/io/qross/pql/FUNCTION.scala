@@ -1,7 +1,5 @@
 package io.qross.pql
 
-import io.qross.core.{DataRow, DataType}
-import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns._
 
@@ -40,7 +38,10 @@ object FUNCTION {
                 //待关闭的控制语句
                 PQL.TO_BE_CLOSE.push($function)
                 //继续解析第一条子语句
-                PQL.parseStatement(sentence.takeAfter(m.group(0)).trim())
+                val first = sentence.takeAfter(m.group(0)).trim()
+                if (first != "") {
+                    PQL.parseStatement(first)
+                }
             case None => throw new SQLParseException("Incorrect FUNCTION sentence: " + sentence)
         }
     }

@@ -55,9 +55,6 @@ class ConditionGroup(expression: String) {
                             else if ($VARIABLE.test(field)) {
                                 PQL.findVariable(field)
                             }
-                            else if ($INTERMEDIATE$N.test(field)) {
-                                PQL.values(field.$trim("~value[", "]").toInt)
-                            }
                             else {
                                 field.$sharp(PQL)
                             },
@@ -66,9 +63,6 @@ class ConditionGroup(expression: String) {
                             }
                             else if ($VARIABLE.test(value)) {
                                 PQL.findVariable(value)
-                            }
-                            else if ($INTERMEDIATE$N.test(value)) {
-                                PQL.values(value.$trim("~value[", "]").toInt)
                             }
                             else if (value.equalsIgnoreCase("EMPTY")) {
                                 DataCell.EMPTY

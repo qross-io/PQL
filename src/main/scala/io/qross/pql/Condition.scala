@@ -65,11 +65,8 @@ class Condition(val expression: String) {
             case "NOT$IN" => !value.asList.toSet.contains(field.value)
             case "IS$NOT" =>
                 val v = value.asText
-                if (v == null) {
-                    false
-                }
-                else if (v.equalsIgnoreCase("NULL")) {
-                    field.nonNull
+                if (v == null || v.equalsIgnoreCase("NULL")) {
+                    field.value != null
                 }
                 else if (v.equalsIgnoreCase("EMPTY")) {
                     field.nonEmpty
@@ -79,11 +76,8 @@ class Condition(val expression: String) {
                 }
             case "IS" =>
                 val v = value.asText
-                if (v == null) {
-                    true
-                }
-                else if (v.equalsIgnoreCase("NULL")) {
-                    field.isNull
+                if (v == null || v.equalsIgnoreCase("NULL")) {
+                    field.value == null
                 }
                 else if (value.asText.equalsIgnoreCase("EMPTY")) {
                     field.isEmpty

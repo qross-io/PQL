@@ -5,6 +5,7 @@ import io.qross.fs.ResourceDir;
 import io.qross.fs.ResourceFile;
 import io.qross.pql.PQL;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -58,12 +59,13 @@ public class OneApi {
         }
     }
 
-    public static Object request(String group, String name, String method, Map<String, String[]> args) {
-        return request(group, name, method, args, DataHub.DEFAULT());
+    public static Object request(String group, String name, HttpServletRequest request) {
+        return request(group, name, request, DataHub.DEFAULT());
     }
 
-    public static Object request(String group, String name, String method, Map<String, String[]> args, DataHub dh) {
+    public static Object request(String group, String name, HttpServletRequest request, DataHub dh) {
 
+        String method = request.getMethod();
         if (!OneApi.contains(group, name, method)) {
             OneApi.readAll();
         }
@@ -74,7 +76,7 @@ public class OneApi {
             if (api.method.equalsIgnoreCase(method)) {
 
                 return new PQL(api.sentences, dh)
-                        .place(args)
+                        .place(request.getParameterMap())
                         .place(api.defaultValue)
                         .run();
             }

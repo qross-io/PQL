@@ -588,6 +588,10 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     }
     
     override def toString: String = {
+        this.getString("yyyy-MM-dd HH:mm:ss")
+    }
+
+    def toFullString: String = {
         this.getString("yyyy-MM-dd HH:mm:ss.SSS")
     }
 }

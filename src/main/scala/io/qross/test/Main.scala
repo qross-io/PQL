@@ -71,7 +71,15 @@ object Main {
 
         //PQL.runEmbedded("<div><%=@MASTER_LOG_HTML%></div>").print
 
-        PQL.openFile("/sql/test.sql").place("parent", "-3").run().print
+        //List.fill(17)("?").mkString("").print
+
+        PQL.openFile("/sql/test.sql").place("parent", "w").run().print
+        //PQL.openEmbeddedFile("/sql/test.html").place("jobId", "54").run().print
+
+//        val row = new DataRow()
+//        row.set("r", new DataRow(), DataType.ROW)
+//        row.getCell("r").asRow.set("name", "Tom")
+//        row.getCell("r").asRow.print
 
 //        PQL.open(
 //            """

@@ -916,6 +916,10 @@ object Sharp {
         data.asText.toLowerCase().toDataCell(DataType.TEXT)
     }
 
+    def INIT$CAP(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        data.asText.initCap.toDataCell(DataType.TEXT)
+    }
+
     def TRIM(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (arg.isJavaList) {
@@ -937,6 +941,15 @@ object Sharp {
 
     def TRIM$RIGHT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asText.$trimRight(if (arg.valid) arg.asText else "").toDataCell(DataType.TEXT)
+    }
+
+    def REPEAT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid && arg.isInteger) {
+            List.fill(arg.asInteger.toInt)(data.asText).asJava.toDataCell(DataType.ARRAY)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("REPEAT", origin)
+        }
     }
 
     def CHAR$AT(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -1077,7 +1090,7 @@ object Sharp {
 
     def IF$NULL$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.invalid) arg else data
+            if (data.invalid || data.value == null) arg else data
         }
         else {
             throw SharpLinkArgumentException.occur("IF NULL THEN", origin)
@@ -1086,7 +1099,7 @@ object Sharp {
 
     def IF$NOT$NULL$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.valid) arg else data
+            if (data.valid && data.value != null) arg else data
         }
         else {
             throw SharpLinkArgumentException.occur("IF NOT NULL THEN", origin)
@@ -1222,7 +1235,7 @@ object Sharp {
 
     /* ---------- DataTable ---------- */
 
-    def GET$FIRST$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def FIRST$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
         val default =   if (arg.valid) {
                             arg.asRow
                         }
@@ -1232,11 +1245,11 @@ object Sharp {
 
         data.asTable.firstRow match {
             case Some(row) => DataCell(row, DataType.ROW)
-            case None => if (arg.valid) DataCell(default, DataType.ROW) else throw new SharpLinkArgumentException("No result at GET FIRST ROW. ")
+            case None => if (arg.valid) DataCell(default, DataType.ROW) else throw new SharpLinkArgumentException("No result at FIRST ROW. ")
         }
     }
 
-    def GET$LAST$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def LAST$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
         val default =   if (arg.valid) {
                             arg.asRow
                         }
@@ -1246,34 +1259,34 @@ object Sharp {
 
         data.asTable.lastRow match {
             case Some(row) => DataCell(row, DataType.ROW)
-            case None => if (arg.valid) DataCell(default, DataType.ROW) else throw new SharpLinkArgumentException("No result at GET FIRST ROW. ")
+            case None => if (arg.valid) DataCell(default, DataType.ROW) else throw new SharpLinkArgumentException("No result at LAST ROW. ")
         }
     }
 
-    def GET$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             data.asTable.getRow(arg.asInteger.toInt - 1).getOrElse(new DataRow()).toDataCell(DataType.ROW)
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at GET ROW. " + origin)
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at ROW. " + origin)
         }
     }
 
-    def GET$FIRST$COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def FIRST$COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asTable.firstColumn match {
             case Some(list) => list.asJava.toDataCell(DataType.ARRAY)
-            case None => throw new SharpLinkArgumentException(s"No result at GET FIRST COLUMN. ")
+            case None => throw new SharpLinkArgumentException(s"No result at FIRST COLUMN. ")
         }
     }
 
-    def GET$LAST$COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def LAST$COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asTable.lastColumn match {
             case Some(list) => list.asJava.toDataCell(DataType.ARRAY)
-            case None => throw new SharpLinkArgumentException(s"No result at GET LAST COLUMN. ")
+            case None => throw new SharpLinkArgumentException(s"No result at LAST COLUMN. ")
         }
     }
 
-    def GET$COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             val field = arg.asText
             val table = data.asTable
@@ -1285,25 +1298,25 @@ object Sharp {
             }
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at GET COLUMN. " + origin)
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at COLUMN. " + origin)
         }
     }
 
-    def GET$FIRST$CELL$DATA(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def FIRST$CELL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asTable.firstRow match {
             case Some(row) => row.firstCell
             case None => DataCell.NOT_FOUND
         }
     }
 
-    def GET$LAST$CELL$DATA(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def LAST$CELL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asTable.lastRow match {
             case Some(row) => row.lastCell
             case None => DataCell.NOT_FOUND
         }
     }
 
-    def GET$FIRST$$ROW$CELL$DATA(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def FIRST$ROW$CELL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             data.asTable.firstRow match {
                 case Some(row) =>
@@ -1317,11 +1330,11 @@ object Sharp {
             }
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at GET FIRST ROW CELL DATA. " + origin)
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at FIRST ROW CELL. " + origin)
         }
     }
 
-    def GET$LAST$$ROW$CELL$DATA(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def LAST$$ROW$CELL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             data.asTable.lastRow match {
                 case Some(row) =>
@@ -1335,7 +1348,7 @@ object Sharp {
             }
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at GET LAST ROW CELL DATA. " + origin)
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at LAST ROW CELL. " + origin)
         }
     }
 
@@ -1381,7 +1394,7 @@ object Sharp {
 
    /* ---------- DataRow ---------- */
 
-    def GET$DATA(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def X(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (data.isRow) {
             if (arg.valid && arg.isInteger) {
                 data.asRow.getCell(arg.asInteger.toInt - 1)
@@ -1407,7 +1420,7 @@ object Sharp {
                 data
             }
             else {
-                throw SharpLinkArgumentException.occur("GET DATA", origin)
+                throw SharpLinkArgumentException.occur("ADD", origin)
             }
         }
         else {
@@ -1527,49 +1540,6 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
     // VALUE LINK  v = l
     // VALUE LINK ARG  v > l
 
-    def update(PQL: PQL): Unit = {
-
-        val links = new mutable.ListBuffer[Link$Argument]()
-        val matches = $LINK.findAllIn(" " + expression).toArray
-
-        for (i <- links.indices) {
-            if (SHARP_LINKS.contains(links(i).linkName)) {
-                //必须是等号, 不能用replace方法, 否则变量内容会保存
-                data = Class.forName("io.qross.pql.Sharp")
-                    .getDeclaredMethod(links(i).linkName,
-                        Class.forName("io.qross.core.DataCell"),
-                        Class.forName("io.qross.core.DataCell"),
-                        Class.forName("java.lang.String"))
-                    .invoke(null,
-                        data,
-                        if (i + 1 < links.length &&
-                            Patterns.MULTI$ARGS$LINKS.contains(links(i).linkName) &&
-                            Patterns.MULTI$ARGS$LINKS(links(i).linkName).contains(links(i+1).linkName)) {
-                            val name = links(i+1).linkName
-                            links(i+1).linkName = "" //executed
-                            Class.forName("io.qross.pql.Sharp")
-                                .getDeclaredMethod(name,
-                                    Class.forName("io.qross.core.DataCell"),
-                                    Class.forName("io.qross.core.DataCell"),
-                                    Class.forName("java.lang.String"))
-                                .invoke(null,
-                                    links(i).solve(PQL),
-                                    links(i+1).solve(PQL),
-                                    links(i+1).originate(PQL)
-                                )
-                        }
-                        else {
-                            links(i).solve(PQL)
-                        },
-                        links(i).originate(PQL)
-                    ).asInstanceOf[DataCell]
-            }
-            else if (links(i).linkName != "") {
-                throw new SharpLinkArgumentException("Wrong link name: " + links(i).originalLinkName)
-            }
-        }
-    }
-
     def execute(PQL: PQL): DataCell = {
 
         var sentence =
@@ -1579,6 +1549,8 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
             else {
                 " " + expression
             }
+
+        sentence = sentence.replace("", "")
 
         val links = new mutable.ListBuffer[Link$Argument]()
 

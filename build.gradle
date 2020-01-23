@@ -6,16 +6,10 @@ apply plugin: 'maven'
 apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
-version = '0.6.1-42-SNAPSHOT'
+version = '0.6.1-58-SNAPSHOT'
 sourceCompatibility = 1.8
 
 archivesBaseName = "qross-pql"
-
-// jar {
-//     manifest {
-//         attributes 'Main-Class': 'io.qross.worker.Worker'
-//     }
-// }
 
 buildscript {
     repositories {

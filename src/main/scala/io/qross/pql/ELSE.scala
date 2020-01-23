@@ -15,8 +15,10 @@ object ELSE {
             PQL.PARSING.head.addStatement($else)
             PQL.PARSING.push($else)
             //继续解析子语句
-            PQL.parseStatement(sentence.takeAfter($ELSE).trim())
-
+            val first = sentence.takeAfter($ELSE).trim()
+            if (first != "") {
+                PQL.parseStatement(first)
+            }
         }
         else {
             throw new SQLParseException("Incorrect ELSE or ELSE IF sentence: " + sentence)

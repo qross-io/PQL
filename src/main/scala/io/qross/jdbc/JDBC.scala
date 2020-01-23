@@ -1,8 +1,8 @@
 package io.qross.jdbc
 
-import io.qross.setting.{Global, Properties}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
+import io.qross.setting.Properties
 
 import scala.collection.{immutable, mutable}
 import scala.util.control.Breaks.breakable

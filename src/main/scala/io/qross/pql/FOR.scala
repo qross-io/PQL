@@ -21,7 +21,10 @@ object FOR {
             //待关闭的控制语句
             PQL.TO_BE_CLOSE.push($for)
             //继续解析子语句
-            PQL.parseStatement(sentence.takeAfter(m.group(0)).trim())
+            val first = sentence.takeAfter(m.group(0)).trim()
+            if (first != "") {
+                PQL.parseStatement(first)
+            }
         }
         else {
             throw new SQLParseException("Incorrect FOR sentence: " + sentence)

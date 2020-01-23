@@ -9,7 +9,6 @@ import io.qross.pql.Patterns.FUNCTION_NAMES
 
 object GlobalVariable {
 
-    val GLOBALS: Set[String] = Global.getClass.getDeclaredMethods.map(_.getName).toSet
     //除环境全局变量的其他全局变量
     val SYSTEM: DataRow = new DataRow()
     val USER: DataRow = new DataRow()
@@ -89,8 +88,9 @@ object GlobalVariable {
         else if (SYSTEM.contains(name)) {
             SYSTEM.getCell(name)
         }
-        else if (GLOBALS.contains(name)) {
-            DataCell(Class.forName("io.qross.setting.Global").getDeclaredMethod(name).invoke(null))
+        else if (Configurations.contains(name)) {
+            DataCell(Configurations.getOrElse(name.toUpperCase, null))
+            //DataCell(Class.forName("io.qross.setting.Global").getDeclaredMethod(name).invoke(null))
         }
         else {
             DataCell.NOT_FOUND

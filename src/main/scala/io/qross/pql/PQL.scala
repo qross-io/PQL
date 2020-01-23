@@ -5,6 +5,7 @@ import io.qross.core._
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.fs.SourceFile
+import io.qross.net.Json
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 import io.qross.time.DateTime
@@ -354,7 +355,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
             if (!found) {
                 EXECUTING.head.setVariable(name, value)
             }
-
         }
         else if (symbol == "@") {
             //全局变量
@@ -493,7 +493,14 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     def $return: Any = {
         if (RESULT.nonEmpty) {
             if (embedded) {
-                RESULT.mkString
+                RESULT.map{
+                    case table: DataTable => table.toString
+                    case row: DataRow => row.toString
+                    case dt: DateTime => dt.toString
+                    case str: String => str
+                    case o: AnyRef => Json.serialize(o)
+                    case x => x.toString
+                }.mkString
             }
             else if (RESULT.size == 1) {
                 RESULT.head match {
