@@ -2,7 +2,7 @@ package io.qross.setting
 
 import java.io._
 import io.qross.jdbc.{DataSource, JDBC}
-import scala.collection.JavaConverters._
+import io.qross.ext.TypeExt._
 
 object Properties {
 
@@ -24,7 +24,15 @@ object Properties {
     private val props = new java.util.Properties()
 
     loadResourcesFile("/conf.properties")
-    loadLocalFile(new File(BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath).getParentFile.getAbsolutePath.replace("\\", "/") + "/qross.properties")
+    loadLocalFile{
+        val sameDir = BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath
+        if (sameDir.contains(".jar!")) {
+            sameDir.takeAfter("file:/").takeBefore(".jar!").takeBeforeLast("/") + "/qross.properties"
+        }
+        else {
+            new File(sameDir).getParentFile.getAbsolutePath.replace("\\", "/") + "/qross.properties"
+        }
+    }
 
     checkReferrer("mysql.qross", "jdbc.default")
     checkReferrer("jdbc.default", "mysql.qross")

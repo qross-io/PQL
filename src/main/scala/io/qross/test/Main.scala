@@ -8,7 +8,7 @@ import java.util.{Date, Properties}
 
 import io.qross.core._
 import io.qross.pql._
-import io.qross.fs.{Excel, FileReader, ResourceDir, ResourceFile}
+import io.qross.fs._
 import io.qross.jdbc.DataSource
 import io.qross.net.{Email, Json}
 import io.qross.ext.TypeExt._
@@ -23,6 +23,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 import io.qross.time.TimeSpan._
+import javax.servlet.http.Cookie
 
 object Main {
 
@@ -73,8 +74,21 @@ object Main {
 
         //List.fill(17)("?").mkString("").print
 
+        //DataSource.QROSS.queryDataTable("select tt from td;").toString().print
+
         PQL.openFile("/sql/test.sql").place("parent", "w").run().print
         //PQL.openEmbeddedFile("/sql/test.html").place("jobId", "54").run().print
+
+        //val cookie = new Cookie("", "")
+        //cookie.setDomain()
+        /*
+        cookie.setComment()
+        cookie.setPath()
+        cookie.setHttpOnly()
+        cookie.setMaxAge()
+        cookie.setSecure()
+        cookie.setVersion(int)
+        */
 
 //        val row = new DataRow()
 //        row.set("r", new DataRow(), DataType.ROW)

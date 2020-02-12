@@ -64,8 +64,8 @@ class DataTable() {
     //添加列和标签
     def addFieldWithLabel(fieldName: String, labelName: String, dataType: DataType): Unit = {
         // . is illegal char in SQLite
-        val name = { if (fieldName.contains(".")) fieldName.takeAfter(".") else fieldName }.toLowerCase()
-        if (!columns.contains(name)) {
+        val name = if (fieldName.contains(".")) fieldName.takeAfter(".") else fieldName
+        if (!this.contains(name)) {
             fields += name
             columns += name -> dataType
             labels += name -> labelName
@@ -75,7 +75,7 @@ class DataTable() {
     //设置标签
     def label(alias: (String, String)*): DataTable = {
         for ((fieldName, aliaName) <- alias) {
-            labels += fieldName.toLowerCase() -> aliaName
+            labels += fieldName -> aliaName
         }
         this
     }
@@ -98,6 +98,10 @@ class DataTable() {
         row
     }
 
+    def +=(row: DataRow): DataTable = {
+        addRow(row)
+    }
+
     //直接添加一个新行, 自动判断数据结构
     def addRow(row: DataRow): DataTable = {
         for (field <- row.getFields) {
@@ -113,7 +117,7 @@ class DataTable() {
         this
     }
 
-    //并行
+    //并行处理
     def par: ParArray[DataRow] = {
         rows.par
     }
@@ -192,13 +196,29 @@ class DataTable() {
         table
     }
 
+    def getColumnName(fieldName: String): Option[String] = {
+        if (this.columns.contains(fieldName)) {
+            Some(fieldName)
+        }
+        else {
+            var name = ""
+            breakable {
+                for (field <- this.fields) {
+                    if (field.equalsIgnoreCase(fieldName)) {
+                        name = field
+                        break
+                    }
+                }
+            }
+
+            if (name != "") Some(name) else None
+        }
+    }
 
     //是否包含某一列
-    def contains(fieldName: String): Boolean = columns.contains(fieldName.toLowerCase())
+    def contains(fieldName: String): Boolean = this.getColumnName(fieldName).nonEmpty
     //行数
     def size: Int = rows.size
-    //行数
-    def height: Int = rows.size
     //行数
     def count(): Int = rows.size
     //列数
@@ -581,30 +601,31 @@ class DataTable() {
     // 二次分组排序, TOP N, 再次聚合, 参与SQL SERVER和第一版FSQL
     // SELECT ... WHERE ... HAVING ... LIMIT N
     def select(fragment: String): DataTable = {
+        //"select value from cookies where name='name' limit 1"
         null
     }
 
     // 删除列
     def drop(fieldNames: String*): Unit = {
         for (fieldName <- fieldNames) {
-            val name = fieldName.toLowerCase
-            fields -= name
-            columns -= name
-            labels -= name
-            rows.foreach(_.remove(name))
+            val name = this.getColumnName(fieldName).getOrElse("")
+            if (name != "") {
+                fields -= name
+                columns -= name
+                labels -= name
+                rows.foreach(_.remove(name))
+            }
         }
     }
 
     // 修改列名
     def alter(fieldName: String, newFieldName: String): Unit = {
-        val oldName = fieldName.toLowerCase()
-        val newName = newFieldName.toLowerCase()
-
-        if (columns.contains(oldName)) {
-            fields(fields.indexOf(oldName)) = newName
-            columns += (newName -> columns(oldName))
+        val oldName = this.getColumnName(fieldName).getOrElse("")
+        if (oldName != "") {
+            fields(fields.indexOf(oldName)) = newFieldName
+            columns += newFieldName -> columns(oldName)
             columns -= oldName
-            labels += (newName -> { if (labels(oldName).equalsIgnoreCase(fieldName)) newFieldName else labels(oldName) })
+            labels += newFieldName -> { if (labels(oldName).equalsIgnoreCase(fieldName)) newFieldName else labels(oldName) }
             labels -= oldName
 
             rows.foreach(_.alter(fieldName, newFieldName))
@@ -613,8 +634,8 @@ class DataTable() {
 
     // 修改数据类型
     def alter(fieldName: String, dataType: DataType): Unit = {
-        val name = fieldName.toLowerCase()
-        if (columns.contains(name)) {
+        val name = this.getColumnName(fieldName).getOrElse("")
+        if (name != "") {
             columns += name -> dataType
         }
     }
@@ -724,25 +745,33 @@ class DataTable() {
     def getLabelList: java.util.List[String] = getLabelNames.asJava
     def getLabels: mutable.LinkedHashMap[String, String] = labels
     def getColumns: mutable.LinkedHashMap[String, DataType] = columns
-    def getFieldDataType(fieldName: String): DataType = columns(fieldName.toLowerCase())
+    def getFieldDataType(fieldName: String): DataType = {
+        val name = this.getColumnName(fieldName).getOrElse("")
+        if (name != "") {
+            this.columns(name)
+        }
+        else {
+            DataType.NULL
+        }
+    }
     def getRow(i: Int): Option[DataRow] = if (i < rows.size) Some(rows(i)) else None
     def getRowList: java.util.List[DataRow] = rows.asJava
     def getColumn(fieldName: String): List[Any] = rows.map(row => row.get(fieldName).orNull).toList
 
-    def firstRow: Option[DataRow] = if (rows.nonEmpty) Some(rows(0)) else None
-    def lastRow: Option[DataRow] = if (rows.nonEmpty) Some(rows(rows.size - 1)) else None
+    def firstRow: Option[DataRow] = if (rows.nonEmpty) Some(this.rows(0)) else None
+    def lastRow: Option[DataRow] = if (rows.nonEmpty) Some(this.rows(this.rows.size - 1)) else None
 
     def firstColumn: Option[List[Any]] = {
-        if (fields.nonEmpty) {
-            Some(rows.map(row => row.get(0).orNull).toList)
+        if (this.fields.nonEmpty) {
+            Some(this.rows.map(row => row.get(0).orNull).toList)
         }
         else {
             None
         }
     }
     def lastColumn: Option[List[Any]] = {
-        if (fields.nonEmpty) {
-            Some(rows.map(row => row.get(fields.size - 1).orNull).toList)
+        if (this.fields.nonEmpty) {
+            Some(this.rows.map(row => row.get(fields.size - 1).orNull).toList)
         }
         else {
             None
@@ -888,9 +917,9 @@ class DataTable() {
     }
     
     def clear(): Unit = {
-        rows.clear()
-        columns.clear()
-        labels.clear()
-        fields.clear()
+        this.rows.clear()
+        this.columns.clear()
+        this.labels.clear()
+        this.fields.clear()
     }
 }

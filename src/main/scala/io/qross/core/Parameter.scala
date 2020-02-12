@@ -16,6 +16,8 @@ object Parameter {
     )
     val $QUESTION$MARK: Regex = """\?""".r
 
+    val $BATCH$MARK: Regex = """@\{[^\{\}]+\}""".r
+
     //符号类型
     val NONE: Int = 0
     val MARK: Int = 1
@@ -23,7 +25,7 @@ object Parameter {
 
     implicit class Sentence$Parameter(var sentence: String) {
 
-        def hasParameters: Boolean = $PARAMETER.map(_.test(sentence)).reduce(_ || _)
+        def hasParameters: Boolean = $PARAMETER.map(_.test(sentence)).reduce(_||_)  //这图形有点...
 
         def hasQuestionMark: Boolean = {
             sentence.pickChars().contains("?")
@@ -41,8 +43,8 @@ object Parameter {
             }
         }
 
-        def matchParameters: List[String] = {
-            $PARAMETER.map(_.findFirstIn(sentence).getOrElse("")).filter(_ != "")
+        def matchBatchMark: Option[String] = {
+            $BATCH$MARK.findFirstIn(sentence)
         }
 
         //适用于DataHub pass和put的方法, 对应DataSource的 tableSelect和tableUpdate
@@ -58,7 +60,7 @@ object Parameter {
 
                 if (symbol == "#") {
                     if (row.contains(field)) {
-                        sentence = sentence.replace(whole, row.getString(field).ifNull("NULL"))
+                        sentence = sentence.replace(whole, row.getString(field, null).ifNull("null").replace("'", "''"))
                     }
                 }
                 else if (symbol == "&") {

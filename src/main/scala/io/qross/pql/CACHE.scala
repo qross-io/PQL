@@ -5,7 +5,6 @@ import io.qross.pql.Solver._
 import io.qross.ext.TypeExt._
 
 object CACHE {
-
     def parse(sentence: String, PQL: PQL): Unit = {
         if ($CACHE.matches(sentence)) {
             val $cache = new Statement("CACHE", sentence.takeBefore("#"), new CACHE($m.group(1).trim, sentence.takeAfter("#").trim))

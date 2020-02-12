@@ -1,10 +1,10 @@
-ackage io.qross.pql
+package io.qross.pql
 
 import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
-import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, $LINK, FUNCTION_NAMES}
+import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, $NULL, $LINK, FUNCTION_NAMES}
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -31,8 +31,8 @@ object Solver {
     val QUERY_EXPRESSION: Regex = """(?i)\$\{\{\s*((SELECT|DELETE|INSERT|UPDATE|PARSE)\s[\s\S]+?)\}\}""".r //查询表达式
 
     val RICH_CHAR: List[Regex] = List[Regex]("\"\"\"[\\s\\S]*?\"\"\"".r, "'''[\\s\\S]*?'''".r) //富字符串
-    val CHAR$N: Regex = """~char\[(\d+)\]""".r  //字符串占位符
-    val STRING$N: Regex = """~string\[(\d+)\]""".r  //富字符串占位符
+    val CHAR$STRING$N: Regex = """~(char|string)\[(\d+)\]""".r  //字符串占位符
+    val TEXT$N: Regex = """~text\[(\d+)\]""".r  //富字符串占位符
     val JSON$N: Regex = """~json\[(\d+)\]""".r  //JSON占位符
     val VALUE$N: Regex = """~value\[(\d+)\]""".r //中间结果占位符
     val STR$N: Regex = """~str\[(\d+)\]""".r //计算过程中的字符串占位符
@@ -124,13 +124,17 @@ object Solver {
             blocks.foreach(closed => {
                     val before = sentence.takeBefore(closed.start)
                     val after = sentence.takeAfter(closed.end - 1)
-                    val replacement = {
-                        if (closed.name == "SINGLE-LINE-COMMENT" || closed.name == "MULTI-LINES-COMMENT") {
-                            ""
-                        }
-                        else {
+                    val replacement =  {
+                        if (closed.name == "SINGLE-QUOTE-STRING") {
                             PQL.chars += sentence.substring(closed.start, closed.end)
                             "~char[" + (PQL.chars.size - 1) + "]"
+                        }
+                        else if (closed.name == "DOUBLE-QUOTE-STRING") {
+                            PQL.chars += sentence.substring(closed.start, closed.end)
+                            "~string[" + (PQL.chars.size - 1) + "]"
+                        }
+                        else {
+                            ""
                         }
                     }
 
@@ -145,7 +149,7 @@ object Solver {
                 regex.findAllIn(sentence)
                     .foreach(string => {
                         PQL.strings += string
-                        sentence = sentence.replace(string, "~string[" + (PQL.strings.size - 1) + "]")
+                        sentence = sentence.replace(string, "~text[" + (PQL.strings.size - 1) + "]")
                     })
             })
 
@@ -191,7 +195,7 @@ object Solver {
                         else {
                             throw new SQLParseException("Miss left square bracket '['." + sentence.substring(0, i).takeRight(20))
                         }
-                    //左大括号, JSON对象, 闭合检查
+                    //左大括号
                     case '{' =>
                         //${ }  ${{ }}  ~{ } ~{{ }}
                         if (i > 0 && sentence.charAt(i - 1) == '$' || sentence.charAt(i - 1) == '~' ) {
@@ -202,6 +206,7 @@ object Solver {
                             //${{ 或 ~{{ 第二个括号, 啥也不干, 忽略
                         }
                         else {
+                            //JSON对象
                             if (blocks.isEmpty || blocks.head.name != "JSON-ARRAY-SQUARE-BRACKET" || blocks.head.end > -1) {
                                 blocks += new Block$Range("JSON-OBJECT-CURLY-BRACKET", i)
                             }
@@ -216,9 +221,11 @@ object Solver {
                             closing.pop()
                         }
                         else if (closing.nonEmpty && closing.head.char == '{') {
-                            blocks.head.end = i + 1
                             closing.pop()
-                            ranges += blocks.pop()
+                            if (blocks.nonEmpty && blocks.head.name == "JSON-OBJECT-CURLY-BRACKET") {
+                                blocks.head.end = i + 1
+                                ranges += blocks.pop()
+                            }
                         }
                         else {
                             throw new SQLParseException("Miss left curly bracket '{'." + sentence.substring(0, i).takeRight(20))
@@ -286,30 +293,18 @@ object Solver {
         }
 
         //恢复字符串
-        def restoreChars(PQL: PQL, quote: String = ""): String = {
+        def restoreChars(PQL: PQL): String = {
 
-            CHAR$N
+            CHAR$STRING$N
                 .findAllMatchIn(sentence)
                 .foreach(m => {
-                    val i = m.group(1).toInt
+                    val i = m.group(2).toInt
                     if (i < PQL.chars.size) {
-                        val char = PQL.chars(i)
-                        sentence = sentence.replace(m.group(0),
-                            if (quote != "") {
-                                if (!char.quotesWith(quote)) {
-                                    char.removeQuotes().useQuotes(quote)
-                                }
-                                else {
-                                    char
-                                }
-                            }
-                            else {
-                                char
-                            })
+                        sentence = sentence.replace(m.group(0), PQL.chars(i))
                     }
                 })
 
-            STRING$N
+            TEXT$N
                 .findAllMatchIn(sentence)
                 .foreach(m => {
                     val i = m.group(1).toInt
@@ -366,7 +361,7 @@ object Solver {
 
         def popStash(PQL: PQL, quote: String = "'"): String = {
             sentence.restoreJsons(PQL)
-                    .restoreChars(PQL, quote)
+                    .restoreChars(PQL)
                     .restoreValues(PQL, quote)
                     .restoreSymbols()
         }
@@ -376,7 +371,7 @@ object Solver {
             replaceArguments(args.toMap)
         }
 
-        //替换外部变量
+        //替换外部传参
         def replaceArguments(map: Map[String, String]): String = {
             ARGUMENT
                 .findAllMatchIn(sentence)
@@ -392,7 +387,7 @@ object Solver {
             sentence
         }
 
-        //替换外部变量
+        //替换外部传参
         def replaceArguments(row: DataRow): String = {
             ARGUMENT
                 .findAllMatchIn(sentence)
@@ -421,6 +416,8 @@ object Solver {
                     .replace("~u000a", "\n")
                     .replace("~u002d", "-")
                     .replace("~u002f", "/")
+                    .replace("~u0028", "(")
+                    .replace("~u0029", ")")
         }
 
         //解析表达式中的变量
@@ -514,7 +511,7 @@ object Solver {
                     $CONSTANT.findFirstIn(m.group(1)) match {
                         case Some(name) =>
                             //如果内容是变量形式
-                            PQL.findVariable("$" + m.group(1))
+                            PQL.findVariable("$" + name)
                                 .ifFound(data => {
                                     sentence = sentence.replace(m.group(0), PQL.$stash(data))
                                 })
@@ -581,12 +578,18 @@ object Solver {
                 PQL.values(sentence.$trim("~value[", "]").toInt)
             }
             //常量
+            else if ($NULL.test(sentence)) {
+                DataCell.NULL
+            }
             else if ($CONSTANT.test(sentence)) {
                 DataCell(sentence, DataType.TEXT)
             }
             //SHARP表达式
             else if ($LINK.test(sentence)) {
                 new Sharp(sentence).execute(PQL)
+            }
+            else if (sentence.bracketsWith("(", ")") || sentence.bracketsWith("~u0028", "~u0029")) {
+                DataCell(sentence.popStash(PQL), DataType.TEXT)
             }
             //最短表达式
             else {

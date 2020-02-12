@@ -26,72 +26,81 @@ class SAVE(var sentence: String) {
 
         val plan = Syntax("SAVE AS").plan(sentence)
 
-        plan.head.words match {
+        plan.head match {
             case "CACHE" => PQL.dh.saveAsCache()
             case "CACHE TABLE" =>
                 if (plan.size == 1) {
-                    PQL.dh.cache(plan.head.oneArgs)
+                    PQL.dh.cache(plan.headArgs)
                 }
                 else {
-                    PQL.dh.cache(plan.head.oneArgs, plan.last.oneArgs)
+                    PQL.dh.cache(plan.headArgs, plan.lastArgs)
                 }
             case "TEMP" => PQL.dh.saveAsTemp()
             case "TEMP TABLE" =>
                 if (plan.size == 1) {
-                    PQL.dh.temp(plan.head.oneArgs)
+                    PQL.dh.temp(plan.headArgs)
                 }
                 else {
-                    PQL.dh.temp(plan.head.oneArgs, plan.options.map(p => (p.words, p.multiArgs.mkString(","))): _*)
+                    PQL.dh.temp(plan.headArgs, plan.options.map(phrase => (phrase, plan.multiArgs(phrase).mkString(","))).toSeq: _*)
                 }
             case "CSV FILE" | "NEW CSV FILE" =>
-                val file = plan.head.oneArgs
+                val file = plan.headArgs
                 if (file.isFile) {
-                    if (plan.head.words.startsWith("NEW ")) {
+                    if (plan.head.startsWith("NEW ")) {
                         PQL.dh.saveAsNewCsvFile(file)
                     }
                     else {
                         PQL.dh.saveAsCsvFile(file)
                     }
 
-                    PQL.dh.withHeaders()
-                    plan.iterate(phrase => {
-                        phrase.words match {
-                            case "WITHOUT HEADERS" => PQL.dh.withoutHeaders()
-                            case "WITH HEADERS" => PQL.dh.withHeaders(phrase.multiArgs)
-                        }
-                    })
+                    if (plan.contains("WITHOUT HEADERS")) {
+                        PQL.dh.withoutHeaders()
+                    }
+                    else if (plan.contains("WITH HEADERS")) {
+                        PQL.dh.withHeaders(plan.multiArgs("WITH HEADERS"))
+                    }
+                    else {
+                        PQL.dh.withHeaders()
+                    }
+
                     PQL.dh.write()
                 }
                 else {
                     throw new SQLParseException("Incorrect csv file name or path at SAVE AS: " + file)
                 }
             case "TXT FILE" | "NEW TXT FILE" =>
-                val file = plan.head.oneArgs
+                val file = plan.headArgs
                 if (file.isFile) {
-                    if (plan.head.words.startsWith("NEW ")) {
+                    if (plan.head.startsWith("NEW ")) {
                         PQL.dh.saveAsNewTextFile(file)
                     }
                     else {
                         PQL.dh.saveAsTextFile(file)
                     }
 
-                    PQL.dh.withHeaders()
-                    plan.iterate(phrase => {
-                        phrase.words match {
-                            case "WITHOUT HEADERS" => PQL.dh.withoutHeaders()
-                            case "WITH HEADERS" => PQL.dh.withHeaders(phrase.multiArgs)
-                            case "DELIMITED BY" => PQL.dh.delimit(phrase.oneArgs)
-                        }
-                    })
+                    if (plan.contains("DELIMITED BY")) {
+                        PQL.dh.delimit(plan.get("DELIMITED BY").getOrElse(",").removeQuotes())
+                    }
+
+                    if (plan.contains("WITHOUT HEADERS")) {
+                        PQL.dh.withoutHeaders()
+                    }
+                    else if (plan.contains("WITH HEADERS")) {
+                        PQL.dh.withHeaders(plan.multiArgs("WITH HEADERS"))
+                    }
+                    else {
+                        PQL.dh.withHeaders()
+                    }
+
                     PQL.dh.write()
                 }
                 else {
                     throw new SQLParseException("Incorrect text file name or path at SAVE AS: " + file)
                 }
             case "JSON FILE" | "NEW JSON FILE" =>
-                val file = plan.head.oneArgs
+                val file = plan.headArgs
                 if (file.isFile) {
-                    if (plan.head.words.startsWith("NEW ")) {
+                    if (plan.head.startsWith("NEW ")) {
                         PQL.dh.saveAsNewJsonFile(file)
                     }
                     else {
@@ -103,33 +112,33 @@ class SAVE(var sentence: String) {
                     throw new SQLParseException("Incorrect json file name or path at SAVE AS: " + file)
                 }
             case "EXCEL" | "NEW EXCEL" =>
-                val file = plan.head.oneArgs
+                val file = plan.headArgs
                 if (file.isFile) {
-                    if (plan.head.words.startsWith("NEW ")) {
+                    if (plan.head.startsWith("NEW ")) {
                         PQL.dh.saveAsNewExcel(file)
                     }
                     else {
                         PQL.dh.saveAsExcel(file)
                     }
 
-                    plan.iterate(phrase => {
-                        phrase.words match {
-                            case "USE DEFAULT TEMPLATE" => PQL.dh.useDefaultTemplate()
-                            case "USE TEMPLATE" => PQL.dh.useTemplate(phrase.oneArgs)
-                        }
-                    })
+                    if (plan.contains("USE DEFAULT TEMPLATE", "DEFAULT TEMPLATE")) {
+                        PQL.dh.useDefaultTemplate()
+                    }
+                    else if (plan.contains("USE TEMPLATE")) {
+                        PQL.dh.useTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
+                    }
                 }
             case "DEFAULT" =>
                 PQL.dh.saveAsDefault()
             case "QROSS" =>
                 PQL.dh.saveAsQross()
             case _ =>
-                val connectionName = plan.head.oneArgs
+                val connectionName = plan.headArgs
                 if (plan.size == 1) {
                     PQL.dh.saveAs(connectionName)
                 }
-                else if ( plan.last.words == "USE") {
-                    PQL.dh.saveAs(connectionName, plan.last.oneArgs)
+                else if (plan.last == "USE") {
+                    PQL.dh.saveAs(connectionName, plan.lastArgs)
                 }
         }
     }

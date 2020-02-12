@@ -4,9 +4,10 @@ import java.sql._
 import java.util
 import java.util.regex.Pattern
 
-import io.qross.core.{DataCell, DataRow, DataTable, DataType}
+import io.qross.core._
 import io.qross.core.Parameter._
 import io.qross.time.Timer
+import io.qross.ext.TypeExt._
 
 import scala.collection.mutable
 
@@ -542,21 +543,28 @@ class DataSource (var connectionName: String, var databaseName: String) {
         }
     }
 
+    //batchSQL 可以是完整的INSERT语句，但是会自动把VALUES后面的内容去掉
+    //也可以是 VALUES 前面的内容
+    //也可以包含 VALUES
     def executeBatchInsert(batchSize: Int = 1000): Int = {
-
-        var count: Int = 0
+        var count: Int = -1
         if (this.batchSQLs.nonEmpty && this.batchValues.nonEmpty) {
             var location: Int = 0
-            val batchSQL = this.batchSQLs(0)
-            var baseSQL: String = batchSQL.toUpperCase
-            if (baseSQL.contains("VALUES")) {
-                location = baseSQL.indexOf("VALUES") + 6
-                baseSQL = batchSQL.substring(0, location) + " "
-            }
-            else {
-                baseSQL = batchSQL + " VALUES "
+            var SQL = this.batchSQLs(0)
+
+            //去掉VALUES后面的内容
+            """(?i)\)\s*VALUES\s*\(""".r.findFirstIn(SQL) match {
+                case Some(values) => SQL = SQL.takeBefore(values) + ") VALUES "
+                case None =>
             }
 
+            //自动增加VALUES
+            """(?i)\)\s*VALUES\s*$""".r.findFirstIn(SQL) match {
+                case Some(_) =>
+                case None => SQL += " VALUES "
+            }
+
+            //好像只适用于MySQL, 无论什么类型, 都加单引号
             var rows = new mutable.ArrayBuffer[String]
             var v: String = ""
             var vs: String = ""
@@ -576,12 +584,12 @@ class DataSource (var connectionName: String, var databaseName: String) {
                 rows += vs
 
                 if (rows.size >= batchSize) {
-                    count += this.executeNonQuery(baseSQL + rows.mkString(","))
+                    count += this.executeNonQuery(SQL + rows.mkString(","))
                     rows.clear()
                 }
             }
             if (rows.nonEmpty) {
-                count += this.executeNonQuery(baseSQL + rows.mkString(","))
+                count += this.executeNonQuery(SQL + rows.mkString(","))
                 rows.clear()
             }
             this.batchValues.clear()
@@ -614,28 +622,57 @@ class DataSource (var connectionName: String, var databaseName: String) {
         result
     }
 
+    //有?占位符
+    //有#或&占位符
+    //没有占位符，但是INSERT
+
     def tableUpdate(SQL: String, table: DataTable): Int = {
         var count = -1
-
         if (table.nonEmpty) {
-            if (SQL.hasQuestionMark) {
-                this.setBatchCommand(SQL)
-                table.foreach(row => {
-                    this.addBatch(row.getValues)
-                })
-                count = this.executeBatchUpdate()
-            }
-            else {
-                val params = SQL.pickParameters()
-                if (params.nonEmpty) {
+            SQL.placeHolderType match {
+                case Parameter.MARK =>
+                    this.setBatchCommand(SQL)
+                    table.foreach(row => {
+                        this.addBatch(row.getValues)
+                    })
+                    count = this.executeBatchUpdate()
+                case Parameter.SHARP =>
                     table.foreach(row => {
                         this.addBatchCommand(SQL.replaceParameters(row))
                     })
                     count = this.executeBatchCommands()
-                }
-                else {
-                    count = this.executeNonQuery(SQL)
-                }
+                case Parameter.NONE =>
+                    //MySQL INSERT的串接模式, 要求SQL语句不能写VALUES后面的内容
+                    if ("""(?i)^INSERT\b""".r.test(SQL.trim()) && !"""(?i)\)\s*VALUES\s*\(""".r.test(SQL)) {
+                        var insertSQL = SQL
+                        if (!"""(?i)\)\s*VALUES\s*$""".r.test(insertSQL)) {
+                            insertSQL += " VALUES "
+                        }
+
+                        val values = new mutable.ArrayBuffer[String]()
+                        table.foreach(row => {
+                            val vs = new mutable.ArrayBuffer[String]()
+                            for ((field, dataType) <- row.columns) {
+                                val v = row.getString(field)
+                                if (v == null) {
+                                    vs += "null"
+                                }
+                                else if (dataType == DataType.INTEGER || dataType == DataType.DECIMAL || dataType == DataType.BOOLEAN) {
+                                    vs += v
+                                }
+                                else {
+                                    vs += "'" + v.replace("'", "''") + "'"
+                                }
+                            }
+                            values += "(" + vs.mkString(",") + ")"
+                            vs.clear()
+                        })
+                        count = this.executeNonQuery(insertSQL + values.mkString(","))
+                        values.clear()
+                    }
+                    else {
+                        count = this.executeNonQuery(SQL)
+                    }
             }
         }
 

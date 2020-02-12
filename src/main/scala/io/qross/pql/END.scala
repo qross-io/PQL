@@ -1,6 +1,6 @@
 package io.qross.pql
 
-import io.qross.pql.Patterns.{$END$IF, $END$LOOP}
+import io.qross.pql.Patterns.{$END$IF, $END$LOOP, $END$CASE}
 import io.qross.ext.TypeExt._
 
 object END {
@@ -39,6 +39,24 @@ object END {
             //只出栈
             PQL.PARSING.pop()
             PQL.PARSING.head.addStatement($endLoop)
+        }
+        else if ($END$CASE.test(sentence)) {
+            //检查CASE WHEN语句是否正常闭合
+            if (PQL.TO_BE_CLOSE.isEmpty) {
+                throw new SQLParseException("Can't find CASE clause: " + sentence)
+            }
+            else if (PQL.TO_BE_CLOSE.head.caption != "CASE") {
+                throw new SQLParseException(PQL.TO_BE_CLOSE.head.caption + " hasn't closed: " + PQL.TO_BE_CLOSE.head.sentence)
+            }
+            else {
+                PQL.TO_BE_CLOSE.pop()
+            }
+
+            val $endCase: Statement = new Statement("END$CASE", "END CASE", new END$CASE())
+            //只出栈
+            PQL.PARSING.pop() //退出WHEN或ELSE
+            PQL.PARSING.pop() //退出CASE
+            PQL.PARSING.head.addStatement($endCase)
         }
         else if ("END".equalsIgnoreCase(sentence)) {
             //END FUNCTION

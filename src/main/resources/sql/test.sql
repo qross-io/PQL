@@ -6,10 +6,33 @@
 
 DEBUG ON;
 
-OPEN QROSS;
+FUNCTION $func_name ($a DEFAULT 0, $b DEFAULT 'hello')
+    BEGIN
+        VAR $row := SELECT id, status, info FROM tc WHERE id>$a LIMIT $c -> FIRST ROW;
+        PRINT 'hello' + $b;
+        PRINT $row % id;
+        PRINT $row % status;
+        PRINT $row % info;
+        RETURN $a;
+    END;
 
-OUTPUT @DEFAULT_SECURITY_AUTHENTICATION;
+CALL $func_name($a := 10, 'world', $c := 10);
 
+PRINT "hello world" TO MD5;
+
+
+
+--REQUEST JSON API 'http://localhost:8080/api/job?projectId=-2&key=';
+--GET # PARSE "/" AS TABLE;
+
+--SELECT id AS ID, status AS Status FROM qross_tasks LIMIT 0 -> INSERT IF EMPTY (  id, status  ) VALUES ( 1   ,'success'), (2,'failed');
+--SELECT id FROM qross_tasks LIMIT 0 -> INSERT IF EMPTY [{ "id":1 }, { "id":2 }];
+
+--PRINT ${ IF $a == 1 THEN '3' ELSIF $a > 1 THEN '5' ELSE '1' END -> POW 2 ROUND };
+--PRINT ${ CASE WHEN $a == 1 THEN '3' WHEN $a > 1 THEN '5' ELSE '1' END -> POW 2 ROUND };
+--PRINT ${ CASE $a WHEN 1 THEN '3' WHEN 2 THEN '5' ELSE '1' END -> POW 2 ROUND };
+
+-- > INSERT IF EMPTY { "success": 0, "failed": 0, "timeout": 0, "other_exceptional": 0 }
 
 --OPEN QROSS;
 --    GET # SELECT * FROM qross_users;

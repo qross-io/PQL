@@ -54,6 +54,16 @@ object Email {
             dh.plug("EMAIL", new Email(title))
         }
 
+        def setSmtpServer(host: String, port: String): DataHub = {
+            EMAIL.setSmtpServer(host, port)
+            dh
+        }
+
+        def setFrom(address: String, password: String, name: String = ""): DataHub = {
+            EMAIL.setFrom(address, password, name)
+            dh
+        }
+
         def fromTemplate(template: String): DataHub = {
             EMAIL.fromTemplate(template)
             dh
@@ -157,6 +167,20 @@ object Email {
 
 class Email(private var title: String) {
 
+    private val smtp = new java.util.Properties()
+
+    smtp.setProperty("mail.transport.protocol", "smtp")
+    smtp.setProperty("mail.smtp.host", Global.EMAIL_SMTP_HOST)
+    smtp.setProperty("mail.smtp.auth", "true")
+    smtp.setProperty("mail.smtp.socketFactory.port", Global.EMAIL_SMTP_PORT)
+    smtp.setProperty("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory")
+    smtp.setProperty("mail.smtp.port", Global.EMAIL_SMTP_PORT)
+
+    private val from = mutable.HashMap[String, String] (
+        "account" -> Global.EMAIL_SENDER_ACCOUNT,
+        "personal" -> Global.EMAIL_SENDER_PERSONAL,
+        "password" -> Global.EMAIL_SENDER_PASSWORD)
+
     private var attachments: ArrayBuffer[String] = new mutable.ArrayBuffer[String]()
 
     //email -> fullname
@@ -165,6 +189,20 @@ class Email(private var title: String) {
     private var bccRecipients = new mutable.HashMap[String, String]()
     private var content: String = ""
     private var placement: String = "NOTHING"
+
+    def setSmtpServer(host: String, port: String): Email = {
+        smtp.setProperty("mail.smtp.host", host)
+        smtp.setProperty("mail.smtp.socketFactory.port", port)
+        smtp.setProperty("mail.smtp.port", port)
+        this
+    }
+
+    def setFrom(address: String, password: String, name: String = ""): Email = {
+        from += "account" -> address
+        from += "password" -> password
+        from += "personal" -> name
+        this
+    }
 
     def fromTemplate(template: String): Email = {
 
@@ -328,29 +366,17 @@ class Email(private var title: String) {
             "No recipients."
         }
     }
-    
+
     def transfer(): String = {
 
         val result = new mutable.ArrayBuffer[String]()
 
-        val props = new java.util.Properties()
-        props.setProperty("mail.transport.protocol", "smtp")
-        props.setProperty("mail.smtp.host", Global.EMAIL_SMTP_HOST)
-        props.setProperty("mail.smtp.auth", "true")
-        if (Global.EMAIL_SSL_AUTH_ENABLED) {
-            props.setProperty("mail.smtp.socketFactory.port", Global.EMAIL_SMTP_PORT)
-            props.setProperty("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory")
-        }
-        else {
-            props.setProperty("mail.smtp.port", Global.EMAIL_SMTP_PORT)
-        }
-    
-        val session = Session.getInstance(props)
+        val session = Session.getInstance(smtp)
         session.setDebug(false)
     
         val message = new MimeMessage(session)
     
-        message.setFrom(new InternetAddress(Global.EMAIL_SENDER_ACCOUNT, Global.EMAIL_SENDER_PERSONAL, "UTF-8"))
+        message.setFrom(new InternetAddress(from("account"), from("personal"), "UTF-8"))
         for((address, personal) <- toRecipients) {
             message.addRecipient(Message.RecipientType.TO, new InternetAddress(address, personal, "UTF-8"))
         }
@@ -392,7 +418,7 @@ class Email(private var title: String) {
         var connected = false
         while (!connected && retry < 10) {
             try {
-                transport.connect(Global.EMAIL_SENDER_ACCOUNT, Global.EMAIL_SENDER_PASSWORD)
+                transport.connect(from("account"), from("password"))
                 connected = true
             }
             catch {

@@ -2,9 +2,11 @@ package io.qross.pql
 
 import java.util.regex.{Matcher, Pattern}
 
-import io.qross.core.DataCell
+import io.qross.core.{DataCell, DataType}
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.BLANKS
+
+import scala.collection.mutable.ListBuffer
 
 class Condition(val expression: String) {
     var field: String = _
@@ -44,7 +46,8 @@ class Condition(val expression: String) {
     NOT
     */
 
-    private val $OPERATOR = """(?i)===|!==|==|!=|<>|>=|<=|>|<|=|\sNOT\sIN\s|\sIS\s+NOT\s|^IS\s+NOT\s|\sIN\s|\sIS\s|^IS\s|\sAND\s|\sOR\s|\sNOT\s+EXISTS|^NOT\s+EXISTS\s|\sEXISTS\s|^EXISTS\s|\sLIKE\s|\sNOT\sLIKE\s|^NOT\s|\sNOT\s""".r
+    private val $OPERATOR = """(?i)===|!==|==|!=|<>|>=|<=|>|<|=|\sNOT\sIN\s|\sIS\s+NOT\s|^IS\s+NOT\s|\sIN\s|\sIS\s|^IS\s|\sAND\s|\sOR\s|\sNOT\s+EXISTS|^NOT\s+EXISTS\s|\sEXISTS\s|^EXISTS\s|^NOT\s|\sNOT\s""".r
+    //private val $OPERATOR = """(?i)===|!==|==|!=|<>|>=|<=|>|<|=|\sIS\s+NOT\s|^IS\s+NOT\s|\sIS\s|^IS\s|\sAND\s|\sOR\s|\sNOT\s+EXISTS|^NOT\s+EXISTS\s|\sEXISTS\s|^EXISTS\s|^NOT\s|\sNOT\s""".r
 
     $OPERATOR.findFirstIn(expression) match {
         case Some(opt) =>
@@ -61,8 +64,34 @@ class Condition(val expression: String) {
             case "NOT" => !value.asBoolean
             case "EXISTS" => value.asText.$trim("(", ")").$trim("[", "]").trim() != ""
             case "NOT$EXISTS" => value.asText.$trim("(", ")").$trim("[", "]").trim() == ""
-            case "IN" => value.asList.toSet.contains(field.value)
-            case "NOT$IN" => !value.asList.toSet.contains(field.value)
+            case "IN" =>
+                if (value.isText) {
+                    val chars = new ListBuffer[String]
+                    value.asText
+                            .pickChars(chars)
+                            .$trim("(", ")")
+                            .split(",")
+                            .toSet[String]
+                            .map(_.restoreChars(chars).removeQuotes())
+                            .contains(field.asText.removeQuotes())
+                }
+                else {
+                    value.asList.toSet.contains(field.value)
+                }
+            case "NOT$IN" =>
+                if (value.isText) {
+                    val chars = new ListBuffer[String]
+                    !value.asText
+                            .pickChars(chars)
+                            .$trim("(", ")")
+                            .split(",")
+                            .toSet[String]
+                            .map(_.restoreChars(chars).removeQuotes())
+                            .contains(field.asText.removeQuotes())
+                }
+                else {
+                    !value.asList.toSet.contains(field.value)
+                }
             case "IS$NOT" =>
                 val v = value.asText
                 if (v == null || v.equalsIgnoreCase("NULL")) {

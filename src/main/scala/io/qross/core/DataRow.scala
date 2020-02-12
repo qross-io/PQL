@@ -12,6 +12,8 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
+import scala.util.control.Breaks.{break, breakable}
+
 object DataRow {
    
     def from(json: String): DataRow = Json(json).parseRow("/")
@@ -40,9 +42,9 @@ class DataRow() {
         }
     }
 
-    val fields = new mutable.ArrayBuffer[String]()
-    val columns = new mutable.LinkedHashMap[String, DataType]()
-    val values = new mutable.LinkedHashMap[String, Any]()
+    val fields = new mutable.ArrayBuffer[String]() //字段名索引列表
+    val columns = new mutable.LinkedHashMap[String, DataType]() //列名及数据类型
+    val values = new mutable.LinkedHashMap[String, Any]()   //列名及值
 
     //insert or update
     def set(fieldName: String, value: Any): Unit = {
@@ -55,19 +57,17 @@ class DataRow() {
 
     def set(fieldName: String, value: Any, dataType: DataType): Unit = {
 
-        val name = fieldName.toLowerCase()
-
-        if (!columns.contains(name)) {
+        if (!columns.contains(fieldName)) {
             //不存在则添加列
-            fields += name
-            columns += name -> dataType
+            fields += fieldName
+            columns += fieldName -> dataType
         }
-        else if (columns(name) != dataType && dataType != DataType.NULL) {
+        else if (columns(fieldName) != dataType && dataType != DataType.NULL) {
             //仅修改数据类型
-            columns += name -> dataType
+            columns += fieldName -> dataType
         }
 
-        this.values += name -> {
+        this.values += fieldName -> {
             if (value != null) {
                 dataType match {
                     case DataType.DATETIME => value.toDateTime.toString
@@ -82,8 +82,8 @@ class DataRow() {
     }
 
     def remove(fieldName: String): Unit = {
-        val name = fieldName.toLowerCase()
-        if (this.columns.contains(name)) {
+        val name = getFieldName(fieldName).getOrElse("")
+        if (name != "") {
             this.fields -= name
             this.columns -= name
             this.values -= name
@@ -91,13 +91,14 @@ class DataRow() {
     }
 
     def updateFieldName(fieldName: String, newFieldName: String): Unit = {
-        val oldName = fieldName.toLowerCase()
-        val newName = newFieldName.toLowerCase()
-        this.fields(this.fields.indexOf(oldName)) = newName
-        this.values += newName -> this.values(oldName)
-        this.values -= oldName
-        this.columns += newName -> this.columns(oldName)
-        this.columns -= oldName
+        val name = getFieldName(fieldName).getOrElse("")
+        if (name != "") {
+            this.fields(this.fields.indexOf(name)) = newFieldName
+            this.values += newFieldName -> this.values(name)
+            this.values -= name
+            this.columns += newFieldName -> this.columns(name)
+            this.columns -= name
+        }
     }
 
     def alter(fieldName: String, newFieldName: String): Unit = {
@@ -111,8 +112,8 @@ class DataRow() {
     }
 
     def get(fieldName: String): Option[Any] = {
-        val name = fieldName.toLowerCase()
-        if (this.values.contains(name)) {
+        val name = this.getFieldName(fieldName).getOrElse("")
+        if (name != "") {
             this.values.get(name)
         }
         else {
@@ -131,8 +132,8 @@ class DataRow() {
     }
 
     def getCell(fieldName: String): DataCell = {
-        val name = fieldName.toLowerCase()
-        if (this.contains(name)) {
+        val name = this.getFieldName(fieldName).getOrElse("")
+        if (name != "") {
             DataCell(this.values(name), this.columns(name))
         }
         else {
@@ -164,8 +165,8 @@ class DataRow() {
     }
 
     def getJson(fieldName: String): Json = {
-        val name = fieldName.toLowerCase()
-        if (this.contains(name)) {
+        val name = this.getFieldName(fieldName).getOrElse("")
+        if (name != "") {
             this.values(name).asInstanceOf[Json]
         }
         else {
@@ -346,14 +347,38 @@ class DataRow() {
     def getFields: List[String] = fields.toList
     def getDataTypes: List[DataType] = columns.values.toList
     def getValues[T]: List[T] = values.values.map(_.asInstanceOf[T]).toList
+    def getFieldName(fieldName: String): Option[String] = {
+        if (this.columns.contains(fieldName)) {
+            Some(fieldName)
+        }
+        else {
+            var name = ""
+            breakable {
+                for (field <- this.fields) {
+                    if (field.equalsIgnoreCase(fieldName)) {
+                        name = field
+                        break
+                    }
+                }
+            }
+
+            if (name != "") Some(name) else None
+        }
+    }
     def getFieldName(index: Int): Option[String] = if (index < fields.length) Some(fields(index)) else None
     def getDataType(index: Int): Option[DataType] = if (index < fields.length) Some(columns(fields(index))) else None
-    def getDataType(fieldName: String): Option[DataType] = this.columns.get(fieldName.toLowerCase())
-
-    def contains(fieldName: String): Boolean = this.columns.contains(fieldName.toLowerCase)
+    def getDataType(fieldName: String): Option[DataType] = {
+        val name = this.getFieldName(fieldName).getOrElse("")
+        if (name != "") {
+            this.columns.get(name)
+        }
+        else {
+            None
+        }
+    }
+    def contains(fieldName: String): Boolean = getFieldName(fieldName).nonEmpty
     def contains(fieldName: String, value: Any): Boolean = {
-        val name = fieldName.toLowerCase()
-        this.columns.contains(name) && this.getString(name) == value.toString
+        this.contains(fieldName) && this.getString(fieldName) == value.toString
     }
     def size: Int = fields.size
     def length: Int = fields.length

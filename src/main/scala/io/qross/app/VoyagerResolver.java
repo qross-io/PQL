@@ -12,13 +12,12 @@ public class VoyagerResolver extends AbstractTemplateViewResolver {
     public VoyagerResolver() {
         setViewClass(requiredViewClass());
 
-        Properties.loadResourcesFile("/voyager.properties");
-        setPrefix(Properties.get("voyager.directory", "/templates/"));
-        setSuffix("." + Properties.get("voyager.extension", "html"));
+        setPrefix(Setting.VoyagerDirectory);
+        setSuffix("." + Setting.VoyagerExtension);
 
         Map<String, Object> attributes = new HashMap<>();
-        attributes.put("connection", Properties.get("voyager.connection", "jdbc.default"));
-        attributes.put("charset", Properties.get("voyager.charset", Global.CHARSET()));
+        attributes.put("connection", Setting.VoyagerConnection);
+        attributes.put("charset", Setting.VoyagerCharset);
         setAttributesMap(attributes);
     }
 

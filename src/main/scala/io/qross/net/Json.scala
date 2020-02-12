@@ -186,6 +186,23 @@ case class Json(text: String = "") {
         
         row
     }
+
+    def parseMap(path: String): Map[String, String] = {
+        val map = new mutable.LinkedHashMap[String, String]()
+
+        val node = findNode(path)
+
+        if (node.isObject) {
+            node.fields().forEachRemaining(child => {
+                map.put(child.getKey, child.getValue.asText())
+            })
+        }
+        else {
+            throw new JsonParseException("Wrong input format. The json path must point to a Object.")
+        }
+
+        map.toMap
+    }
     
     def parseJavaList(path: String): java.util.List[Any] = {
         val list = new java.util.ArrayList[Any]()

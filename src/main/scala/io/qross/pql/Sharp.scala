@@ -7,11 +7,13 @@ import io.qross.ext.TypeExt._
 import io.qross.fql.Fragment
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
+import io.qross.security.MD5
 import io.qross.time.ChronExp
 import io.qross.time.TimeSpan._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 object Sharp {
 
@@ -979,6 +981,7 @@ object Sharp {
         }
     }
 
+    //Cron Expression获取下一次匹配
     def TICK$BY(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             ChronExp(data.asText).getNextTick(arg.asDateTime) match {
@@ -988,6 +991,16 @@ object Sharp {
         }
         else {
             throw SharpLinkArgumentException.occur("TICK$BY", origin)
+        }
+    }
+
+    def TO$MDX(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            //参数是盐值
+            MD5.encrypt(data.asText, arg.asText).toDataCell(DataType.TEXT)
+        }
+        else {
+            MD5.encrypt(data.asText).toDataCell(DataType.TEXT)
         }
     }
 
@@ -1362,6 +1375,8 @@ object Sharp {
                 table.addRow(arg.asRow).toDataCell(DataType.TABLE)
             }
             else if (arg.isText && Fragment.$VALUES.test(arg.asText)) {
+                //仅支持 -> INSERT IF EMPTY "(id, status) VALUES (1, 'success')"
+                //仍不支持 -> INSERT IF EMPTY (id, status) VALUES (1, 'success')
                 table.insert(arg.asText).toDataCell(DataType.TABLE)
             }
             else {
@@ -1382,6 +1397,15 @@ object Sharp {
             else {
                 data
             }
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at INSERT IF EMPTY. " + origin)
+        }
+    }
+
+    def VALUES(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(data.asText + " VALUES " + arg.asText, DataType.TEXT)
         }
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at INSERT IF EMPTY. " + origin)
@@ -1492,7 +1516,19 @@ object Sharp {
 
     def IN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            arg.asList.toSet.contains(data.value).toDataCell(DataType.BOOLEAN)
+            if (arg.isText) {
+                val chars = new ListBuffer[String]
+                arg.asText
+                   .pickChars(chars)
+                   .$trim("(", ")")
+                   .split(",")
+                   .toSet[String]
+                   .map(_.restoreChars(chars).removeQuotes())
+                   .contains(data.asText.removeQuotes()).toDataCell(DataType.BOOLEAN)
+            }
+            else {
+                arg.asList.toSet.contains(data.value).toDataCell(DataType.BOOLEAN)
+            }
         }
         else {
             throw SharpLinkArgumentException.occur(s"IN", origin)
@@ -1501,10 +1537,24 @@ object Sharp {
 
     def NOT$IN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            DataCell(!arg.asList.toSet.contains(data.value), DataType.BOOLEAN)
+            if (arg.isText) {
+                {
+                    val chars = new ListBuffer[String]
+                    !arg.asText
+                        .pickChars(chars)
+                        .$trim("(", ")")
+                        .split(",")
+                        .toSet[String]
+                        .map(_.restoreChars(chars).removeQuotes())
+                        .contains(data.asText.removeQuotes())
+                }.toDataCell(DataType.BOOLEAN)
+            }
+            else {
+                DataCell(!arg.asList.toSet.contains(data.value), DataType.BOOLEAN)
+            }
         }
         else {
-            throw SharpLinkArgumentException.occur(s"IN", origin)
+            throw SharpLinkArgumentException.occur(s"NOT IN", origin)
         }
     }
 
@@ -1542,15 +1592,52 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
 
     def execute(PQL: PQL): DataCell = {
 
-        var sentence =
+        var sentence = {
             if (data.invalid) {
                 expression.takeAfter($LET).trim()
             }
             else {
                 " " + expression
             }
+        }
 
-        sentence = sentence.replace("", "")
+        //处理短表达式 IF 和 CASE
+        if (data.invalid) {
+            sentence.takeBefore($BLANK).toUpperCase() match {
+                case "IF" =>
+                    $END$.findFirstIn(sentence) match {
+                        case Some(end) => data = IF.express(sentence.substring(0, sentence.indexOf(end) + end.length).trim(), PQL)
+                        case None => throw new SQLExecuteException("Wrong IF expression, keyword END is needed. " + sentence)
+                    }
+                    sentence = sentence.takeAfter($END$)
+                case "CASE" =>
+                    $END$.findFirstIn(sentence) match {
+                        case Some(end) => data = CASE.express(sentence.substring(0, sentence.indexOf(end) + end.length).trim(), PQL)
+                        case None => throw new SQLExecuteException("Wrong CASE expression, keyword END is needed. " + sentence)
+                    }
+                    sentence = sentence.takeAfter($END$).trim()
+                case _ =>
+            }
+
+            if (sentence.startsWith("->")) {
+                sentence = sentence.substring(2)
+            }
+        }
+
+        //分组数据即(..)包围的数据，去掉空白字符
+        $TUPLE.findAllIn(sentence).foreach(tuple => {
+            sentence = sentence.replace(tuple, tuple.replaceAll("\\s", ""))
+        })
+
+        // 将 $row % field 转成 $row X 'field' 格式
+        $PROPERTY.findAllMatchIn(sentence).foreach(m => {
+            sentence = sentence.replace(m.group(0), " X '" + m.group(1) + "'")
+        })
+
+        // 特殊格式 TO MD5
+        $MD5.findAllMatchIn(sentence).foreach(m => {
+            sentence = sentence.replace(m.group(0), " TO MDX" + m.group(1))
+        })
 
         val links = new mutable.ListBuffer[Link$Argument]()
 
@@ -1560,10 +1647,10 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
             //必须是等号, 不能用replace方法, 否则变量内容会保存
             data = {
                 if (matches.nonEmpty) {
-                    sentence.takeBefore(matches.head).$sharp(PQL)
+                    sentence.takeBefore(matches.head).$eval(PQL)
                 }
                 else {
-                    sentence.$sharp(PQL)
+                    sentence.$eval(PQL)
                 }
             }
         }

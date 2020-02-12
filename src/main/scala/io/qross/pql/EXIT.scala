@@ -22,18 +22,16 @@ object EXIT {
                 }
             }
 
-            val m = $EXIT.matcher(sentence)
-            if (m.find) {
-                if (contained) {
-                    val $exit: Statement = new Statement("EXIT", sentence, if (m.group(1) != null) new ConditionGroup(m.group(2).trim()) else null)
-                    PQL.PARSING.head.addStatement($exit)
-                }
-                else {
-                    throw new SQLParseException("EXIT must be contained in FOR or WHILE statement: " + sentence)
-                }
-            }
-            else {
-                throw new SQLParseException("Incorrect EXIT sentence: " + sentence)
+            $EXIT.findFirstMatchIn(sentence) match {
+                case Some(m) =>
+                    if (contained) {
+                        val $exit: Statement = new Statement("EXIT", sentence, if (m.group(1) != null) new ConditionGroup(m.group(2).trim()) else null)
+                        PQL.PARSING.head.addStatement($exit)
+                    }
+                    else {
+                        throw new SQLParseException("EXIT must be contained in FOR or WHILE statement: " + sentence)
+                    }
+                case None => throw new SQLParseException("Incorrect EXIT sentence: " + sentence)
             }
         }
     }

@@ -20,7 +20,7 @@ object DataHub {
     def DEFAULT: DataHub = new DataHub("")
 }
 
-class DataHub (private val defaultConnectionName: String = "") {
+class DataHub (var defaultConnectionName: String) {
     
     private val SOURCES = mutable.HashMap[String, DataSource](
         "DEFAULT" -> {
@@ -60,12 +60,16 @@ class DataHub (private val defaultConnectionName: String = "") {
     //producers/consumers amount
     private var LINES: Int = Environment.cpuThreads
     private var TANKS: Int = 3
-    //selectSQL, @param
-    private val pageSQLs = new mutable.HashMap[String, String]()
+    //selectSQL, (@param, initialPoint)
+    private lazy val pageSQLs = new mutable.HashMap[String, String]()
     //selectSQL, (@param, beginKey, endKey, blockSize)
-    private val blockSQLs = new mutable.HashMap[String, (String, Long, Long, Int)]()
+    private lazy val blockSQLs = new mutable.HashMap[String, (String, Long, Long, Int)]()
     //selectSQL
-    private var processSQLs = new mutable.ArrayBuffer[String]()
+    private lazy val processSQLs = new mutable.ArrayBuffer[String]()
+
+    def this() {
+        this("")
+    }
 
     // ---------- system ----------
 
@@ -111,7 +115,11 @@ class DataHub (private val defaultConnectionName: String = "") {
         this
     }
 
-    def open(connectionNameOrDataSource: Any, database: String = ""): DataHub = {
+    def open(connectionNameOrDataSource: Any): DataHub = {
+        open(connectionNameOrDataSource, "")
+    }
+
+    def open(connectionNameOrDataSource: Any, database: String): DataHub = {
         reset()
         connectionNameOrDataSource match {
             case connectionName: String =>
@@ -167,7 +175,11 @@ class DataHub (private val defaultConnectionName: String = "") {
         this
     }
 
-    def saveAs(connectionName: String, database: String = ""): DataHub = {
+    def saveAs(connectionName: String): DataHub = {
+        saveAs(connectionName, "")
+    }
+
+    def saveAs(connectionName: String, database: String): DataHub = {
         if (!SOURCES.contains(connectionName)) {
             SOURCES += connectionName -> new DataSource(connectionName, database)
         }
@@ -345,7 +357,7 @@ class DataHub (private val defaultConnectionName: String = "") {
         }
 
         if ($SHEET$NONE$QUERY.test(nonQuerySQL)) {
-            this.pick[Excel]("EXCEL$R") match {
+            this.pick[Excel]("EXCEL$W") match {
                 case Some(excel) => AFFECTED_ROWS_OF_LAST_SET = excel.executeNonQuery(nonQuerySQL)
                 case None => throw new ExtensionNotFoundException("Must open an excel file first.")
             }
@@ -377,7 +389,6 @@ class DataHub (private val defaultConnectionName: String = "") {
 
         this
     }
-
 
     def join(selectSQL: String, on: (String, String)*): DataHub = {
         TABLE.join(CURRENT.executeDataTable(selectSQL), on: _*)
@@ -497,9 +508,11 @@ class DataHub (private val defaultConnectionName: String = "") {
         this
     }
 
-    //按limit分页
-    //select * from table limit @offset, 10000  多线程
-    //select * from table where id>@id LIMIT 10000  单线程
+    //多线程, 按limit分页, 不过越往后越慢
+    //select * from table limit @{offset}, 10000
+    //单线程, @{id}为主键名, 必须在返回值中且与数据表字段一致, 如果不是从0开始, 在WHERE条件式中加 id>2000 条件式
+    //应用场景较少, 主要解决大数据表的分页问题
+    //select * from table where id>@{id} LIMIT 10000
     def page(selectSQL: String): DataHub = {
         //clear if new transaction
         reset()
@@ -508,7 +521,7 @@ class DataHub (private val defaultConnectionName: String = "") {
             println(selectSQL)
         }
 
-        selectSQL.matchParameters.headOption match {
+        selectSQL.matchBatchMark match {
             case Some(param) => pageSQLs += selectSQL -> param
             case None => TABLE.merge(CURRENT.executeDataTable(selectSQL))
         }
@@ -519,8 +532,7 @@ class DataHub (private val defaultConnectionName: String = "") {
     //按主键分块读取
     //begin_id, end_id
     //每10000行一块
-
-    //select * from table where id>@id AND id<=@id
+    //select * from table where id>@{id} AND id<=@{id}
     //select id from table order by id asc limit 1
     //select max(id) from table
     //beginKeyOrSQL为整数时左开右闭, 为SQL时左闭右闭
@@ -532,7 +544,7 @@ class DataHub (private val defaultConnectionName: String = "") {
             println(selectSQL)
         }
 
-        selectSQL.matchParameters.headOption match {
+        selectSQL.matchBatchMark match {
             case Some(param) =>
                 blockSQLs += selectSQL -> (param,
                         beginKeyOrSQL match {
@@ -554,15 +566,16 @@ class DataHub (private val defaultConnectionName: String = "") {
         this
     }
 
-    //多线程执行同一条更新语句, beginKeyOrSQL为整数时左开右闭, 为SQL时左闭右闭
+    //多线程执行同一条UPDATE或DELETE语句, beginKeyOrSQL为整数时左开右闭, 为SQL时左闭右闭
     //初始设计目的是解决tidb不能大批量更新的问题, 只能按块更新
+    //DELETE FROM table WHERE id>@{id} AND id<=@{id}
     def bulk(nonQuerySQL: String, beginKeyOrSQL: Any, endKeyOrSQL: Any, bulkSize: Int = 100000): DataHub = {
 
         if (DEBUG) {
             println(nonQuerySQL)
         }
 
-        nonQuerySQL.matchParameters.headOption match {
+        nonQuerySQL.matchBatchMark match {
             case Some(param) =>
                 var begin = beginKeyOrSQL match {
                     case sentence: String => CURRENT.executeDataRow(sentence).getLong(0) - 1
@@ -628,9 +641,9 @@ class DataHub (private val defaultConnectionName: String = "") {
 
         //生产者
         for ((selectSQL, param) <- pageSQLs) {
-            if (param.toLowerCase().contains("offset")) {
+            if (param.toLowerCase() == "@{offset}") {
                 //offset
-                val pageSize = "\\d+".r.findFirstMatchIn(selectSQL.substring(selectSQL.indexOf(param) + param.length)) match {
+                val pageSize = "\\d+".r.findFirstMatchIn(selectSQL.takeAfter(param)) match {
                     case Some(ps) => ps.group(0).toInt
                     case None => 10000
                 }
@@ -648,14 +661,15 @@ class DataHub (private val defaultConnectionName: String = "") {
 
             var i = if (config._2 == 0) 0 else config._2 - 1
             while (i < config._3) {
-                var SQL = selectSQL
-                SQL = SQL.replaceFirst(config._1, i.toString)
-                i += config._4
-                if (i > config._3) {
-                    i = config._3
-                }
-                SQL = SQL.replaceFirst(config._1, i.toString)
-                Blocker.QUEUE.add(SQL)
+                Blocker.QUEUE.add(
+                    selectSQL.replaceFirst(config._1, i.toString)
+                            .replaceFirst(config._1, {
+                                i += config._4
+                                if (i > config._3) {
+                                    i = config._3
+                                }
+                                i.toString
+                            }))
             }
 
             //producer
@@ -692,16 +706,16 @@ class DataHub (private val defaultConnectionName: String = "") {
     private def stream(handler: DataTable => Unit): Unit = {
 
         for ((selectSQL, param) <- pageSQLs) {
-            if (param.toLowerCase().contains("offset")) {
+            if (param.toLowerCase() == "@{offset}") {
                 //offset
-                val pageSize = "\\d+".r.findFirstMatchIn(selectSQL.substring(selectSQL.indexOf(param) + param.length)) match {
-                    case Some(ps) => ps.group(0).toInt
+                val pageSize = "\\d+".r.findFirstIn(selectSQL.takeAfter(param)) match {
+                    case Some(ps) => ps.toInt
                     case None => 10000
                 }
 
                 val parallel = new Parallel()
                 //producer
-                for (i <- 0 until LINES) {  //Global.CORES
+                for (i <- 0 until LINES) {
                     parallel.add(new Pager(CURRENT, selectSQL, param, pageSize, TANKS))
                 }
                 parallel.startAll()
@@ -719,40 +733,23 @@ class DataHub (private val defaultConnectionName: String = "") {
                 parallel.waitAll()
                 Pager.CUBE.reset()
                 Output.writeMessage("Exit All Page")
-
-                /* origin code for single thread
-                var page = 0
-                var continue = true
-                do {
-                    val table = CURRENT.executeDataTable(selectSQL.replace("@" + param, String.valueOf(page * pageSize)))
-                    if (table.nonEmpty) {
-                        handler(table)
-                        //dataSource.tableUpdate(nonQuerySQL, table)
-                        page += 1
-                    }
-                    else {
-                        continue = false
-                    }
-                }
-                while(continue)
-                */
             }
             else {
-                //SELECT * FROM table WHERE id>@id LIMIT 10000;
-
+                //单线程, 多线程使用block方法
+                //SELECT * FROM table WHERE id>@{id} LIMIT 10000;
                 var id = 0L //primaryKey
+                val field = param.$trim("@{", "}")
                 var continue = true
                 do {
                     val table = CURRENT.executeDataTable(selectSQL.replace(param, String.valueOf(id)))
                     TOTAL_COUNT_OF_RECENT_QUERY += table.count()
                     COUNT_OF_LAST_QUERY = table.count()
                     if (table.nonEmpty) {
-                        //dataSource.tableUpdate(nonQuerySQL, table)
-                        if (table.contains(param)) {
-                            id = table.max(param).firstCellLongValue
+                        if (table.contains(field)) {
+                            id = table.max(field).firstCellLongValue
                         }
                         else {
-                            throw new Exception("Result set must contains primiary key: " + param)
+                            throw new Exception("Result set must contains primary key: " + field)
                         }
 
                         handler(table)
@@ -767,21 +764,19 @@ class DataHub (private val defaultConnectionName: String = "") {
         }
 
         for ((selectSQL, config) <- blockSQLs) {
-            //id
-
             //SELECT * FROM table WHERE id>@id AND id<=@id;
-
             //producer
             var i = if (config._2 == 0) 0 else config._2 - 1
             while (i < config._3) {
-                var SQL = selectSQL
-                SQL = SQL.replaceFirst(config._1, i.toString)
-                i += config._4
-                if (i > config._3) {
-                    i = config._3
-                }
-                SQL = SQL.replaceFirst(config._1, i.toString)
-                Blocker.QUEUE.add(SQL)
+                Blocker.QUEUE.add(
+                    selectSQL.replaceFirst(config._1, i.toString)
+                             .replaceFirst(config._1, {
+                                 i += config._4
+                                 if (i > config._3) {
+                                     i = config._3
+                                 }
+                                 i.toString
+                             }))
             }
 
             //consumer
@@ -792,17 +787,18 @@ class DataHub (private val defaultConnectionName: String = "") {
             }
             parallel.startAll()
             //consumer
-            while(!Blocker.CUBE.closed || Blocker.DATA.size() > 0 || parallel.running) {
-                val table = Blocker.DATA.poll()
-                if (table != null) {
-                    TOTAL_COUNT_OF_RECENT_QUERY += table.count()
-                    COUNT_OF_LAST_QUERY = table.count()
-                    handler(table)
-                    Output.writeMessage(s"${config._4} SAVED")
+            while(parallel.running) {
+                if (Blocker.DATA.size() > 0) {
+                    val table = Blocker.DATA.poll()
+                    if (table != null) {
+                        TOTAL_COUNT_OF_RECENT_QUERY += table.count()
+                        COUNT_OF_LAST_QUERY = table.count()
+                        handler(table)
+                        Output.writeMessage(s"${config._4} SAVED.")
+                    }
                 }
                 Timer.sleep(100)
             }
-            Output.writeMessage("Exit Block While")
             parallel.waitAll()
             Output.writeMessage("Exit All Block")
         }

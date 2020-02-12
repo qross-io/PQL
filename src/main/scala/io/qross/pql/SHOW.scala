@@ -7,12 +7,9 @@ import io.qross.pql.Solver._
 
 object SHOW {
     def parse(sentence: String, PQL: PQL): Unit = {
-        val m: Matcher = $SHOW.matcher(sentence)
-        if (m.find) {
-            PQL.PARSING.head.addStatement(new Statement("SHOW", sentence, new SHOW(m.group(1))))
-        }
-        else {
-            throw new SQLParseException("Incorrect SHOW sentence: " + sentence)
+        $SHOW.findFirstMatchIn(sentence) match {
+            case Some(m) => PQL.PARSING.head.addStatement(new Statement("SHOW", sentence, new SHOW(m.group(1))))
+            case None => throw new SQLParseException("Incorrect SHOW sentence: " + sentence)
         }
     }
 }

@@ -20,7 +20,16 @@ class GET(val selectSQL: String) {
 
     def execute(PQL: PQL): Unit = {
         //为了支持sharp表达式, 所以用buffer
-        PQL.dh.buffer(new SELECT(this.selectSQL).select(PQL).asTable)
+
         //dh.get($get.selectSQL.$restore(this))
+        (Patterns.$BLANK.findFirstIn(selectSQL) match {
+            case Some(blank) => selectSQL.takeBefore(blank)
+            case None => ""
+        }).toUpperCase() match {
+            case "SELECT" => PQL.dh.buffer(new SELECT(this.selectSQL).select(PQL).asTable)
+            case "PARSE" => PQL.dh.buffer(new PARSE(this.selectSQL).parse(PQL).asTable)
+            case "" => throw new SQLExecuteException("Incomplete or empty GET sentence: " + selectSQL)
+            case _ => throw new SQLExecuteException("Unsupported GET sentence: " + selectSQL)
+        }
     }
 }

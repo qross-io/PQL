@@ -194,11 +194,13 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     //待关闭的控制语句，如IF, FOR, WHILE等，不保存ELSE和ELSIF
     private[pql] val TO_BE_CLOSE = new mutable.ArrayStack[Statement]()
     //IF条件执行结果
-    private[pql] val IF$BRANCHES = new mutable.ArrayStack[Boolean]()
+    private[pql] lazy val IF$BRANCHES = new mutable.ArrayStack[Boolean]()
+    //CASE语句对比结果
+    private[pql] lazy val CASE$WHEN = new mutable.ArrayStack[Case$When]()
     //FOR语句循环项变量值
-    private[pql] val FOR$VARIABLES = new mutable.ArrayStack[ForVariables]()
+    private[pql] lazy val FOR$VARIABLES = new mutable.ArrayStack[ForVariables]()
 
-    private[pql] val USER$FUNCTIONS = new mutable.LinkedHashMap[String, UserFunction]()
+    private[pql] lazy val USER$FUNCTIONS = new mutable.LinkedHashMap[String, UserFunction]()
 
     private[pql] var breakCurrentLoop = false
 
@@ -499,6 +501,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                     case dt: DateTime => dt.toString
                     case str: String => str
                     case o: AnyRef => Json.serialize(o)
+                    case null => null
                     case x => x.toString
                 }.mkString
             }

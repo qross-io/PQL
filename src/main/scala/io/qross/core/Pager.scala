@@ -14,10 +14,10 @@ object Pager {
 
 class Pager(source: DataSource,
             selectSQL: String,
-            param: String = "#offset",
+            param: String = "@{offset}",
             pageSize: Int = 10000, tanks: Int = 3) extends Thread {
 
-    //线程创建时加1 - 在线程内部判断时使用
+    //活跃线程+1, 线程创建时加1 - 在线程内部判断时使用
     Pager.CUBE.mark()
 
     override def run(): Unit = {
@@ -26,7 +26,7 @@ class Pager(source: DataSource,
         var break = false
         do {
             while (Pager.DATA.size() >= tanks) {
-                Timer.sleep(500)
+                Timer.sleep(200)
             }
 
             val table = ds.executeDataTable(selectSQL.replace(param, String.valueOf(Pager.CUBE.increase() * pageSize)))
@@ -42,7 +42,7 @@ class Pager(source: DataSource,
 
         ds.close()
 
-        //线程关闭时减1
+        //活跃线程, 在线程关闭时减1
         Pager.CUBE.wipe()
         Output.writeMessage("Pager Thread Exit!")
     }

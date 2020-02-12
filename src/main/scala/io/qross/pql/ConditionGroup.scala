@@ -2,14 +2,13 @@ package io.qross.pql
 
 import java.util.regex.Matcher
 
-import io.qross.core.{DataCell, DataHub, DataType}
+import io.qross.core.{DataCell, DataType}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
-import io.qross.pql.Solver._
 import io.qross.pql.Patterns._
+import io.qross.pql.Solver._
 
 import scala.collection.mutable
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 class ConditionGroup(expression: String) {
@@ -21,23 +20,25 @@ class ConditionGroup(expression: String) {
         //解析表达式
         var exp = expression.$clean(PQL)
 
-         //replace SELECT to ~value[n]
-        var m: Matcher = null
-        while ({m = $SELECT$.matcher(exp); m}.find) {
+        //replace SELECT to ~value[n]
+        $SELECT$.findAllMatchIn(exp).foreach(m => {
             val select = findOutSelect(exp, m.group(0))
-            //exp = exp.replace(select, "~select[" + selects.size + "]")
             exp = exp.replace(select, PQL.$stash(DataCell(
                 PQL.dh.executeJavaList(select.$trim("(", ")").trim().$restore(PQL)),
                 DataType.ARRAY
             )))
-            //selects += select
-        }
+        })
+
+        //处理IN (), 因为小括号会与条件分组冲突, 即去掉小括号
+        IN$$.findAllIn(exp).foreach(in$$ => {
+            exp = exp.replace(in$$, " IN ~u0028" + in$$.takeBetween("(", ")").replaceAll("""\s""", "") + "~u0029")
+        })
 
         // 解析括号中的逻辑 () 并将表达式分步
-        while ({m = $BRACKET.matcher(exp); m}.find) {
+        $BRACKET.findAllMatchIn(exp).foreach(m => {
             parseBasicExpression(m.group(1).trim)
             exp = exp.replace(m.group(0), "~condition[" + (this.conditions.size - 1) + "]")
-        }
+        })
         //finally
         parseBasicExpression(exp)
 

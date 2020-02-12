@@ -17,18 +17,16 @@ object CONTINUE {
             }
         }
 
-        val m = $CONTINUE.matcher(sentence)
-        if (m.find) {
-            if (contained) {
-                val $continue: Statement = new Statement("CONTINUE", m.group(0), if (m.group(1) != null) new ConditionGroup(m.group(2).trim()) else null)
-                PQL.PARSING.head.addStatement($continue)
-            }
-            else {
-                throw new SQLParseException("CONTINUE must be contained in FOR or WHILE statement: " + sentence)
-            }
-        }
-        else {
-            throw new SQLParseException("Incorrect CONTINUE sentence: " + sentence)
+        $CONTINUE.findFirstMatchIn(sentence) match {
+            case Some(m) =>
+                if (contained) {
+                    val $continue: Statement = new Statement("CONTINUE", m.group(0), if (m.group(1) != null) new ConditionGroup(m.group(2).trim()) else null)
+                    PQL.PARSING.head.addStatement($continue)
+                }
+                else {
+                    throw new SQLParseException("CONTINUE must be contained in FOR or WHILE statement: " + sentence)
+                }
+            case None => throw new SQLParseException("Incorrect CONTINUE sentence: " + sentence)
         }
     }
 

@@ -11,29 +11,36 @@ object Patterns {
     val $FUNCTION$ARGUMENT: Regex = """(?i)^\$[a-z0-9]+(\s+[a-z]+)?(\s+DEFAULT\s+.+)?$""".r
 
     val $IF: Regex = """(?i)^IF\s+([\s\S]+?)\s+THEN(\s|$)""".r
-    val $IF$: Regex = """(?i)^IF\s""".r
-    val $ELSIF: Pattern = Pattern.compile("""^ELSIF\s+([\s\S]+?)\s+THEN(\s|$)""", Pattern.CASE_INSENSITIVE)
+    val $ELSIF: Regex = """(?i)^ELSIF\s+([\s\S]+?)\s+THEN(\s|$)""".r
     val $ELSE: Regex = """(?i)^ELSE(\s|$)""".r
     val $END$IF: Regex = """(?i)^END\s+IF$""".r
 
     val $WHILE: Pattern = Pattern.compile("""^WHILE\s+([\s\S]+)\s+LOOP(\s|$)""", Pattern.CASE_INSENSITIVE)
     val $END$LOOP: Regex = """(?i)^END\s+LOOP$""".r
 
+    val $CASE: Regex = """(?i)^CASE\b""".r
+    val $WHEN: Regex = """(?i)^WHEN\s+([\s\S]+?)\s+THEN(\s|$)""".r
+    val $END$CASE: Regex = """(?i)^END\s+CASE$""".r
+    val $WHEN$: Regex = """(?i)\sWHEN\s""".r
+
+    val $END$: Regex = """(?i)\bEND\b""".r
+
     val $BLANK: Regex = """\s""".r
     val BLANKS: String = """\s+"""
     val $PHRASE: Regex = """(?i)^\b[a-z]+\b(\s+\b[a-z]+\b)*""".r
 
-    val $BRACKET: Pattern = Pattern.compile("""\(([^\)]+)\)""", Pattern.CASE_INSENSITIVE)
+    val $BRACKET: Regex = """\(([^\)]+)\)""".r
     val $AND$: Pattern = Pattern.compile("""(^|\sOR\s)(([\s\S]+?)\s+AND\s+([\s\S]+?))($|\sAND|\sOR)""", Pattern.CASE_INSENSITIVE)
     val $OR: Pattern = Pattern.compile("\\sOR\\s", Pattern.CASE_INSENSITIVE)
     val $OR$: Pattern = Pattern.compile("""(^)(([\s\S]+?)\s+OR\s+([\s\S]+?))(\sOR|$)""", Pattern.CASE_INSENSITIVE)
     val A$AND$Z: Regex = """(?i)[A-Z]{3}\s+AND\s+[A-Z]{3}""".r
     val A$OR$Z: Regex = """(?i)[A-Z]{3}\s+OR\s+[A-Z]{3}""".r
 
-    val $SELECT$: Pattern = Pattern.compile("""\(\s*SELECT\s""", Pattern.CASE_INSENSITIVE)  //(SELECT...)
+    val $SELECT$: Regex = """(?i)\(\s*SELECT\s""".r  //(SELECT...)
     val $CONDITION: Regex = """(?i)^~condition\[(\d+)\]$""".r
+    val IN$$: Regex = """(?i)\sIN\s*\([^\(\)]*\)""".r  // IN (...)
 
-    val STATEMENTS: Set[String] = Set[String]("IF", "ELSIF", "ELSE", "FOR", "WHILE", "CALL")
+    val STATEMENTS: Set[String] = Set[String]("IF", "ELSIF", "ELSE", "FOR", "WHILE", "CALL", "CASE", "WHEN")
     val NON_QUERY_CAPTIONS: Set[String] = Set[String]("UPDATE", "REPLACE", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT")
     val $INSERT$INTO: Regex = """(?i)^INSERT\s+INTO\s""".r
     val $VALUES: Regex = """(?i)\bVALUES\b""".r
@@ -43,10 +50,10 @@ object Patterns {
     val $NON$QUERY: Regex = s"(?i)^(${NON_QUERY_CAPTIONS.mkString("|")})\\s".r
     val $SHEET$NONE$QUERY: Regex = """^(INSERT\s+INTO|UPDATE|DELETE|DELETE\s+FROM)\s+SHEET\s""".r
 
-    val $FOR: Pattern = Pattern.compile("""^FOR\s+([\s\S]+?)\s+IN\s+([\s\S]+?)\s+LOOP(\s|$)""", Pattern.CASE_INSENSITIVE)
-    val $EXIT: Pattern = Pattern.compile("""^EXIT(\s+WHEN\s([\s\S]+))?$""", Pattern.CASE_INSENSITIVE)
+    val $FOR: Regex = """(?i)^FOR\s+([\s\S]+?)\s+IN\s+([\s\S]+?)\s+LOOP(\s|$)""".r
+    val $EXIT: Regex = """(?i)^EXIT(\s+WHEN\s([\s\S]+))?$""".r
     val $EXIT$CODE: Regex = """(?i)^EXIT\s+(CODE|PROCEDURE)(\s|$)""".r
-    val $CONTINUE: Pattern = Pattern.compile("""^CONTINUE(\s+WHEN\s([\s\S]+))?$""", Pattern.CASE_INSENSITIVE)
+    val $CONTINUE: Regex = """(?i)^CONTINUE(\s+WHEN\s([\s\S]+))?$""".r
     val $SET: Regex = """(?i)^SET\s+([\s\S]+?)(:=|=:)([\s\S]+)$""".r
     val $VAR: Regex = """(?i)^VAR\s+\$[a-z0-9_]""".r
     val $DECLARE: Regex = """(?i)^DECLARE\s+\$[a-z0-9_]""".r
@@ -54,25 +61,28 @@ object Patterns {
     val $OPEN: Regex = """(?i)^OPEN\s+""".r
     val $USE: Regex = """(?i)^USE\s+""".r
     val $SAVE$AS: Regex = """(?i)^SAVE\s+AS\s+""".r
-    val $CACHE: Regex = """(?i)^CACHE\s+(\S+)\s*#""".r
-    val $TEMP: Regex = """(?i)^TEMP\s+(\S+)\s*#""".r
-    val PRIMARY$KEY: Regex = """(?i)\sPRIMARY(\s+KEY)?\s""".r
+    val $CACHE: Regex = """(?i)^CACHE\s+([\s\S]+)#""".r
+    val $TEMP: Regex = """(?i)^TEMP\s+([\s\S]+)#""".r
     val $GET: Regex = """(?i)^GET\s*#""".r
     val $PASS: Regex = """(?i)^PASS\s*#""".r
     val $PUT: Regex = """(?i)^PUT\s*#""".r
     val $PREP: Regex = """(?i)^PREP\s*#""".r
+    val $PAGE: Regex = """(?i)^PAGE\s*#\s*SELECT\b""".r
+    val $BLOCK: Regex = """(?i)^BLOCK[\s\S]+?#\s*(SELECT|UPDATE|DELETE)\b""".r
+    val $PROCESS: Regex = """(?i)^PROCESS\s*#\s*SELECT\b""".r
+    val $BATCH: Regex = """(?i)^BATCH\s*#""".r
     val $OUTPUT: Regex = """(?i)^OUTPUT\s*#?""".r
     val $PRINT: Regex = """(?i)^PRINT\s""".r
     val $PRINT$SEAL: Regex = """(?i)^[a-z]+\s""".r
-    val $SHOW: Pattern = Pattern.compile("""^SHOW\s+(\d+)""", Pattern.CASE_INSENSITIVE)
+    val $SHOW: Regex = """(?i)^SHOW\s+(\d+)$""".r
     val $RUN: Regex = """(?i)^RUN\s+(COMMAND|SHELL)\s+""".r
-    val $REQUEST: Regex = """(?i)^REQUEST\s+JSON\s+API\s+""".r
-    val $REQUEST$METHOD: Pattern = Pattern.compile("""\s+(POST|PUT|DELETE)(\s+(\S+))?""", Pattern.CASE_INSENSITIVE)
-    val $REQUEST$HEADER: Pattern = Pattern.compile("""\s+SET\s+HEADER\s+(\S+)""", Pattern.CASE_INSENSITIVE)
+    val $REQUEST: Regex = """(?i)^REQUEST\s+""".r
     val $SEND$MAIL: Regex = """(?i)^SEND\s+E?MAIL\s+""".r
     val $PARSE: Regex = """(?i)^PARSE\s""".r
-    val $AS: Regex = """(?i)\sAS\s""".r
     val $LINK: Regex = """(?i)\s[A-Z][A-Z\$]*([ \t]+[A-Z\$]*[A-Z])*(\s|$)""".r
+    val $TUPLE: Regex = """\([^\)]+\)""".r
+    val $PROPERTY: Regex = """(?i)%\s*([_a-z]+)\b""".r
+    val $MD5: Regex = """(?i)\sTO\s+MD5(\s|$)""".r
     val $LET: Regex = """(?i)^LET\s+""".r
     val $DEBUG: Regex = """(?i)^DEBUG\s""".r
     val $ECHO: Regex = """(?i)^ECHO(\s|$)""".r
@@ -85,6 +95,7 @@ object Patterns {
     val FUNCTION_NAMES: Set[String] = GlobalFunction.getClass.getDeclaredMethods.map(m => m.getName).filter(n => "^[A-Z]".r.test(n)).toSet
     val $RESERVED: Regex = """^[_A-Za-z0-9\.]+$""".r
     val $CONSTANT: Regex = """^[A-Za-z][A-Za-z0-9_]*$|^[_][A-Za-z0-9_]+$""".r
+    val $NULL: Regex = """(?i)^NULL$""".r
 
     val SHARP_LINKS: Set[String] = Sharp.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z]$|^[A-Z]$""".r.test(n)).toSet
     val MULTI$ARGS$LINKS: Map[String, Set[String]] = Map[String, Set[String]](
@@ -95,7 +106,9 @@ object Patterns {
         "REPLACE$ALL" -> Set[String]("TO"),
         "SUBSTRING" -> Set[String]("TO"),
         "PLUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
-        "MINUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"))
+        "MINUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
+        "INSERT" -> Set[String]("VALUES"),
+        "INSERT$IF$EMPTY" -> Set[String]("VALUES"))
     val $DATETIME_UNITS: Regex = """^(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND|MILLI|MICRO|NONA)=(\d+)$""".r
     val GLOBAL_VARIABLES: Set[String] = GlobalVariableDeclaration.getClass.getDeclaredMethods.map(m => m.getName).toSet
     val ARROW: String = "->"

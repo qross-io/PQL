@@ -19,8 +19,6 @@ class Bulker(source: DataSource) extends Thread {
                 ds.executeNonQuery(SQL)
                 println(SQL)
             }
-            println("运行状态++++++++++++++++++++++++++")
-            println(Bulker.QUEUE.size())
             Timer.sleep(100)
         }
         ds.close()

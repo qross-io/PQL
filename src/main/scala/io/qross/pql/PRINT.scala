@@ -22,13 +22,11 @@ object PRINT {
 class PRINT(var message: String) {
 
     val messageType: String = {
-        if ($PRINT$SEAL.test(message)) {
-            val seal = message.takeBefore($BLANK).trim()
-            message = message.takeAfter($PRINT$SEAL).trim()
-            seal
-        }
-        else {
-            "NONE"
+        $PRINT$SEAL.findFirstIn(message) match {
+            case Some(seal) =>
+                message = message.takeAfter(seal)
+                seal.trim().toUpperCase
+            case None => "NONE"
         }
     }
 

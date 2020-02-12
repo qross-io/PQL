@@ -1,14 +1,14 @@
 package io.qross.pql
 
 import io.qross.ext.TypeExt._
-import io.qross.pql.Patterns.{$ELSE, $IF$}
+import io.qross.pql.Patterns.$ELSE
 
 object ELSE {
     def parse(sentence: String, PQL: PQL): Unit = {
         if ($ELSE.test(sentence)) {
             val $else: Statement = new Statement("ELSE", "ELSE", new ELSE())
-            if (PQL.PARSING.isEmpty || (!(PQL.PARSING.head.caption == "IF") && !(PQL.PARSING.head.caption == "ELSIF"))) {
-                throw new SQLParseException("Can't find previous IF or ELSE IF clause: " + sentence)
+            if (PQL.PARSING.isEmpty || (PQL.PARSING.head.caption != "IF" && PQL.PARSING.head.caption != "ELSIF" && PQL.PARSING.head.caption != "WHEN")) {
+                throw new SQLParseException("Can't find previous IF or ELSE IF or WHEN clause: " + sentence)
             }
             //先出栈再进栈
             PQL.PARSING.pop()
@@ -21,7 +21,7 @@ object ELSE {
             }
         }
         else {
-            throw new SQLParseException("Incorrect ELSE or ELSE IF sentence: " + sentence)
+            throw new SQLParseException("Incorrect ELSE sentence: " + sentence)
         }
     }
 }
@@ -29,12 +29,26 @@ object ELSE {
 class ELSE {
 
     def execute(PQL: PQL, statement: Statement): Unit = {
-        if (!PQL.IF$BRANCHES.head) {
-            PQL.IF$BRANCHES.pop()
-            PQL.IF$BRANCHES.push(true)
-            PQL.EXECUTING.push(statement)
+        //IF 匹配到为 ELSIF 或 IF
+        //IF 匹配不到为 ROOT
+        //CASE WHEN 匹配到为 WHEN
+        //CASE WHEN 匹配不到为 CASE
+        if (PQL.EXECUTING.head.caption == "CASE" || PQL.EXECUTING.head.caption == "WHEN") {
+            if (!PQL.CASE$WHEN.head.matched) {
+                PQL.CASE$WHEN.head.matched = true
+                PQL.EXECUTING.push(statement)
 
-            PQL.executeStatements(statement.statements)
+                PQL.executeStatements(statement.statements)
+            }
+        }
+        else {
+            if (!PQL.IF$BRANCHES.head) {
+                PQL.IF$BRANCHES.pop()
+                PQL.IF$BRANCHES.push(true)
+                PQL.EXECUTING.push(statement)
+
+                PQL.executeStatements(statement.statements)
+            }
         }
     }
 

@@ -10,7 +10,9 @@ import io.qross.pql.Patterns.FUNCTION_NAMES
 object GlobalVariable {
 
     //除环境全局变量的其他全局变量
+    //系统全局变量
     val SYSTEM: DataRow = new DataRow()
+    //用户全局变量
     val USER: DataRow = new DataRow()
 
     //Global.getClass.getDeclaredMethods.contains()

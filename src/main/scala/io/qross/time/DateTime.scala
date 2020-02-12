@@ -1,13 +1,11 @@
 package io.qross.time
 
-import java.sql.{Date, Time, Timestamp}
 import java.time._
 import java.time.format.DateTimeFormatter
 import java.time.temporal.{ChronoField, ChronoUnit}
 import java.util.regex.Pattern
 
 import io.qross.core.ConvertFailureException
-import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 
 import scala.collection.mutable
@@ -54,9 +52,10 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
                                 parseLocalDateTime(str, formatStyle)
                             }
         case dt: DateTime => dt.localDateTime
-        case date: Date => parseLocalDateTime(date.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
-        case time: Time => parseLocalDateTime(LocalDate.now() + " " + time.toString, "yyyy-MM-dd HH:mm:ss")
-        case timeStamp: Timestamp => timeStamp.toLocalDateTime
+        case date2: java.sql.Date => parseLocalDateTime(date2.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
+        case time: java.sql.Time => parseLocalDateTime(LocalDate.now() + " " + time.toString, "yyyy-MM-dd HH:mm:ss")
+        case timeStamp: java.sql.Timestamp => timeStamp.toLocalDateTime
+        case date1: java.util.Date => date1.toInstant.atZone(ZoneId.systemDefault()).toLocalDateTime
         case l: Long => parseLocalDateTime(l)
         case i: Int => parseLocalDateTime(i)
         case f: Float => parseLocalDateTime(f.toInt)
@@ -142,6 +141,8 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
         }
         LocalDateTime.ofEpochSecond(second, nano.toInt, OffsetDateTime.now.getOffset)
     }
+
+    def toDate: java.util.Date = java.util.Date.from(this.localDateTime.atZone(ZoneId.systemDefault()).toInstant)
    
     def get(field: ChronoField): Int = this.localDateTime.get(field)
     def getYear: Int = this.localDateTime.getYear

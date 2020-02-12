@@ -8,6 +8,7 @@ import io.qross.time.Timer
 import io.qross.ext._
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.control.Breaks.{break, breakable}
 
 //生产者-加工者-消费者模式中的加工者，可以有多个
 
@@ -18,9 +19,12 @@ object Processer {
 
     def closed: Boolean = {
         var ed = true
-        for (cube <- CUBEs) {
-            if (!cube.closed) {
-                ed = false
+        breakable {
+            for (cube <- CUBEs) {
+                if (!cube.closed) {
+                    ed = false
+                    break
+                }
             }
         }
 

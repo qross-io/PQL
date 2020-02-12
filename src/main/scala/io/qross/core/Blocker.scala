@@ -15,9 +15,11 @@ object Blocker {
 
 class Blocker(source: DataSource, tanks: Int = 3) extends Thread {
 
+    //活跃线程+1, 线程创建时加1 - 在线程内部判断时使用
     Blocker.CUBE.mark()
 
     override def run(): Unit = {
+
 
         val ds = new DataSource(source.connectionName, source.databaseName)
 
@@ -35,6 +37,7 @@ class Blocker(source: DataSource, tanks: Int = 3) extends Thread {
         ds.close()
 
         Blocker.CUBE.wipe()
+
         Output.writeMessage("Blocker Thread Exit!")
     }
 }

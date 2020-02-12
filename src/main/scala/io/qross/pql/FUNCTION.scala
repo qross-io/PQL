@@ -49,7 +49,7 @@ object FUNCTION {
 
 class FUNCTION(val functionName: String) {
 
-    //这个方法无意义
+    //这个方法无意义, 函数的执行在CALL语句中
     def execute(PQL: PQL, statement: Statement): Unit = {
         //if (PQL.dh.debugging) {
             //Output.writeDebugging("This is a placeholder of FUNCTION. Please ignore it.")

@@ -5,29 +5,26 @@ import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
-import io.qross.net.Json._
 
 import scala.util.control.Breaks.{break, breakable}
 
 object FOR {
     def parse(sentence: String, PQL: PQL): Unit = {
-        val m = $FOR.matcher(sentence)
-        if (m.find) {
-            val $for: Statement = new Statement("FOR", m.group(0), new FOR(m.group(1).trim(), m.group(2).trim()))
+        $FOR.findFirstMatchIn(sentence) match {
+            case Some(m) =>
+                val $for: Statement = new Statement("FOR", m.group(0), new FOR(m.group(1).trim(), m.group(2).trim()))
 
-            PQL.PARSING.head.addStatement($for)
-            //只进栈
-            PQL.PARSING.push($for)
-            //待关闭的控制语句
-            PQL.TO_BE_CLOSE.push($for)
-            //继续解析子语句
-            val first = sentence.takeAfter(m.group(0)).trim()
-            if (first != "") {
-                PQL.parseStatement(first)
-            }
-        }
-        else {
-            throw new SQLParseException("Incorrect FOR sentence: " + sentence)
+                PQL.PARSING.head.addStatement($for)
+                //只进栈
+                PQL.PARSING.push($for)
+                //待关闭的控制语句
+                PQL.TO_BE_CLOSE.push($for)
+                //继续解析子语句
+                val first = sentence.takeAfter(m.group(0)).trim()
+                if (first != "") {
+                    PQL.parseStatement(first)
+                }
+            case None => throw new SQLParseException("Incorrect FOR sentence: " + sentence)
         }
     }
 }

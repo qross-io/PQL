@@ -18,7 +18,6 @@ class Cube(max: Int = -1) {
 
     def achieved: Boolean = this.value >= this.max
 
-
     def reset(): Unit = synchronized {
         this.value = -1
     }

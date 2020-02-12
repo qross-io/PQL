@@ -6,7 +6,7 @@ apply plugin: 'maven'
 apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
-version = '0.6.1-58-SNAPSHOT'
+version = '0.6.1-97-SNAPSHOT'
 sourceCompatibility = 1.8
 
 archivesBaseName = "qross-pql"
@@ -44,8 +44,8 @@ dependencies {
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.4'
     compile group: 'org.json4s', name: 'json4s-jackson_2.12', version: '3.6.2'
 
-    runtime group: 'mysql', name: 'mysql-connector-java', version: '5.1.47'
-    //runtime group: 'mysql', name: 'mysql-connector-java', version: '8.0.16'
+    //runtime group: 'mysql', name: 'mysql-connector-java', version: '5.1.47'
+    runtime group: 'mysql', name: 'mysql-connector-java', version: '8.0.19'
     //runtime('mysql:mysql-connector-java')
     runtime group: 'org.xerial', name: 'sqlite-jdbc', version: '3.20.0'
 
@@ -69,7 +69,7 @@ uploadArchives {
              repository(url: "https://repo.rdc.aliyun.com/repository/75742-snapshot-Xkjz8l/") {
                 authentication(userName: 'zRjGml', password: 'aqGluc43el')
             }
-//            repository(url: "https://repo.rdc.aliyun.com/repository/75742-release-biEMxs/") {
+//            repository(url: "https://repo.rdc.a`liyun.com/repository/75742-release-biEMxs/") {
 //                authentication(userName: 'zRjGml', password: 'aqGluc43el')
 //            }
             //构造项目的Pom文件

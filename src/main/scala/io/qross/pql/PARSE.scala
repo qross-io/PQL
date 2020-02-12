@@ -1,10 +1,10 @@
 package io.qross.pql
 
-import io.qross.core.{DataCell, DataType}
+import io.qross.core.DataCell
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.net.Json._
-import io.qross.pql.Patterns.{$PARSE, $AS, ARROW}
+import io.qross.pql.Patterns.{$PARSE, ARROW}
 import io.qross.pql.Solver._
 
 object PARSE {
@@ -20,48 +20,49 @@ object PARSE {
 
 class PARSE(var sentence: String) {
 
-    //express 是否支持嵌入式查询语句, 即 ${{ }} v
+    //sentence包含PARSE关键词
+
+    //express 是否支持嵌入式查询语句, 即 ${{ }}
     def parse(PQL: PQL, express: Boolean = false): DataCell = {
 
-        val (select, links) = {
-            if (sentence.contains(ARROW)) {
-                (sentence.takeBefore(ARROW), sentence.takeAfter(ARROW))
+        var body = sentence.takeAfter(Patterns.$BLANK).trim()
+        val links = {
+            if (body.contains(ARROW)) {
+                body = body.takeBefore(ARROW)
+                sentence.takeAfter(ARROW)
             }
             else {
-                (sentence, "")
-            }
-        }
-
-        var dataType = ""
-        var path = {
-            if ($AS.test(select)) {
-                dataType = select.takeAfter($AS).trim()
-                select.takeBetween($PARSE, $AS).trim()
-            }
-            else {
-                select.takeAfter($PARSE).trim()
+                ""
             }
         }
 
         if (express) {
-            path = path.$express(PQL).$sharp(PQL).asText
+            body = body.$express(PQL).popStash(PQL)
         }
         else {
-            path = path.$eval(PQL).asText
+            body = body.$restore(PQL)
         }
 
+        val plan = Syntax("PARSE").plan(body)
+
+        val path = plan.headArgs
+
         val data = {
-            if (dataType != null) {
-                dataType.trim().toUpperCase match {
-                    case "TABLE" => PQL.dh.parseTable(path)
-                    case "ROW" | "MAP" | "OBJECT" => PQL.dh.parseRow(path)
-                    case "LIST" | "ARRAY" => PQL.dh.parseList(path)
-                    case "VALUE" | "SINGLE" => PQL.dh.parseValue(path)
-                    case _ => PQL.dh.parseTable(path)
-                }
-            }
-            else {
-                PQL.dh.parseTable(path)
+            plan.head match {
+                case "" =>
+                    if (plan.size > 1) {
+                        plan.last match {
+                                case "AS TABLE" => PQL.dh.parseTable(path)
+                                case "AS ROW" | "AS MAP" | "AS OBJECT" => PQL.dh.parseRow(path)
+                                case "AS LIST" | "AS ARRAY" => PQL.dh.parseList(path)
+                                case "AS VALUE" | "AS SINGLE VALUE" => PQL.dh.parseValue(path)
+                                case _ => PQL.dh.parseTable(path)
+                            }
+                    }
+                    else {
+                        PQL.dh.parseTable(path)
+                    }
+                case _ => PQL.dh.parseTable(path)
             }
         }.toDataCell
 
@@ -94,13 +95,3 @@ class PARSE(var sentence: String) {
         }
     }
 }
-
-/*
-query = query.takeAfter("""^PARSE\s""".r).trim.removeQuotes()
-output match {
-    case "TABLE" => DataCell(PQL.dh.parseTable(query), DataType.TABLE)
-    case "ROW" | "MAP" | "OBJECT" => DataCell(PQL.dh.parseRow(query), DataType.ROW)
-    case "LIST" | "ARRAY" => DataCell(PQL.dh.parseList(query), DataType.ARRAY)
-    case "VALUE" => PQL.dh.parseValue(query)
-    case "AUTO" => DataCell(PQL.dh.parseNode(query), DataType.JSON)
-}*/

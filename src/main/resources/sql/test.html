@@ -6,9 +6,17 @@
 </head>
 <body>
 <%
-SELECT title FROM qross_jobs -> FIRST COLUMN;
+VAR $row := SELECT id, title FROM qross_jobs LIMIT 1 -> FIRST ROW;
 %>
-
-<%=123%>
+<div>${ $row % id }</div>
+<div><%= $row % title %></div>
+<div>
+    <%
+    SET $a := 1;
+    %>
+</div>
+${ CASE $a WHEN 1 THEN 'HELLO' WHEN 2 THEN 'WORLD' ELSE 'NO' END }
+<br/>
+${ IF $a < 0 THEN 'HELLO' ELSIF $a > 0 THEN 'WORLD' ELSE 'NO' END }
 </body>
 </html>

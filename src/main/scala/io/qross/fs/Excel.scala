@@ -343,12 +343,12 @@ class Excel(val fileName: String) {
 
         var sheet: Sheet = null
         var cursor = 0 //startRow and cursorRow
-        val columns = plan.get("").multiArgs.map(_.removeQuotes())
+        val columns = plan.multiArgs("").map(_.removeQuotes())
 
         if (plan.contains("SHEET")) {
-            sheet = workbook.getSheet(plan.get("SHEET").oneArgs)
+            sheet = workbook.getSheet(plan.oneArgs("SHEET"))
             if (sheet == null) {
-                sheet = workbook.createSheet(plan.get("SHEET").oneArgs)
+                sheet = workbook.createSheet(plan.oneArgs("SHEET"))
             }
         }
         else {
@@ -356,7 +356,7 @@ class Excel(val fileName: String) {
         }
 
         if (plan.contains("ROW")) {
-            Try(plan.get("ROW").oneArgs.toInt) match {
+            Try(plan.oneArgs("ROW").toInt) match {
                 case Success(v) =>
                     if (v > cursor) {
                         cursor = v - 1
@@ -373,7 +373,7 @@ class Excel(val fileName: String) {
         var rows = 0
         table.foreach(row => {
 
-            for (values <- plan.get("VALUES").moreArgs(row)) {
+            for (values <- plan.moreArgs(row, "VALUES")) {
 
                 val row = sheet.createRow(cursor)
                 if (columns.length != values.length) {
