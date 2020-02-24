@@ -5,10 +5,10 @@ import io.qross.setting.Properties;
 
 public class Setting {
 
-    public static String OneApiResourceDirs = Properties.get("oneapi.internal.dirs");
-    public static String OneApiExternalDirs = Properties.get("oneapi.external.dirs");
-    public static String OneApiServiceConnection = Properties.get("oneapi.service.connection");
-    public static String OneApiServiceName = Properties.get("oneapi.service.name");
+    public static String OneApiServiceName = Properties.get("oneapi.service.name", "OneApiService");
+    public static String OneApiResourceDirs = Properties.get("oneapi.internal.dirs", "");
+    public static String OneApiExternalDirs = Properties.get("oneapi.external.dirs", "");
+    public static String OneApiMySQLConnection = Properties.get("oneapi.mysql.connection", "");
 
     public static String VoyagerDirectory = Properties.get("voyager.directory", "/templates/");
     public static String VoyagerExtension = Properties.get("voyager.extension", "html");
@@ -35,7 +35,7 @@ public class Setting {
                     break;
                 case "--oneapi.service.connection":
                     if (i + 1 < args.length) {
-                        OneApiServiceConnection = args[i+1];
+                        OneApiMySQLConnection = args[i+1];
                     }
                     break;
                 case "--oneapi.service.name":

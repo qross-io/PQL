@@ -76,7 +76,23 @@ object Main {
 
         //DataSource.QROSS.queryDataTable("select tt from td;").toString().print
 
-        PQL.openFile("/sql/test.sql").place("parent", "w").run().print
+        PQL.openFile("/sql/api.sql").place(
+            "pageSize" -> "20",
+            "pageNum" -> "9",
+            "month" -> "2020-10",
+            "currentPage" -> "2",
+            "startDate" -> "2012-02-03",
+            "userId" -> "1",
+            "reportId" -> "1",
+            "stat_date" -> "2020-01-20",
+            "debtor_id_number" -> "12",
+            "debtor_name" -> "name",
+            "telephone" -> "13623456678",
+            "companyId" -> "123",
+            "collectorIds" -> "1,2,3",
+            "statType" -> "1",
+            "id" -> "1"
+        ).run().print
         //PQL.openEmbeddedFile("/sql/test.html").place("jobId", "54").run().print
 
         //val cookie = new Cookie("", "")

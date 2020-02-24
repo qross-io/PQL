@@ -54,11 +54,11 @@ object JDBC {
     def hasQrossSystem: Boolean = {
 
         if (!QrossExists) {
-            if (!Properties.contains(QROSS) && !Properties.contains(QROSS + ".url")) {
-                Output.writeException(s"Can't find properties key $QROSS, it must be set in .properties files.")
+            if (Properties.contains(QROSS) || Properties.contains(QROSS + ".url")) {
+                QrossExists = true
             }
             else {
-                QrossExists = true
+                //Output.writeWarning(s"Can't find properties key $QROSS, it must be set in .properties files.")
             }
         }
 

@@ -7,83 +7,78 @@ import io.qross.pql.SQLParseException
 //case class DataType(className: String, typeName: String)
 
 object DataType extends Enumeration {
-    val INTEGER: DataType = DataType("INTEGER")
-    val DECIMAL: DataType = DataType("DECIMAL")
-    val TEXT: DataType = DataType("TEXT")
-    val BLOB: DataType = DataType("BLOB")
-    val NULL: DataType = DataType("NULL")
-    val DATETIME: DataType = DataType("DATETIME")
-    val BOOLEAN: DataType = DataType("BOOLEAN")
-    val TABLE: DataType = DataType("TABLE")
-    val ROW: DataType = DataType("ROW")
-    val MAP: DataType = DataType("MAP")
-    val LIST: DataType = DataType("LIST")
-    val ARRAY: DataType = DataType("ARRAY")
-    val OBJECT: DataType = DataType("OBJECT")
-    val JSON: DataType = DataType("JSON")
-    val EXCEPTION: DataType = DataType("EXCEPTION")
-    val REGEX: DataType = DataType("REGEX")
+    val INTEGER: DataType = new DataType("INTEGER")
+    val DECIMAL: DataType = new DataType("DECIMAL")
+    val TEXT: DataType = new DataType("TEXT")
+    val BLOB: DataType = new DataType("BLOB")
+    val NULL: DataType = new DataType("NULL")
+    val DATETIME: DataType = new DataType("DATETIME")
+    val BOOLEAN: DataType = new DataType("BOOLEAN")
+    val TABLE: DataType = new DataType("TABLE")
+    val ROW: DataType = new DataType("ROW")
+    val MAP: DataType = new DataType("MAP")
+    val LIST: DataType = new DataType("LIST")
+    val ARRAY: DataType = new DataType("ARRAY")
+    val OBJECT: DataType = new DataType("OBJECT")
+    val JSON: DataType = new DataType("JSON")
+    val EXCEPTION: DataType = new DataType("EXCEPTION")
+    val REGEX: DataType = new DataType("REGEX")
 
     //database data type name
     def ofTypeName(typeName: String, className: String = ""): DataType = {
-        {
+        new DataType(
             typeName.toUpperCase match {
-                case "TEXT" | "VARCHAR" | "CHAR" | "NVARCHAR" | "TINYTEXT" | "SMALLTEXT" | "MEDIUMTEXT" | "LONGTEXT" | "STRING" | "NVARCHAR" | "NCHAR" => DataType.TEXT
-                case "INT" | "INTEGER" | "BIGINT" | "TINYINT" | "SMALLINT" | "MEDIUMINT" | "LONG" | "SHORT" => DataType.INTEGER
-                case "FLOAT" | "DOUBLE" | "DECIMAL" | "REAL" | "NUMBER" | "NUMERIC" | "MONEY" | "SMALLMONEY" => DataType.DECIMAL
-                case "DATE" | "TIME" | "DATETIME" | "TIMESTAMP" | "YEAR" => DataType.DATETIME
-                case "BIT" | "BOOL" | "BOOLEAN" => DataType.BOOLEAN
-                case "MAP" | "ROW" | "OBJECT" | "DATAROW" => DataType.ROW
-                case "TABLE" | "DATATABLE" => DataType.TABLE
-                case "NULL" | "EMPTY" => DataType.NULL
-                case "JSON" => DataType.JSON
-                case "BLOB" | "TINYBLOB" | "MEDIUMBLOB" | "VARBINARY" | "BINARY" => DataType.BLOB
+                case "TEXT" | "VARCHAR" | "CHAR" | "NVARCHAR" | "TINYTEXT" | "SMALLTEXT" | "MEDIUMTEXT" | "LONGTEXT" | "STRING" | "NVARCHAR" | "NCHAR" => "TEXT"
+                case "INT" | "INTEGER" | "BIGINT" | "TINYINT" | "SMALLINT" | "MEDIUMINT" | "LONG" | "SHORT" => "INTEGER"
+                case "FLOAT" | "DOUBLE" | "DECIMAL" | "REAL" | "NUMBER" | "NUMERIC" | "MONEY" | "SMALLMONEY" => "DECIMAL"
+                case "DATE" | "TIME" | "DATETIME" | "TIMESTAMP" | "YEAR" => "DATETIME"
+                case "BIT" | "BOOL" | "BOOLEAN" => "BOOLEAN"
+                case "MAP" | "ROW" | "OBJECT" | "DATAROW" => "ROW"
+                case "TABLE" | "DATATABLE" => "TABLE"
+                case "NULL" | "EMPTY" => "NULL"
+                case "JSON" => "JSON"
+                case "BLOB" | "TINYBLOB" | "MEDIUMBLOB" | "VARBINARY" | "BINARY" => "BLOB"
                 case _ =>
                     if (className != "") {
-                        ofClassName(className)
+                        DataType.ofClassName(className).typeName
                     }
                     else {
-                        DataType.NULL
+                        "NULL"
                     }
-            }
-        }.of(typeName.toUpperCase())
-            .from(className)
+            }, typeName.toUpperCase(), className)
     }
 
     //java type name
     def ofClassName(className: String): DataType = {
-        val name = {
-            if (className.contains(".")) {
-                className.substring(className.lastIndexOf(".") + 1).toLowerCase()
-            }
-            else {
-                className.toLowerCase()
-            }
-        }
-
-        {
-            name match {
-                case "string" => DataType.TEXT
-                case "bit" | "int" | "integer" | "long" | "timestamp" => DataType.INTEGER
-                case "float" | "double" | "bigdecimal" => DataType.DECIMAL
-                case "boolean" => DataType.BOOLEAN
-                case "datetime" | "date" | "time" | "timestamp" => DataType.DATETIME
-                case "list" | "array" | "arraylist" => DataType.ARRAY
-                case "map" => DataType.MAP
-                case "datarow" => DataType.ROW
-                case "datatable" => DataType.TABLE
-                case "regex" | "pattern" => DataType.REGEX
-                case "json" => DataType.JSON
-                case "[B" => DataType.BLOB
-                case _ => DataType.TEXT
-            }
-        }.from(className)
+        new DataType(
+            {
+                if (className.contains(".")) {
+                    className.substring(className.lastIndexOf(".") + 1).toLowerCase()
+                }
+                else {
+                    className.toLowerCase()
+                }
+            } match {
+                    case "string" => "TEXT"
+                    case "bit" | "int" | "integer" | "long" | "timestamp" => "INTEGER"
+                    case "float" | "double" | "bigdecimal" => "DECIMAL"
+                    case "boolean" => "BOOLEAN"
+                    case "datetime" | "date" | "time" | "timestamp" => "DATETIME"
+                    case "list" | "array" | "arraylist" => "ARRAY"
+                    case "map" => "MAP"
+                    case "datarow" => "ROW"
+                    case "datatable" => "TABLE"
+                    case "regex" | "pattern" => "REGEX"
+                    case "json" => "JSON"
+                    case "[B" => "BLOB"
+                    case _ => "TEXT"
+                }, className)
     }
 
     //data value
     def ofValue(value: Any): DataType = {
         if (value != null) {
-            ofClassName(value.getClass.getName)
+            DataType.ofClassName(value.getClass.getName)
         }
         else {
             DataType.NULL
@@ -91,52 +86,54 @@ object DataType extends Enumeration {
     }
 
     def ofJsonNodeType(node: JsonNode): DataType = {
-        {
+        new DataType(
             if (node.isIntegralNumber || node.isInt || node.isLong || node.isShort || node.isBigInteger) {
-                DataType.INTEGER
+                "INTEGER"
             }
             else if (node.isFloatingPointNumber || node.isDouble || node.isFloat || node.isBigDecimal) {
-                DataType.DECIMAL
+                "DECIMAL"
             }
             else if (node.isBoolean) {
-                DataType.BOOLEAN
+                "BOOLEAN"
             }
             else if (node.isArray) {
-                DataType.ARRAY
+                "ARRAY"
             }
             else if (node.isBinary) {
-                DataType.BLOB
+                "BLOB"
             }
             else if (node.isNull) {
-                DataType.NULL
+                "NULL"
             }
             else if (node.isObject) {
-                DataType.ROW
+                "ROW"
             }
             else {
-                DataType.TEXT
-            }
-        }.from(node.getNodeType.name())
+                "TEXT"
+            }, node.getNodeType.name())
     }
 }
 
-case class DataType(typeName: String) {
-    //来自数据库的原始类型, 如INT, VARCHAR等
-    var originalName: String = ""
-    //语言类类型, 如java.lang.String
-    var className: String = ""
+// originalName来自数据库的原始类型, 如INT, VARCHAR等
+// className 语言类类型, 如java.lang.String
+class DataType(val typeName: String, val originalName: String, val className: String) {
 
-    def of(originalName: String): DataType = {
-        this.originalName = originalName
-        this
+    def this(typeName: String) {
+        this(typeName, "", "")
     }
 
-    def from(className: String): DataType = {
-        this.className = className
-        this
+    def this(typeName: String, className: String) {
+        this(typeName, "", className)
     }
 
     override def toString: String = typeName
+
+    override def equals(obj: scala.Any): Boolean = {
+        obj match {
+            case dataType: DataType => this.typeName == dataType.typeName
+            case _ => false
+        }
+    }
 }
 
 /*

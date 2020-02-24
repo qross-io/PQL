@@ -101,6 +101,7 @@ object Patterns {
     val MULTI$ARGS$LINKS: Map[String, Set[String]] = Map[String, Set[String]](
         "SUBSTRING" -> Set[String]("TO"),
         "SPLIT" -> Set[String]("AND"),
+        "BRACKET" -> Set[String]("AND"),
         "REPLACE" -> Set[String]("TO"),
         "REPLACE$FIRST" -> Set[String]("TO"),
         "REPLACE$ALL" -> Set[String]("TO"),

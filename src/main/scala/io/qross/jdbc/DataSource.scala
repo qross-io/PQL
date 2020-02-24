@@ -4,10 +4,10 @@ import java.sql._
 import java.util
 import java.util.regex.Pattern
 
-import io.qross.core._
 import io.qross.core.Parameter._
-import io.qross.time.Timer
+import io.qross.core._
 import io.qross.ext.TypeExt._
+import io.qross.time.Timer
 
 import scala.collection.mutable
 
@@ -23,8 +23,8 @@ object DataSource {
 
 class DataSource (var connectionName: String, var databaseName: String) {
 
-    private val batchSQLs = new mutable.ArrayBuffer[String]()
-    private val batchValues = new mutable.ArrayBuffer[Vector[Any]]()
+    private[jdbc] val batchSQLs = new mutable.ArrayBuffer[String]()
+    private[jdbc] val batchValues = new mutable.ArrayBuffer[Vector[Any]]()
 
     private[jdbc] var config = JDBC.get(connectionName)
 
@@ -67,27 +67,34 @@ class DataSource (var connectionName: String, var databaseName: String) {
                         Class.forName(config.alternativeDriver).newInstance()
                     }
                     catch {
-                        case e: ClassNotFoundException => System.err.println("Open database ClassNotFoundException " + e.getMessage)
+                        case e: ClassNotFoundException => System.err.println("Open database ClassNotFoundException: " + e.getMessage)
                     }
                 }
                 else {
-                    System.err.println("Open database ClassNotFoundException " + e.getMessage)
+                    System.err.println("Open database ClassNotFoundException: " + e.getMessage)
                 }
-            case e: InstantiationException => System.err.println("Open database InstantiationException " + e.getMessage)
-            case e: IllegalAccessException => System.err.println("Open database IllegalAccessException " + e.getMessage)
+            case e: InstantiationException => System.err.println("Open database InstantiationException: " + e.getMessage)
+            case e: IllegalAccessException => System.err.println("Open database IllegalAccessException: " + e.getMessage)
+        }
+
+        if (config.username != "") {
+            this.connection = Some(DriverManager.getConnection(config.connectionString, config.username, config.password))
+        }
+        else {
+            this.connection = Some(DriverManager.getConnection(config.connectionString))
         }
 
         //尝试连接
-        try {
-            if (config.username != "") {
-                this.connection = Some(DriverManager.getConnection(config.connectionString, config.username, config.password))
-            }
-            else {
-                this.connection = Some(DriverManager.getConnection(config.connectionString))
-            }
-        } catch {
-            case e: SQLException => System.err.println("Open database SQLException " + e.getMessage)
-        }
+//        try {
+//            if (config.username != "") {
+//                this.connection = Some(DriverManager.getConnection(config.connectionString, config.username, config.password))
+//            }
+//            else {
+//                this.connection = Some(DriverManager.getConnection(config.connectionString))
+//            }
+//        } catch {
+//            case e: SQLException => System.err.println("Open database SQLException: " + e.getMessage)
+//        }
 
         if (config.dbType == DBType.MySQL) {
             this.connection match {
@@ -495,6 +502,10 @@ class DataSource (var connectionName: String, var databaseName: String) {
 
     def addBatch(values: Vector[Any]): Unit = {
         this.batchValues += values
+    }
+
+    def addBatch(values: java.util.List[Any]): Unit = {
+        this.batchValues += values.toArray.toVector
     }
 
     def executeBatchUpdate(commitOnExecute: Boolean = true): Int = {

@@ -8,20 +8,23 @@ import io.qross.fs.FileReader;
 import io.qross.fs.ResourceDir;
 import io.qross.fs.ResourceFile;
 import io.qross.jdbc.DataAccess;
+import io.qross.net.Json;
 import io.qross.pql.PQL;
 import io.qross.setting.Properties;
+import io.qross.time.DateTime;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.util.*;
 
 public class OneApi {
 
     public String path = "";
-    public String method = "";
     public String defaultValue = "";
     public String sentences = "";
     public Set<String> allowed = new HashSet<>();
@@ -30,6 +33,10 @@ public class OneApi {
     public static Map<String, Map<String, OneApi>> ALL = new HashMap<>();
     // token -> allowed name
     public static Map<String, String> TOKENS = new HashMap<>();
+
+    //service,path,date,hour -> pv
+    public static List<String> TRAFFIC = new ArrayList<>();
+    private static DateTime LastSaveTime = DateTime.now();
 
     //read all api settings from resources:/api/
     public static void readAll() {
@@ -41,7 +48,7 @@ public class OneApi {
             for (String dir : dirs) {
                 String[] files = ResourceDir.open(dir).listFiles("*.sql");
                 for (String file: files) {
-                    readAPIs(file.substring(dir.length(), file.lastIndexOf(".")), ResourceFile.open(file).content().split("##"));
+                    readAPIs(file.substring(file.indexOf(dir) + dir.length(), file.lastIndexOf(".")), ResourceFile.open(file).content().split("##"));
                 }
             }
         }
@@ -59,22 +66,28 @@ public class OneApi {
         }
 
         //从数据表加载接口数据和TOKEN
-        if (!Setting.OneApiServiceName.isEmpty()) {
-            DataAccess ds = new DataAccess(Setting.OneApiServiceConnection);
-            DataTable APIs = ds.executeDataTable("SELECT * FROM qross_api_in_one WHERE service_name=?", Setting.OneApiServiceName);
-            for (DataRow API : APIs.getRowList()) {
-                OneApi api = new OneApi();
-                api.path = API.getString("path");
-                api.method = API.getString("method").toUpperCase();
-                api.sentences = API.getString("pql");
-                api.defaultValue = API.getString("default_value");
+        if (!Setting.OneApiMySQLConnection.isEmpty()) {
+            DataAccess ds = new DataAccess(Setting.OneApiMySQLConnection);
 
-                if (!ALL.containsKey(api.path)) {
-                    ALL.put(api.path, new LinkedHashMap<>());
+            if (!Setting.OneApiServiceName.isEmpty()) {
+
+                DataTable APIs = ds.executeDataTable("SELECT * FROM qross_api_in_one WHERE service_name=?", Setting.OneApiServiceName);
+                for (DataRow API : APIs.getRowList()) {
+                    OneApi api = new OneApi();
+                    api.path = API.getString("path");
+                    api.sentences = API.getString("pql");
+                    api.defaultValue = API.getString("default_value");
+
+                    if (!ALL.containsKey(api.path)) {
+                        ALL.put(api.path, new LinkedHashMap<>());
+                    }
+                    String[] methods = API.getString("method").toUpperCase().split(",");
+                    for (String method : methods) {
+                        ALL.get(api.path).put(method.trim(), api);
+                    }
                 }
-                ALL.get(api.path).put(api.method, api);
+                APIs.clear();
             }
-            APIs.clear();
 
             DataTable tokens = ds.executeDataTable("SELECT name, token FROM qross_api_tokens");
             for (DataRow token : tokens.getRowList()) {
@@ -103,7 +116,7 @@ public class OneApi {
                     else {
                         api.path = path + "/" + API[0].trim();
                     }
-                    api.method = API[1].trim().toUpperCase();
+
                     if (API.length == 3) {
                         api.sentences = API[2].trim();
                     }
@@ -131,7 +144,11 @@ public class OneApi {
                     if (!ALL.containsKey(api.path)) {
                         ALL.put(api.path, new LinkedHashMap<>());
                     }
-                    ALL.get(api.path).put(api.method, api);
+
+                    String[] methods = API[1].trim().toUpperCase().split(",");
+                    for (String method : methods) {
+                        ALL.get(api.path).put(method.trim(), api);
+                    }
                 }
             }
         }
@@ -143,11 +160,120 @@ public class OneApi {
         return OneApi.ALL.size();
     }
 
+    //path and method of all api
+    public static Map<String, String> all() {
+        if (ALL.isEmpty()) {
+            readAll();
+        }
+
+        Map<String, String> keys = new HashMap<>();
+        for (String key : ALL.keySet()) {
+            keys.put(key, String.join(",", ALL.get(key).keySet()));
+        }
+        return keys;
+    }
+
+    //unsaved traffic data
+    public static List<String> traffic() {
+        return TRAFFIC;
+    }
+
+    public static List<String> listResources(String path) {
+        List<String> files = new ArrayList<>();
+        if (!path.isEmpty()) {
+            String[] dirs = path.split(";");
+            for (String dir : dirs) {
+                files.addAll(Arrays.asList(ResourceDir.open(dir).listFiles("*.sql")));
+            }
+        }
+        return files;
+    }
+
+    public static List<String> listDirectory(String path) {
+        List<String> files = new ArrayList<>();
+        //load api from external dirs out of jar
+        if (!path.isEmpty()) {
+            String[] dirs = path.split(";");
+            for (String dir : dirs) {
+                for (File file : Directory.listFiles(dir, "*.sql", true)) {
+                    files.add(file.getPath());
+                }
+            }
+        }
+        return files;
+    }
+
+    //traffic count
+    private static void count(String path) {
+        if (!Setting.OneApiMySQLConnection.isEmpty()) {
+            TRAFFIC.add(path + DateTime.now().getString(",yyyy-MM-dd,HH"));
+            if (TRAFFIC.size() >= 1000 || LastSaveTime.earlier(DateTime.now()) >= 60000) {
+                DataAccess ds = new DataAccess(Setting.OneApiMySQLConnection);
+                Map<String, Integer> traffic = new HashMap<>();
+                for (String pv : TRAFFIC) {
+                    if (traffic.containsKey(pv)) {
+                        traffic.put(pv, traffic.get(pv) + 1);
+                    }
+                    else {
+                        traffic.put(pv, 1);
+                    }
+                }
+                ds.setBatchCommand("INSERT INTO qross_api_traffic (service_name, path, record_date, record_hour, pv) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pv=pv+?");
+                for (String key : traffic.keySet()) {
+                    String[] values = key.split(",");
+                    ds.addBatch(Setting.OneApiServiceName, values[0], values[1], values[2], traffic.get(key), traffic.get(key));
+                }
+                ds.executeBatchUpdate();
+                ds.close();
+            }
+        }
+    }
+
     public static Object request(String path) {
         return request(path, DataHub.DEFAULT());
     }
 
     public static Object request(String path, DataHub dh) {
+        return request(path, new HashMap<String, String>(), dh);
+    }
+
+    public static Object requestWithJsonParameters(String path) {
+        return requestWithJsonParameters(path, DataHub.DEFAULT());
+    }
+
+    public static Map<String, String> getJsonParameters() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        StringBuilder sb = new StringBuilder();
+        if (attributes != null) {
+            try {
+                // body stream
+                BufferedReader br = new BufferedReader(new InputStreamReader(attributes.getRequest().getInputStream()));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    sb.append(line);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (sb.length() > 0) {
+            return new Json(sb.toString()).parseJavaMap("/");
+        }
+        else {
+            return new HashMap<>();
+        }
+    }
+
+    public static Object requestWithJsonParameters(String path, DataHub dh) {
+        return request(path, getJsonParameters(), dh);
+    }
+
+    public static Object request(String path, Map<String, String> params) {
+        return request(path, params, DataHub.DEFAULT());
+    }
+
+    public static Object request(String path, Map<String, String> params, DataHub dh) {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
@@ -186,14 +312,20 @@ public class OneApi {
                 }
 
                 if (allowed) {
-                    return new PQL(api.sentences, dh)
-                            .place(request.getParameterMap())
+                    count(api.path);
+
+
+
+                    return  new PQL(api.sentences, dh)
+                            .place(params)
+                            .placeParameters(request.getParameterMap())
                             .place(api.defaultValue)
                             .run();
                 } else {
                     return "{\"error\": \"Access denied\"}";
                 }
-            } else {
+            }
+            else {
                 return "{\"error\": \"WRONG or MISS path/Method '" + path + " " + method + "'\"}";
             }
         }

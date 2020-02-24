@@ -5,11 +5,10 @@ import java.util
 import java.util.jar.{JarEntry, JarFile}
 import java.util.regex.Pattern
 
-import io.qross.setting.BaseClass
 import io.qross.ext.TypeExt._
+import io.qross.setting.BaseClass
 
 import scala.collection.mutable
-import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.util.matching.Regex
 
@@ -62,14 +61,18 @@ class ResourceDir(path: String) {
     def listFiles(filter: Regex): Array[String] = {
 
         try {
-            val root: String = BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath
+            var root: String = BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath
+            if (root.contains(".jar!")) {
+                root = root.takeAfter("file:").takeBeforeLast(".jar!") + ".jar"
+            }
             val localJarFile: JarFile = new JarFile(new File(root))
             val entries: util.Enumeration[JarEntry] = localJarFile.entries
             val files = new mutable.ArrayBuffer[String]()
             while (entries.hasMoreElements) {
                 val jarEntry: JarEntry = entries.nextElement
                 val name: String = jarEntry.getName
-                if (name.startsWith(if (path.startsWith("/")) path.drop(1) else path)) {
+
+                if (name.takeAfter("^BOOT-INF/classes/".r).startsWith(if (path.startsWith("/")) path.drop(1) else path) || path == "/" || path == "") {
                     if (filter.regex != "") {
                         if (filter.test(name)) {
                             files += "/" + name
@@ -82,8 +85,10 @@ class ResourceDir(path: String) {
             }
 
             files.toArray
-        } catch {
+        }
+        catch {
             case _: IOException =>
+                //can't list files correctly if path is root "/"
                 val resource = BaseClass.MAIN.getResourceAsStream(path)
                 if (resource != null) {
                     val sl = if (path.endsWith("/")) "" else "/"

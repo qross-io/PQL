@@ -6,15 +6,22 @@ import io.qross.ext.ToScala;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class DataAccess extends DataSource {
 
-    public static DataAccess DEFAULT = new DataAccess(JDBC.DEFAULT());
-    public static DataAccess QROSS = new DataAccess(JDBC.QROSS());
-    public static DataAccess MEMORY = new DataAccess(DBType.Memory());
+    public static DataAccess DEFAULT() {
+        return new DataAccess(JDBC.DEFAULT());
+    }
+    public static DataAccess QROSS() {
+        return new DataAccess(JDBC.QROSS());
+    }
+    public static DataAccess MEMORY() {
+        return new DataAccess(DBType.Memory());
+    }
 
     public DataAccess() {
         this.connectionName_$eq(JDBC.DEFAULT());
@@ -63,6 +70,14 @@ public class DataAccess extends DataSource {
             e.printStackTrace();
         }
         return map;
+    }
+
+    public void addBatch(Object...values) {
+        addBatch(Arrays.asList(values));
+    }
+
+    public void executeBatchUpdate() {
+        executeBatchUpdate(true);
     }
 
     public List<Object> executeList(String SQL, Object... values) {

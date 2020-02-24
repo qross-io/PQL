@@ -110,7 +110,7 @@ object PQL {
         }
 
         def setArgs(queries: java.util.Map[String, Array[String]]): DataHub = {
-            PQL.place(queries)
+            PQL.placeParameters(queries)
             dh
         }
 
@@ -422,11 +422,22 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         this
     }
 
-    def place(queries: java.util.Map[String, Array[String]]): PQL = {
-        this.SQL = this.SQL.replaceArguments(queries.asScala.map(kv => (kv._1, kv._2(0))).toMap[String, String])
+    def placeParameters(queries: java.util.Map[String, Array[String]]): PQL = {
+        this.SQL = this.SQL.replaceArguments(
+                queries.asScala
+                        .map(kv => (kv._1, kv._2.headOption.getOrElse(""))).toMap[String, String])
 
         queries.keySet().forEach(key => {
             root.setVariable(key, queries.get(key).headOption.getOrElse(""))
+        })
+        this
+    }
+
+    def place(map: java.util.Map[String, String]): PQL = {
+        this.SQL = this.SQL.replaceArguments(map.asScala.toMap)
+
+        map.keySet().forEach(key => {
+            root.setVariable(key, map.get(key))
         })
         this
     }

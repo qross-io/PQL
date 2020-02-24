@@ -44,7 +44,7 @@ public class Voyager extends AbstractTemplateView {
                 .getWriter()
                 .write(
                         new PQL("EMBEDDED:" + content, new DataHub(attributes.get("connection").toString()))
-                                .place(request.getParameterMap())
+                                .placeParameters(request.getParameterMap())
                                 .set(model)
                                 .run()
                                 .toString()

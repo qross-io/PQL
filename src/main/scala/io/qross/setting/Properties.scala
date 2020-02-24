@@ -27,14 +27,13 @@ object Properties {
     loadLocalFile{
         val sameDir = BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath
         if (sameDir.contains(".jar!")) {
-            sameDir.takeAfter("file:/").takeBefore(".jar!").takeBeforeLast("/") + "/qross.properties"
+            sameDir.takeAfter("file:").takeBefore(".jar!").takeBeforeLast("/") + "/qross.properties"
         }
         else {
             new File(sameDir).getParentFile.getAbsolutePath.replace("\\", "/") + "/qross.properties"
         }
     }
 
-    checkReferrer("mysql.qross", "jdbc.default")
     checkReferrer("jdbc.default", "mysql.qross")
 
     if (containsQross) {

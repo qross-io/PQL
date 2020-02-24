@@ -418,6 +418,8 @@ object Solver {
                     .replace("~u002f", "/")
                     .replace("~u0028", "(")
                     .replace("~u0029", ")")
+                    //.replace("~u0022", "\"")
+                    //.replace("~u0027", "'")
         }
 
         //解析表达式中的变量
@@ -589,7 +591,7 @@ object Solver {
                 new Sharp(sentence).execute(PQL)
             }
             else if (sentence.bracketsWith("(", ")") || sentence.bracketsWith("~u0028", "~u0029")) {
-                DataCell(sentence.popStash(PQL), DataType.TEXT)
+                DataCell(sentence.popStash(PQL, quote), DataType.TEXT)
             }
             //最短表达式
             else {

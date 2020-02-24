@@ -839,6 +839,31 @@ object Sharp {
         }
     }
 
+    def BRACKET(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (arg.isJavaList) {
+                val brackets = arg.asList[String]
+                data.asText.bracketsWith(brackets.headOption.getOrElse(""), brackets.lastOption.getOrElse("")).toDataCell(DataType.TEXT)
+            }
+            else {
+                val brackets = arg.asText
+                data.asText.bracket(brackets, brackets).toDataCell(DataType.TEXT)
+            }
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at BRACKET. " + origin)
+        }
+    }
+
+    def QUOTE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.bracket(arg.asText).toDataCell(DataType.TEXT)
+        }
+        else {
+            data.asText.bracket("'").toDataCell(DataType.TEXT)
+        }
+    }
+
     def INDEX$OF(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             DataCell(data.asText.indexOf(arg.asText) + 1, DataType.INTEGER)

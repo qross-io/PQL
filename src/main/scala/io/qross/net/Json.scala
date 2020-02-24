@@ -2,6 +2,7 @@ package io.qross.net
 
 import java.io.InputStream
 import java.net.{HttpURLConnection, MalformedURLException, URL}
+import java.util
 
 import com.fasterxml.jackson.databind.node.JsonNodeType
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
@@ -191,7 +192,6 @@ case class Json(text: String = "") {
         val map = new mutable.LinkedHashMap[String, String]()
 
         val node = findNode(path)
-
         if (node.isObject) {
             node.fields().forEachRemaining(child => {
                 map.put(child.getKey, child.getValue.asText())
@@ -202,6 +202,22 @@ case class Json(text: String = "") {
         }
 
         map.toMap
+    }
+
+    def parseJavaMap(path: String): java.util.Map[String, String] = {
+        val map = new util.HashMap[String, String]()
+
+        val node = findNode(path)
+        if (node.isObject) {
+            node.fields().forEachRemaining(child => {
+                map.put(child.getKey, child.getValue.asText())
+            })
+        }
+        else {
+            throw new JsonParseException("Wrong input format. The json path must point to a Object.")
+        }
+
+        map
     }
     
     def parseJavaList(path: String): java.util.List[Any] = {

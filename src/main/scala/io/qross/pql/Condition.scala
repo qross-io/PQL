@@ -100,6 +100,28 @@ class Condition(val expression: String) {
                 else if (v.equalsIgnoreCase("EMPTY")) {
                     field.nonEmpty
                 }
+                else if (v.equalsIgnoreCase("DEFINED")) {
+                    if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                        true
+                    }
+                    else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                        true
+                    }
+                    else {
+                        false
+                    }
+                }
+                else if (v.endsWith("UNDEFINED")) {
+                    if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                        false
+                    }
+                    else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                        false
+                    }
+                    else {
+                        true
+                    }
+                }
                 else {
                     field.value != value.value
                 }
@@ -108,8 +130,30 @@ class Condition(val expression: String) {
                 if (v == null || v.equalsIgnoreCase("NULL")) {
                     field.value == null
                 }
-                else if (value.asText.equalsIgnoreCase("EMPTY")) {
+                else if (v.equalsIgnoreCase("EMPTY")) {
                     field.isEmpty
+                }
+                else if (v.equalsIgnoreCase("DEFINED")) {
+                    if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                        false
+                    }
+                    else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                        false
+                    }
+                    else {
+                        true
+                    }
+                }
+                else if (v.endsWith("UNDEFINED")) {
+                    if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                        true
+                    }
+                    else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                        true
+                    }
+                    else {
+                        false
+                    }
                 }
                 else {
                     field.value == value.value
