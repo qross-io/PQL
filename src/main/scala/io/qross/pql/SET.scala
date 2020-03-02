@@ -106,7 +106,7 @@ class SET(var declare: String, val symbol: String, val expression: String) {
         else {
             //在SHARP表达式内部再恢复字符串和中间值
             if (variables.length == 1) {
-                PQL.updateVariable(variables.head, new Sharp(expression).execute(PQL))
+                PQL.updateVariable(variables.head, new Sharp(expression.$clean(PQL)).execute(PQL))
             }
             else {
                 throw new SQLParseException("Only 1 variable name allowed when declare a new variable. " + expression)

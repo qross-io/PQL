@@ -4,7 +4,7 @@ import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
-import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, $NULL, $LINK, FUNCTION_NAMES}
+import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, $NULL, $LINK, FUNCTION_NAMES, $PROPERTY}
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -519,7 +519,8 @@ object Solver {
                                 })
                         case None =>
                             //已在clean过程中, 不需要clean
-                            new Sharp(m.group(1)).execute(PQL).ifValid(data => {
+                            //替换变量是因为sharp表达式中可能存在未解析的变量, 如ECHO语句中只支持内嵌 ${ }
+                            new Sharp(m.group(1).replaceVariables(PQL)).execute(PQL).ifValid(data => {
                                 sentence = sentence.replace(m.group(0), PQL.$stash(data))
                             })
                     }
@@ -579,15 +580,15 @@ object Solver {
             if ($INTERMEDIATE$N.test(sentence)) {
                 PQL.values(sentence.$trim("~value[", "]").toInt)
             }
-            //常量
             else if ($NULL.test(sentence)) {
                 DataCell.NULL
             }
+            //常量
             else if ($CONSTANT.test(sentence)) {
                 DataCell(sentence, DataType.TEXT)
             }
             //SHARP表达式
-            else if ($LINK.test(sentence)) {
+            else if ($LINK.test(sentence) || $PROPERTY.test(sentence)) {
                 new Sharp(sentence).execute(PQL)
             }
             else if (sentence.bracketsWith("(", ")") || sentence.bracketsWith("~u0028", "~u0029")) {

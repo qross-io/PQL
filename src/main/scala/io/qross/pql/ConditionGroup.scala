@@ -47,19 +47,22 @@ class ConditionGroup(expression: String) {
             val field = condition.field
             val value = condition.value
 
-            condition.eval( if (field == null || field == "") {
+            condition.eval( if (field == null) {
                                 DataCell.NULL
                             }
-                            else if ($CONDITION.test(field)) {
+                            else if ($CONDITION$N.test(field)) {
                                 conditions(field.$trim("~condition[", "]").toInt).result.toDataCell(DataType.BOOLEAN)
                             }
                             else if ($VARIABLE.test(field)) {
                                 PQL.findVariable(field)
                             }
+                            else if (value.equalsIgnoreCase("DEFINED") || value.equalsIgnoreCase("UNDEFINED")) {
+                                field.$restore(PQL).toDataCell(DataType.TEXT)
+                            }
                             else {
                                 field.$sharp(PQL)
                             },
-                            if ($CONDITION.test(value)) {
+                            if ($CONDITION$N.test(value)) {
                                 DataCell(conditions(value.$trim("~condition[", "]").toInt).result, DataType.BOOLEAN)
                             }
                             else if ($VARIABLE.test(value)) {
@@ -68,7 +71,7 @@ class ConditionGroup(expression: String) {
                             else if (value.equalsIgnoreCase("EMPTY")) {
                                 DataCell.EMPTY
                             }
-                            else if (value.equalsIgnoreCase("UNDEFINED") || value.equalsIgnoreCase("NULL") || value == "()") {
+                            else if (value.equalsIgnoreCase("NULL") || value == "()") {
                                 DataCell.NULL
                             }
                             else if (condition.operator == "NOT") {
@@ -155,13 +158,13 @@ class ConditionGroup(expression: String) {
                 left = left.substring(left.indexOf(n.group) + n.group.length)
             }
 
-            if (!$CONDITION.test(left)) {
+            if (!$CONDITION$N.test(left)) {
                 exp = exp.replace(left, stash)
                 clause = clause.replace(left, stash)
                 conditions += new Condition(left.trim)
             }
 
-            if (!$CONDITION.test(right)) {
+            if (!$CONDITION$N.test(right)) {
                 exp = exp.replace(right, stash)
                 clause = clause.replace(right, stash)
                 conditions += new Condition(right.trim)
@@ -177,13 +180,13 @@ class ConditionGroup(expression: String) {
             left = m.group(3)
             right = m.group(4)
 
-            if (!$CONDITION.test(left)) {
+            if (!$CONDITION$N.test(left)) {
                 exp = exp.replace(left, stash)
                 clause = clause.replace(left, stash)
                 conditions += new Condition(left.trim)
             }
 
-            if (!$CONDITION.test(right)) {
+            if (!$CONDITION$N.test(right)) {
                 exp = exp.replace(right, stash)
                 clause = clause.replace(right, stash)
                 conditions += new Condition(right.trim)
@@ -195,7 +198,7 @@ class ConditionGroup(expression: String) {
         }
 
         //SINGLE
-        if (!$CONDITION.test(exp)) {
+        if (!$CONDITION$N.test(exp)) {
             conditions += new Condition(exp.trim)
         }
     }

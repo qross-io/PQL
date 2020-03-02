@@ -25,6 +25,7 @@ class ECHO(val content: String) {
 
     def execute(PQL: PQL): Unit = {
         if (content.nonEmpty) {
+            //ECHO不能支持变量，js表达式，函数或查询表达式，因为会与js中的定义冲突
             PQL.RESULT += content.replaceSharpExpressions(PQL).popStash(PQL, "")
         }
     }

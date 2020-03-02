@@ -6,17 +6,26 @@
 </head>
 <body>
 <%
-VAR $row := SELECT id, title FROM qross_jobs LIMIT 1 -> FIRST ROW;
+VAR $row := SELECT * FROM qross_tasks LIMIT 10 -> LAST ROW;
 %>
-<div>${ $row % id }</div>
-<div><%= $row % title %></div>
+${ $row.ready_time IF NULL $row.start_time }
+<div>${ $row.id }</div>
+<div><%= $row.job_id %></div>
 <div>
     <%
-    SET $a := 1;
+    IF $row.id IS INT THEN
+        OUTPUT 'INT';
+    ELSE
+        OUTPUT 'NOT INT';
+    END IF;
     %>
 </div>
-${ CASE $a WHEN 1 THEN 'HELLO' WHEN 2 THEN 'WORLD' ELSE 'NO' END }
+${ CASE WHEN $row.ready_time IS NOT NULL THEN $row.ready_time ELSE $row.start_time END }
 <br/>
-${ IF $a < 0 THEN 'HELLO' ELSIF $a > 0 THEN 'WORLD' ELSE 'NO' END }
+${ CASE $row.ready_time IS NULL WHEN 1 < 2 THEN $row.start_time ELSE $row.ready_time END }
+<br/>
+${ IF $row.ready_time IS NULL THEN $row.start_time ELSE $row.ready_time END }
+<br/>
+
 </body>
 </html>

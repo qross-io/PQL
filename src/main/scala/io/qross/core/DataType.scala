@@ -131,6 +131,7 @@ class DataType(val typeName: String, val originalName: String, val className: St
     override def equals(obj: scala.Any): Boolean = {
         obj match {
             case dataType: DataType => this.typeName == dataType.typeName
+            case str: String => this.typeName.equalsIgnoreCase(str)
             case _ => false
         }
     }

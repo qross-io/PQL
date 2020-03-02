@@ -63,7 +63,7 @@ object CASE {
                     case "WHEN" =>
                         if (prev == "CASE") {
                             val equiv = sentence.takeBefore(words(i)).trim()
-                            equivalent = if (equiv == "") DataCell(true, DataType.BOOLEAN) else equiv.$eval(PQL)
+                            equivalent = if (equiv == "") DataCell(true, DataType.BOOLEAN) else if ($CONDITION.test(equiv)) new ConditionGroup(equiv).evalAll(PQL).toDataCell(DataType.BOOLEAN) else equiv.$eval(PQL)
                         }
                         else if (prev == "THEN") {
                             if (met) {
@@ -97,6 +97,9 @@ object CASE {
                             if (met) {
                                 result = sentence.takeBefore(words(i))
                                 break
+                            }
+                            else {
+                                sentence = sentence.takeAfter(words(i))
                             }
                         }
                         else {

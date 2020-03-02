@@ -34,7 +34,7 @@ class SELECT(val sentence: String) {
             }
         }).toDataCell(DataType.TABLE)
 
-        PQL.COUNT_OF_LAST_QUERY = data.dataType match {
+        PQL.COUNT_OF_LAST_SELECT = data.dataType match {
             case DataType.TABLE => data.asTable.size
             case DataType.ARRAY | DataType.LIST => data.asList.size
             case _ => 1

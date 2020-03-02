@@ -74,7 +74,7 @@ object END {
             //END是FUNCTION的最后一条子语句
             PQL.PARSING.head.addStatement($end)
 
-            //将语句从root转移到functions
+            //将语句从当前节点转移到functions
             val $function = PQL.PARSING.pop()
             PQL.USER$FUNCTIONS += $function.instance.asInstanceOf[FUNCTION].functionName -> new UserFunction($function)
         }

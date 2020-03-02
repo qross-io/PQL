@@ -94,65 +94,85 @@ class Condition(val expression: String) {
                 }
             case "IS$NOT" =>
                 val v = value.asText
-                if (v == null || v.equalsIgnoreCase("NULL")) {
+                if (v == null) {
                     field.value != null
                 }
-                else if (v.equalsIgnoreCase("EMPTY")) {
-                    field.nonEmpty
-                }
-                else if (v.equalsIgnoreCase("DEFINED")) {
-                    if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
-                        true
-                    }
-                    else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
-                        true
-                    }
-                    else {
-                        false
-                    }
-                }
-                else if (v.endsWith("UNDEFINED")) {
-                    if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
-                        false
-                    }
-                    else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
-                        false
-                    }
-                    else {
-                        true
+                else if ("""(?i)^[a-z]+$""".r.test(v)) {
+                    v.toUpperCase match {
+                        case "NULL" => field.value != null
+                        case "EMPTY" => field.nonEmpty
+                        case "DEFINED" =>
+                            if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                                true
+                            }
+                            else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                                true
+                            }
+                            else {
+                                false
+                            }
+                        case "UNDEFINED" =>
+                            if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                                false
+                            }
+                            else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                                false
+                            }
+                            else {
+                                true
+                            }
+                        case "TABLE" | "DATATABLE" => !field.isTable
+                        case "ROW" | "DATAROW" | "MAP" | "OBJECT" => !field.isRow
+                        case "LIST" | "ARRAY" => !field.isJavaList
+                        case "STRING" | "TEXT" => !field.isText
+                        case "DECIMAL" | "NUMERIC" => !field.isDecimal
+                        case "INT" | "INTEGER" => !field.isInteger
+                        case "BOOL" | "BOOLEAN" => !field.isBoolean
+                        case "DATETIME" => !field.isDateTime
+                        case _ => field.dataType.typeName != v
                     }
                 }
                 else {
-                    field.value != value.value
+                    field.value == value.value
                 }
             case "IS" =>
                 val v = value.asText
-                if (v == null || v.equalsIgnoreCase("NULL")) {
+                if (v == null) {
                     field.value == null
                 }
-                else if (v.equalsIgnoreCase("EMPTY")) {
-                    field.isEmpty
-                }
-                else if (v.equalsIgnoreCase("DEFINED")) {
-                    if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
-                        false
-                    }
-                    else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
-                        false
-                    }
-                    else {
-                        true
-                    }
-                }
-                else if (v.endsWith("UNDEFINED")) {
-                    if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
-                        true
-                    }
-                    else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
-                        true
-                    }
-                    else {
-                        false
+                else if ("""(?i)^[a-z]+$""".r.test(v)) {
+                    v.toUpperCase match {
+                        case "NULL" => field.value == null
+                        case "EMPTY" => field.isEmpty
+                        case "DEFINED" =>
+                            if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                                false
+                            }
+                            else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                                false
+                            }
+                            else {
+                                true
+                            }
+                        case "UNDEFINED" =>
+                            if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                                true
+                            }
+                            else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                                true
+                            }
+                            else {
+                                false
+                            }
+                        case "TABLE" | "DATATABLE" => field.isTable
+                        case "ROW" | "DATAROW" | "MAP" | "OBJECT" => field.isRow
+                        case "LIST" | "ARRAY" => field.isJavaList
+                        case "STRING" | "TEXT" => field.isText
+                        case "DECIMAL" | "NUMERIC" => field.isDecimal
+                        case "INT" | "INTEGER" => field.isInteger
+                        case "BOOL" | "BOOLEAN" => field.isBoolean
+                        case "DATETIME" => field.isDateTime
+                        case _ => field.dataType.typeName == v
                     }
                 }
                 else {

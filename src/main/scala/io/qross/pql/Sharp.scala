@@ -1057,7 +1057,7 @@ object Sharp {
 
     /* ---------- 数字 ---------- */
 
-    def IF$ZERO$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def IF$ZERO(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (data.asInteger == 0) arg else data
         }
@@ -1066,7 +1066,7 @@ object Sharp {
         }
     }
 
-    def IF$NOT$ZERO$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def IF$NOT$ZERO(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (data.asInteger != 0) arg else data
         }
@@ -1108,7 +1108,7 @@ object Sharp {
 
     /* ---------- 判断操作 IS ---------- */
 
-    def IF$EMPTY$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def IF$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (data.asText == "") arg else data
         }
@@ -1117,7 +1117,7 @@ object Sharp {
         }
     }
 
-    def IF$NOT$EMPTY$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def IF$NOT$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (data.asText != "") arg else data
         }
@@ -1126,7 +1126,7 @@ object Sharp {
         }
     }
 
-    def IF$NULL$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def IF$NULL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (data.invalid || data.value == null) arg else data
         }
@@ -1135,7 +1135,7 @@ object Sharp {
         }
     }
 
-    def IF$NOT$NULL$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def IF$NOT$NULL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (data.valid && data.value != null) arg else data
         }
@@ -1144,7 +1144,24 @@ object Sharp {
         }
     }
 
-    def IF$TRUE$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def IF$UNDEFINED(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.dataType == DataType.EXCEPTION && data.value == "NOT_FOUND") {
+                arg
+            }
+            else if (Solver.ARGUMENT.test(data.asText.removeQuotes())) {
+                arg
+            }
+            else {
+                data
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("IF UNDEFINED THEN", origin)
+        }
+    }
+
+    def IF$TRUE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (data.asBoolean) arg else data
         }
@@ -1153,37 +1170,13 @@ object Sharp {
         }
     }
 
-    def IF$FALSE$THEN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def IF$FALSE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (!data.asBoolean) arg else data
         }
         else {
             throw SharpLinkArgumentException.occur("IF FALSE THEN", origin)
         }
-    }
-
-    def IS$NULL(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isNull || data.invalid || data.asText.bracketsWith("#{", "}") || data.asText.bracketsWith("&{", "}"), DataType.BOOLEAN)
-    }
-
-    def IS$NOT$NULL(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.nonNull && data.valid && !data.asText.bracketsWith("#{", "}") && !data.asText.bracketsWith("&{", "}"), DataType.BOOLEAN)
-    }
-
-    def IS$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isEmpty, DataType.BOOLEAN)
-    }
-
-    def IS$NOT$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.nonEmpty, DataType.BOOLEAN)
-    }
-
-    def IS$TRUE(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.asBoolean, DataType.BOOLEAN)
-    }
-
-    def IS$FALSE(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(!data.asBoolean, DataType.BOOLEAN)
     }
 
     def LIKE(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -1197,78 +1190,6 @@ object Sharp {
 
     def NOT$LIKE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         LIKE(data, arg, origin).update(!data.value.asInstanceOf[Boolean])
-    }
-
-    def IS$TEXT(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isText, DataType.BOOLEAN)
-    }
-
-    def IS$NOT$TEXT(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(!data.isText, DataType.BOOLEAN)
-    }
-
-    def IS$INTEGER(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isInteger, DataType.BOOLEAN)
-    }
-
-    def IS$NOT$INTEGER(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(!data.isInteger, DataType.BOOLEAN)
-    }
-
-    def IS$INT(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        IS$INTEGER(data, arg, origin)
-    }
-
-    def IS$NOT$INT(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        IS$NOT$INTEGER(data, arg, origin)
-    }
-
-    def IS$DECIMAL(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isDecimal, DataType.BOOLEAN)
-    }
-
-    def IS$NOT$DECIMAL(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(!data.isDecimal, DataType.BOOLEAN)
-    }
-
-    def IS$LIST(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isJavaList, DataType.BOOLEAN)
-    }
-
-    def IS$NOT$LIST(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(!data.isJavaList, DataType.BOOLEAN)
-    }
-
-    def IS$ARRAY(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isJavaList, DataType.BOOLEAN)
-    }
-
-    def IS$NOT$ARRAY(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isJavaList, DataType.BOOLEAN)
-    }
-
-    def IS$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isRow, DataType.BOOLEAN)
-    }
-
-    def IS$NOT$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isRow, DataType.BOOLEAN)
-    }
-
-    def IS$TABLE(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isTable, DataType.BOOLEAN)
-    }
-
-    def IS$NOT$TABLE(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(!data.isTable, DataType.BOOLEAN)
-    }
-
-    def IS$REGEX(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.isRegex, DataType.BOOLEAN)
-    }
-
-    def IS$NOT$REGEX(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(!data.isRegex, DataType.BOOLEAN)
     }
 
     /* ---------- DataTable ---------- */
@@ -1654,7 +1575,7 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
             sentence = sentence.replace(tuple, tuple.replaceAll("\\s", ""))
         })
 
-        // 将 $row % field 转成 $row X 'field' 格式
+        // 将 $row.field 转成 $row X 'field' 格式
         $PROPERTY.findAllMatchIn(sentence).foreach(m => {
             sentence = sentence.replace(m.group(0), " X '" + m.group(1) + "'")
         })

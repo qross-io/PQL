@@ -6,6 +6,8 @@
 
 DEBUG ON;
 
+
+
 FUNCTION $func_name ($a DEFAULT 0, $b DEFAULT 'hello')
     BEGIN
         VAR $row := SELECT id, status, info FROM tc WHERE id>$a LIMIT $c -> FIRST ROW;

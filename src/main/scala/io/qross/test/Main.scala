@@ -89,9 +89,11 @@ object Main {
             "debtor_name" -> "name",
             "telephone" -> "13623456678",
             "companyId" -> "123",
-            "collectorIds" -> "1,2,3",
+            "collectorIds" -> "1,2,3 a:b:c",
             "statType" -> "1",
-            "id" -> "1"
+            "id" -> "1",
+            "time" -> "2020-02-27 18:30:33",
+            "filter" -> ""
         ).run().print
         //PQL.openEmbeddedFile("/sql/test.html").place("jobId", "54").run().print
 

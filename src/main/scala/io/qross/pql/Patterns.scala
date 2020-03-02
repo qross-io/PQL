@@ -23,6 +23,8 @@ object Patterns {
     val $END$CASE: Regex = """(?i)^END\s+CASE$""".r
     val $WHEN$: Regex = """(?i)\sWHEN\s""".r
 
+    val $CONDITION: Regex = """(?i)=|!=|>|<|IS""".r
+
     val $END$: Regex = """(?i)\bEND\b""".r
 
     val $BLANK: Regex = """\s""".r
@@ -37,7 +39,7 @@ object Patterns {
     val A$OR$Z: Regex = """(?i)[A-Z]{3}\s+OR\s+[A-Z]{3}""".r
 
     val $SELECT$: Regex = """(?i)\(\s*SELECT\s""".r  //(SELECT...)
-    val $CONDITION: Regex = """(?i)^~condition\[(\d+)\]$""".r
+    val $CONDITION$N: Regex = """(?i)^~condition\[(\d+)\]$""".r
     val IN$$: Regex = """(?i)\sIN\s*\([^\(\)]*\)""".r  // IN (...)
 
     val STATEMENTS: Set[String] = Set[String]("IF", "ELSIF", "ELSE", "FOR", "WHILE", "CALL", "CASE", "WHEN")
@@ -79,9 +81,9 @@ object Patterns {
     val $REQUEST: Regex = """(?i)^REQUEST\s+""".r
     val $SEND$MAIL: Regex = """(?i)^SEND\s+E?MAIL\s+""".r
     val $PARSE: Regex = """(?i)^PARSE\s""".r
-    val $LINK: Regex = """(?i)\s[A-Z][A-Z\$]*([ \t]+[A-Z\$]*[A-Z])*(\s|$)""".r
+    val $LINK: Regex = """(?i)\s[A-Z][A-Z\$]*([ \t]+[A-Z]+)*(\s|$)""".r
     val $TUPLE: Regex = """\([^\)]+\)""".r
-    val $PROPERTY: Regex = """(?i)%\s*([_a-z]+)\b""".r
+    val $PROPERTY: Regex = """(?i)\.\s*([_a-z]+)\b""".r
     val $MD5: Regex = """(?i)\sTO\s+MD5(\s|$)""".r
     val $LET: Regex = """(?i)^LET\s+""".r
     val $DEBUG: Regex = """(?i)^DEBUG\s""".r
@@ -89,6 +91,7 @@ object Patterns {
     val $SLEEP: Regex = """(?i)^SLEEP\s""".r
     val $CALL: Regex = """(?i)^CALL\s""".r
     val $RETURN: Regex = """(?i)^RETURN(\s|$)""".r
+    val $EXEC: Regex = """(?i)EXEC\s""".r
 
     val $VARIABLE: Regex = """^(\$|@)\(?[A-Za-z0-9_]+\)?$""".r
     val $INTERMEDIATE$N: Regex = """^~value\[(\d+)\]$""".r
