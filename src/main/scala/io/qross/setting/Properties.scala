@@ -23,36 +23,17 @@ object Properties {
 
     private val props = new java.util.Properties()
 
+    //load default config
     loadResourcesFile("/conf.properties")
-    loadLocalFile{
-        val sameDir = BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath
-        if (sameDir.contains(".jar!")) {
-            sameDir.takeAfter("file:").takeBefore(".jar!").takeBeforeLast("/") + "/qross.properties"
-        }
-        else {
-            new File(sameDir).getParentFile.getAbsolutePath.replace("\\", "/") + "/qross.properties"
-        }
-    }
-
-    checkReferrer("jdbc.default", "mysql.qross")
-
+    //load qross config
+    loadSiblingFile("qross.properties")
+    //load config from database table
     if (containsQross) {
         loadPropertiesAndConnections()
     }
-
-    private def checkReferrer(name: String, alternate: String): Unit = {
-        if (contains(name)) {
-            val value = props.getProperty(name)
-            if (contains(value)) {
-                props.setProperty(name, props.getProperty(value))
-            }
-            else  if (contains(s"$value.url")) {
-                props.setProperty(name, props.getProperty(s"$value.url"))
-            }
-        }
-        else if (contains(alternate)) {
-            props.setProperty(name, props.getProperty(alternate))
-        }
+    //default connection
+    if (!contains("jdbc.default") && containsQross) {
+        props.setProperty("jdbc.default", "mysql.qross")
     }
 
     def containsQross: Boolean = {
@@ -65,11 +46,21 @@ object Properties {
 
     def get(key: String, defaultValue: String): String = {
         if (props.containsKey(key)) {
-            props.getProperty(key)
+            val value = props.getProperty(key)
+            if (props.contains(value)) {
+                props.getProperty(value)
+            }
+            else {
+                value
+            }
         }
         else {
             defaultValue
         }
+    }
+
+    def getAllPropertyNames: java.util.Set[String] = {
+        props.stringPropertyNames()
     }
 
     def get(key: String): String = {
@@ -92,7 +83,19 @@ object Properties {
             props.load(new BufferedReader(new InputStreamReader(BaseClass.MAIN.getResourceAsStream(path))))
         }
         catch {
-            case _ : Exception =>
+            case e : Exception => e.printStackTrace()
+        }
+    }
+
+    def loadSiblingFile(fileName: String): Unit = {
+        loadLocalFile{
+            val sameDir = BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath
+            if (sameDir.contains(".jar!")) {
+                sameDir.takeAfter("file:").takeBefore(".jar!").takeBeforeLast("/") + "/" + fileName
+            }
+            else {
+                new File(sameDir).getParentFile.getAbsolutePath.replace("\\", "/") + "/" + fileName
+            }
         }
     }
 
