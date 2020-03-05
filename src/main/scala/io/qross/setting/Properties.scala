@@ -45,17 +45,12 @@ object Properties {
     }
 
     def get(key: String, defaultValue: String): String = {
-        if (props.containsKey(key)) {
-            val value = props.getProperty(key)
-            if (props.contains(value)) {
-                props.getProperty(value)
-            }
-            else {
-                value
-            }
+        val value = props.getProperty(key, defaultValue)
+        if (props.containsKey(value)) {
+            props.getProperty(value, defaultValue)
         }
         else {
-            defaultValue
+            value
         }
     }
 
@@ -64,7 +59,13 @@ object Properties {
     }
 
     def get(key: String): String = {
-        get(key, "null")
+        val value = props.getProperty(key)
+        if (props.containsKey(value)) {
+            props.getProperty(value)
+        }
+        else {
+            value
+        }
     }
 
     def set(key: String, value: String): Unit = {

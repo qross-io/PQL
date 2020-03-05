@@ -286,8 +286,7 @@ public class OneApi {
             if (OneApi.contains(path, method)) {
                 OneApi api = OneApi.pick(path, method);
 
-                String security = Properties.get("oneapi.security.enabled");
-
+                String security = Properties.get("oneapi.security.enabled", "0");
                 if (security.equalsIgnoreCase("true") || security.equalsIgnoreCase("yes")) {
                     security = "1";
                 }
