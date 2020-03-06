@@ -76,7 +76,7 @@ object Main {
 
         //DataSource.QROSS.queryDataTable("select tt from td;").toString().print
 
-        PQL.openFile("/sql/api.sql").place(
+        /* PQL.openFile("/sql/api.sql").place(
             "pageSize" -> "20",
             "pageNum" -> "9",
             "month" -> "2020-10",
@@ -94,8 +94,9 @@ object Main {
             "id" -> "1",
             "time" -> "2020-02-27 18:30:33",
             "filter" -> ""
-        ).run().print
+        ).run().print */
         //PQL.openEmbeddedFile("/sql/test.html").place("jobId", "54").run().print
+        PQL.openFile("/sql/date.sql").run()
 
         //val cookie = new Cookie("", "")
         //cookie.setDomain()

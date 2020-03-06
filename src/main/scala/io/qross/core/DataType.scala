@@ -1,8 +1,7 @@
 package io.qross.core
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.qross.ext.Output
-import io.qross.pql.SQLParseException
+import io.qross.ext.TypeExt._
 
 //case class DataType(className: String, typeName: String)
 
@@ -50,15 +49,16 @@ object DataType extends Enumeration {
 
     //java type name
     def ofClassName(className: String): DataType = {
+        val firstName = {
+            if (className.contains(".")) {
+                className.substring(className.lastIndexOf(".") + 1)
+            }
+            else {
+                className
+            }
+        }
         new DataType(
-            {
-                if (className.contains(".")) {
-                    className.substring(className.lastIndexOf(".") + 1).toLowerCase()
-                }
-                else {
-                    className.toLowerCase()
-                }
-            } match {
+             firstName.toLowerCase() match {
                     case "string" => "TEXT"
                     case "bit" | "int" | "integer" | "long" | "timestamp" => "INTEGER"
                     case "float" | "double" | "bigdecimal" => "DECIMAL"
@@ -70,9 +70,8 @@ object DataType extends Enumeration {
                     case "datatable" => "TABLE"
                     case "regex" | "pattern" => "REGEX"
                     case "json" => "JSON"
-                    case "[B" => "BLOB"
                     case _ => "TEXT"
-                }, className)
+                }, firstName.toUpperCase(), className)
     }
 
     //data value
@@ -86,6 +85,7 @@ object DataType extends Enumeration {
     }
 
     def ofJsonNodeType(node: JsonNode): DataType = {
+
         new DataType(
             if (node.isIntegralNumber || node.isInt || node.isLong || node.isShort || node.isBigInteger) {
                 "INTEGER"
@@ -110,7 +110,15 @@ object DataType extends Enumeration {
             }
             else {
                 "TEXT"
-            }, node.getNodeType.name())
+            }, {
+                val name = node.getNodeType.name()
+                if (name.contains(".")) {
+                    name.takeAfterLast(".")
+                }
+                else {
+                    name
+                }
+            }.toUpperCase(), node.getNodeType.name())
     }
 }
 
@@ -120,10 +128,6 @@ class DataType(val typeName: String, val originalName: String, val className: St
 
     def this(typeName: String) {
         this(typeName, "", "")
-    }
-
-    def this(typeName: String, className: String) {
-        this(typeName, "", className)
     }
 
     override def toString: String = typeName

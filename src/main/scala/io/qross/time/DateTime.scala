@@ -25,9 +25,12 @@ object DateTime {
     def getSecondsSpan(beginTime: String, endTime: String): Long = getSecondsSpan(new DateTime(beginTime), new DateTime(endTime))
     def getSecondsSpan(beginTime: DateTime, endTime: DateTime): Long = ChronoUnit.SECONDS.between(beginTime.localDateTime, endTime.localDateTime)
 
+    val FULL = 0 //DATETIME
+    val DATE = 1 //DATE
+    val TIME = 2 //TIME
 }
 
-class  DateTime(private val dateTime: Any = "", private val formatStyle: String = "") {
+class  DateTime(private val dateTime: Any, private val formatStyle: String, private var mode: Int) {
     
     //E,EE,EEE = Sun
     //EEEE = Sunday
@@ -43,6 +46,22 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     
     //a = PM
 
+    def this() {
+        this("", "", DateTime.FULL)
+    }
+
+    def this(dateTime: Any) {
+        this(dateTime, "", DateTime.FULL)
+    }
+
+    def this(dateTime: Any, formatStyle: String) {
+        this(dateTime, formatStyle, DateTime.FULL)
+    }
+
+    def this(dateTime: Any, mode: Int) {
+        this(dateTime, "", mode)
+    }
+
     val localDateTime: LocalDateTime = dateTime match {
         case localDateTime: LocalDateTime => localDateTime
         case str: String => if (str == "") {
@@ -52,8 +71,12 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
                                 parseLocalDateTime(str, formatStyle)
                             }
         case dt: DateTime => dt.localDateTime
-        case date2: java.sql.Date => parseLocalDateTime(date2.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
-        case time: java.sql.Time => parseLocalDateTime(LocalDate.now() + " " + time.toString, "yyyy-MM-dd HH:mm:ss")
+        case date2: java.sql.Date =>
+            mode = DateTime.DATE
+            parseLocalDateTime(date2.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
+        case time: java.sql.Time =>
+            mode = DateTime.TIME
+            parseLocalDateTime(LocalDate.now() + " " + time.toString, "yyyy-MM-dd HH:mm:ss")
         case timeStamp: java.sql.Timestamp => timeStamp.toLocalDateTime
         case date1: java.util.Date => date1.toInstant.atZone(ZoneId.systemDefault()).toLocalDateTime
         case l: Long => parseLocalDateTime(l)
@@ -430,7 +453,6 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     def shape(FROM: String, TO: String, STEP: ChronoUnit = ChronoUnit.DAYS, FILTER: String = ""):
 
     List[DateTime] = {
-        
         val list = new mutable.LinkedHashSet[DateTime]()
         
         val begin = this.copy().express(FROM)
@@ -589,7 +611,27 @@ class  DateTime(private val dateTime: Any = "", private val formatStyle: String 
     }
     
     override def toString: String = {
-        this.getString("yyyy-MM-dd HH:mm:ss")
+        this.mode match {
+            case DateTime.DATE => toDateString
+            case DateTime.TIME => toTimeString
+            case _ => this.getString("yyyy-MM-dd HH:mm:ss")
+        }
+    }
+
+    def toString(mode: String): String = {
+        mode match {
+            case "DATE" => toDateString
+            case "TIME" => toTimeString
+            case _ => this.getString("yyyy-MM-dd HH:mm:ss")
+        }
+    }
+
+    def toDateString: String = {
+        this.getString("yyyy-MM-dd")
+    }
+
+    def toTimeString: String = {
+        this.getString("HH:mm:ss")
     }
 
     def toFullString: String = {

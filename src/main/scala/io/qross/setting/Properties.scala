@@ -104,16 +104,6 @@ object Properties {
     def loadPropertiesAndConnections(): Unit = {
         val ds = DataSource.QROSS
 
-        ds.executeDataTable("SELECT properties_type, properties_path FROM qross_properties WHERE enabled='yes' ORDER BY id ASC")
-                        .foreach(row => {
-                            if (row.getString("properties_type") == "local") {
-                                loadLocalFile(row.getString("properties_path"))
-                            }
-                            else {
-                                loadResourcesFile(row.getString("properties_path"))
-                            }
-                        }).clear()
-
         ds.executeDataTable("SELECT * FROM qross_connections WHERE enabled='yes'")
                         .foreach(row => {
                             //从数据行新建
