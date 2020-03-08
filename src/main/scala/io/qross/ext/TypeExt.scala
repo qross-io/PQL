@@ -592,7 +592,7 @@ object TypeExt {
                 case f: Float => f
                 case d: Double => d
                 case b: Boolean => if (b) 1 else 0
-                case bd: java.math.BigDecimal => bd.doubleValue()
+                case bd: java.math.BigDecimal => bd.stripTrailingZeros().doubleValue()
                 case _ => throw new ConvertFailureException("Can't recognize as or convert to Decimal: " + any)
             }
         }

@@ -17,9 +17,9 @@ class Plan {
 
     val phrases = new mutable.LinkedHashMap[String, String]()
 
-    val head: String = phrases.head._1
-    val last: String = phrases.last._1
-    val size: Int = phrases.size
+    def head: String = phrases.head._1
+    def last: String = phrases.last._1
+    def size: Int = phrases.size
 
     def +=(phrase: (String, String)): Unit = {
         phrases += phrase._1 -> phrase._2

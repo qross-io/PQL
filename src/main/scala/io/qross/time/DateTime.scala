@@ -28,6 +28,7 @@ object DateTime {
     val FULL = 0 //DATETIME
     val DATE = 1 //DATE
     val TIME = 2 //TIME
+    val TIMESTAMP = 3 //TIME STAMP
 }
 
 class  DateTime(private val dateTime: Any, private val formatStyle: String, private var mode: Int) {
@@ -67,6 +68,9 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
         case str: String => if (str == "") {
                                 LocalDateTime.now()
                             }
+                            else if ("^\\d+$".r.test(str)) {
+                                parseLocalDateTime(str.toLong)
+                            }
                             else {
                                 parseLocalDateTime(str, formatStyle)
                             }
@@ -77,7 +81,9 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
         case time: java.sql.Time =>
             mode = DateTime.TIME
             parseLocalDateTime(LocalDate.now() + " " + time.toString, "yyyy-MM-dd HH:mm:ss")
-        case timeStamp: java.sql.Timestamp => timeStamp.toLocalDateTime
+        case timeStamp: java.sql.Timestamp =>
+            mode = DateTime.TIMESTAMP
+            timeStamp.toLocalDateTime
         case date1: java.util.Date => date1.toInstant.atZone(ZoneId.systemDefault()).toLocalDateTime
         case l: Long => parseLocalDateTime(l)
         case i: Int => parseLocalDateTime(i)
@@ -614,6 +620,7 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
         this.mode match {
             case DateTime.DATE => toDateString
             case DateTime.TIME => toTimeString
+            case DateTime.TIMESTAMP => toEpochSecond.toString
             case _ => this.getString("yyyy-MM-dd HH:mm:ss")
         }
     }
@@ -622,6 +629,7 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
         mode match {
             case "DATE" => toDateString
             case "TIME" => toTimeString
+            case "TIMESTAMP" => toEpochSecond.toString
             case _ => this.getString("yyyy-MM-dd HH:mm:ss")
         }
     }

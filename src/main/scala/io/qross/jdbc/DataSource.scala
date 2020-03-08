@@ -138,16 +138,15 @@ class DataSource (var connectionName: String, var databaseName: String) {
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
                 val meta: ResultSetMetaData = rs.getMetaData
-
                 val columns: Int = meta.getColumnCount
-                var fieldName = ""
+                //var fieldName = ""
                 for (i <- 1 to columns) {
-                    fieldName = meta.getColumnLabel(i) //meta.getColumnName(i) original name
-                    // . is illegal char in SQLite and field name contains "." in hive columns
-                    if (fieldName.contains(".")) fieldName = fieldName.substring(fieldName.lastIndexOf(".") + 1)
-                    if (!Pattern.matches("^[a-zA-Z_][a-zA-Z0-9_]*$", fieldName) || table.contains(fieldName)) fieldName = "column" + i
+                    //fieldName = meta.getColumnLabel(i) //meta.getColumnName(i) original name
+                    // '.' is illegal char in SQLite and field name often contains "." in hive columns
+                    //if (fieldName.contains(".")) fieldName = fieldName.substring(fieldName.lastIndexOf(".") + 1)
+                    //if (!Pattern.matches("^[a-zA-Z_][a-zA-Z0-9_]*$", fieldName) || table.contains(fieldName)) fieldName = "column" + i
                     //println(meta.getColumnLabel(i) + ": " + meta.getColumnTypeName(i) + ", " + meta.getColumnClassName(i))
-                    table.addFieldWithLabel(fieldName, meta.getColumnLabel(i), DataType.ofTypeName(meta.getColumnTypeName(i), meta.getColumnClassName(i)))
+                    table.addField(meta.getColumnLabel(i), DataType.ofTypeName(meta.getColumnTypeName(i), meta.getColumnClassName(i)))
                 }
 
                 val fields = table.getFieldNames
@@ -159,8 +158,11 @@ class DataSource (var connectionName: String, var databaseName: String) {
                             val value = rs.getObject(i)
                             if (dataType == DataType.INTEGER) {
                                 if (value != null) {
-                                    if (dataType.originalName == "BIGINT" || dataType.originalName == "LONG" || dataType.className == "java.math.bigInteger") {
-                                        rs.getLong(i)
+                                    if (dataType.className == "java.math.BigInteger") {
+                                        value.asInstanceOf[java.math.BigInteger]
+                                    }
+                                    else if (dataType.originalName == "BIGINT" || dataType.originalName == "LONG") {
+                                        value.toInteger
                                     }
                                     else {
                                         rs.getInt(i)
@@ -172,11 +174,14 @@ class DataSource (var connectionName: String, var databaseName: String) {
                             }
                             else if (dataType == DataType.DECIMAL) {
                                 if (value != null) {
-                                    if (dataType.originalName == "DOUBLE" || dataType.className == "java.math.bigDecimal") {
-                                        rs.getDouble(i)
+                                    if (dataType.className == "java.math.BigDecimal") {
+                                        value.asInstanceOf[java.math.BigDecimal].stripTrailingZeros()
+                                    }
+                                    else if (dataType.originalName == "DOUBLE" || dataType.originalName == "DECIMAL") {
+                                        value.asInstanceOf[Double]
                                     }
                                     else {
-                                        rs.getFloat(i)
+                                        value.asInstanceOf[Float]
                                     }
                                 }
                                 else {
@@ -648,8 +653,9 @@ class DataSource (var connectionName: String, var databaseName: String) {
                     })
                     count = this.executeBatchUpdate()
                 case Parameter.SHARP =>
+                    val params = SQL.pickParameters()
                     table.foreach(row => {
-                        this.addBatchCommand(SQL.replaceParameters(row))
+                        this.addBatchCommand(SQL.replaceParameters(params, row))
                     })
                     count = this.executeBatchCommands()
                 case Parameter.NONE =>

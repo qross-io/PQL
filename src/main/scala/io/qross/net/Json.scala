@@ -210,7 +210,12 @@ case class Json(text: String = "") {
         val node = findNode(path)
         if (node.isObject) {
             node.fields().forEachRemaining(child => {
-                map.put(child.getKey, child.getValue.asText())
+                if (child.getValue.isTextual) {
+                    map.put(child.getKey, child.getValue.asText())
+                }
+                else {
+                    map.put(child.getKey, child.getValue.toString)
+                }
             })
         }
         else {

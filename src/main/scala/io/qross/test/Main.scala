@@ -95,8 +95,9 @@ object Main {
             "time" -> "2020-02-27 18:30:33",
             "filter" -> ""
         ).run().print */
-        //PQL.openEmbeddedFile("/sql/test.html").place("jobId", "54").run().print
-        PQL.openFile("/sql/date.sql").run()
+        PQL.openEmbeddedFile("/sql/detail.html").set("jobId", 54).place("jobId", "54").run().print
+        //PQL.openFile("/sql/date.sql").place("month", "[1, 2]").run().print
+
 
         //val cookie = new Cookie("", "")
         //cookie.setDomain()

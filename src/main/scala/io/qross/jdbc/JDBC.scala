@@ -108,6 +108,9 @@ object JDBC {
             connectionString = "jdbc:sqlite:" + connectionName
             driver = "org.sqlite.JDBC"
         }
+        else if (connectionName.startsWith("jdbc:")) {
+            connectionString = connectionName
+        }
         else {
             throw new Exception(s"""Can't find connection string of connection name "$connectionName" in properties.""")
         }

@@ -236,12 +236,12 @@ class DataHub (var defaultConnectionName: String) {
         //var createSQL = "" + tableName + " (__pid INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE"
         var createSQL = s"CREATE TABLE IF NOT EXISTS $tableName ("
         if (primaryKey != "" && !table.contains(primaryKey)) {
-            createSQL += s" $primaryKey INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE, "
+            createSQL += s" [$primaryKey] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE, "
         }
         val placeHolders = new mutable.ArrayBuffer[String]()
         val fields = new mutable.ArrayBuffer[String]()
         for ((field, dataType) <- table.getColumns) {
-            fields += field + " " + dataType.toString
+            fields += "[" + field + "] " + dataType.toString
             placeHolders += "?"
         }
         createSQL += fields.mkString(", ") + ")"
@@ -250,11 +250,11 @@ class DataHub (var defaultConnectionName: String) {
 
         if (DEBUG) {
             Output.writeDebugging(createSQL)
-            Output.writeDebugging(s"${table.size} rows has been saved in temp table $tableName.")
+            Output.writeDebugging(s"${table.size} rows has been saved in cache table $tableName.")
         }
 
         if (table.nonEmpty) {
-            SOURCES("CACHE").tableUpdate("INSERT INTO " + tableName + " (" + table.getFieldNames.mkString(",") + ") VALUES (" + placeHolders.mkString(",") + ")", table)
+            SOURCES("CACHE").tableUpdate("INSERT INTO " + tableName + " ([" + table.getFieldNames.mkString("], [") + "]) VALUES (" + placeHolders.mkString(",") + ")", table)
         }
         placeHolders.clear()
 
@@ -314,12 +314,12 @@ class DataHub (var defaultConnectionName: String) {
         //var createSQL = "CREATE TABLE IF NOT EXISTS " + tableName + " (__pid INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE"
         var createSQL = s"CREATE TABLE IF NOT EXISTS $tableName ("
         if (primaryKey != "") {
-            createSQL += s" $primaryKey INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE, "
+            createSQL += s" [$primaryKey] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE, "
         }
         val placeHolders = new mutable.ArrayBuffer[String]()
         val fields = new mutable.ArrayBuffer[String]()
         for ((field, dataType) <- table.getColumns) {
-            fields += field + " " + dataType.toString
+            fields += "[" + field + "] " + dataType.toString
             placeHolders += "?"
         }
         createSQL += fields.mkString(", ") + ")"
@@ -332,7 +332,7 @@ class DataHub (var defaultConnectionName: String) {
         }
 
         if (table.nonEmpty) {
-            SOURCES("TEMP").tableUpdate("INSERT INTO " + tableName + " (" + table.getFieldNames.mkString(",") + ") VALUES (" + placeHolders.mkString(",") + ")", table)
+            SOURCES("TEMP").tableUpdate("INSERT INTO " + tableName + " ([" + table.getFieldNames.mkString("],[") + "]) VALUES (" + placeHolders.mkString(",") + ")", table)
         }
         placeHolders.clear()
 

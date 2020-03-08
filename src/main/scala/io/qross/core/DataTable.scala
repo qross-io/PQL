@@ -64,12 +64,12 @@ class DataTable() {
     //添加列和标签
     def addFieldWithLabel(fieldName: String, labelName: String, dataType: DataType): Unit = {
         // . is illegal char in SQLite
-        val name = if (fieldName.contains(".")) fieldName.takeAfter(".") else fieldName
-        if (!this.contains(name)) {
-            fields += name
-            columns += name -> dataType
-            labels += name -> labelName
-        }
+        //val columnName = if (fieldName.contains(".")) fieldName.takeAfter(".") else fieldName
+        val columnName = if (!this.contains(fieldName)) fieldName else fieldName + fields.size
+
+        fields += columnName
+        columns += columnName -> dataType
+        labels += columnName -> labelName
     }
 
     //设置标签
