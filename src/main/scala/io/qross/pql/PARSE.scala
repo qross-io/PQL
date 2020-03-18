@@ -23,7 +23,8 @@ class PARSE(var sentence: String) {
     //sentence包含PARSE关键词
 
     //express 是否支持嵌入式查询语句, 即 ${{ }}
-    def parse(PQL: PQL, express: Boolean = false): DataCell = {
+    //不能用parse名, 会与静态方法
+    def doParse(PQL: PQL, express: Boolean = false): DataCell = {
 
         var body = sentence.takeAfter(Patterns.$BLANK).trim()
         val links = {
@@ -75,7 +76,7 @@ class PARSE(var sentence: String) {
     }
 
     def execute(PQL: PQL): Unit = {
-        val data = this.parse(PQL)
+        val data = this.doParse(PQL)
         PQL.RESULT += data
         PQL.COUNT_OF_LAST_SELECT = if (data.isTable) data.asTable.size else if (data.isJavaList) data.asJavaList.size() else 1
 

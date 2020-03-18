@@ -267,7 +267,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         else {
             try {
                 Class.forName(s"io.qross.pql.$caption")
-                        .getDeclaredMethod("parse", "".getClass , Class.forName("io.qross.pql.PQL"))
+                        .getDeclaredMethod("parse", "".getClass, Class.forName("io.qross.pql.PQL"))
                         .invoke(null, sentence, this)
             }
             catch {

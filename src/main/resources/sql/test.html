@@ -27,5 +27,20 @@ ${ CASE $row.ready_time IS NULL WHEN 1 < 2 THEN $row.start_time ELSE $row.ready_
 ${ IF $row.ready_time IS NULL THEN $row.start_time ELSE $row.ready_time END }
 <br/>
 
+<%
+VAR $finished := 'success,checking_limit,failed,timeout,incorrect,no_commands,ignore,interrupted,killed';
+VAR $unfinished := 'new,initialized,ready,executing';
+SET $running := SELECT status FROM qross_keeper_beats WHERE actor_name='Keeper';
+IF $running == 'running' THEN
+%>
+<button id="RestartButton" class="medium-button prime operate-button" style="${ IF $finished CONTAINS $row.status THEN '' ELSE 'display: none' END }" confirm-text="Are you sure to restart this Task?" action="/api/task/restart?taskId=&(taskId)&recordTime=&(recordTime)" method="put">Restart</button> <br/>
+<button id="KillButton" class="medium-button task-failed-badge operate-button" style="${ IF $unfinished CONTAINS $row.status THEN '' ELSE 'display: none' END }" confirm-text="Are you sure to kill this Task?" action="/api/task/kill?taskId=&(taskId)&recordTime=&(recordTime)" method="put">Kill</button>
+<%
+ELSE
+%>
+<span style="color: #F03030; border-bottom: 1px dashed #F03030;">Keeper isn't running.</span>
+<%
+END IF;
+%>
 </body>
 </html>

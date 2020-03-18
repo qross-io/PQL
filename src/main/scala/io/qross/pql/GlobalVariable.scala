@@ -32,6 +32,12 @@ object GlobalVariable {
                 }).clear()
     }
 
+    //设置临时系统变量, 系统启动时更新, 关闭时删除, 只作用于当前系统
+    //如果设置了与更高级的全局变量相同的变量名, 无意义
+    def set(name: String, value: Any): Unit = {
+        SYSTEM.set(name, value)
+    }
+
     //更新用户变量
     def set(name: String, value: Any, user: Int = 0, role: String = "WORKER"): Unit = {
 
@@ -91,7 +97,7 @@ object GlobalVariable {
             SYSTEM.getCell(name)
         }
         else if (Configurations.contains(name)) {
-            DataCell(Configurations.getOrElse(name.toUpperCase, null))
+            DataCell(Configurations.getOrProperty(name.toUpperCase, name.replace("_", ".").toLowerCase(), null))
             //DataCell(Class.forName("io.qross.setting.Global").getDeclaredMethod(name).invoke(null))
         }
         else {

@@ -1,5 +1,7 @@
 package io.qross.pql
 
+import java.util
+
 import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.ext.NumberExt._
 import io.qross.ext.Output
@@ -1233,14 +1235,14 @@ object Sharp {
 
     def FIRST$COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asTable.firstColumn match {
-            case Some(list) => list.asJava.toDataCell(DataType.ARRAY)
+            case Some(list) => list.toJavaList.toDataCell(DataType.ARRAY)
             case None => throw new SharpLinkArgumentException(s"No result at FIRST COLUMN. ")
         }
     }
 
     def LAST$COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asTable.lastColumn match {
-            case Some(list) => list.asJava.toDataCell(DataType.ARRAY)
+            case Some(list) => list.toJavaList.toDataCell(DataType.ARRAY)
             case None => throw new SharpLinkArgumentException(s"No result at LAST COLUMN. ")
         }
     }
@@ -1250,7 +1252,7 @@ object Sharp {
             val field = arg.asText
             val table = data.asTable
             if (table.contains(field)) {
-                table.getColumn(field).asJava.toDataCell(DataType.ARRAY)
+                table.getColumn(field).toJavaList.toDataCell(DataType.ARRAY)
             }
             else {
                 throw new SharpLinkArgumentException(s"No result at GET COLUMN: incorrect field name $field. " + origin)
@@ -1373,11 +1375,11 @@ object Sharp {
                 data.asRow.getCell(arg.asText)
             }
             else {
-                throw SharpLinkArgumentException.occur("GET DATA", origin)
+                throw SharpLinkArgumentException.occur("X", origin)
             }
         }
         else {
-            throw SharpInapplicableLinkNameException.occur("GET DATA", origin)
+            throw SharpInapplicableLinkNameException.occur("X", origin)
         }
     }
 
@@ -1433,17 +1435,30 @@ object Sharp {
 
     def GET(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            val index = arg.asInteger.toInt
-            val list = data.asList
-            if (index < list.size) {
-                DataCell(list(index))
+            if (data.isJavaList) {
+                val index = arg.asInteger.toInt
+                val list = data.asList
+                if (index < list.size) {
+                    DataCell(list(index))
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"Out of index at GET, index: $index. " + origin)
+                }
+            }
+            else if (data.isRow) {
+                if (arg.isInteger) {
+                    data.asRow.getCell(arg.asInteger.toInt - 1)
+                }
+                else {
+                    data.asRow.getCell(arg.asText)
+                }
             }
             else {
-                throw new SharpLinkArgumentException(s"Out of index at GET, index: $index. " + origin)
+                throw SharpInapplicableLinkNameException.occur("GET", origin)
             }
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at GET. " + origin)
+            throw SharpLinkArgumentException.occur("GET", origin)
         }
     }
 
@@ -1622,10 +1637,12 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
                                 .invoke(null,
                                     data,
                                     if (i + 1 < links.length &&
-                                        Patterns.MULTI$ARGS$LINKS.contains(links(i).linkName) &&
-                                        Patterns.MULTI$ARGS$LINKS(links(i).linkName).contains(links(i+1).linkName)) {
+                                            (Patterns.MULTI$ARGS$LINKS.contains(links(i).linkName) &&
+                                            Patterns.MULTI$ARGS$LINKS(links(i).linkName).contains(links(i+1).linkName)
+                                            || PRIORITIES.contains(links(i+1).linkName)) //prioritization of execution
+                                    ) {
                                         val name = links(i+1).linkName
-                                        links(i+1).linkName = "" //executed
+                                        links(i+1).linkName = "" //mark as executed
                                         Class.forName("io.qross.pql.Sharp")
                                             .getDeclaredMethod(name,
                                                 Class.forName("io.qross.core.DataCell"),

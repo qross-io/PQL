@@ -151,7 +151,12 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
 
     def mkString(quote: String = ""): String = {
         if (value != null) {
-            value.toString.userQuotesIf(quote, dataType == DataType.TEXT || dataType == DataType.DATETIME)
+            if (this.dataType != DataType.ARRAY) {
+                value.toString.userQuotesIf(quote, dataType == DataType.TEXT || dataType == DataType.DATETIME)
+            }
+            else {
+                Json.serialize(value.asInstanceOf[java.util.ArrayList[Object]])
+            }
         }
         else {
             "null"

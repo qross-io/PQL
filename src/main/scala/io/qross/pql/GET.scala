@@ -27,7 +27,7 @@ class GET(val selectSQL: String) {
             case None => ""
         }).toUpperCase() match {
             case "SELECT" => PQL.dh.buffer(new SELECT(this.selectSQL).select(PQL).asTable)
-            case "PARSE" => PQL.dh.buffer(new PARSE(this.selectSQL).parse(PQL).asTable)
+            case "PARSE" => PQL.dh.buffer(new PARSE(this.selectSQL).doParse(PQL).asTable)
             case "" => throw new SQLExecuteException("Incomplete or empty GET sentence: " + selectSQL)
             case _ => throw new SQLExecuteException("Unsupported GET sentence: " + selectSQL)
         }

@@ -68,7 +68,7 @@ class FOR(var variable: String, val collection: String) {
                             new SELECT(query).select(PQL).asTable
                         }
                         else if ($PARSE.test(query)) {
-                            new PARSE(query).parse(PQL).asTable
+                            new PARSE(query).doParse(PQL).asTable
                         }
                         else {
                             throw new SQLExecuteException("Only supports SELECT or PARSE sentence in FOR loop query mode.")

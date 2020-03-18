@@ -24,7 +24,7 @@ class OUTPUT(val content: String) {
                 new SELECT(content).select(PQL).value
             }
             else if ($PARSE.test(content)) {
-                new PARSE(content).parse(PQL).value
+                new PARSE(content).doParse(PQL).value
             }
             else if ($INSERT$INTO.test(content)) {
                 new INSERT(content).insert(PQL)

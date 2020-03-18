@@ -82,7 +82,7 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
             mode = DateTime.TIME
             parseLocalDateTime(LocalDate.now() + " " + time.toString, "yyyy-MM-dd HH:mm:ss")
         case timeStamp: java.sql.Timestamp =>
-            mode = DateTime.TIMESTAMP
+            mode = DateTime.FULL
             timeStamp.toLocalDateTime
         case date1: java.util.Date => date1.toInstant.atZone(ZoneId.systemDefault()).toLocalDateTime
         case l: Long => parseLocalDateTime(l)

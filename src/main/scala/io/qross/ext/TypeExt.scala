@@ -1,5 +1,6 @@
 package io.qross.ext
 
+import java.util
 import java.util.regex.Pattern
 
 import io.qross.core._
@@ -8,7 +9,6 @@ import io.qross.pql.SQLExecuteException
 import io.qross.setting.Global
 import io.qross.time.{DateTime, Timer}
 import io.qross.pql.Solver._
-
 import javax.script.{ScriptEngine, ScriptEngineManager, ScriptException}
 
 import scala.collection.JavaConverters._
@@ -713,6 +713,12 @@ object TypeExt {
                 }
             }
             table
+        }
+
+        def toJavaList: java.util.ArrayList[A] = {
+            val column = new util.ArrayList[A]()
+            list.foreach(column.add)
+            column
         }
 
         def toJsonString: String = {

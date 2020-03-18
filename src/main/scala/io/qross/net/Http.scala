@@ -116,6 +116,7 @@ class Http(var method: String, var url: String, var data: String = "") {
 
         conn.connect()
 
+        //这句话有问题，如果传送data，第127行会执行出错
         if (this.data != "") {
             val os = conn.getOutputStream
             os.write(this.data.getBytes("utf-8"))
@@ -136,7 +137,7 @@ class Http(var method: String, var url: String, var data: String = "") {
     def upload(path: String): Unit = {
 
         val file = new File(path.locate())
-        if (!file.exists() || !file.isFile()) {
+        if (!file.exists() || !file.isFile) {
             System.err.println("File not found!")
         }
 

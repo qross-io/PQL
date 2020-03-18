@@ -62,7 +62,7 @@ class VAR(val assignments: String) {
                     new SELECT(value).select(PQL)
                 }
                 else if ($PARSE.test(value)) {
-                    new PARSE(value).parse(PQL)
+                    new PARSE(value).doParse(PQL)
                 }
                 else if ($INSERT$INTO.test(value)) {
                     new INSERT(value).insert(PQL)

@@ -113,6 +113,7 @@ object Patterns {
         "MINUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
         "INSERT" -> Set[String]("VALUES"),
         "INSERT$IF$EMPTY" -> Set[String]("VALUES"))
+    val PRIORITIES: Set[String] = Set[String]("X")
     val $DATETIME_UNITS: Regex = """^(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND|MILLI|MICRO|NONA)=(\d+)$""".r
     val GLOBAL_VARIABLES: Set[String] = GlobalVariableDeclaration.getClass.getDeclaredMethods.map(m => m.getName).toSet
     val ARROW: String = "->"

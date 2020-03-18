@@ -56,7 +56,7 @@ class SET(var declare: String, val symbol: String, val expression: String) {
             }
         }
         else if ($PARSE.test(expression)) {
-            val data = new PARSE(expression).parse(PQL)
+            val data = new PARSE(expression).doParse(PQL)
             if (symbol == ":=") {
                 data.asTable.firstRow match {
                     case Some(row) =>
