@@ -69,7 +69,10 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
                                 LocalDateTime.now()
                             }
                             else if ("^\\d+$".r.test(str)) {
-                                parseLocalDateTime(str.toLong)
+                                str.length match {
+                                    case 10 | 13 | 17 => parseLocalDateTime(str.toLong)
+                                    case _ => parseLocalDateTime(str)
+                                }
                             }
                             else {
                                 parseLocalDateTime(str, formatStyle)

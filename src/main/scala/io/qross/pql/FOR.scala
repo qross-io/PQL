@@ -58,50 +58,52 @@ class FOR(var variable: String, val collection: String) {
     private def computeVariables(PQL: PQL): ForVariables = {
         val forVars = new ForVariables()
 
-        val table: DataTable =
-                    if (collection.bracketsWith("(", ")")) {
-                        //集合查询语句
-                        //(SELECT...)
-                        //(PARSE...)
-                        val query = collection.$trim("(", ")").trim()
-                        if ($SELECT.test(query)) {
-                            new SELECT(query).select(PQL).asTable
-                        }
-                        else if ($PARSE.test(query)) {
-                            new PARSE(query).doParse(PQL).asTable
-                        }
-                        else {
-                            throw new SQLExecuteException("Only supports SELECT or PARSE sentence in FOR loop query mode.")
-                        }
-                    }
-                    else if (collection.bracketsWith("[", "]")) {
-                        Json(collection.$restore(PQL, "\"")).parseTable("/")
-                    }
-                    else if (collection.bracketsWith("{", "}")) {
-                        Json(collection.$restore(PQL, "\"")).parseRow("/").toTable()
-                    }
-                    else if ($VARIABLE.test(collection)) {
-                        //集合变量
-                        //@a, $b
-                        PQL.findVariable(collection).asTable
-                    }
-                    else {
-                        //SHARP表达式
-                        new Sharp(collection.$clean(PQL)).execute(PQL).asTable
-                    }
-
-        if (variables.length <= table.columnCount) {
-            table.map(row => {
-                val newRow = new DataRow()
-                for (i <- variables.indices) {
-                    newRow.set(variables(i).substring(1).toUpperCase, row.get(i).orNull)
+        val table: DataTable = {
+            if (collection.bracketsWith("(", ")")) {
+                //集合查询语句
+                //(SELECT...)
+                //(PARSE...)
+                val query = collection.$trim("(", ")").trim()
+                if ($SELECT.test(query)) {
+                    new SELECT(query).select(PQL).asTable
                 }
-                newRow
-            }).foreach(forVars.addRow)
+                else if ($PARSE.test(query)) {
+                    new PARSE(query).doParse(PQL).asTable
+                }
+                else {
+                    throw new SQLExecuteException("Only supports SELECT or PARSE sentence in FOR loop query mode.")
+                }
+            }
+            else if (collection.bracketsWith("[", "]")) {
+                Json(collection.$restore(PQL, "\"")).parseTable("/")
+            }
+            else if (collection.bracketsWith("{", "}")) {
+                Json(collection.$restore(PQL, "\"")).parseRow("/").toTable()
+            }
+            else if ($VARIABLE.test(collection)) {
+                //集合变量
+                //@a, $b
+                PQL.findVariable(collection).asTable
+            }
+            else {
+                //SHARP表达式
+                new Sharp(collection.$clean(PQL)).execute(PQL).asTable
+            }
         }
-        else {
-            throw new SQLParseException("In FOR loop, result columns must equal or more than variables amount.")
-        }
+
+
+        //如果变量的数量小于集合的列数，则变量赋值为null
+        table.map(row => {
+            val newRow = new DataRow()
+            for (i <- variables.indices) {
+                newRow.set(variables(i).substring(1).toUpperCase, row.get(i).orNull)
+            }
+            newRow
+        }).foreach(forVars.addRow)
+//        }
+//        else {
+//            throw new SQLParseException("In FOR loop, result columns must equal or more than variables amount.")
+//        }
 
         forVars
     }

@@ -1,9 +1,11 @@
 package io.qross.app;
 
 import io.qross.core.DataHub;
+import io.qross.ext.Console;
 import io.qross.fs.ResourceFile;
 import io.qross.pql.PQL;
 import org.springframework.web.servlet.view.AbstractTemplateView;
+import scala.collection.immutable.Stream;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -16,7 +18,7 @@ public class Voyager extends AbstractTemplateView {
     @Override
     protected void renderMergedTemplateModel(Map<String, Object> model, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-        String url = getUrl();
+        String url = getUrl().replace("//", "/");
         String name = getBeanName();
         String dir;
         if (name == null) {
@@ -40,14 +42,13 @@ public class Voyager extends AbstractTemplateView {
         Map<String, Object> attributes = getAttributesMap();
 
         response.setCharacterEncoding(attributes.get("charset").toString());
+
+        Object result = new PQL("EMBEDDED:" + content, new DataHub(attributes.get("connection").toString()))
+                .placeParameters(request.getParameterMap())
+                .set(model)
+                .run();
         response
                 .getWriter()
-                .write(
-                        new PQL("EMBEDDED:" + content, new DataHub(attributes.get("connection").toString()))
-                                .placeParameters(request.getParameterMap())
-                                .set(model)
-                                .run()
-                                .toString()
-                );
+                .write(result == null ? "" : result.toString());
     }
 }

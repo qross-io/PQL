@@ -148,6 +148,9 @@ case class Json(text: String = "") {
                 }
                 table.addRow(row)
             })
+            if (table.isEmpty) {
+                table.addField("empty", DataType.NULL)
+            }
         }
         else if (node.isObject) {
             val row = new DataRow()

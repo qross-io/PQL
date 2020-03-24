@@ -13,7 +13,7 @@ object DataCell {
     val NULL: DataCell = DataCell(null, DataType.NULL) //一个DataCell的默认值, 类型未定义, 值未赋值
     val NOT_FOUND: DataCell = DataCell("NOT_FOUND", DataType.EXCEPTION) //表示未按预期找到想要的结果
     val ERROR: DataCell = DataCell("ERROR", DataType.EXCEPTION) //计算值时发生错误
-    val EMPTY: DataCell = DataCell("", DataType.NULL) //表示一种空状态, 比如列表为空, 字符串为空等
+    val EMPTY: DataCell = DataCell("EMPTY", DataType.NULL) //表示一种空状态, 比如列表为空, 字符串为空等
 }
 
 case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {

@@ -189,7 +189,7 @@ case class FileReader(file: File) {
     }
 
     //field, defaultValue
-    def readAllAsTable(fields: String*): DataTable = {
+    def readAllAsTable(): DataTable = {
         val table = new DataTable()
         while (this.hasNextLine) {
             table.addRow(this.parseLine)
