@@ -4,7 +4,7 @@ import java.io.File
 import java.lang.management.ManagementFactory
 import java.sql.DriverManager
 import java.util.regex.{Matcher, Pattern}
-import java.util.{Date, Properties}
+import java.util.Date
 
 import io.qross.core._
 import io.qross.pql._
@@ -17,7 +17,7 @@ import io.qross.pql.Solver._
 import io.qross.time.{ChronExp, CronExp, DateTime}
 import io.qross.pql.Patterns._
 import io.qross.pql.PQL._
-import io.qross.setting.{Environment, Global}
+import io.qross.setting.{Environment, Global, Properties}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -95,11 +95,9 @@ object Main {
             "time" -> "2020-02-27 18:30:33",
             "filter" -> ""
         ).run().print */
-        //PQL.openFile("/sql/api.sql").place("jobId=1&list=20200213120500,20200213140500,20200213150500,20200213160500,20200213180500").run().print
-        PQL.openEmbeddedFile("/sql/task.html").place("jobId=54&taskId=2422728&recordTime=2020-03-16%2022:37:19").run().print
+        PQL.openFile("/sql/api.sql").place("jobId=365").run().print
 
-
-
+        //PQL.openEmbeddedFile("/sql/manual.html").place("jobId=595").set("jobId=595").run().print
 
         //val cookie = new Cookie("", "")
         //cookie.setDomain()

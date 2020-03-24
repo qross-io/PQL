@@ -17,6 +17,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.xml.crypto.Data;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -108,7 +109,7 @@ public class OneApi {
                 //2 allowed | default values
                 //3 allowed | default values
                 //4 PQL
-                if (API.length >= 3) {
+                if (API.length >= 2) {
                     OneApi api = new OneApi();
                     if (api.path.endsWith("/")) {
                         api.path = path + API[0].trim();
@@ -117,10 +118,21 @@ public class OneApi {
                         api.path = path + "/" + API[0].trim();
                     }
 
-                    if (API.length == 3) {
+                    String METHOD = "GET";
+                    if (API.length == 2) {
+                        api.sentences = API[1].trim();
+                    }
+                    else if (API.length == 3) {
+                        if (API[1].contains("=")) {
+                            api.defaultValue = API[1];
+                        }
+                        else {
+                            METHOD = API[1];
+                        }
                         api.sentences = API[2].trim();
                     }
                     else if (API.length == 4) {
+                        METHOD = API[1].trim().toUpperCase();
                         if (API[2].contains("=")) {
                             api.defaultValue = API[2].trim();
                         }
@@ -130,6 +142,7 @@ public class OneApi {
                         api.sentences = API[3].trim();
                     }
                     else if (API.length == 5) {
+                        METHOD = API[1].trim().toUpperCase();
                         if (API[2].contains("=")) {
                             api.defaultValue = API[2].trim();
                             api.allowed.addAll(Arrays.asList(API[3].trim().split(",")));
@@ -145,7 +158,7 @@ public class OneApi {
                         ALL.put(api.path, new LinkedHashMap<>());
                     }
 
-                    String[] methods = API[1].trim().toUpperCase().split(",");
+                    String[] methods = METHOD.split(",");
                     for (String method : methods) {
                         ALL.get(api.path).put(method.trim(), api);
                     }
@@ -233,6 +246,8 @@ public class OneApi {
         return request(path, DataHub.DEFAULT());
     }
 
+    public static Object request(String path, String connectionName) { return request(path, new DataHub(connectionName)); }
+
     public static Object request(String path, DataHub dh) {
         return request(path, new HashMap<String, String>(), dh);
     }
@@ -271,6 +286,10 @@ public class OneApi {
 
     public static Object request(String path, Map<String, String> params) {
         return request(path, params, DataHub.DEFAULT());
+    }
+
+    public static Object request(String path, Map<String, String> params, String connectionName) {
+        return request(path, params, new DataHub(connectionName));
     }
 
     public static Object request(String path, Map<String, String> params, DataHub dh) {
@@ -313,8 +332,6 @@ public class OneApi {
                 if (allowed) {
                     count(api.path);
 
-
-
                     return  new PQL(api.sentences, dh)
                             .place(params)
                             .placeParameters(request.getParameterMap())
@@ -330,6 +347,46 @@ public class OneApi {
         }
         else {
             return "{\"error\": \"Need spring boot environment.\"}";
+        }
+    }
+
+    public static Object execute(String path) {
+        return execute(path, DataHub.DEFAULT());
+    }
+
+    public static Object execute(String path, String connectionName) {
+        return execute(path, new DataHub(connectionName));
+    }
+
+    public static Object execute(String path, DataHub dh) {
+        if (!OneApi.contains(path, "GET")) {
+            OneApi.readAll();
+        }
+
+        String params = "";
+        if (path.contains("?")) {
+            path = path.substring(0, path.indexOf("?"));
+            params = path.substring(path.indexOf("?") + 1);
+        }
+
+        if (OneApi.contains(path, "GET")) {
+            OneApi api = OneApi.pick(path, "GET");
+            PQL PQL = new PQL(api.sentences, dh);
+
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes != null) {
+                HttpServletRequest request = attributes.getRequest();
+                PQL.placeParameters(request.getParameterMap());
+            }
+
+            if (!params.isEmpty()) {
+                PQL.place(params);
+            }
+
+            return PQL.place(api.defaultValue).run();
+        }
+        else {
+            return "{\"error\": \"WRONG or MISS path '" + path + "'\"}";
         }
     }
 

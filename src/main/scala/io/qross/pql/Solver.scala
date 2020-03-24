@@ -12,7 +12,8 @@ import scala.util.matching.Regex.Match
 
 object Solver {
 
-    val ARGUMENT: Regex = """[#&]\{([a-zA-Z0-9_]+)\}""".r  //入参 #{name} 或 &{name}
+    //val ARGUMENT: Regex = """[#&]\{([a-zA-Z0-9_]+)\}""".r  //入参 #{name} 或 &{name}
+    val ARGUMENTS: List[Regex] = List[Regex]("""[#&]\{([a-zA-Z0-9_]+)\}""".r, """[#&]\{('[a-zA-Z0-9_]+')\}""".r, """[#&]\{("[a-zA-Z0-9_]+")\}""".r)
     //val GLOBAL_VARIABLE: Regex = """@\(?([a-zA-Z0-9_]+)\)?""".r //全局变量 @name 或 @(name)
     //val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
     val USER_VARIABLE: List[Regex] = List[Regex](
@@ -366,6 +367,10 @@ object Solver {
                     .restoreSymbols()
         }
 
+        def containsArguments: Boolean = {
+            ARGUMENTS.flatMap(_.findAllMatchIn(sentence)).nonEmpty
+        }
+
         //替换外部变量
         def replaceArguments(args: (String, String)*): String = {
             replaceArguments(args.toMap)
@@ -373,14 +378,34 @@ object Solver {
 
         //替换外部传参
         def replaceArguments(map: Map[String, String]): String = {
-            ARGUMENT
-                .findAllMatchIn(sentence)
+            ARGUMENTS
+                .flatMap(r => r.findAllMatchIn(sentence))
                 .foreach(m => {
                     val whole = m.group(0)
-                    val fieldName = m.group(1)
+                    val (fieldName, quote) = {
+                        if (m.group(1).quotesWith("'")) {
+                            (m.group(1).removeQuotes(), "'")
+                        }
+                        else if (m.group(1).quotesWith("\"")) {
+                            (m.group(1).removeQuotes(), "\"")
+                        }
+                        else {
+                            (m.group(1), "")
+                        }
+                    }
 
                     if (map.contains(fieldName)) {
-                        sentence = sentence.replace(whole, map(fieldName))
+                        sentence = sentence.replace(whole, {
+                            if (quote == "'") {
+                                map(fieldName).replace("'", "''")
+                            }
+                            else if (quote == "\"") {
+                                map(fieldName).replace("\"", "\"\"")
+                            }
+                            else {
+                                map(fieldName)
+                            }
+                        })
                     }
                 })
 
@@ -389,14 +414,35 @@ object Solver {
 
         //替换外部传参
         def replaceArguments(row: DataRow): String = {
-            ARGUMENT
-                .findAllMatchIn(sentence)
+            ARGUMENTS
+                .flatMap(r => r.findAllMatchIn(sentence))
                 .foreach(m => {
                     val whole = m.group(0)
-                    val fieldName = m.group(1)
+                    val (fieldName, quote) = {
+                        if (m.group(1).quotesWith("'")) {
+                            (m.group(1).removeQuotes(), "'")
+                        }
+                        else if (m.group(1).quotesWith("\"")) {
+                            (m.group(1).removeQuotes(), "\"")
+                        }
+                        else {
+                            (m.group(1), "")
+                        }
+                    }
 
                     if (row.contains(fieldName)) {
-                        sentence = sentence.replace(whole, row.getString(fieldName, "null"))
+                        sentence = sentence.replace(whole,
+                            {
+                                if (quote == "'") {
+                                    row.getString(fieldName, "null").replace("'", "''")
+                                }
+                                else if (quote == "\"") {
+                                    row.getString(fieldName, "null").replace("\"", "\"\"")
+                                }
+                                else {
+                                    row.getString(fieldName, "null")
+                                }
+                            })
                     }
                 })
 

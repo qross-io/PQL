@@ -1,8 +1,12 @@
 package io.qross.setting
 
 import java.io._
+
 import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.ext.TypeExt._
+import io.qross.fs.ResourceFile
+
+import scala.xml._
 
 object Properties {
 
@@ -27,6 +31,8 @@ object Properties {
     loadResourcesFile("/conf.properties")
     //load qross config
     loadSiblingFile("qross.properties")
+    //load mybatis config
+    loadMyBatisConfigEnvironments()
     //load config from database table
     if (containsQross) {
         loadPropertiesAndConnections()
@@ -85,6 +91,34 @@ object Properties {
         }
         catch {
             case e : Exception => e.printStackTrace()
+        }
+    }
+
+    def loadMyBatisConfigEnvironments(path: String = "/mybatis-config.xml"): Unit = {
+
+        val xml = BaseClass.MAIN.getResource(path)
+        if (xml != null) {
+            val config = XML.load(xml)
+            val default = config \ "environments" \ "@default"
+            if (default.nonEmpty) {
+                Properties.set("jdbc.default", default.toString())
+            }
+
+            (config \ "environments" \\ "environment").foreach(environment => {
+                val id = environment \ "@id"
+                if (id.nonEmpty) {
+                    (environment \ "dataSource" \\ "property").foreach(property => {
+                        val name = property \ "@name"
+                        val value = property \ "@value"
+                        if (name.nonEmpty && value.nonEmpty && !value.toString().bracketsWith("${", "}")) {
+                            Properties.set(s"$id.$name", value.toString())
+                        }
+                        if (name.toString() == "url") {
+                            Properties.set(id.toString(), value.toString())
+                        }
+                    })
+                }
+            })
         }
     }
 

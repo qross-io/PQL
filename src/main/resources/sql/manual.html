@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add a task manually</title>
+    <script type="text/javascript" src="/root/root.js"></script>
+    <script type="text/javascript" src="/root/root.model.js"></script>
+    <script type="text/javascript" src="/root/root.datetime.js"></script>
+    <script type="text/javascript" src="/root/root.editor.js"></script>
+    <script type="text/javascript" src="/root/root.callout.js"></script>
+    <link href="/root/root.css" rel="stylesheet" type="text/css" />
+    <link href="/root/iconfont.css" rel="stylesheet" type="text/css" />
+    <style type="text/css">
+    .command { margin: 0px auto 20px auto; }
+    .commandId { font-size: 10px; padding: 2px; border: 1px solid #C09030; border-radius: 3px; color: #C09030; }
+    input[type=checkbox] { width: 16px; height: 16px; }
+    .commandText { font-size: 16px; font-family: Consolas; background-color: #EEEEEE; border-radius: 5px; padding: 6px 12px; line-height: 150%; }
+    .commandText textarea { font-size: 16px; font-family: Consolas; line-height: 150%; padding: 0px 0px; color: var(--darker); background-color: transparent; outline: none; border-width: 0px; }
+    .ButtonDiv { text-align: center; }
+    </style>
+</head>
+<body>
+<%
+SET $title, $job_type := SELECT title, job_type FROM qross_jobs WHERE id=#{jobId};
+%>
+<table border="0" width="100%" cellspacing="0" cellpadding="0" class="title-area" fixed="yes">
+    <tr>
+        <td class="crumbs"><a class="primary-title" -href="detail?jobId=&(jobId)">${title}</a> <i class="iconfont icon-right"></i> <span class="emphasis">Run at once</span></td>
+        <td class="jump-button">
+            <% IF $job_type == 'scheduled' THEN %>
+            <button href="create?jobId=&(jobId)" class="normal-button prime"> Create multiple Tasks </button>
+            <% END IF %>
+        </td>
+    </tr>
+</table>
+<div class="space"></div>
+<div class="features">
+    <div class="feature"><a -href="/job/detail?jobId=&(jobId)">Home</a></div>
+    <div class="feature"><a href="/job/tasks?jobId=${jobId}">Tasks</a></div>
+    <div class="feature-focus">Run at once!</div>
+    <div class="feature"><a href="/job/dag?jobId=${jobId}">DAG</a></div>
+    <div class="feature"><a href="/job/depends?jobId=${jobId}">Depends</a></div>
+    <div class="feature"><a href="/job/events?jobId=${jobId}">Events</a></div>
+    <div class="feature"><a href="/job/owner?jobId=${jobId}">Owners</a></div>
+</div>
+<div class="main-frame">
+    <for in="/api/dag/list?jobId=&(jobId)">
+        <div id="Command_@[id]" class="command">
+            <table width="100%" cellpadding="10" cellspacing="0" border="0">
+                <tr>
+                    <td><span class="commandId">@[id]</span> &nbsp; <span class="title">@[title]</span></td>
+                    <td align="right"><input id="CheckBox_@[id]" type="checkbox" checked="yes" value="@[id]"> <label for="CheckBox_@[id]" class="f16">Select</label></td>
+                </tr>
+            </table>
+            <div class="commandText" command="@[id]">@[command_text]</div>
+        </div>
+    </for>
+    <editor id="CommandTextEditor" editable="yes" datatype="textarea" elements=".commandText"></editor>
+    <div class="ButtonDiv">
+        <%
+        SET $running := SELECT status FROM qross_keeper_beats WHERE actor_name='Keeper';
+        IF $running == 'running' THEN
+            IF EXISTS(SELECT id FROM qross_jobs_dependencies WHERE job_id=$jobId) THEN %>
+                <input type="checkbox" id="IgnoreDepends" /> <label for="IgnoreDepends">Ignore depends</label> &nbsp; &nbsp; &nbsp; &nbsp;
+            <% END IF %>
+            <button id="RunButton" class="normal-button new"> Run at once </button>
+        <% ELSE %>
+        <span style="color: #F03030; border-bottom: 1px dashed #F03030;">Keeper isn't running.</span>
+        <% END IF%>
+    </div>
+    <div class="space"></div>
+</div>
+<script type="text/javascript">
+$finish(function() {
+
+    if ($x('input[type=checkbox]').size() == 0) {
+        $x('#RunButton').css('normal-button disabled').disable();
+    }
+
+    Editor$('#CommandTextEditor').on('edit', function(ev) {
+        $x('#RunButton').css('normal-button disabled').disable();
+    }).on('cancel', function(ev) {
+        $x('#RunButton').css('normal-button new').enable();
+    }).on('complete', function(after) {
+        this.element.setAttribute('changed', 'yes');
+        $x('#RunButton').css('normal-button new').enable();
+    });
+
+    $x('input[type=checkbox]').bind('change', function() {
+        if (this.checked) {
+            $x('#Command_' + this.value).style('opacity', 1);
+            $x('#CommandText_' + this.value).enable();
+            $x('#RunButton').css('normal-button new').enable();
+        }
+        else {
+            $x('#Command_' + this.value).style('opacity', 0.5);
+            $x('#CommandText_' + this.value).disable();
+            if ($x('input[type=checkbox]:checked').size() == 0) {
+                $x('#RunButton').css('normal-button disabled').disable();
+            }
+        }
+    });
+
+    $x('#RunButton').bind('click', function() {
+
+        $x('#RunButton').css('normal-button disabled').disable();
+
+        let dag = '';
+        if ($x('input[type=checkbox]:checked').size() != $x('input[type=checkbox]').size()) {
+            dag = $x('input[type=checkbox]:checked').map(chk => chk.value).join(',');
+        }
+
+        //if command text changed
+        let commands = [];
+        $x('div.commandText[changed=yes]').objects.forEach(div => {
+            $x('#CheckBox_' + div.getAttribute('command') + ':checked').objects.forEach(checkbox => {
+                commands.push(checkbox.value + ':' + div.textContent);
+            });
+        });
+
+        //must replace " with \\\\"  java and mysql will convert it both
+        $POST('/api/task/instant', 'jobId=${jobId}&dag=' + dag + '&commands=' + encodeURIComponent(commands.join('##$##').replace(/"/g, '\\\\"')))
+            .success(result => {
+                if (result.id != null) {
+                    window.location.href = '/job/tasks?jobId=${jobId}&taskId=' + result.id;
+                }
+                else {
+                    $x('#RunButton').css('normal-button new').enable();
+                    Callout('Something wrong. Please retry!').upside('#RunButton').show(5);
+                }
+            });
+    });
+});
+</script>
+</body>
+</html>

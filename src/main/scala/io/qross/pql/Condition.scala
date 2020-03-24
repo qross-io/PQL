@@ -1,11 +1,9 @@
 package io.qross.pql
 
-import java.util.regex.{Matcher, Pattern}
-
 import io.qross.core.{DataCell, DataType}
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.BLANKS
-
+import io.qross.pql.Solver._
 import scala.collection.mutable.ListBuffer
 
 class Condition(val expression: String) {
@@ -46,7 +44,7 @@ class Condition(val expression: String) {
     NOT
     */
 
-    private val $OPERATOR = """(?i)===|!==|==|!=|<>|>=|<=|>|<|=|\sNOT\s+IN\b|\sIS\s+NOT\s|\sIN\s|\sIS\s|\sAND\s|\sOR\s|\sNOT\s+EXISTS\b|\sEXISTS\b|\sNOT\s""".r
+    private val $OPERATOR = """(?i)===|!==|==|!=|<>|>=|<=|>|<|=|\sNOT\s+IN\b|\sIS\s+NOT\s|\sIN\b|\sIS\s|\sAND\s|\sOR\s|\bNOT\s+EXISTS\b|\bEXISTS\b|\sNOT\s""".r
 
     $OPERATOR.findFirstIn(expression) match {
         case Some(opt) =>
@@ -104,7 +102,7 @@ class Condition(val expression: String) {
                             if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
                                 true
                             }
-                            else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                            else if (field.asText.removeQuotes().containsArguments) {
                                 true
                             }
                             else {
@@ -114,7 +112,7 @@ class Condition(val expression: String) {
                             if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
                                 false
                             }
-                            else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                            else if (field.asText.removeQuotes().containsArguments) {
                                 false
                             }
                             else {
@@ -147,7 +145,7 @@ class Condition(val expression: String) {
                             if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
                                 false
                             }
-                            else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                            else if (field.asText.removeQuotes().containsArguments) {
                                 false
                             }
                             else {
@@ -157,7 +155,7 @@ class Condition(val expression: String) {
                             if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
                                 true
                             }
-                            else if (Solver.ARGUMENT.test(field.asText.removeQuotes())) {
+                            else if (field.asText.removeQuotes().containsArguments) {
                                 true
                             }
                             else {

@@ -1151,7 +1151,7 @@ object Sharp {
             if (data.dataType == DataType.EXCEPTION && data.value == "NOT_FOUND") {
                 arg
             }
-            else if (Solver.ARGUMENT.test(data.asText.removeQuotes())) {
+            else if (data.asText.removeQuotes().containsArguments) {
                 arg
             }
             else {
