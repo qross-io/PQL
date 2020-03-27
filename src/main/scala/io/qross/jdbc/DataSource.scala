@@ -838,6 +838,11 @@ class DataSource (var connectionName: String, var databaseName: String) {
     
     private def trimSQL(SQL: String): String = {
         var commandText = SQL.trim
+
+        if ("""(?i)^[a-z]+\s*#""".r.test(commandText)) {
+            commandText = commandText.takeAfter("#")
+        }
+
         if (commandText.endsWith(";")) {
             commandText = commandText.dropRight(1)
         }

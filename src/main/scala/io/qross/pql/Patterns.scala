@@ -81,10 +81,14 @@ object Patterns {
     val $REQUEST: Regex = """(?i)^REQUEST\s+""".r
     val $SEND$MAIL: Regex = """(?i)^SEND\s+E?MAIL\s+""".r
     val $PARSE: Regex = """(?i)^PARSE\s""".r
-    val $LINK: Regex = """(?i)\s[A-Z][A-Z\$]*([ \t]+[A-Z]+)*(\s|$)""".r
+    val $LINK: Regex = """(?i)\s[A-Z][A-Z\$]*([ \t]+[A-Z][A-Z\d]+)*(\s|$)""".r
     val $TUPLE: Regex = """\([^\)]+\)""".r
     val $PROPERTY: Regex = """(?i)\.\s*([_a-z]+)\b""".r
-    val $MD5: Regex = """(?i)\sTO\s+MD5(\s|$)""".r
+//    val $ENCRYPTION: Map[Regex, String] = Map[Regex, String](
+//        """(?i)\sTO\s+MD5(\s|$)""".r -> " TO MDF ",
+//        """(?i)\sTO\s+BASE64(\s|$)""".r -> " TO BASESF ",
+//        """(?i)\sDECODE\s+BASE64(\s|$)""".r -> " DECODE BASESF "
+//    )
     val $LET: Regex = """(?i)^LET\s+""".r
     val $DEBUG: Regex = """(?i)^DEBUG\s""".r
     val $ECHO: Regex = """(?i)^ECHO(\s|$)""".r
@@ -100,7 +104,7 @@ object Patterns {
     val $CONSTANT: Regex = """^[A-Za-z][A-Za-z0-9_]*$|^[_][A-Za-z0-9_]+$""".r
     val $NULL: Regex = """(?i)^NULL$""".r
 
-    val SHARP_LINKS: Set[String] = Sharp.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z]$|^[A-Z]$""".r.test(n)).toSet
+    val SHARP_LINKS: Set[String] = Sharp.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z\d]+$|^[A-Z]$""".r.test(n)).toSet
     val MULTI$ARGS$LINKS: Map[String, Set[String]] = Map[String, Set[String]](
         "SUBSTRING" -> Set[String]("TO"),
         "SPLIT" -> Set[String]("AND"),

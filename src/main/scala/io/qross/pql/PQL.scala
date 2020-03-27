@@ -260,7 +260,17 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     //解析入口
     def parseStatement(sentence: String): Unit = {
-        val caption: String = if ($BLANK.test(sentence)) { sentence.takeBefore($BLANK).toUpperCase } else sentence.toUpperCase
+        val caption: String = {
+            if ("(?i)^[a-z]+#".r.test(sentence)) {
+                sentence.takeBefore("#")
+            }
+            else if ($BLANK.test(sentence)) {
+                sentence.takeBefore($BLANK).toUpperCase
+            }
+            else {
+                sentence.toUpperCase
+            }
+        }
         if (NON_QUERY_CAPTIONS.contains(caption)) {
             PARSING.head.addStatement(new Statement(caption, sentence))
         }

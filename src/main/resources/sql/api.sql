@@ -1,11 +1,7 @@
 DEBUG ON;
 
-OPEN QROSS;
+PRINT "str-world" TO MD5;
+PRINT "c3RyLXdvcmxk" DECODE BASE64;
+PRINT "str-world" TO BASE64;
 
-IF '' IS EMPTY THEN
-    PRINT 'hello';
-END IF;
 
-IF '' IS NOT EMPTY THEN
-    PRINT 'world';
-END IF;

@@ -17,6 +17,7 @@ import io.qross.pql.Solver._
 import io.qross.time.{ChronExp, CronExp, DateTime}
 import io.qross.pql.Patterns._
 import io.qross.pql.PQL._
+import io.qross.security.{Base64, MD5}
 import io.qross.setting.{Environment, Global, Properties}
 
 import scala.collection.mutable
@@ -96,6 +97,9 @@ object Main {
             "filter" -> ""
         ).run().print */
         PQL.openFile("/sql/api.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
+
+        //println(Base64.encode("str-world"))
+        //println(Base64.decode("c3RyLXdvcmxk"))
 
         //PQL.openEmbeddedFile("/sql/test.html").place("jobId=595").set("jobId=595").run().print
 

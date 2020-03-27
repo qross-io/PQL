@@ -9,7 +9,7 @@ import io.qross.ext.TypeExt._
 import io.qross.fql.Fragment
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
-import io.qross.security.MD5
+import io.qross.security.{Base64, MD5}
 import io.qross.time.ChronExp
 import io.qross.time.TimeSpan._
 
@@ -1021,13 +1021,35 @@ object Sharp {
         }
     }
 
-    def TO$MDX(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    //MD5
+    def TO$MD5(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             //参数是盐值
             MD5.encrypt(data.asText, arg.asText).toDataCell(DataType.TEXT)
         }
         else {
             MD5.encrypt(data.asText).toDataCell(DataType.TEXT)
+        }
+    }
+
+    //Base64
+    def TO$BASE64(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            //参数是盐值
+            Base64.encode(data.asText, arg.asText).toDataCell(DataType.TEXT)
+        }
+        else {
+            Base64.encode(data.asText).toDataCell(DataType.TEXT)
+        }
+    }
+
+    def DECODE$BASE64(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            //参数是盐值
+            Base64.decode(data.asText, arg.asText).toDataCell(DataType.TEXT)
+        }
+        else {
+            Base64.decode(data.asText).toDataCell(DataType.TEXT)
         }
     }
 
@@ -1596,9 +1618,9 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
         })
 
         // 特殊格式 TO MD5
-        $MD5.findAllMatchIn(sentence).foreach(m => {
-            sentence = sentence.replace(m.group(0), " TO MDX" + m.group(1))
-        })
+//        $MD5.findAllMatchIn(sentence).foreach(m => {
+//            sentence = sentence.replace(m.group(0), " TO MDX" + m.group(1))
+//        })
 
         val links = new mutable.ListBuffer[Link$Argument]()
 

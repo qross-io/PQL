@@ -330,7 +330,7 @@ public class OneApi {
                 }
 
                 if (allowed) {
-                    count(api.path);
+                    //count(api.path);
 
                     return  new PQL(api.sentences, dh)
                             .place(params)
@@ -351,22 +351,27 @@ public class OneApi {
     }
 
     public static Object execute(String path) {
-        return execute(path, DataHub.DEFAULT());
+        return execute(path, "GET", DataHub.DEFAULT());
     }
 
-    public static Object execute(String path, String connectionName) {
-        return execute(path, new DataHub(connectionName));
+    public static Object execute(String path, String method) {
+        return execute(path, method, DataHub.DEFAULT());
     }
 
-    public static Object execute(String path, DataHub dh) {
-        if (!OneApi.contains(path, "GET")) {
-            OneApi.readAll();
-        }
+    public static Object execute(String path, String method, String connectionName) {
+        return execute(path, method, new DataHub(connectionName));
+    }
+
+    public static Object execute(String path, String method, DataHub dh) {
 
         String params = "";
         if (path.contains("?")) {
             path = path.substring(0, path.indexOf("?"));
             params = path.substring(path.indexOf("?") + 1);
+        }
+
+        if (!OneApi.contains(path, "GET")) {
+            OneApi.readAll();
         }
 
         if (OneApi.contains(path, "GET")) {

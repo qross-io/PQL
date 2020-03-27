@@ -4,6 +4,7 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.apache.commons.codec.binary.Base64;
 import org.springframework.util.DigestUtils;
 
 public class MD5 {
@@ -27,8 +28,6 @@ public class MD5 {
         return DigestUtils.md5DigestAsHex((str + salt).getBytes());
     }
 
-
-
     //qc3ebXEyijPIPDgISujZqw==
 //    public static String DEFAULT = encode("1234567");
 //
@@ -45,11 +44,4 @@ public class MD5 {
 //        return str;
 //    }
 //
-//    private static String Base64Encode(final byte[] bytes) {
-//        return new String(Base64.encodeBase64(bytes));
-//    }
-//
-//    private static byte[] Base64Decode(final byte[] bytes) {
-//        return Base64.decodeBase64(bytes);
-//    }
 }
