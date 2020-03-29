@@ -80,7 +80,13 @@ class SEND(val info: String) {
                 case "FROM$DEFAULT$TEMPLATE" => email.fromDefaultTemplate()
                 case "WITH$SIGNATURE" => email.withSignature(arg.asText)
                 case "WITH$DEFAULT$SIGNATURE" => email.withDefaultSignature()
-                case "PLACE$DATA" => email.placeData(arg.asText)
+                case "PLACE$DATA" =>
+                    if (arg.isRow) {
+                        email.placeData(arg.asRow)
+                    }
+                    else {
+                        email.placeData(arg.asText)
+                    }
                 case "PLACE" => email.place(arg.asText)
                 case "AT" => email.at(arg.asText)
                 case "ATTACH" =>

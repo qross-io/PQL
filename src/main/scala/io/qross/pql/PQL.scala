@@ -9,6 +9,7 @@ import io.qross.net.Json
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 import io.qross.time.DateTime
+import javax.servlet.http.HttpServletRequest
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -490,6 +491,20 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         model.keySet().forEach(key => {
             root.setVariable(key, model.get(key))
         })
+        this
+    }
+
+    def setHttpRequest(request: HttpServletRequest): PQL = {
+
+        root.setVariable("request", new DataRow(
+            "method" -> request.getMethod,
+            "queryString" -> request.getQueryString,
+            "domain" -> request.getServerName,
+            "protocol" -> request.getRequestURL.toString.takeBefore(":"),
+            "path" -> request.getRequestURI,
+            "host" -> request.getRequestURL.toString.takeBefore(request.getRequestURI)
+        ))
+
         this
     }
 

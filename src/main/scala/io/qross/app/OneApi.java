@@ -335,6 +335,7 @@ public class OneApi {
                     return  new PQL(api.sentences, dh)
                             .place(params)
                             .placeParameters(request.getParameterMap())
+                            .setHttpRequest(request)
                             .place(api.defaultValue)
                             .run();
                 } else {
