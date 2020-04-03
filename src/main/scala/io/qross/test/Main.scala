@@ -96,7 +96,7 @@ object Main {
             "time" -> "2020-02-27 18:30:33",
             "filter" -> ""
         ).run().print */
-        PQL.openFile("/sql/api.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
+        //PQL.openFile("/sql/api.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
 
         //println(Base64.encode("str-world"))
         //println(Base64.decode("c3RyLXdvcmxk"))

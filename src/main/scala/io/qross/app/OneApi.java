@@ -351,19 +351,19 @@ public class OneApi {
         }
     }
 
-    public static Object execute(String path) {
+    public static String execute(String path) {
         return execute(path, "GET", DataHub.DEFAULT());
     }
 
-    public static Object execute(String path, String method) {
+    public static String execute(String path, String method) {
         return execute(path, method, DataHub.DEFAULT());
     }
 
-    public static Object execute(String path, String method, String connectionName) {
+    public static String execute(String path, String method, String connectionName) {
         return execute(path, method, new DataHub(connectionName));
     }
 
-    public static Object execute(String path, String method, DataHub dh) {
+    public static String execute(String path, String method, DataHub dh) {
 
         String params = "";
         if (path.contains("?")) {
@@ -371,12 +371,12 @@ public class OneApi {
             params = path.substring(path.indexOf("?") + 1);
         }
 
-        if (!OneApi.contains(path, "GET")) {
+        if (!OneApi.contains(path, method)) {
             OneApi.readAll();
         }
 
-        if (OneApi.contains(path, "GET")) {
-            OneApi api = OneApi.pick(path, "GET");
+        if (OneApi.contains(path, method)) {
+            OneApi api = OneApi.pick(path, method);
             PQL PQL = new PQL(api.sentences, dh);
 
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -389,7 +389,13 @@ public class OneApi {
                 PQL.place(params);
             }
 
-            return PQL.place(api.defaultValue).run();
+            Object result = PQL.place(api.defaultValue).run();
+            if (result != null) {
+                return result.toString();
+            }
+            else {
+                return null;
+            }
         }
         else {
             return "{\"error\": \"WRONG or MISS path '" + path + "'\"}";

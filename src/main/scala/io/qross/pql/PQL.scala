@@ -366,7 +366,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         }
         else if (symbol == "@") {
             //全局变量
-            GlobalVariable.set(name, value, dh.userId, dh.roleName)
+            GlobalVariable.set(name, value, dh.userId, dh.role)
         }
     }
 
@@ -374,7 +374,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     def findVariable(field: String): DataCell = {
 
         val symbol = field.take(1)
-        val name = field.takeAfter(0).$trim("(", ")").toUpperCase()
+        val name = field.drop(1).$trim("(", ")").toUpperCase()
 
         var cell = DataCell.NOT_FOUND
 
@@ -489,7 +489,17 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     def set(model: java.util.Map[String, Any]): PQL = {
         model.keySet().forEach(key => {
-            root.setVariable(key, model.get(key))
+            if (key.startsWith("@")) {
+                //全局变量
+                GlobalVariable.SYSTEM.set(key.drop(1), model.get(key))
+            }
+            else if (key.startsWith("$")) {
+                //用户变量
+                root.setVariable(key.drop(1), model.get(key))
+            }
+            else {
+                root.setVariable(key, model.get(key))
+            }
         })
         this
     }

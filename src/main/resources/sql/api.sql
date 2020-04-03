@@ -3,7 +3,16 @@ DEBUG ON;
 OPEN QROSS;
 
 
-SEND MAIL 'Qross System Account'
-    FROM TEMPLATE '/templates/notification.html'
-    PLACE DATA "username=wuzhneg&password=1234567&host=http://localhost:8080/&fullname=吴铮"
-    TO "wuzheng@zichan360.com";
+VAR $task := SELECT id, status FROM qross_tasks WHERE id>0 LIMIT 0 -> FIRST ROW { };
+
+IF $task IS EMPTY THEN
+    PRINT 'EMPTY';
+END IF;
+
+IF $task IS NULL THEN
+    PRINT 'NULL';
+END IF;
+
+IF $task IS UNDEFINED THEN
+    PRINT 'UNDEFINED';
+END IF;

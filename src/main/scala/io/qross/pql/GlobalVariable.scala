@@ -10,7 +10,7 @@ import io.qross.pql.Patterns.FUNCTION_NAMES
 object GlobalVariable {
 
     //除环境全局变量的其他全局变量
-    //系统全局变量
+    //系统全局变量, 仅作用于当前PQL
     val SYSTEM: DataRow = new DataRow()
     //用户全局变量
     val USER: DataRow = new DataRow()
@@ -37,6 +37,11 @@ object GlobalVariable {
     def set(name: String, value: Any): Unit = {
         SYSTEM.set(name, value)
     }
+
+    //设置只作用于当前PQL的全局变量, 暂时无用
+//    def set(name: String, value: Any, PQL: PQL): Unit = {
+//        PQL.variables.set(name, value)
+//    }
 
     //更新用户变量
     def set(name: String, value: Any, user: Int = 0, role: String = "WORKER"): Unit = {
@@ -125,9 +130,9 @@ object GlobalVariableDeclaration {
     def AFFECTED_ROWS_OF_LAST_PREP(PQL: PQL): DataCell = DataCell(PQL.dh.AFFECTED_ROWS_OF_LAST_PREP, DataType.INTEGER)
 
     def BOOL(PQL: PQL): DataCell = DataCell(PQL.BOOL, DataType.BOOLEAN)
-    def USER_ID(PQL: PQL): DataCell = DataCell(PQL.dh.userId, DataType.INTEGER)
+    def UID(PQL: PQL): DataCell = DataCell(PQL.dh.userId, DataType.INTEGER)
     def USERNAME(PQL: PQL): DataCell = DataCell(PQL.dh.userName, DataType.TEXT)
-    def ROLE(PQL: PQL): DataCell = DataCell(PQL.dh.roleName, DataType.TEXT)
+    def ROLE(PQL: PQL): DataCell = DataCell(PQL.dh.role, DataType.TEXT)
     def RESULT(PQL: PQL): DataCell = {
         PQL.RESULT.lastOption match {
             case Some(v) => DataCell(v)
