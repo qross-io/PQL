@@ -16,6 +16,7 @@ import io.qross.time.TimeSpan._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.Random
 
 object Sharp {
 
@@ -1288,14 +1289,26 @@ object Sharp {
     def FIRST$CELL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asTable.firstRow match {
             case Some(row) => row.firstCell
-            case None => DataCell.NOT_FOUND
+            case None =>
+                if (arg.valid) {
+                    arg
+                }
+                else {
+                    DataCell.NOT_FOUND
+                }
         }
     }
 
     def LAST$CELL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asTable.lastRow match {
             case Some(row) => row.lastCell
-            case None => DataCell.NOT_FOUND
+            case None =>
+                if (arg.valid) {
+                    arg
+                }
+                else {
+                    DataCell.NOT_FOUND
+                }
         }
     }
 
@@ -1380,6 +1393,18 @@ object Sharp {
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at INSERT IF EMPTY. " + origin)
         }
+    }
+
+    def FIELDS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asTable.getFieldNameList, DataType.ARRAY)
+    }
+
+    def LABELS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asTable.getLabelNameList, DataType.ARRAY)
+    }
+
+    def HEADERS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asTable.getHeaders, DataType.ROW)
     }
 
     def TO$HTML$TABLE(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -1554,6 +1579,34 @@ object Sharp {
 
     def TO$INT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         TO$INTEGER(data, arg, origin)
+    }
+
+    def RANDOM(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isText) {
+            data.asText.shuffle(if (arg.valid) arg.asInteger(1).toInt else 1).toDataCell(DataType.TEXT)
+        }
+        else if (data.isJavaList) {
+            val list = data.asJavaList
+            val length = list.size()
+            //如从一个区间一个随机数
+            if (arg.invalid || arg.asInteger(1) == 1) {
+                DataCell(list.get(Random.nextInt(length)))
+            }
+            //从一个区间取多个随机数
+            else {
+                val sample = new util.ArrayList[Any]()
+                for (i <- 1 to arg.asInteger(1).toInt) {
+                    sample.add(list.get(Random.nextInt(length)))
+                }
+                DataCell(sample, DataType.ARRAY)
+            }
+        }
+        else if (data.isTable) {
+            data.asTable.takeSample(if (arg.valid) arg.asInteger(1).toInt else 1).toDataCell(DataType.TABLE)
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("RANDOM", origin)
+        }
     }
 }
 

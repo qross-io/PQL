@@ -446,7 +446,7 @@ class DataTable() {
     def takeSample(amount: Int): DataTable = {
         val table = new DataTable()
         Random.shuffle(rows)
-            .take(amount)
+            .take(if (amount < rows.length) amount else rows.length)
             .foreach(row => {
                 table.addRow(row)
             })
@@ -742,8 +742,15 @@ class DataTable() {
     def getFieldNames: List[String] = fields.toList
     def getFieldNameList: java.util.List[String] = getFieldNames.asJava
     def getLabelNames: List[String] = labels.values.toList
-    def getLabelList: java.util.List[String] = getLabelNames.asJava
+    def getLabelNameList: java.util.List[String] = getLabelNames.asJava
     def getLabels: mutable.LinkedHashMap[String, String] = labels
+    def getHeaders: DataRow = {
+        val list = new DataRow()
+        labels.foreach(kv => {
+            list.set(kv._1, kv._2, DataType.TEXT)
+        })
+        list
+    }
     def getColumns: mutable.LinkedHashMap[String, DataType] = columns
     def getFieldDataType(fieldName: String): DataType = {
         val name = this.getColumnName(fieldName).getOrElse("")

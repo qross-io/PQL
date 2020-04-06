@@ -10,6 +10,10 @@ DEBUG ON;
 --SAVE AS 'mysql.local';
 --PUT # insert into td (info, status) VALUES ('#[中文]', &[100]);
 
---OPEN mysql.adb;
-DELETE FROM tc WHERE id<10;
-DELETE FROM td WHERE id<10;
+OPEN QROSS;
+
+SET $create_time := '2020-04-06 12:00:00';
+
+IF $create_time EARLIER @Now > 24 HOURS THEN
+    PRINT 'HELLO';
+END IF;

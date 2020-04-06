@@ -17,7 +17,7 @@ import scala.collection.mutable.ListBuffer
 import scala.sys.process._
 import scala.util.control.Breaks._
 import scala.util.matching.Regex
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 object TypeExt {
 
@@ -457,6 +457,16 @@ object TypeExt {
                 })
 
             string
+        }
+
+        def shuffle(digit: Int = 1): String = {
+            val length = string.length
+            val sb = new mutable.StringBuilder()
+            for (i <- 1 to digit) {
+                val random = Random.nextInt(length)
+                sb.append(string.substring(random, random + 1))
+            }
+            sb.toString()
         }
     }
 

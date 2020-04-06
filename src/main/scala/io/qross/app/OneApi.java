@@ -35,10 +35,6 @@ public class OneApi {
     // token -> allowed name
     public static Map<String, String> TOKENS = new HashMap<>();
 
-    //service,path,date,hour -> pv
-    public static List<String> TRAFFIC = new ArrayList<>();
-    private static DateTime LastSaveTime = DateTime.now();
-
     //read all api settings from resources:/api/
     public static void readAll() {
         ALL.clear();
@@ -167,6 +163,18 @@ public class OneApi {
         }
     }
 
+    public static boolean contains(String path) {
+        return ALL.containsKey(path);
+    }
+
+    public static boolean contains(String path, String method) {
+        return ALL.containsKey(path) && ALL.get(path).containsKey(method.toUpperCase());
+    }
+
+    public static OneApi pick(String path, String method) {
+        return ALL.get(path).get(method.toUpperCase());
+    }
+
     //refresh all api
     public static int refresh() {
         OneApi.readAll();
@@ -184,11 +192,6 @@ public class OneApi {
             keys.put(key, String.join(",", ALL.get(key).keySet()));
         }
         return keys;
-    }
-
-    //unsaved traffic data
-    public static List<String> traffic() {
-        return TRAFFIC;
     }
 
     public static List<String> listResources(String path) {
@@ -216,201 +219,51 @@ public class OneApi {
         return files;
     }
 
-    //traffic count
-    private static void count(String path) {
-        if (!Setting.OneApiMySQLConnection.isEmpty()) {
-            TRAFFIC.add(path + DateTime.now().getString(",yyyy-MM-dd,HH"));
-            if (TRAFFIC.size() >= 1000 || LastSaveTime.earlier(DateTime.now()) >= 60000) {
-                DataAccess ds = new DataAccess(Setting.OneApiMySQLConnection);
-                Map<String, Integer> traffic = new HashMap<>();
-                for (String pv : TRAFFIC) {
-                    if (traffic.containsKey(pv)) {
-                        traffic.put(pv, traffic.get(pv) + 1);
-                    }
-                    else {
-                        traffic.put(pv, 1);
-                    }
-                }
-                ds.setBatchCommand("INSERT INTO qross_api_traffic (service_name, path, record_date, record_hour, pv) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pv=pv+?");
-                for (String key : traffic.keySet()) {
-                    String[] values = key.split(",");
-                    ds.addBatch(Setting.OneApiServiceName, values[0], values[1], values[2], traffic.get(key), traffic.get(key));
-                }
-                ds.executeBatchUpdate();
-                ds.close();
-            }
-        }
-    }
-
-    public static Object request(String path) {
-        return request(path, DataHub.DEFAULT());
-    }
-
-    public static Object request(String path, String connectionName) { return request(path, new DataHub(connectionName)); }
-
-    public static Object request(String path, DataHub dh) {
-        return request(path, new HashMap<String, String>(), dh);
-    }
-
     public static Object requestWithJsonParameters(String path) {
-        return requestWithJsonParameters(path, DataHub.DEFAULT());
-    }
-
-    public static Map<String, String> getJsonParameters() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        StringBuilder sb = new StringBuilder();
-        if (attributes != null) {
-            try {
-                // body stream
-                BufferedReader br = new BufferedReader(new InputStreamReader(attributes.getRequest().getInputStream()));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    sb.append(line);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (sb.length() > 0) {
-            return new Json(sb.toString()).parseJavaMap("/");
-        }
-        else {
-            return new HashMap<>();
-        }
+        return new OneApiRequester(path).withJsonParameters().request();
     }
 
     public static Object requestWithJsonParameters(String path, DataHub dh) {
-        return request(path, getJsonParameters(), dh);
+        return new OneApiRequester(path, dh).withJsonParameters().request();
+    }
+
+    public static Object requestWithJsonParameters(String path, String connectionName) {
+        return new OneApiRequester(path, connectionName).withJsonParameters().request();
+    }
+
+    public static OneApiRequester withJsonParameters() {
+        return new OneApiRequester().withJsonParameters();
+    }
+
+    public static OneApiRequester signIn(int userId, String userName, String role) {
+        return new OneApiRequester().signIn(userId, userName, role);
+    }
+
+    public static OneApiRequester signIn(int userId, String userName, String role, Map<String, Object> info) {
+        return new OneApiRequester().signIn(userId, userName, role, info);
+    }
+
+    public static Object request(String path) {
+        return new OneApiRequester(path).request();
+    }
+
+    public static Object request(String path, String connectionName) {
+        return new OneApiRequester(path, connectionName).request();
+    }
+
+    public static Object request(String path, DataHub dh){
+        return new OneApiRequester(path, dh).request();
     }
 
     public static Object request(String path, Map<String, String> params) {
-        return request(path, params, DataHub.DEFAULT());
+        return new OneApiRequester(path, params).request();
     }
 
     public static Object request(String path, Map<String, String> params, String connectionName) {
-        return request(path, params, new DataHub(connectionName));
+        return new OneApiRequester(path, params, new DataHub(connectionName));
     }
 
     public static Object request(String path, Map<String, String> params, DataHub dh) {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attributes != null) {
-            HttpServletRequest request = attributes.getRequest();
-
-            String method = request.getMethod();
-            if (!OneApi.contains(path, method)) {
-                OneApi.readAll();
-            }
-
-            if (OneApi.contains(path, method)) {
-                OneApi api = OneApi.pick(path, method);
-
-                String security = Properties.get("oneapi.security.enabled", "0");
-                if (security.equalsIgnoreCase("true") || security.equalsIgnoreCase("yes")) {
-                    security = "1";
-                }
-
-                boolean allowed = false;
-                if (security.equals("1")) {
-                    String token = request.getParameter("token");
-                    if (token == null || token.isEmpty()) {
-                        for (Cookie cookie : request.getCookies()) {
-                            if (cookie.getName().equalsIgnoreCase("token")) {
-                                token = cookie.getValue();
-                                break;
-                            }
-                        }
-                    }
-
-                    if (TOKENS.containsKey(token) && (api.allowed.isEmpty() || api.allowed.contains(TOKENS.get(token)))) {
-                        allowed = true;
-                    }
-                } else {
-                    allowed = true;
-                }
-
-                if (allowed) {
-                    //count(api.path);
-
-                    return  new PQL(api.sentences, dh)
-                            .place(params)
-                            .placeParameters(request.getParameterMap())
-                            .setHttpRequest(request)
-                            .place(api.defaultValue)
-                            .run();
-                } else {
-                    return "{\"error\": \"Access denied\"}";
-                }
-            }
-            else {
-                return "{\"error\": \"WRONG or MISS path/Method '" + path + " " + method + "'\"}";
-            }
-        }
-        else {
-            return "{\"error\": \"Need spring boot environment.\"}";
-        }
-    }
-
-    public static String execute(String path) {
-        return execute(path, "GET", DataHub.DEFAULT());
-    }
-
-    public static String execute(String path, String method) {
-        return execute(path, method, DataHub.DEFAULT());
-    }
-
-    public static String execute(String path, String method, String connectionName) {
-        return execute(path, method, new DataHub(connectionName));
-    }
-
-    public static String execute(String path, String method, DataHub dh) {
-
-        String params = "";
-        if (path.contains("?")) {
-            path = path.substring(0, path.indexOf("?"));
-            params = path.substring(path.indexOf("?") + 1);
-        }
-
-        if (!OneApi.contains(path, method)) {
-            OneApi.readAll();
-        }
-
-        if (OneApi.contains(path, method)) {
-            OneApi api = OneApi.pick(path, method);
-            PQL PQL = new PQL(api.sentences, dh);
-
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes != null) {
-                HttpServletRequest request = attributes.getRequest();
-                PQL.placeParameters(request.getParameterMap());
-            }
-
-            if (!params.isEmpty()) {
-                PQL.place(params);
-            }
-
-            Object result = PQL.place(api.defaultValue).run();
-            if (result != null) {
-                return result.toString();
-            }
-            else {
-                return null;
-            }
-        }
-        else {
-            return "{\"error\": \"WRONG or MISS path '" + path + "'\"}";
-        }
-    }
-
-    public static boolean contains(String path) {
-        return ALL.containsKey(path);
-    }
-
-    public static boolean contains(String path, String method) {
-        return ALL.containsKey(path) && ALL.get(path).containsKey(method.toUpperCase());
-    }
-
-    public static OneApi pick(String path, String method) {
-        return ALL.get(path).get(method.toUpperCase());
+        return new OneApiRequester(path, params, dh).request();
     }
 }

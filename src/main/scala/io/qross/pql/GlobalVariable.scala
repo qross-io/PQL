@@ -2,10 +2,9 @@ package io.qross.pql
 
 import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.setting.{Configurations, Global}
-import io.qross.time.DateTime
-import io.qross.core.Authentication._
 import io.qross.pql.Patterns.FUNCTION_NAMES
+import io.qross.setting.Configurations
+import io.qross.time.DateTime
 
 object GlobalVariable {
 
@@ -32,6 +31,23 @@ object GlobalVariable {
                 }).clear()
     }
 
+    def loadUserVariables(userId: Int): Unit = {
+        //从数据库加载用户全局变量
+        if (JDBC.hasQrossSystem) {
+            DataSource.QROSS.queryDataTable("SELECT var_name, var_type, var_value FROM qross_variables WHERE var_user=?", userId)
+                    .foreach(row => {
+                        GlobalVariable.USER.set(
+                            row.getString("var_name").toUpperCase(),
+                            row.getString("var_type") match {
+                                case "INTEGER" => row.getLong("var_value")
+                                case "DECIMAL" => row.getDouble("var_value")
+                                case _ => row.getString("var_value")
+                            })
+
+                    }).clear()
+        }
+    }
+
     //设置临时系统变量, 系统启动时更新, 关闭时删除, 只作用于当前系统
     //如果设置了与更高级的全局变量相同的变量名, 无意义
     def set(name: String, value: Any): Unit = {
@@ -44,7 +60,7 @@ object GlobalVariable {
 //    }
 
     //更新用户变量
-    def set(name: String, value: Any, user: Int = 0, role: String = "WORKER"): Unit = {
+    def set(name: String, value: Any, username: String, role: String): Unit = {
 
         if (Patterns.GLOBAL_VARIABLES.contains(name)) {
             throw new SQLExecuteException("Can't update process variable. This variable is readonly.")
@@ -53,15 +69,15 @@ object GlobalVariable {
             throw new SQLExecuteException(s"$name is a global function.")
         }
         else if (SYSTEM.contains(name) || Configurations.contains(name)) {
-            if (role == "MASTER") {
+            if (role == "master") {
                 if (SYSTEM.contains(name)) {
                     SYSTEM.set(name, value)
                     //更新数据库
                     DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('SYSTEM', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""", value match {
-                        case i: Int => "INTEGER"
-                        case l: Long => "INTEGER"
-                        case f: Float => "DECIMAL"
-                        case d: Double => "DECIMAL"
+                        case _: Int => "INTEGER"
+                        case _: Long => "INTEGER"
+                        case _: Float => "DECIMAL"
+                        case _: Double => "DECIMAL"
                         case _ => "TEXT"
                     }, name, value, value)
                 }
@@ -78,12 +94,12 @@ object GlobalVariable {
             //更新数据库
             if (JDBC.hasQrossSystem) {
                 DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('USER', ?, ?, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""", value match {
-                    case i: Int => "INTEGER"
-                    case l: Long => "INTEGER"
-                    case f: Float => "DECIMAL"
-                    case d: Double => "DECIMAL"
+                    case _: Int => "INTEGER"
+                    case _: Long => "INTEGER"
+                    case _: Float => "DECIMAL"
+                    case _: Double => "DECIMAL"
                     case _ => "TEXT"
-                }, user, name, value, value)
+                }, username, name, value, value)
             }
         }
     }
@@ -100,6 +116,9 @@ object GlobalVariable {
         }
         else if (SYSTEM.contains(name)) {
             SYSTEM.getCell(name)
+        }
+        else if (PQL.credential.contains(name)) {
+            PQL.credential.getCell(name)
         }
         else if (Configurations.contains(name)) {
             DataCell(Configurations.getOrProperty(name.toUpperCase, name.replace("_", ".").toLowerCase(), null))
@@ -130,9 +149,12 @@ object GlobalVariableDeclaration {
     def AFFECTED_ROWS_OF_LAST_PREP(PQL: PQL): DataCell = DataCell(PQL.dh.AFFECTED_ROWS_OF_LAST_PREP, DataType.INTEGER)
 
     def BOOL(PQL: PQL): DataCell = DataCell(PQL.BOOL, DataType.BOOLEAN)
-    def UID(PQL: PQL): DataCell = DataCell(PQL.dh.userId, DataType.INTEGER)
-    def USERNAME(PQL: PQL): DataCell = DataCell(PQL.dh.userName, DataType.TEXT)
-    def ROLE(PQL: PQL): DataCell = DataCell(PQL.dh.role, DataType.TEXT)
+
+    def USERID(PQL: PQL): DataCell =  PQL.credential.getCell("userid")
+    def USERNAME(PQL: PQL): DataCell = PQL.credential.getCell("username")
+    def ROLE(PQL: PQL): DataCell = PQL.credential.getCell("role")
+    def USER(PQL: PQL): DataCell = DataCell(PQL.credential, DataType.ROW)
+
     def RESULT(PQL: PQL): DataCell = {
         PQL.RESULT.lastOption match {
             case Some(v) => DataCell(v)

@@ -1,10 +1,12 @@
 package io.qross.pql
 
-import io.qross.core.Authentication._
+import java.util
+
 import io.qross.core._
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.fs.SourceFile
+import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.net.Json
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
@@ -205,6 +207,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private[pql] var breakCurrentLoop = false
 
+    private[pql] val credential = new DataRow("userid" -> 0, "username" -> "anonymous", "role" -> "worker")
+
     //开始解析
     private def parseAll(): Unit = {
 
@@ -366,7 +370,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         }
         else if (symbol == "@") {
             //全局变量
-            GlobalVariable.set(name, value, dh.userId, dh.role)
+            GlobalVariable.set(name, value, credential.getString("username"), credential.getString("role"))
         }
     }
 
@@ -497,6 +501,9 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 //用户变量
                 root.setVariable(key.drop(1), model.get(key))
             }
+            else if (key.startsWith("#")) {
+                credential.set(key.drop(1), model.get(key))
+            }
             else {
                 root.setVariable(key, model.get(key))
             }
@@ -505,7 +512,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     }
 
     def setHttpRequest(request: HttpServletRequest): PQL = {
-
         root.setVariable("request", new DataRow(
             "method" -> request.getMethod,
             "queryString" -> request.getQueryString,
@@ -514,6 +520,65 @@ class PQL(val originalSQL: String, val dh: DataHub) {
             "path" -> request.getRequestURI,
             "host" -> request.getRequestURL.toString.takeBefore(request.getRequestURI)
         ))
+
+        this
+    }
+
+    def signIn(userId: Int, userName: String, role: String): PQL = {
+        credential.set("userid", userId)
+        credential.set("username", userName)
+        credential.set("role", role)
+
+        GlobalVariable.loadUserVariables(userId)
+
+        this
+    }
+
+    def signIn(userId: Int, userName: String, role: String, info: (String, Any)*): PQL = {
+        credential.set("userid", userId)
+        credential.set("username", userName)
+        credential.set("role", role)
+        info.foreach(kv => credential.set(kv._1, kv._2))
+
+        GlobalVariable.loadUserVariables(userId)
+
+        this
+    }
+
+    def signIn(info: (String, Any)*): PQL = {
+        info.foreach(kv => credential.set(kv._1, kv._2))
+
+        val userId = credential.getInt("userid", 0)
+        if (userId > 0) {
+            GlobalVariable.loadUserVariables(userId)
+        }
+
+        this
+    }
+
+    def signIn(info : java.util.Map[String, Any]): PQL = {
+        for (kv <- info.asScala) {
+            credential.set(kv._1, kv._2)
+        }
+
+        val userId = credential.getInt("userid", 0)
+        if (userId > 0) {
+            GlobalVariable.loadUserVariables(userId)
+        }
+
+        this
+    }
+
+    def signIn(userId: Int, userName: String, role: String, info : java.util.Map[String, Any]): PQL = {
+
+        credential.set("userid", userId)
+        credential.set("username", userName)
+        credential.set("role", role)
+        for (kv <- info.asScala) {
+            credential.set(kv._1, kv._2)
+        }
+
+        GlobalVariable.loadUserVariables(userId)
 
         this
     }

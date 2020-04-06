@@ -6,7 +6,9 @@ import java.sql.DriverManager
 import java.util.regex.{Matcher, Pattern}
 import java.util.Date
 
+import io.qross.app.OneApi
 import io.qross.core._
+import io.qross.ext.Console
 import io.qross.pql._
 import io.qross.fs._
 import io.qross.jdbc.DataSource
@@ -25,6 +27,8 @@ import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 import io.qross.time.TimeSpan._
 import javax.servlet.http.Cookie
+
+import scala.util.Random
 
 object Main {
 
@@ -96,7 +100,12 @@ object Main {
             "time" -> "2020-02-27 18:30:33",
             "filter" -> ""
         ).run().print */
-        //PQL.openFile("/sql/api.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
+        PQL.openFile("/sql/date.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
+
+        //"abc".shuffle(100).print
+        //"abcdefghijklmnopqrstuvwxyz0123456789".shuffle(10).print
+
+
 
         //println(Base64.encode("str-world"))
         //println(Base64.decode("c3RyLXdvcmxk"))
