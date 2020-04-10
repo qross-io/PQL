@@ -643,6 +643,24 @@ object Sharp {
         }
     }
 
+    def DROP(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.drop(arg.asInteger.toInt).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at DROP. " + origin)
+        }
+    }
+
+    def DROP$RIGHT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.dropRight(arg.asInteger.toInt).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at DROP RIGHT. " + origin)
+        }
+    }
+
     def TAKE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             data.asText.take(arg.asInteger.toInt).toDataCell(DataType.TEXT)

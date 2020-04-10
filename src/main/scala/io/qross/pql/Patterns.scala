@@ -29,7 +29,7 @@ object Patterns {
 
     val $BLANK: Regex = """\s""".r
     val BLANKS: String = """\s+"""
-    val $PHRASE: Regex = """(?i)^\b[a-z]+\b(\s+\b[a-z]+\b)*""".r
+    val $PHRASE: Regex = """(?i)^\b[a-z]+(\s+[a-z]+)*(\s|$)""".r
 
     val $BRACKET: Regex = """\(([^\)]+)\)""".r
     val $AND$: Pattern = Pattern.compile("""(^|\sOR\s)(([\s\S]+?)\s+AND\s+([\s\S]+?))($|\sAND|\sOR)""", Pattern.CASE_INSENSITIVE)

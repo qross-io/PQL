@@ -9,11 +9,13 @@ DEBUG ON;
 --GET # select [100], [中文] from test1;
 --SAVE AS 'mysql.local';
 --PUT # insert into td (info, status) VALUES ('#[中文]', &[100]);
-
 OPEN QROSS;
 
-SET $create_time := '2020-04-06 12:00:00';
+PRINT "123456" DROP 1;
 
-IF $create_time EARLIER @Now > 24 HOURS THEN
-    PRINT 'HELLO';
-END IF;
+VAR $id := SELECT id, username FROM qross_users -> FIRST COLUMN -> JOIN '","' QUOTE '"';
+PRINT $id;
+
+REQUEST JSON API 'http://bigdata-api-dev.zichan360.com/encryption-service/entryption/entryStr'
+DATA  { "list" : [$id!] } METHOD 'POST';
+PARSE '/data' AS TABLE;

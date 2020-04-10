@@ -2,7 +2,7 @@ package io.qross.net
 
 import java.io._
 import java.net.{HttpURLConnection, URL}
-
+import io.qross.ext.TypeExt._
 import io.qross.core.{DataHub, ExtensionNotFoundException}
 import io.qross.fs.Path._
 import org.apache.commons.codec.binary.Base64
@@ -62,17 +62,28 @@ object Http {
 
 class Http(var method: String, var url: String, var data: String = "") {
 
+    this.data = this.data.trim()
+    if (this.data != "") {
+        if (!this.data.bracketsWith("[", "]") && !this.data.bracketsWith("{", "}")) {
+            if (this.url.endsWith("?")) {
+                this.url += this.data
+            }
+            else if (this.url.contains("?")) {
+                this.url += "&" + this.data
+            }
+            else {
+                this.url += "?" + this.data
+            }
+            this.data = ""
+        }
+    }
+
     private val conn: HttpURLConnection = new URL(url).openConnection().asInstanceOf[HttpURLConnection]
     conn.setRequestMethod(method)
     conn.setDoInput(true)
     conn.setDoOutput(true)
-    if (method == "POST") {
+    if (method == "POST" || method == "PUT") {
         conn.setUseCaches(false) // cant't cache when use post method
-    }
-
-    def send(data: String): Http = {
-        this.data = data
-        this
     }
 
     def setHeader(name: String, value: String): Http = {
@@ -116,11 +127,13 @@ class Http(var method: String, var url: String, var data: String = "") {
 
         conn.connect()
 
-        //这句话有问题，如果传送data，第127行会执行出错
         if (this.data != "") {
-            val os = conn.getOutputStream
-            os.write(this.data.getBytes("utf-8"))
-            os.close()
+            if (this.data.bracketsWith("[", "]") || this.data.bracketsWith("{", "}")) {
+                val os =  conn.getOutputStream
+                os.write(this.data.getBytes("utf-8"))
+                os.flush()
+                os.close()
+            }
         }
 
         // read response content
@@ -130,6 +143,8 @@ class Http(var method: String, var url: String, var data: String = "") {
             buffer.append(line)
         }
         reader.close()
+
+        conn.disconnect()
 
         buffer.toString
     }
