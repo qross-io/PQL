@@ -3,6 +3,7 @@ package io.qross.test
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.sql.DriverManager
+import java.time.{LocalDateTime, ZoneId}
 import java.util.regex.{Matcher, Pattern}
 import java.util.Date
 
@@ -100,8 +101,20 @@ object Main {
             "time" -> "2020-02-27 18:30:33",
             "filter" -> ""
         ).run().print */
+<<<<<<< HEAD
 
         PQL.openFile("/sql/date.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
+=======
+        //PQL.openFile("/sql/date.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
+
+//        ZoneId.getAvailableZoneIds.forEach(x => {
+//            if ("[+-]\\d+".r.test(x)) {
+//                println(x)
+//            }
+//        })
+
+        DateTime.now.print
+>>>>>>> v0.6.1-4-RELEASE
 
         val sentence = "IF $username != $userId AND ($role == 'master' OR ($role == 'keeper' AND $user.role NOT IN ('keeper', 'master'))) THEN"
         USER_VARIABLE.map(_.findAllMatchIn(sentence))

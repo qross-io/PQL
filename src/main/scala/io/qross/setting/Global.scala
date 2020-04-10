@@ -1,5 +1,7 @@
 package io.qross.setting
 
+import java.time.ZoneId
+
 import io.qross.ext.TypeExt._
 import io.qross.fs.Path._
 
@@ -12,6 +14,8 @@ object Global {
     def COMPANY_NAME: String = Configurations.getOrProperty("COMPANY_NAME", "company.name")
 
     def CHARSET: String = Configurations.getOrProperty("CHARSET", "charset").ifNullOrEmpty("UTF-8")
+
+    def TIMEZONE: String = Configurations.getOrProperty("TIMEZONE", "timezone").ifNullOrEmpty(ZoneId.systemDefault().toString)
 
     def USER_HOME: String = System.getProperty("user.dir").toDir
 

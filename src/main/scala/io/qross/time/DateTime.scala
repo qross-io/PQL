@@ -7,9 +7,12 @@ import java.util.regex.Pattern
 
 import io.qross.core.ConvertFailureException
 import io.qross.ext.TypeExt._
+import io.qross.setting.Global
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
+import scala.util.control.Breaks._
+import scala.collection.JavaConverters._
 
 object DateTime {
     
@@ -63,39 +66,60 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
         this(dateTime, "", mode)
     }
 
-    val localDateTime: LocalDateTime = dateTime match {
-        case localDateTime: LocalDateTime => localDateTime
-        case str: String => if (str == "") {
-                                LocalDateTime.now()
-                            }
-                            else if ("^\\d+$".r.test(str)) {
-                                str.length match {
-                                    case 10 | 13 | 17 => parseLocalDateTime(str.toLong)
-                                    case _ => parseLocalDateTime(str)
-                                }
-                            }
-                            else {
-                                parseLocalDateTime(str, formatStyle)
-                            }
-        case dt: DateTime => dt.localDateTime
-        case date2: java.sql.Date =>
-            mode = DateTime.DATE
-            parseLocalDateTime(date2.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
-        case time: java.sql.Time =>
-            mode = DateTime.TIME
-            parseLocalDateTime(LocalDate.now() + " " + time.toString, "yyyy-MM-dd HH:mm:ss")
-        case timeStamp: java.sql.Timestamp =>
-            mode = DateTime.FULL
-            timeStamp.toLocalDateTime
-        case date1: java.util.Date => date1.toInstant.atZone(ZoneId.systemDefault()).toLocalDateTime
-        case l: Long => parseLocalDateTime(l)
-        case i: Int => parseLocalDateTime(i)
-        case f: Float => parseLocalDateTime(f.toInt)
-        case d: Double => parseLocalDateTime(d.toLong)
-        case localDate: LocalDate => parseLocalDateTime(localDate.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
-        case localTime: LocalTime => parseLocalDateTime(LocalDate.now() + " " + localTime.toString, "yyyy-MM-dd HH:mm:ss")
-        case _ =>   throw new ConvertFailureException("Can't recognize as or convert to DateTime: " + dateTime)
+    private val timezone: ZoneId = {
+        var zone = ""
+        breakable {
+            for (z <- ZoneId.getAvailableZoneIds.asScala) {
+                if (z.asInstanceOf[String].toLowerCase.contains(Global.TIMEZONE.toLowerCase)) {
+                    zone = z
+                    break
+                }
+            }
+        }
+
+        if (zone == "") {
+            ZoneId.systemDefault()
+        }
+        else {
+            ZoneId.of(zone)
+        }
     }
+
+    val localDateTime: LocalDateTime = {
+        dateTime match {
+            case localDateTime: LocalDateTime => localDateTime
+            case str: String => if (str == "") {
+                LocalDateTime.now(timezone)
+            }
+            else if ("^\\d+$".r.test(str)) {
+                str.length match {
+                    case 10 | 13 | 17 => parseLocalDateTime(str.toLong)
+                    case _ => parseLocalDateTime(str)
+                }
+            }
+            else {
+                parseLocalDateTime(str, formatStyle)
+            }
+            case dt: DateTime => dt.localDateTime
+            case date2: java.sql.Date =>
+                mode = DateTime.DATE
+                parseLocalDateTime(date2.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
+            case time: java.sql.Time =>
+                mode = DateTime.TIME
+                parseLocalDateTime(LocalDate.now() + " " + time.toString, "yyyy-MM-dd HH:mm:ss")
+            case timeStamp: java.sql.Timestamp =>
+                mode = DateTime.FULL
+                timeStamp.toLocalDateTime
+            case date1: java.util.Date => date1.toInstant.atZone(timezone).toLocalDateTime
+            case l: Long => parseLocalDateTime(l)
+            case i: Int => parseLocalDateTime(i)
+            case f: Float => parseLocalDateTime(f.toInt)
+            case d: Double => parseLocalDateTime(d.toLong)
+            case localDate: LocalDate => parseLocalDateTime(localDate.toString + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
+            case localTime: LocalTime => parseLocalDateTime(LocalDate.now() + " " + localTime.toString, "yyyy-MM-dd HH:mm:ss")
+            case _ =>   throw new ConvertFailureException("Can't recognize as or convert to DateTime: " + dateTime)
+        }
+    }.atZone(timezone).toLocalDateTime
 
     private def parseLocalDateTime(dateTime: String, format: String = ""): LocalDateTime = {
 
@@ -145,7 +169,7 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
                 LocalDateTime.parse(dateTime + "00", DateTimeFormatter.ofPattern(style + "HH"))
             }
             else {
-                LocalDateTime.parse( LocalDate.now().toString + " " + dateTime, DateTimeFormatter.ofPattern("yyyy-MM-dd " + style))
+                LocalDateTime.parse( LocalDate.now(timezone).toString + " " + dateTime, DateTimeFormatter.ofPattern("yyyy-MM-dd " + style))
             }
         }
         else if (dateTime.length == 10 && (dateTime.contains("-") || dateTime.contains("/"))) {
@@ -174,7 +198,7 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
         LocalDateTime.ofEpochSecond(second, nano.toInt, OffsetDateTime.now.getOffset)
     }
 
-    def toDate: java.util.Date = java.util.Date.from(this.localDateTime.atZone(ZoneId.systemDefault()).toInstant)
+    def toDate: java.util.Date = java.util.Date.from(this.localDateTime.atZone(timezone).toInstant)
    
     def get(field: ChronoField): Int = this.localDateTime.get(field)
     def getYear: Int = this.localDateTime.getYear
@@ -277,8 +301,8 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
         new DateTime(this.localDateTime.withHour(0).withMinute(0).withSecond(0).withNano(0))
     }
    
-    def toEpochSecond: Long = this.localDateTime.atZone(ZoneId.systemDefault).toInstant.getEpochSecond
-    def toEpochMilli: Long = this.localDateTime.atZone(ZoneId.systemDefault).toInstant.toEpochMilli
+    def toEpochSecond: Long = this.localDateTime.atZone(timezone).toInstant.getEpochSecond
+    def toEpochMilli: Long = this.localDateTime.atZone(timezone).toInstant.toEpochMilli
     
     def plus(unit: ChronoUnit, amount: Int): DateTime = {
         new DateTime(this.localDateTime.plus(amount, unit))

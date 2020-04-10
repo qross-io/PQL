@@ -7,8 +7,8 @@ apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
 version = '0.6.1-13-RELEASE'
-sourceCompatibility = 1.8
 
+sourceCompatibility = 1.8
 archivesBaseName = "qross-pql"
 
 buildscript {
