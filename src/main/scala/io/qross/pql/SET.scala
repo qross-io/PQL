@@ -17,7 +17,7 @@ object SET {
     }
 }
 
-class SET(var declare: String, val symbol: String, val expression: String) {
+class SET(val declare: String, val symbol: String, val expression: String) {
 
     def execute(PQL: PQL): Unit = {
         //1. SELECT查询  - 以SELECT开头 - 需要解析$开头的变量和函数

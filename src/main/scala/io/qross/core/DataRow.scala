@@ -390,6 +390,19 @@ class DataRow() {
         this
     }
 
+    def turnToColumn(fieldColumn: String, valueColumn: String): DataTable = {
+        val table = new DataTable()
+        this.values.foreach(field => {
+            table.addRow(
+                new DataRow(
+                    fieldColumn -> field._1,
+                    valueColumn -> field._2
+                )
+            )
+        })
+        table
+    }
+
     def mkString(delimiter: String): String = {
         val values = new mutable.StringBuilder()
         for (field <- fields) {
@@ -406,8 +419,8 @@ class DataRow() {
     def toJavaMap: java.util.Map[String, Any] = values.asJava
     def toJavaList: java.util.List[Any] = values.values.toList.asJava
 
-    def toTable(keyName: String = "key", valueName: String = "value"): DataTable = {
-        values.toMap.toTable(keyName, valueName)
+    def toTable: DataTable = {
+        new DataTable(this)
     }
 
     override def toString: String = {

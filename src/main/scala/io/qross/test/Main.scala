@@ -100,7 +100,15 @@ object Main {
             "time" -> "2020-02-27 18:30:33",
             "filter" -> ""
         ).run().print */
+
         PQL.openFile("/sql/date.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
+
+        val sentence = "IF $username != $userId AND ($role == 'master' OR ($role == 'keeper' AND $user.role NOT IN ('keeper', 'master'))) THEN"
+        USER_VARIABLE.map(_.findAllMatchIn(sentence))
+            .flatMap(_.toList.sortBy(m => m.group(1)).reverse)
+        //    .foreach(println)
+
+
 
         //"abc".shuffle(100).print
         //"abcdefghijklmnopqrstuvwxyz0123456789".shuffle(10).print

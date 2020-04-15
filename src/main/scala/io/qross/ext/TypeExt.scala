@@ -743,13 +743,6 @@ object TypeExt {
     }
 
     implicit class MapExt[A, B](map: Map[A, B]) {
-        def toTable(keyName: String = "key", valueName: String = "value"): DataTable = {
-            val table = new DataTable()
-            for (item <- map) {
-                table.addRow(new DataRow(keyName -> item._1, valueName -> item._2))
-            }
-            table
-        }
 
         def toRow: DataRow = {
             val row = new DataRow()

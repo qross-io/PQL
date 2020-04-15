@@ -1149,11 +1149,29 @@ object Sharp {
         data.asDecimal.percent.toDataCell(DataType.TEXT)
     }
 
-    /* ---------- 判断操作 IS ---------- */
+    /* ---------- 判断操作 ---------- */
 
     def IF$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.asText == "") arg else data
+            if (
+                if (data.isTable) {
+                    data.asTable.isEmpty
+                }
+                else if (data.isRow) {
+                    data.asRow.isEmpty
+                }
+                else if (data.isJavaList) {
+                    data.asJavaList.isEmpty
+                }
+                else {
+                    data.asText.isEmpty
+                }
+            ) {
+                arg
+            }
+            else {
+                data
+            }
         }
         else {
             throw SharpLinkArgumentException.occur("IF EMPTY THEN", origin)
@@ -1305,15 +1323,20 @@ object Sharp {
     }
 
     def FIRST$CELL(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        data.asTable.firstRow match {
-            case Some(row) => row.firstCell
-            case None =>
-                if (arg.valid) {
-                    arg
-                }
-                else {
-                    DataCell.NOT_FOUND
-                }
+        if (data.isRow) {
+            data.asRow.firstCell
+        }
+        else {
+            data.asTable.firstRow match {
+                case Some(row) => row.firstCell
+                case None =>
+                    if (arg.valid) {
+                        arg
+                    }
+                    else {
+                        DataCell.NOT_FOUND
+                    }
+            }
         }
     }
 
@@ -1366,6 +1389,8 @@ object Sharp {
         }
     }
 
+    //INSERT IF EMPTY "(id, status) VALUES (1, 'success')"
+    //INSERT IF EMPTY (id, status) VALUES (1, 'success')
     def INSERT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             val table = data.asTable
@@ -1376,8 +1401,6 @@ object Sharp {
                 table.addRow(arg.asRow).toDataCell(DataType.TABLE)
             }
             else if (arg.isText && Fragment.$VALUES.test(arg.asText)) {
-                //仅支持 -> INSERT IF EMPTY "(id, status) VALUES (1, 'success')"
-                //仍不支持 -> INSERT IF EMPTY (id, status) VALUES (1, 'success')
                 table.insert(arg.asText).toDataCell(DataType.TABLE)
             }
             else {
@@ -1413,6 +1436,43 @@ object Sharp {
         }
     }
 
+    //TURN 'a' AND 'b' TO ROW
+    //TURN (a, b) TO ROW
+    //TURN ['a', 'b'] TO ROW
+    //将来 TURN a, b TO ROW
+    def TURN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        SELECT(data, arg, origin)
+    }
+
+    // SELECT * 无意义
+    // 将来 SELECT a, b
+    def SELECT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (arg.isJavaList) {
+                data.asTable.select(arg.asList[String]: _*).toDataCell(DataType.TABLE)
+            }
+            else if (arg.isText) {
+                data.asTable.select(arg.asText.$trim("(", ")").split(",").map(_.removeQuotes()): _*).toDataCell(DataType.TABLE)
+            }
+            else {
+                throw SharpLinkArgumentException.occur("SELECT", origin)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("SELECT", origin)
+        }
+    }
+
+    def TO$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        TURN$TO$ROW(data, arg, origin)
+    }
+
+    //TURN TO ROW
+    //TURN TO ROW (column1, column2)
+    def TURN$TO$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asTable.turnToRow, DataType.ROW)
+    }
+
     def FIELDS(data: DataCell, arg: DataCell, origin: String): DataCell = {
         DataCell(data.asTable.getFieldNameList, DataType.ARRAY)
     }
@@ -1445,6 +1505,44 @@ object Sharp {
         }
         else {
             throw SharpInapplicableLinkNameException.occur("X", origin)
+        }
+    }
+
+    //TURN TO COLUMN "a" AND "b"
+    //TURN TO COLUMN (a, b)
+    //TURN TO COLUMN ["a", "b"]
+    //将来 TURN TO COLUMN a, b
+    def TURN$TO$COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isRow) {
+            if (arg.valid) {
+                val args: List[String] = {
+                    if (arg.isJavaList) {
+                        arg.asList[String]
+                    }
+                    else if (arg.isText) {
+                        arg.asText.$trim("(", ")").split(",").map(_.removeQuotes()).toList
+                    }
+                    else {
+                        throw SharpLinkArgumentException.occur("TURN TO COLUMN", origin)
+                    }
+                }
+
+                if (args.size >= 2) {
+                    data.asRow.turnToColumn(args.head, args(1)).toDataCell(DataType.TABLE)
+                }
+                else if (args.size == 1) {
+                    data.asRow.turnToColumn(args.head, "value").toDataCell(DataType.TABLE)
+                }
+                else {
+                    data.asRow.turnToColumn("field", "value").toDataCell(DataType.TABLE)
+                }
+            }
+            else {
+                data.asRow.turnToColumn("field", "value").toDataCell(DataType.TABLE)
+            }
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("TURN TO COLUMN", origin)
         }
     }
 
@@ -1678,20 +1776,10 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
             }
         }
 
-        //分组数据即(..)包围的数据，去掉空白字符
+        //分组数据即(..)包围的数据如 (1, "2")，去掉空白字符
         $TUPLE.findAllIn(sentence).foreach(tuple => {
             sentence = sentence.replace(tuple, tuple.replaceAll("\\s", ""))
         })
-
-        // 将 $row.field 转成 $row X 'field' 格式
-        $PROPERTY.findAllMatchIn(sentence).foreach(m => {
-            sentence = sentence.replace(m.group(0), " X '" + m.group(1) + "'")
-        })
-
-        // 特殊格式 TO MD5
-//        $MD5.findAllMatchIn(sentence).foreach(m => {
-//            sentence = sentence.replace(m.group(0), " TO MDX" + m.group(1))
-//        })
 
         val links = new mutable.ListBuffer[Link$Argument]()
 

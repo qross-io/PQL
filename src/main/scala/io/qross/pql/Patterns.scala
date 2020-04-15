@@ -31,7 +31,7 @@ object Patterns {
     val BLANKS: String = """\s+"""
     val $PHRASE: Regex = """(?i)^\b[a-z]+(\s+[a-z]+)*(\s|$)""".r
 
-    val $BRACKET: Regex = """\(([^\)]+)\)""".r
+    val $BRACKET: Regex = """\(([^\(\)]+?)\)""".r
     val $AND$: Pattern = Pattern.compile("""(^|\sOR\s)(([\s\S]+?)\s+AND\s+([\s\S]+?))($|\sAND|\sOR)""", Pattern.CASE_INSENSITIVE)
     val $OR: Pattern = Pattern.compile("\\sOR\\s", Pattern.CASE_INSENSITIVE)
     val $OR$: Pattern = Pattern.compile("""(^)(([\s\S]+?)\s+OR\s+([\s\S]+?))(\sOR|$)""", Pattern.CASE_INSENSITIVE)
@@ -83,12 +83,7 @@ object Patterns {
     val $PARSE: Regex = """(?i)^PARSE\s""".r
     val $LINK: Regex = """(?i)\s[A-Z][A-Z\$]*([ \t]+[A-Z][A-Z\d]+)*(\s|$)""".r
     val $TUPLE: Regex = """\([^\)]+\)""".r
-    val $PROPERTY: Regex = """(?i)\.\s*([_a-z]+)\b""".r
-//    val $ENCRYPTION: Map[Regex, String] = Map[Regex, String](
-//        """(?i)\sTO\s+MD5(\s|$)""".r -> " TO MDF ",
-//        """(?i)\sTO\s+BASE64(\s|$)""".r -> " TO BASESF ",
-//        """(?i)\sDECODE\s+BASE64(\s|$)""".r -> " DECODE BASESF "
-//    )
+
     val $LET: Regex = """(?i)^LET\s+""".r
     val $DEBUG: Regex = """(?i)^DEBUG\s""".r
     val $ECHO: Regex = """(?i)^ECHO(\s|$)""".r
@@ -116,7 +111,8 @@ object Patterns {
         "PLUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
         "MINUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
         "INSERT" -> Set[String]("VALUES"),
-        "INSERT$IF$EMPTY" -> Set[String]("VALUES"))
+        "INSERT$IF$EMPTY" -> Set[String]("VALUES"),
+        "TURN" -> Set[String]("AND"))
     val PRIORITIES: Set[String] = Set[String]("X")
     val $DATETIME_UNITS: Regex = """^(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND|MILLI|MICRO|NONA)=(\d+)$""".r
     val GLOBAL_VARIABLES: Set[String] = GlobalVariableDeclaration.getClass.getDeclaredMethods.map(m => m.getName).toSet

@@ -1,6 +1,7 @@
 package io.qross.app;
 
 import io.qross.core.DataHub;
+import io.qross.core.DataRow;
 import io.qross.jdbc.DataAccess;
 import io.qross.net.Json;
 import io.qross.pql.PQL;
@@ -61,6 +62,11 @@ public class OneApiRequester {
         this.path = path;
         this.params.putAll(params);
         this.dh = dh;
+    }
+
+    public OneApiRequester signIn(Map<String, Object> info) {
+        this.info.putAll(info);
+        return this;
     }
 
     public OneApiRequester signIn(int userId, String userName, String role) {

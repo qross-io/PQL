@@ -235,6 +235,10 @@ public class OneApi {
         return new OneApiRequester().withJsonParameters();
     }
 
+    public static OneApiRequester signIn(Map<String, Object> info) {
+        return new OneApiRequester().signIn(info);
+    }
+
     public static OneApiRequester signIn(int userId, String userName, String role) {
         return new OneApiRequester().signIn(userId, userName, role);
     }

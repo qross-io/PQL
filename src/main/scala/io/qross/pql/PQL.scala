@@ -378,7 +378,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     def findVariable(field: String): DataCell = {
 
         val symbol = field.take(1)
-        val name = field.drop(1).$trim("(", ")").toUpperCase()
+        val name = field.drop(1).toUpperCase()
 
         var cell = DataCell.NOT_FOUND
 

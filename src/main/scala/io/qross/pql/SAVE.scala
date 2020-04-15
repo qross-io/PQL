@@ -18,13 +18,11 @@ object SAVE {
     }
 }
 
-class SAVE(var sentence: String) {
+class SAVE(val sentence: String) {
 
     def execute(PQL: PQL): Unit = {
 
-        sentence = sentence.$restore(PQL)
-
-        val plan = Syntax("SAVE AS").plan(sentence)
+        val plan = Syntax("SAVE AS").plan(sentence.$restore(PQL))
 
         plan.head match {
             case "CACHE" => PQL.dh.saveAsCache()

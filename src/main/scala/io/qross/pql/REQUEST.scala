@@ -18,13 +18,11 @@ object REQUEST {
     }
 }
 
-class REQUEST(private var sentence: String) {
+class REQUEST(private val sentence: String) {
 
     def execute(PQL: PQL): Unit = {
 
-        sentence = sentence.$restore(PQL)
-
-        val plan = Syntax("REQUEST").plan(sentence)
+        val plan = Syntax("REQUEST").plan(sentence.$restore(PQL))
 
         plan.head match {
             case "JSON API" =>

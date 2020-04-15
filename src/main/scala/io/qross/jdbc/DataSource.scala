@@ -660,7 +660,7 @@ class DataSource (var connectionName: String, var databaseName: String) {
                     count = this.executeBatchCommands()
                 case Parameter.NONE =>
                     //MySQL INSERT的串接模式, 要求SQL语句不能写VALUES后面的内容
-                    if ("""(?i)^INSERT\b""".r.test(SQL.trim()) && !"""(?i)\)\s*VALUES\s*\(""".r.test(SQL)) {
+                    if ("""(?i)^(INSERT|REPLACE)\b""".r.test(SQL.trim()) && !"""(?i)\)\s*VALUES\s*\(""".r.test(SQL)) {
                         var insertSQL = SQL
                         if (!"""(?i)\)\s*VALUES\s*$""".r.test(insertSQL)) {
                             insertSQL += " VALUES "

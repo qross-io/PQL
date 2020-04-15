@@ -652,6 +652,29 @@ class DataTable() {
         this
     }
 
+    def turnToRow: DataRow = {
+        val newRow = new DataRow()
+        if (this.width >= 2) {
+            this.rows.foreach(row => {
+                newRow.set(row.getString(0), row.getCell(1))
+            })
+        }
+        else if (this.width == 1) {
+            for (i <- 0 until this.size) {
+                newRow.set("value" + i, this.rows(i).getCell(0))
+            }
+        }
+        newRow
+    }
+
+    def turnToRow(fieldColumn: String, valueColumn: String): DataRow = {
+        val newRow = new DataRow()
+        this.rows.foreach(row => {
+            newRow.set(row.getString(fieldColumn), row.getCell(valueColumn))
+        })
+        newRow
+    }
+
     def updateSource(SQL: String): DataTable = {
         updateSource(JDBC.DEFAULT, SQL)
         this

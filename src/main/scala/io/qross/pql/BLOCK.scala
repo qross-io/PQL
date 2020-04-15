@@ -16,11 +16,9 @@ object BLOCK {
     }
 }
 
-class BLOCK(private var sentence: String, caption: String, SQL: String) {
+class BLOCK(private val sentence: String, caption: String, SQL: String) {
     def execute(PQL: PQL): Unit = {
-        sentence = sentence.$restore(PQL)
-
-        val plan = Syntax("BLOCK").plan(sentence)
+        val plan = Syntax("BLOCK").plan(sentence.$restore(PQL))
         val from = plan.get("FROM").getOrElse("0").toLong
         val to = plan.get("TO").getOrElse("0").toLong
         val block = plan.get("PER").getOrElse("10000").toInt

@@ -4,7 +4,7 @@ import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
-import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, $NULL, $LINK, FUNCTION_NAMES, $PROPERTY}
+import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, $NULL, $LINK, FUNCTION_NAMES}
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -17,12 +17,16 @@ object Solver {
     //val GLOBAL_VARIABLE: Regex = """@\(?([a-zA-Z0-9_]+)\)?""".r //全局变量 @name 或 @(name)
     //val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
     val USER_VARIABLE: List[Regex] = List[Regex](
+        """\$\(([a-zA-Z0-9_]+)\.(\S+?)\)""".r,
         """\$\(([a-zA-Z0-9_]+)\)""".r,
+        """\$([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)""".r,
         """\$([a-zA-Z0-9_]+)""".r
     )
     val GLOBAL_VARIABLE: List[Regex] = List[Regex](
-        """@\(([a-zA-Z0-9_]+)\)""".r,
-        """@([a-zA-Z0-9_]+)""".r
+        """@\(([a-zA-Z0-9_]+)\.(\S+?)\)\(?""".r,
+        """@\(([a-zA-Z0-9_]+)\)\(?""".r,
+        """@([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\(?""".r,
+        """@([a-zA-Z0-9_]+)\(?""".r
     )
     val USER_DEFINED_FUNCTION: Regex = """$[a-zA-Z_]+\(\)""".r //用户函数, 未完成
     val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\s*\(([^\)]*)\)""".r //系统函数
@@ -472,15 +476,28 @@ object Solver {
         def replaceVariables(PQL: PQL): String = {
             USER_VARIABLE
                 .map(r => r.findAllMatchIn(sentence))
-                .flatMap(s => s.toList.sortBy(m => m.group(1)).reverse)
+                .flatMap(s => s.toList.sortBy(m => m.group(1)).reverse)  //反转很重要, $user  $username 先替换长的
                 .foreach(m => {
                     val whole = m.group(0)
-
-                    PQL.findVariable(whole).ifFound(data => {
-                        sentence = sentence.replace(whole, PQL.$stash(data))
+                    val name = m.group(1)
+//println(whole)
+                    PQL.findVariable("$" + name).ifFound(data => {
+                        if (m.groupCount == 1) {
+                            sentence = sentence.replace(whole, PQL.$stash(data))
+                        }
+                        else {
+                            val row = data.asRow
+                            val property = m.group(2)
+                            if (row.contains(property)) {
+                                sentence = sentence.replace(whole, PQL.$stash(row.getCell(property)))
+                            }
+                            else {
+                                throw new SQLExecuteException("$" + name + " doesn't contain property \"" + property + "\".")
+                            }
+                        }
                     }).ifNotFound(() => {
                         if (PQL.dh.debugging) {
-                            Output.writeWarning(s"The variable $whole has not been assigned.")
+                            Output.writeWarning(s"The variable $name has not been assigned.")
                         }
                     })
                 })
@@ -490,11 +507,27 @@ object Solver {
                     .flatMap(s => s.toList.sortBy(m => m.group(1)).reverse)
                     .foreach(m => {
                         val whole = m.group(0)
-                        val name = m.group(1)
-
-                        if (whole.contains("(") && whole.endsWith(")") || !FUNCTION_NAMES.contains(name.toUpperCase())) {
-                            PQL.findVariable(whole).ifFound(data => {
-                                sentence = sentence.replace(whole, PQL.$stash(data))
+                        if (!whole.endsWith("(")) {
+                            val name = m.group(1)
+                            PQL.findVariable("@" + name).ifFound(data => {
+                                if (m.groupCount == 1) {
+                                    sentence = sentence.replace(whole, PQL.$stash(data))
+                                }
+                                else {
+                                    val row = data.asRow
+                                    val property = m.group(2)
+                                    if (row.contains(property)) {
+                                        sentence = sentence.replace(whole, PQL.$stash(row.getCell(property)))
+                                    }
+                                    else {
+                                        throw new SQLExecuteException("@" + name + " doesn't contain property \"" + property + "\".")
+                                    }
+                                }
+                            })
+                            .ifNotFound(() => {
+                                if (PQL.dh.debugging) {
+                                    Output.writeWarning(s"The global variable $name has not been assigned.")
+                                }
                             })
                         }
                     })
@@ -634,7 +667,7 @@ object Solver {
                 DataCell(sentence, DataType.TEXT)
             }
             //SHARP表达式
-            else if ($LINK.test(sentence) || $PROPERTY.test(sentence)) {
+            else if ($LINK.test(sentence)) {
                 new Sharp(sentence).execute(PQL)
             }
             else if (sentence.bracketsWith("(", ")") || sentence.bracketsWith("~u0028", "~u0029")) {

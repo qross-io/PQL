@@ -78,7 +78,7 @@ class FOR(var variable: String, val collection: String) {
                 Json(collection.$restore(PQL, "\"")).parseTable("/")
             }
             else if (collection.bracketsWith("{", "}")) {
-                Json(collection.$restore(PQL, "\"")).parseRow("/").toTable()
+                Json(collection.$restore(PQL, "\"")).parseRow("/").turnToColumn("key", "value")
             }
             else if ($VARIABLE.test(collection)) {
                 //集合变量

@@ -10,6 +10,7 @@ import io.qross.pql.Solver._
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.util.control.Breaks._
 
 class ConditionGroup(expression: String) {
 
@@ -35,10 +36,17 @@ class ConditionGroup(expression: String) {
         })
 
         // 解析括号中的逻辑 () 并将表达式分步
-        $BRACKET.findAllMatchIn(exp).foreach(m => {
-            parseBasicExpression(m.group(1).trim)
-            exp = exp.replace(m.group(0), "~condition[" + (this.conditions.size - 1) + "]")
-        })
+        breakable {
+            while (true) {
+                $BRACKET.findFirstMatchIn(exp) match {
+                    case Some(m) =>
+                        parseBasicExpression(m.group(1).trim)
+                        exp = exp.replace(m.group(0), "~condition[" + (this.conditions.size - 1) + "]")
+                    case _ => break
+                }
+            }
+        }
+
         //finally
         parseBasicExpression(exp)
 
