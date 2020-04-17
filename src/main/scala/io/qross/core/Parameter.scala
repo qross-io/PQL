@@ -61,7 +61,7 @@ object Parameter {
 
                 if (symbol == "#") {
                     if (row.contains(field)) {
-                        sentence = sentence.replace(whole, row.getString(field, null).ifNull("null").replace("'", "''"))
+                        sentence = sentence.replace(whole, row.getString(field, null).ifNull("null").preventInjection)
                     }
                 }
                 else if (symbol == "&") {
@@ -76,7 +76,7 @@ object Parameter {
                                         value.toString
                                     }
                                     else {
-                                        "'" + value.toString.replace("'", "''") + "'"
+                                        "'" + value.toString.preventInjection + "'"
                                     }
                                 })
                             case _ =>

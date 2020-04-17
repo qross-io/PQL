@@ -340,6 +340,9 @@ object TypeExt {
 
         def initCap: String = string.take(1).toUpperCase + string.substring(1)
 
+        def preventInjection: String = string.replace("'", "''").replace("\\", "\\\\")
+        def preventInjectionOfDoubleQuote: String = string.replace("\"", "\"\"").replace("\\", "\\\\")
+
         def isJsRegex: Boolean = string.startsWith("/") && string.indexOf("/") < string.lastIndexOf("/") && "/[ig]*$".r.test(string)
 
         def ifEmpty(defaultValue: String): String = {

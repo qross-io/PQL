@@ -591,10 +591,7 @@ class DataSource (var connectionName: String, var databaseName: String) {
                     if (i > 0) {
                         vs += "', '"
                     }
-                    if (v.contains("'")) {
-                        v = v.replace("'", "''")
-                    }
-                    vs += v
+                    vs += v.preventInjection
                 }
                 vs += "')"
                 rows += vs
@@ -661,11 +658,15 @@ class DataSource (var connectionName: String, var databaseName: String) {
                 case Parameter.NONE =>
                     //MySQL INSERT的串接模式, 要求SQL语句不能写VALUES后面的内容
                     if ("""(?i)^(INSERT|REPLACE)\b""".r.test(SQL.trim()) && !"""(?i)\)\s*VALUES\s*\(""".r.test(SQL)) {
-                        var insertSQL = SQL
-                        if (!"""(?i)\)\s*VALUES\s*$""".r.test(insertSQL)) {
-                            insertSQL += " VALUES "
-                        }
 
+                        val VALUES = {
+                            if (!"""(?i)\)\s*VALUES\s*$""".r.test(SQL)) {
+                                " VALUES "
+                            }
+                            else {
+                                ""
+                            }
+                        }
                         val values = new mutable.ArrayBuffer[String]()
                         table.foreach(row => {
                             val vs = new mutable.ArrayBuffer[String]()
@@ -678,13 +679,13 @@ class DataSource (var connectionName: String, var databaseName: String) {
                                     vs += v
                                 }
                                 else {
-                                    vs += "'" + v.replace("'", "''") + "'"
+                                    vs += "'" + v.preventInjection + "'"
                                 }
                             }
                             values += "(" + vs.mkString(",") + ")"
                             vs.clear()
                         })
-                        count = this.executeNonQuery(insertSQL + values.mkString(","))
+                        count = this.executeNonQuery(SQL + VALUES + values.mkString(","))
                         values.clear()
                     }
                     else {

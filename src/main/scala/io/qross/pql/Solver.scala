@@ -401,10 +401,10 @@ object Solver {
                     if (map.contains(fieldName)) {
                         sentence = sentence.replace(whole, {
                             if (quote == "'") {
-                                map(fieldName).replace("'", "''")
+                                map(fieldName).preventInjection
                             }
                             else if (quote == "\"") {
-                                map(fieldName).replace("\"", "\"\"")
+                                map(fieldName).preventInjectionOfDoubleQuote
                             }
                             else {
                                 map(fieldName)
@@ -438,10 +438,10 @@ object Solver {
                         sentence = sentence.replace(whole,
                             {
                                 if (quote == "'") {
-                                    row.getString(fieldName, "null").replace("'", "''")
+                                    row.getString(fieldName, "null").preventInjection
                                 }
                                 else if (quote == "\"") {
-                                    row.getString(fieldName, "null").replace("\"", "\"\"")
+                                    row.getString(fieldName, "null").preventInjectionOfDoubleQuote
                                 }
                                 else {
                                     row.getString(fieldName, "null")
