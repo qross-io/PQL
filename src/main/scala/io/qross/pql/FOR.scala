@@ -74,16 +74,22 @@ class FOR(var variable: String, val collection: String) {
                     throw new SQLExecuteException("Only supports SELECT or PARSE sentence in FOR loop query mode.")
                 }
             }
-            else if (collection.bracketsWith("[", "]")) {
-                Json(collection.$restore(PQL, "\"")).parseTable("/")
-            }
-            else if (collection.bracketsWith("{", "}")) {
-                Json(collection.$restore(PQL, "\"")).parseRow("/").turnToColumn("key", "value")
-            }
             else if ($VARIABLE.test(collection)) {
                 //集合变量
                 //@a, $b
                 PQL.findVariable(collection).asTable
+            }
+            else if (JSON$N.test(collection)) {
+                val json = collection.$restore(PQL, "\"")
+                if (json.bracketsWith("[", "]")) {
+                    Json(json).parseTable("/")
+                }
+                else if (json.bracketsWith("{", "}")) {
+                    Json(json).parseRow("/").turnToColumn("key", "value")
+                }
+                else {
+                    new DataTable()
+                }
             }
             else {
                 //SHARP表达式

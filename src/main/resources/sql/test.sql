@@ -30,9 +30,9 @@ PRINT "hello world" TO MD5;
 --SELECT id AS ID, status AS Status FROM qross_tasks LIMIT 0 -> INSERT IF EMPTY (  id, status  ) VALUES ( 1   ,'success'), (2,'failed');
 --SELECT id FROM qross_tasks LIMIT 0 -> INSERT IF EMPTY [{ "id":1 }, { "id":2 }];
 
---PRINT ${ IF $a == 1 THEN '3' ELSIF $a > 1 THEN '5' ELSE '1' END -> POW 2 ROUND };
---PRINT ${ CASE WHEN $a == 1 THEN '3' WHEN $a > 1 THEN '5' ELSE '1' END -> POW 2 ROUND };
---PRINT ${ CASE $a WHEN 1 THEN '3' WHEN 2 THEN '5' ELSE '1' END -> POW 2 ROUND };
+--PRINT ${ IF $a == 1 THEN '3' ELSIF $a > 1 THEN '5' ELSE '1' END };
+--PRINT ${ CASE WHEN $a == 1 THEN '3' WHEN $a > 1 THEN '5' ELSE '1' END };
+--PRINT ${ CASE $a WHEN 1 THEN '3' WHEN 2 THEN '5' ELSE '1' END };
 
 -- > INSERT IF EMPTY { "success": 0, "failed": 0, "timeout": 0, "other_exceptional": 0 }
 

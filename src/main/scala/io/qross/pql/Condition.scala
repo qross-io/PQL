@@ -130,7 +130,7 @@ class Condition(val expression: String) {
                     }
                 }
                 else {
-                    field.value == value.value
+                    field.value != value.value
                 }
             case "IS" =>
                 val v = value.asText

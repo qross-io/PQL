@@ -1105,7 +1105,7 @@ object Sharp {
             if (data.asInteger == 0) arg else data
         }
         else {
-            throw SharpLinkArgumentException.occur("IF ZERO THEN", origin)
+            throw SharpLinkArgumentException.occur("IF ZERO", origin)
         }
     }
 
@@ -1114,7 +1114,7 @@ object Sharp {
             if (data.asInteger != 0) arg else data
         }
         else {
-            throw SharpLinkArgumentException.occur("IF NOT ZERO THEN", origin)
+            throw SharpLinkArgumentException.occur("IF NOT ZERO", origin)
         }
     }
 
@@ -1174,7 +1174,7 @@ object Sharp {
             }
         }
         else {
-            throw SharpLinkArgumentException.occur("IF EMPTY THEN", origin)
+            throw SharpLinkArgumentException.occur("IF EMPTY", origin)
         }
     }
 
@@ -1183,7 +1183,7 @@ object Sharp {
             if (data.asText != "") arg else data
         }
         else {
-            throw SharpLinkArgumentException.occur("IF NOT EMPTY THEN", origin)
+            throw SharpLinkArgumentException.occur("IF NOT EMPTY", origin)
         }
     }
 
@@ -1192,7 +1192,7 @@ object Sharp {
             if (data.invalid || data.value == null) arg else data
         }
         else {
-            throw SharpLinkArgumentException.occur("IF NULL THEN", origin)
+            throw SharpLinkArgumentException.occur("IF NULL", origin)
         }
     }
 
@@ -1201,7 +1201,7 @@ object Sharp {
             if (data.valid && data.value != null) arg else data
         }
         else {
-            throw SharpLinkArgumentException.occur("IF NOT NULL THEN", origin)
+            throw SharpLinkArgumentException.occur("IF NOT NULL", origin)
         }
     }
 
@@ -1218,7 +1218,7 @@ object Sharp {
             }
         }
         else {
-            throw SharpLinkArgumentException.occur("IF UNDEFINED THEN", origin)
+            throw SharpLinkArgumentException.occur("IF UNDEFINED", origin)
         }
     }
 
@@ -1227,7 +1227,7 @@ object Sharp {
             if (data.asBoolean) arg else data
         }
         else {
-            throw SharpLinkArgumentException.occur("IF TRUE THEN", origin)
+            throw SharpLinkArgumentException.occur("IF TRUE", origin)
         }
     }
 
@@ -1236,7 +1236,7 @@ object Sharp {
             if (!data.asBoolean) arg else data
         }
         else {
-            throw SharpLinkArgumentException.occur("IF FALSE THEN", origin)
+            throw SharpLinkArgumentException.occur("IF FALSE", origin)
         }
     }
 
@@ -1733,7 +1733,6 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
     /*
     SHARP表达式以LET开头, LET在独立语句中不可以省略
     处理数据的方法称为“连接”
-    连接由多个单词组成，某此情况下可以是特殊字符 % (属性连接符)
     连接可以没有参数或有一个参数
     没有参数的多个连接之间必须使用 # 或 -> 或 回车换行隔开
      */

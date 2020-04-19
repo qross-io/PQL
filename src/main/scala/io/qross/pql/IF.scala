@@ -1,8 +1,9 @@
 package io.qross.pql
 
-import io.qross.core.DataCell
-import io.qross.pql.Patterns.$IF
+import io.qross.core.{DataCell, DataType}
+import io.qross.pql.Patterns._
 import io.qross.ext.TypeExt._
+
 import scala.util.control.Breaks.{break, breakable}
 import io.qross.pql.Solver._
 
@@ -79,6 +80,26 @@ object IF {
         }
 
         result.$eval(PQL)
+        /*
+        if ($SELECT.test(result)) {
+            new SELECT(result).select(PQL)
+        }
+        else if ($PARSE.test(result)) {
+            new PARSE(result).doParse(PQL)
+        }
+        else if ($INSERT$INTO.test(result)) {
+            new INSERT(result).insert(PQL)
+        }
+        else if ($DELETE.test(result)) {
+            new DELETE(result).delete(PQL)
+        }
+        else if ($NON$QUERY.test(result)) {
+            DataCell(PQL.dh.executeNonQuery(result.$restore(PQL)), DataType.INTEGER)
+        }
+        else {
+            result.$eval(PQL)
+        }
+        */
     }
 }
 

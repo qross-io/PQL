@@ -480,20 +480,13 @@ object Solver {
                 .foreach(m => {
                     val whole = m.group(0)
                     val name = m.group(1)
-//println(whole)
+
                     PQL.findVariable("$" + name).ifFound(data => {
                         if (m.groupCount == 1) {
                             sentence = sentence.replace(whole, PQL.$stash(data))
                         }
                         else {
-                            val row = data.asRow
-                            val property = m.group(2)
-                            if (row.contains(property)) {
-                                sentence = sentence.replace(whole, PQL.$stash(row.getCell(property)))
-                            }
-                            else {
-                                throw new SQLExecuteException("$" + name + " doesn't contain property \"" + property + "\".")
-                            }
+                            sentence = sentence.replace(whole, PQL.$stash(data.asRow.getCell(m.group(2))))
                         }
                     }).ifNotFound(() => {
                         if (PQL.dh.debugging) {
@@ -514,14 +507,7 @@ object Solver {
                                     sentence = sentence.replace(whole, PQL.$stash(data))
                                 }
                                 else {
-                                    val row = data.asRow
-                                    val property = m.group(2)
-                                    if (row.contains(property)) {
-                                        sentence = sentence.replace(whole, PQL.$stash(row.getCell(property)))
-                                    }
-                                    else {
-                                        throw new SQLExecuteException("@" + name + " doesn't contain property \"" + property + "\".")
-                                    }
+                                    sentence = sentence.replace(whole, PQL.$stash(data.asRow.getCell(m.group(2))))
                                 }
                             })
                             .ifNotFound(() => {

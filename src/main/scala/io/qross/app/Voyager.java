@@ -39,7 +39,12 @@ public class Voyager extends AbstractTemplateView {
             while ((m = p.matcher(content)).find()) {
                 String path = dir + m.group(1);
                 path = path.replace("//", "/");
-                content = content.replace(m.group(0), ResourceFile.open(path).content());
+                if (path.endsWith(".sql")) {
+                    content = content.replace(m.group(0), "<%" + ResourceFile.open(path).content() + "%>");
+                }
+                else {
+                    content = content.replace(m.group(0), ResourceFile.open(path).content());
+                }
             }
 
             Map<String, Object> attributes = getAttributesMap();
