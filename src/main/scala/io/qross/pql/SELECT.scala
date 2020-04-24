@@ -3,7 +3,7 @@ package io.qross.pql
 import io.qross.core.{DataCell, DataType}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
-import io.qross.pql.Patterns.ARROW
+import io.qross.pql.Patterns.{ARROW}
 import io.qross.pql.Solver._
 
 object SELECT {
@@ -49,16 +49,7 @@ class SELECT(val sentence: String) {
     }
 
     def execute(PQL: PQL): Unit = {
-
-        val result = this.select(PQL)
-
-        PQL.RESULT += result.value
-
-        if (PQL.dh.debugging) {
-            Output.writeLine("                                                                        ")
-            Output.writeLine(sentence.popStash(PQL))
-            result.asTable.show()
-        }
+        PQL.RESULT += this.select(PQL).value
     }
 }
 

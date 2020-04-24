@@ -7,6 +7,7 @@ import java.util.regex.Pattern
 import io.qross.core.Parameter._
 import io.qross.core._
 import io.qross.ext.TypeExt._
+import io.qross.net.Json
 import io.qross.time.Timer
 
 import scala.collection.mutable
@@ -27,6 +28,9 @@ class DataSource (var connectionName: String, var databaseName: String) {
     private[jdbc] val batchValues = new mutable.ArrayBuffer[Vector[Any]]()
 
     private[jdbc] var config = JDBC.get(connectionName)
+
+    //是否启用调试
+    private var DEBUG = false
 
     private var connection: Option[Connection] = None //current connection
     private var tick: Long = -1L //not opened
@@ -52,6 +56,12 @@ class DataSource (var connectionName: String, var databaseName: String) {
         connected
     }
 
+    def debug(enabled: Boolean = true): DataSource = {
+        DEBUG = enabled
+        this
+    }
+    //是否启用调试模式
+    def debugging: Boolean = DEBUG
     
     def open(): Unit = {
         //Class.forName(config.driver).newInstance()
@@ -133,7 +143,12 @@ class DataSource (var connectionName: String, var databaseName: String) {
     // ---------- basic command ----------
 
     def executeDataTable(SQL: String, values: Any*): DataTable = {
-        
+
+        if (DEBUG) {
+            println()
+            println(SQL)
+        }
+
         val table: DataTable = new DataTable()
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
@@ -202,11 +217,22 @@ class DataSource (var connectionName: String, var databaseName: String) {
 
             case None =>
         }
+
+        if (DEBUG) {
+            table.show(10)
+        }
         
         table
     }
 
     def executeJavaMapList(SQL: String, values: Any*): util.List[util.Map[String, Any]] = {
+
+        if (DEBUG) {
+            println()
+            println(SQL)
+            println("------------------------------------------------------------------------")
+        }
+
         val mapList: util.List[util.Map[String, Any]] = new util.ArrayList[util.Map[String, Any]]()
 
         this.executeResultSet(SQL, values: _*) match {
@@ -227,10 +253,21 @@ class DataSource (var connectionName: String, var databaseName: String) {
             case None =>
         }
 
+        if (DEBUG) {
+            println(Json.serialize(mapList))
+        }
+
         mapList
     }
 
     def executeMapList(SQL: String, values: Any*): List[Map[String, Any]] = {
+
+        if (DEBUG) {
+            println()
+            println(SQL)
+            println("------------------------------------------------------------------------")
+        }
+
         val mapList: mutable.ListBuffer[Map[String, Any]] = new mutable.ListBuffer[Map[String, Any]]()
 
         this.executeResultSet(SQL, values: _*) match {
@@ -251,10 +288,21 @@ class DataSource (var connectionName: String, var databaseName: String) {
             case None =>
         }
 
+        if (DEBUG) {
+            println(Json.serialize(mapList))
+        }
+
         mapList.toList
     }
 
     def executeDataRow(SQL: String, values: Any*): DataRow = {
+
+        if (DEBUG) {
+            println()
+            println(SQL)
+            println("------------------------------------------------------------------------")
+        }
+
         val row: DataRow = new DataRow
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
@@ -271,10 +319,24 @@ class DataSource (var connectionName: String, var databaseName: String) {
                 }
             case None =>
         }
+
+        if (DEBUG) {
+            println(row.getFields.mkString(", "))
+            println("------------------------------------------------------------------------")
+            println(row.mkString(", "))
+        }
+
         row
     }
 
     def executeJavaMap(SQL: String, values: Any*): util.Map[String, Any] = {
+
+        if (DEBUG) {
+            println()
+            println(SQL)
+            println("------------------------------------------------------------------------")
+        }
+
         val map: util.Map[String, Any] = new util.HashMap[String, Any]()
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
@@ -292,10 +354,21 @@ class DataSource (var connectionName: String, var databaseName: String) {
             case None =>
         }
 
+        if (DEBUG) {
+            println(Json.serialize(map))
+        }
+
         map
     }
 
     def executeHashMap(SQL: String, values: Any*): Map[String, Any] = {
+
+        if (DEBUG) {
+            println()
+            println(SQL)
+            println("------------------------------------------------------------------------")
+        }
+
         val map: mutable.HashMap[String, Any] = new mutable.HashMap[String, Any]()
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
@@ -313,10 +386,21 @@ class DataSource (var connectionName: String, var databaseName: String) {
             case None =>
         }
 
+        if (DEBUG) {
+            println(Json.serialize(map))
+        }
+
         map.toMap
     }
 
     def executeDataMap[S, T](SQL: String, values: Any*): Map[S, T] = {
+
+        if (DEBUG) {
+            println()
+            println(SQL)
+            println("------------------------------------------------------------------------")
+        }
+
         val map: mutable.HashMap[S, T] = new mutable.HashMap[S, T]()
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
@@ -329,10 +413,22 @@ class DataSource (var connectionName: String, var databaseName: String) {
                 rs.close()
             case None =>
         }
+
+        if (DEBUG) {
+            println(Json.serialize(map))
+        }
+
         map.toMap
     }
     
     def executeJavaList(SQL: String, values: Any*): util.List[Any] = {
+
+        if (DEBUG) {
+            println()
+            println(SQL)
+            println("------------------------------------------------------------------------")
+        }
+
         val list: util.List[Any] = new util.ArrayList[Any]()
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
@@ -345,10 +441,22 @@ class DataSource (var connectionName: String, var databaseName: String) {
                 rs.close()
             case None =>
         }
+
+        if (DEBUG) {
+            println(Json.serialize(list))
+        }
+
         list
     }
 
     def executeSingleList[T](SQL: String, values: Any*): List[T] = {
+
+        if (DEBUG) {
+            println()
+            println(SQL)
+            println("------------------------------------------------------------------------")
+        }
+
         val list: mutable.ListBuffer[T] = new mutable.ListBuffer[T]()
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
@@ -361,10 +469,22 @@ class DataSource (var connectionName: String, var databaseName: String) {
                 rs.close()
             case None =>
         }
+
+        if (DEBUG) {
+            println(Json.serialize(list))
+        }
+
         list.toList
     }
     
     def executeSingleValue(SQL: String, values: Any*): DataCell = {
+
+        if (DEBUG) {
+            println()
+            println(SQL)
+            println("------------------------------------------------------------------------")
+        }
+
         var data: DataCell = DataCell.NOT_FOUND
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
@@ -377,10 +497,22 @@ class DataSource (var connectionName: String, var databaseName: String) {
                 }
             case None =>
         }
+
+        if (DEBUG) {
+            println("Result: " + data)
+        }
+
         data
     }
     
     def executeExists(SQL: String, values: Any*): Boolean = {
+
+        if (DEBUG) {
+            println()
+            println(SQL)
+            println("------------------------------------------------------------------------")
+        }
+
         var result = false
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
@@ -392,6 +524,10 @@ class DataSource (var connectionName: String, var databaseName: String) {
                     rs.close()
                 }
             case None =>
+        }
+
+        if (DEBUG) {
+            println("Result: " + result)
         }
         
         result
@@ -428,9 +564,16 @@ class DataSource (var connectionName: String, var databaseName: String) {
     def executeNonQuery(SQL: String, values: Any*): Int = {
         this.openIfNot()
 
+        if (DEBUG) {
+            println()
+            println(SQL.take(1024))
+            println("------------------------------------------------------------------------")
+        }
+
+        var row: Int = -1
         this.connection match {
             case Some(conn) =>
-                var row: Int = -1
+
                 var retry: Int = 0
                 while(row == -1 && retry < 3) {
                     //try {
@@ -446,9 +589,14 @@ class DataSource (var connectionName: String, var databaseName: String) {
                     //}
                     retry += 1
                 }
-                row
-            case None => -1
+            case None =>
         }
+
+        if (DEBUG) {
+            println(s"$row row(s) affected. ")
+        }
+
+        row
     }
 
     // ---------- batch update ----------
@@ -471,6 +619,10 @@ class DataSource (var connectionName: String, var databaseName: String) {
                         this.batchSQLs.foreach(SQL => {
                             stmt.addBatch(SQL)
                             count += 1
+
+                            if (DEBUG && count <= 10) {
+                                println(SQL)
+                            }
                         })
                         stmt.executeBatch()
                         conn.commit()
@@ -521,33 +673,35 @@ class DataSource (var connectionName: String, var databaseName: String) {
                 var count: Int = 0
                 if (this.batchSQLs.nonEmpty) {
                     if (this.batchValues.nonEmpty) {
-                        //try {
-                            conn.setAutoCommit(false)
-                            val prest: PreparedStatement = conn.prepareStatement(this.batchSQLs(0))
-                            for (values <- this.batchValues) {
-                                for (i <- values.indices) {
-                                    prest.setObject(i + 1, values(i))
-                                }
-                                prest.addBatch()
 
-                                count += 1
-                                if (count % 1000 == 0) {
-                                    prest.executeBatch
-                                    if (commitOnExecute) {
-                                        conn.commit()
-                                    }
+                        if (DEBUG) {
+                            println(this.batchSQLs(0))
+                        }
+
+                        conn.setAutoCommit(false)
+                        val prest: PreparedStatement = conn.prepareStatement(this.batchSQLs(0))
+                        for (values <- this.batchValues) {
+                            for (i <- values.indices) {
+                                prest.setObject(i + 1, values(i))
+                            }
+                            prest.addBatch()
+
+                            count += 1
+                            if (count % 1000 == 0) {
+                                prest.executeBatch
+                                if (commitOnExecute) {
+                                    conn.commit()
                                 }
                             }
-                            if (count % 1000 > 0) {
-                                prest.executeBatch
-                            }
-                            conn.commit()
-                            conn.setAutoCommit(true)
-                            prest.clearBatch()
-                            prest.close()
-                        //} catch {
-                        //    case e: SQLException => e.printStackTrace()
-                        //}
+                        }
+                        if (count % 1000 > 0) {
+                            prest.executeBatch
+                        }
+                        conn.commit()
+                        conn.setAutoCommit(true)
+                        prest.clearBatch()
+                        prest.close()
+
                         this.batchValues.clear()
                     }
                     this.batchSQLs.clear()
@@ -640,6 +794,11 @@ class DataSource (var connectionName: String, var databaseName: String) {
     //没有占位符，但是INSERT
 
     def tableUpdate(SQL: String, table: DataTable): Int = {
+
+        if (DEBUG) {
+            println(SQL)
+        }
+
         var count = -1
         if (table.nonEmpty) {
             SQL.placeHolderType match {
@@ -683,8 +842,10 @@ class DataSource (var connectionName: String, var databaseName: String) {
                                 }
                             }
                             values += "(" + vs.mkString(",") + ")"
+
                             vs.clear()
                         })
+
                         count = this.executeNonQuery(SQL + VALUES + values.mkString(","))
                         values.clear()
                     }

@@ -22,13 +22,19 @@ class ConditionGroup(expression: String) {
         var exp = expression.$clean(PQL)
 
         //replace SELECT to ~value[n]
-        $SELECT$.findAllMatchIn(exp).foreach(m => {
-            val select = findOutSelect(exp, m.group(0))
-            exp = exp.replace(select, PQL.$stash(DataCell(
-                PQL.dh.executeJavaList(select.$trim("(", ")").trim().$restore(PQL)),
-                DataType.ARRAY
-            )))
-        })
+        breakable {
+            while (true) {
+                $SELECT$.findFirstMatchIn(exp) match {
+                    case Some(m) =>
+                        val select = findOutSelect(exp, m.group(0))
+                        exp = exp.replace(select, PQL.$stash(DataCell(
+                            PQL.dh.executeJavaList(select.$trim("(", ")").trim().$restore(PQL)),
+                            DataType.ARRAY
+                        )))
+                    case _ => break
+                }
+            }
+        }
 
         //处理IN (), 因为小括号会与条件分组冲突, 即去掉小括号
         IN$$.findAllIn(exp).foreach(in$$ => {

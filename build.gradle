@@ -6,7 +6,7 @@ apply plugin: 'maven'
 apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
-version = '0.6.1-15-RELEASE'
+version = '0.6.1-24-RELEASE'
 
 sourceCompatibility = 1.8
 archivesBaseName = "qross-pql"

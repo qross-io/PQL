@@ -635,7 +635,7 @@ object Sharp {
                 data.asText.$split(delimiter.head, delimiter.last).toRow.toDataCell(DataType.ROW)
             }
             else {
-                data.asText.split(arg.asText).toList.asJava.toDataCell(DataType.ARRAY)
+                data.asText.split(arg.asText, -1).toList.asJava.toDataCell(DataType.ARRAY)
             }
         }
         else {
@@ -649,6 +649,15 @@ object Sharp {
         }
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at DROP. " + origin)
+        }
+    }
+
+    def DROP$LEFT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.drop(arg.asInteger.toInt).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at DROP LEFT. " + origin)
         }
     }
 
@@ -724,6 +733,24 @@ object Sharp {
         }
     }
 
+    def TAKE$BEFORE$LAST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.takeBeforeLast(arg.value).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at TAKE RIGHT BEFORE. " + origin)
+        }
+    }
+
+    def TAKE$AFTER$LAST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asText.takeAfterLast(arg.value).toDataCell(DataType.TEXT)
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at TAKE RIGHT AFTER. " + origin)
+        }
+    }
+
     def SUBSTRING(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (arg.isJavaList) {
@@ -751,24 +778,6 @@ object Sharp {
         }
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at SUBSTRING. " + origin)
-        }
-    }
-
-    def TAKE$BEFORE$LAST(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (arg.valid) {
-            data.asText.takeBeforeLast(arg.value).toDataCell(DataType.TEXT)
-        }
-        else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at TAKE RIGHT BEFORE. " + origin)
-        }
-    }
-
-    def TAKE$AFTER$LAST(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (arg.valid) {
-            data.asText.takeAfterLast(arg.value).toDataCell(DataType.TEXT)
-        }
-        else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at TAKE RIGHT AFTER. " + origin)
         }
     }
 
@@ -938,6 +947,22 @@ object Sharp {
         }
     }
 
+    def REPLACE$LAST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid && arg.isJavaList) {
+            val list = arg.asList[String]
+            val text = data.asText
+            if (text.contains(list.head)) {
+                DataCell(text.takeBeforeLast(list.head) + list.last + text.takeAfterLast(list.head), DataType.TEXT)
+            }
+            else {
+                data
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("REPLACE LAST", origin)
+        }
+    }
+
     def REPLACE$ALL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid && arg.isJavaList) {
             val list = arg.asList[String]
@@ -1025,6 +1050,19 @@ object Sharp {
         else {
             throw SharpLinkArgumentException.occur("WHOLE MATCHES", origin)
         }
+    }
+
+    def LIKE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            { "(?i)" + arg.asText.replace("%", """[\s\S]*""").replace("?", """[\s\S]""").bracket("^", "$") }.r.test(data.asText).toDataCell(DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("LIKE", origin)
+        }
+    }
+
+    def NOT$LIKE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        LIKE(data, arg, origin).update(!data.value.asInstanceOf[Boolean])
     }
 
     //Cron Expression获取下一次匹配
@@ -1240,46 +1278,19 @@ object Sharp {
         }
     }
 
-    def LIKE(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (arg.valid) {
-            { "(?i)" + arg.asText.replace("%", """[\s\S]*""").replace("?", """[\s\S]""").bracket("^", "$") }.r.test(data.asText).toDataCell(DataType.BOOLEAN)
-        }
-        else {
-            throw SharpLinkArgumentException.occur("LIKE", origin)
-        }
-    }
-
-    def NOT$LIKE(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        LIKE(data, arg, origin).update(!data.value.asInstanceOf[Boolean])
-    }
-
     /* ---------- DataTable ---------- */
 
     def FIRST$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        val default =   if (arg.valid) {
-                            arg.asRow
-                        }
-                        else {
-                            new DataRow()
-                        }
-
         data.asTable.firstRow match {
             case Some(row) => DataCell(row, DataType.ROW)
-            case None => if (arg.valid) DataCell(default, DataType.ROW) else throw new SharpLinkArgumentException("No result at FIRST ROW. ")
+            case None => if (arg.valid) DataCell(arg.asRow, DataType.ROW) else throw new SharpLinkArgumentException("No result at FIRST ROW. ")
         }
     }
 
     def LAST$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        val default =   if (arg.valid) {
-                            arg.asRow
-                        }
-                        else {
-                            new DataRow()
-                        }
-
         data.asTable.lastRow match {
             case Some(row) => DataCell(row, DataType.ROW)
-            case None => if (arg.valid) DataCell(default, DataType.ROW) else throw new SharpLinkArgumentException("No result at LAST ROW. ")
+            case None => if (arg.valid) DataCell(arg.asRow, DataType.ROW) else throw new SharpLinkArgumentException("No result at LAST ROW. ")
         }
     }
 
@@ -1295,14 +1306,26 @@ object Sharp {
     def FIRST$COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asTable.firstColumn match {
             case Some(list) => list.toJavaList.toDataCell(DataType.ARRAY)
-            case None => throw new SharpLinkArgumentException(s"No result at FIRST COLUMN. ")
+            case None =>
+                if (arg.valid) {
+                    DataCell(arg.asJavaList, DataType.ARRAY)
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at FIRST COLUMN. ")
+                }
         }
     }
 
     def LAST$COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asTable.lastColumn match {
             case Some(list) => list.toJavaList.toDataCell(DataType.ARRAY)
-            case None => throw new SharpLinkArgumentException(s"No result at LAST COLUMN. ")
+            case None =>
+                if (arg.valid) {
+                    DataCell(arg.asJavaList, DataType.ARRAY)
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at LAST COLUMN. ")
+                }
         }
     }
 
@@ -1314,7 +1337,7 @@ object Sharp {
                 table.getColumn(field).toJavaList.toDataCell(DataType.ARRAY)
             }
             else {
-                throw new SharpLinkArgumentException(s"No result at GET COLUMN: incorrect field name $field. " + origin)
+                throw new SharpLinkArgumentException(s"No result at COLUMN: incorrect field name $field. " + origin)
             }
         }
         else {

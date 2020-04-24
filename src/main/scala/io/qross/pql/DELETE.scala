@@ -53,13 +53,6 @@ class DELETE(val sentence: String) {
 
             val data = DataCell(PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY, DataType.INTEGER)
 
-            if (PQL.dh.debugging) {
-                Output.writeLine("                                                                        ")
-                Output.writeLine(sentence)
-                Output.writeLine("------------------------------------------------------------------------")
-                Output.writeLine(s"${PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY} row(s) affected. ")
-            }
-
             if (links != "") {
                 new Sharp(links, data).execute(PQL)
             }

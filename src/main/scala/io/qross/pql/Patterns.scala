@@ -100,19 +100,21 @@ object Patterns {
     val $NULL: Regex = """(?i)^NULL$""".r
 
     val SHARP_LINKS: Set[String] = Sharp.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z\d]+$|^[A-Z]$""".r.test(n)).toSet
-    val MULTI$ARGS$LINKS: Map[String, Set[String]] = Map[String, Set[String]](
-        "SUBSTRING" -> Set[String]("TO"),
-        "SPLIT" -> Set[String]("AND"),
-        "BRACKET" -> Set[String]("AND"),
-        "REPLACE" -> Set[String]("TO"),
-        "REPLACE$FIRST" -> Set[String]("TO"),
-        "REPLACE$ALL" -> Set[String]("TO"),
-        "SUBSTRING" -> Set[String]("TO"),
-        "PLUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
-        "MINUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
-        "INSERT" -> Set[String]("VALUES"),
-        "INSERT$IF$EMPTY" -> Set[String]("VALUES"),
-        "TURN" -> Set[String]("AND"))
+    val MULTI$ARGS$LINKS: Map[String, Set[String]] =
+        Map[String, Set[String]](
+            "SUBSTRING" -> Set[String]("TO"),
+            "SUBSTR" -> Set[String]("TO"),
+            "SPLIT" -> Set[String]("AND"),
+            "BRACKET" -> Set[String]("AND"),
+            "REPLACE" -> Set[String]("TO"),
+            "REPLACE$FIRST" -> Set[String]("TO"),
+            "REPLACE$ALL" -> Set[String]("TO"),
+            "TRIM" -> Set[String]("AND"),
+            "PLUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
+            "MINUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
+            "INSERT" -> Set[String]("VALUES"),
+            "INSERT$IF$EMPTY" -> Set[String]("VALUES"),
+            "TURN" -> Set[String]("AND"))
     val PRIORITIES: Set[String] = Set[String]("X")
     val $DATETIME_UNITS: Regex = """^(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND|MILLI|MICRO|NONA)=(\d+)$""".r
     val GLOBAL_VARIABLES: Set[String] = GlobalVariableDeclaration.getClass.getDeclaredMethods.map(m => m.getName).toSet

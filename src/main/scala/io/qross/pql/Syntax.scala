@@ -28,8 +28,6 @@ object Syntax {
             SAVE AS  TEMP TABLE [tableName]  PRIMARY KEY [columnName]  UNIQUE KEY (column1, column2, ...)  KEY (column1, column2, ...);
             SAVE AS  NEW? CSV FILE [fileName]  WITHOUT HEADERS;
             SAVE AS  NEW? CSV FILE [fileName]  WITH HEADERS (column1 AS header1, column2 AS header2, ...);
-            SAVE AS  CSV FILE [fileName]  WITHOUT HEADERS;
-            SAVE AS  CSV FILE [fileName]  WITH HEADERS (column1 AS header1, column2 header2, ...);
             SAVE AS  NEW? TXT FILE [fileName]  DELIMITED BY 'delimiter'  WITHOUT HEADERS;
             SAVE AS  NEW? TXT FILE [fileName]  DELIMITED BY 'delimiter'  WITH HEADERS (header1, column2 AS header2, ...);
             SAVE AS  NEW? JSON FILE [fileName];

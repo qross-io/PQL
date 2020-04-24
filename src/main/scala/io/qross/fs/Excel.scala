@@ -38,7 +38,7 @@ object Excel {
         if ("""^\d+$""".r.test(column)) {
             column.toInt - 1
         }
-        else if ("""(?i)^[A-Z]$""".r.test(column)) {
+        else if ("""(?i)^[A-Z]+$""".r.test(column)) {
             var n = 0
             for (i <- column.indices) {
                 n += (column.charAt(i).toInt - 64) * Math.pow(26, column.length - 1 - i).toInt
@@ -71,7 +71,7 @@ object Excel {
         def openExcel(fileNameOrPath: String): DataHub = ???
 
         def saveAsExcel(fileNameOrPath: String): DataHub = {
-            dh.plug("EXCEL$W", new Excel(fileNameOrPath))
+            dh.plug("EXCEL$W", new Excel(fileNameOrPath).debug(dh.debugging))
             if (dh.slots("ZIP")) {
                 ZIP.addFile(EXCEL$W.path)
             }
@@ -112,6 +112,16 @@ class Excel(val fileName: String) {
 
     private var closed: Boolean = true
     private var $workbook: Workbook = _
+
+    //是否启用调试
+    private var DEBUG = false
+
+    def debug(enabled: Boolean = true): Excel = {
+        DEBUG = enabled
+        this
+    }
+
+    def debugging: Boolean = DEBUG
 
     def open(fileNameOrPath: String): Excel = {
         this
@@ -334,7 +344,13 @@ class Excel(val fileName: String) {
     }
 
     //插入多行, 返回受影响的记录数
+    //INSERT INTO NEW SHEET sheet1 ROW 2 (A1, B1, C1) VALUES ('姓名', '年龄', '分数');
     def insert(sentence: String, table: DataTable): Int = {
+
+        if (DEBUG) {
+            println("EXCEL INSERT # " + sentence)
+        }
+
         val plan = Syntax("INSERT INTO").plan(
             $INSERT$INTO.findFirstIn(sentence) match {
                 case Some(capital) => sentence.takeAfter(capital).trim()
@@ -371,9 +387,14 @@ class Excel(val fileName: String) {
         }
 
         var rows = 0
-        table.foreach(row => {
+        table.foreach(dataRow => {
 
-            for (values <- plan.moreArgs(row, "VALUES")) {
+            for (values <- plan.moreArgs(dataRow, "VALUES")) {
+
+                if (DEBUG && rows < 10) {
+                    print("\t")
+                    println("(" + values.mkString(",") + ")")
+                }
 
                 val row = sheet.createRow(cursor)
                 if (columns.length != values.length) {

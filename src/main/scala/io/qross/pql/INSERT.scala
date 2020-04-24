@@ -48,15 +48,6 @@ class INSERT(var sentence: String) {
     }
 
     def execute(PQL: PQL): Unit = {
-        val SQL = sentence.$restore(PQL)
-
-        PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY = PQL.dh.set(SQL).AFFECTED_ROWS_OF_LAST_SET
-
-        if (PQL.dh.debugging) {
-            Output.writeLine("                                                                        ")
-            Output.writeLine(SQL)
-            Output.writeLine("------------------------------------------------------------------------")
-            Output.writeLine(s"${PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY} row(s) affected. ")
-        }
+        PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY = PQL.dh.set(sentence.$restore(PQL)).AFFECTED_ROWS_OF_LAST_SET
     }
 }

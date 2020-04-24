@@ -74,17 +74,32 @@ class DataHub (var defaultConnectionName: String) {
 
     def debug(enabled: Boolean = true): DataHub = {
         DEBUG = enabled
+        SOURCES.values.foreach(_.debug(enabled))
+        this.pick[Excel]("EXCEL$R") match {
+            case Some(excel) => excel.debug(enabled)
+            case None =>
+        }
+        this.pick[Excel]("EXCEL$W") match {
+            case Some(excel) => excel.debug(enabled)
+            case None =>
+        }
+
         this
     }
 
     def debugging: Boolean = DEBUG
+
+    def +=(dataSource:(String, DataSource)): DataHub = {
+        SOURCES += dataSource._1 -> dataSource._2.debug(DEBUG)
+        this
+    }
 
     // ---------- open ----------
 
     def openCache(): DataHub = {
         reset()
         if (!SOURCES.contains("CACHE")) {
-            SOURCES += "CACHE" -> DataSource.MEMORY
+            this += "CACHE" -> DataSource.MEMORY
         }
         CURRENT = SOURCES("CACHE")
         this
@@ -93,7 +108,7 @@ class DataHub (var defaultConnectionName: String) {
     def openTemp(): DataHub = {
         reset()
         if (!SOURCES.contains("TEMP")) {
-            SOURCES += "TEMP" -> new DataSource(holder)
+            this += "TEMP" -> new DataSource(holder)
         }
         CURRENT = SOURCES("TEMP")
         this
@@ -108,7 +123,7 @@ class DataHub (var defaultConnectionName: String) {
     def openQross(): DataHub = {
         reset()
         if (!SOURCES.contains("QROSS")) {
-            SOURCES += "QROSS" -> DataSource.QROSS
+            this += "QROSS" -> DataSource.QROSS
         }
         CURRENT = SOURCES("QROSS")
         this
@@ -123,12 +138,12 @@ class DataHub (var defaultConnectionName: String) {
         connectionNameOrDataSource match {
             case connectionName: String =>
                     if (!SOURCES.contains(connectionName)) {
-                        SOURCES += connectionName -> new DataSource(connectionName, database)
+                        this += connectionName -> new DataSource(connectionName, database)
                     }
                     CURRENT = SOURCES(connectionName)
             case dataSource: DataSource =>
                 if (!SOURCES.contains(dataSource.connectionName)) {
-                    SOURCES += dataSource.connectionName -> dataSource
+                    this += dataSource.connectionName -> dataSource
                 }
                 CURRENT = dataSource
             case _ => throw new Exception("Unsupported data source parameter format, only support String or DataSource")
@@ -147,7 +162,7 @@ class DataHub (var defaultConnectionName: String) {
 
     def saveAsCache(): DataHub = {
         if (!SOURCES.contains("CACHE")) {
-            SOURCES += "CACHE" -> DataSource.MEMORY
+            this += "CACHE" -> DataSource.MEMORY
         }
         TARGET = SOURCES("CACHE")
         this
@@ -155,7 +170,7 @@ class DataHub (var defaultConnectionName: String) {
 
     def saveAsTemp(): DataHub = {
         if (!SOURCES.contains("TEMP")) {
-            SOURCES += "TEMP" -> new DataSource(holder)
+            this += "TEMP" -> new DataSource(holder)
         }
         TARGET = SOURCES("TEMP")
         this
@@ -168,7 +183,7 @@ class DataHub (var defaultConnectionName: String) {
 
     def saveAsQross(): DataHub = {
         if (!SOURCES.contains("QROSS")) {
-            SOURCES += "QROSS" -> DataSource.QROSS
+            this += "QROSS" -> DataSource.QROSS
         }
         TARGET = SOURCES("QROSS")
         this
@@ -180,7 +195,7 @@ class DataHub (var defaultConnectionName: String) {
 
     def saveAs(connectionName: String, database: String): DataHub = {
         if (!SOURCES.contains(connectionName)) {
-            SOURCES += connectionName -> new DataSource(connectionName, database)
+            this += connectionName -> new DataSource(connectionName, database)
         }
         TARGET = SOURCES(connectionName)
         this
@@ -230,7 +245,7 @@ class DataHub (var defaultConnectionName: String) {
     def cache(tableName: String, table: DataTable, primaryKey: String): DataHub = {
 
         if (!SOURCES.contains("CACHE")) {
-            SOURCES += "CACHE" -> DataSource.MEMORY
+            this += "CACHE" -> DataSource.MEMORY
         }
 
         //var createSQL = "" + tableName + " (__pid INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE"
@@ -308,7 +323,7 @@ class DataHub (var defaultConnectionName: String) {
         })
 
         if (!SOURCES.contains("TEMP")) {
-            SOURCES += "TEMP" -> new DataSource(holder)
+            this += "TEMP" -> new DataSource(holder)
         }
 
         //var createSQL = "CREATE TABLE IF NOT EXISTS " + tableName + " (__pid INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE"
@@ -351,9 +366,6 @@ class DataHub (var defaultConnectionName: String) {
 
     //execute SQL on target dataSource
     def set(nonQuerySQL: String, values: Any*): DataHub = {
-        if (DEBUG) {
-            println(nonQuerySQL)
-        }
 
         if ($SHEET$NONE$QUERY.test(nonQuerySQL)) {
             this.pick[Excel]("EXCEL$W") match {
@@ -375,16 +387,12 @@ class DataHub (var defaultConnectionName: String) {
         reset()
 
         if (DEBUG) {
-            println(selectSQL)
+            println("GET # " + selectSQL)
         }
 
         TABLE.merge(CURRENT.executeDataTable(selectSQL, values: _*))
         TOTAL_COUNT_OF_RECENT_GET += TABLE.count()
         COUNT_OF_LAST_GET = TABLE.count()
-
-        if (DEBUG) {
-            TABLE.show(10)
-        }
 
         this
     }
@@ -395,7 +403,11 @@ class DataHub (var defaultConnectionName: String) {
     }
 
     def pass(querySentence: String, default:(String, Any)*): DataHub = {
-        if (DEBUG) println(querySentence)
+
+        if (DEBUG) {
+            println("PASS # " + querySentence)
+        }
+
         if (TABLE.isEmpty) {
             if (default.nonEmpty) {
                 TABLE.addRow(new DataRow(default: _*))
@@ -407,10 +419,6 @@ class DataHub (var defaultConnectionName: String) {
         TABLE.cut(CURRENT.tableSelect(querySentence, TABLE))
         TOTAL_COUNT_OF_RECENT_GET = TABLE.count()
         COUNT_OF_LAST_GET = TABLE.count()
-
-        if (DEBUG) {
-            TABLE.show(10)
-        }
 
         this
     }
@@ -436,7 +444,7 @@ class DataHub (var defaultConnectionName: String) {
     def put(nonQuerySQL: String): DataHub = {
 
         if (DEBUG) {
-            println(nonQuerySQL)
+            println("PUT # " + nonQuerySQL)
         }
 
         if (TABLE.nonEmpty) {
@@ -475,7 +483,7 @@ class DataHub (var defaultConnectionName: String) {
     def put(nonQuerySQL: String, table: DataTable): DataHub = {
 
         if (DEBUG) {
-            println(nonQuerySQL)
+            println("PUT # " + nonQuerySQL)
         }
 
         if (TABLE.nonEmpty) {
@@ -517,7 +525,7 @@ class DataHub (var defaultConnectionName: String) {
         reset()
 
         if (DEBUG) {
-            println(selectSQL)
+            println("PAGE # " + selectSQL)
         }
 
         selectSQL.matchBatchMark match {
@@ -540,7 +548,7 @@ class DataHub (var defaultConnectionName: String) {
         reset()
 
         if (DEBUG) {
-            println(selectSQL)
+            println("BLOCK # " + selectSQL)
         }
 
         selectSQL.matchBatchMark match {
@@ -631,6 +639,10 @@ class DataHub (var defaultConnectionName: String) {
     // #4+6 多线程生产多线程消费
     // #4+5+6 多线程加工多线程消费
     def batch(nonQuerySentence: String): DataHub = {
+
+        if (DEBUG) {
+            println(nonQuerySentence)
+        }
 
         //pageSQLs or blockSQLs
         //processSQLs

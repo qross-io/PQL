@@ -8,7 +8,7 @@ import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, $NULL, $LINK, FUNCTION
 
 import scala.collection.mutable
 import scala.util.matching.Regex
-import scala.util.matching.Regex.Match
+import scala.util.control.Breaks._
 
 object Solver {
 
@@ -39,6 +39,7 @@ object Solver {
     val CHAR$STRING$N: Regex = """~(char|string)\[(\d+)\]""".r  //字符串占位符
     val TEXT$N: Regex = """~text\[(\d+)\]""".r  //富字符串占位符
     val JSON$N: Regex = """~json\[(\d+)\]""".r  //JSON占位符
+    val SHARP$N: Regex = """~sharp\[(\d+)\]""".r  //Sharp表达式
     val VALUE$N: Regex = """~value\[(\d+)\]""".r //中间结果占位符
     val STR$N: Regex = """~str\[(\d+)\]""".r //计算过程中的字符串占位符
 
@@ -273,24 +274,35 @@ object Solver {
                     jsons(i+1) = jsons(i+1).replace(jsons(i), replacement)
                 }
             }
-//                .foreach(json => {
-//                    PQL.jsons += json
-//                    sentence = sentence.replace(json, "~json[" + PQL.jsons.size + "]")
-//                })
+
+            //防止语句内嵌和外部表达式冲突
+            // SELECT id FROM table where title=${abc -> CONCAT '234' } -> FIRST CELL
+            SHARP_EXPRESSION.findAllIn(sentence)
+                    .foreach(sharp => {
+                        PQL.sharps += sharp
+                        sentence = sentence.replace(sharp, s"~sharp[${PQL.sharps.size - 1}]")
+                    })
 
             sentence.trim
         }
 
+        //优先恢复Sharp表达式
+        def restoreSharps(PQL: PQL): String = {
+            SHARP$N.findAllMatchIn(sentence)
+                .foreach(m => {
+                    sentence = sentence.replace(m.group(0), PQL.sharps(m.group(1).toInt))
+                })
+
+            sentence
+        }
+
         def restoreJsons(PQL: PQL): String = {
-            var mch: Option[Match] = null
-            while({mch = JSON$N.findFirstMatchIn(sentence); mch}.nonEmpty) {
-                mch match {
-                    case Some(m) =>
-                        val i = m.group(1).toInt
-                        if (i < PQL.jsons.size) {
-                            sentence = sentence.replace(m.group(0), PQL.jsons(i).$clean(PQL))
-                        }
-                    case None =>
+            breakable {
+                while (true) {
+                    JSON$N.findFirstMatchIn(sentence) match {
+                        case Some(m) => sentence = sentence.replace(m.group(0), PQL.jsons(m.group(1).toInt).$clean(PQL))
+                        case None => break
+                    }
                 }
             }
 
@@ -458,7 +470,7 @@ object Solver {
             sentence.replace("~u003b", ";")
                     .replace("~u0024", "$")
                     .replace("~u0040", "@")
-                    .replace("~u007e", "~")
+                    //.replace("~u007e", "~")
                     .replace("~u0021", "!")
                     //.replace("~u0023", "#") //已在Parameter中替换
                     //.replace("~u0026", "&")//已在Parameter中替换
@@ -489,9 +501,17 @@ object Solver {
                             sentence = sentence.replace(whole, PQL.$stash(data.asRow.getCell(m.group(2))))
                         }
                     }).ifNotFound(() => {
-                        if (PQL.dh.debugging) {
-                            Output.writeWarning(s"The variable $name has not been assigned.")
+                        if (m.groupCount == 1) {
+                            if (PQL.dh.debugging) {
+                                Output.writeWarning(s"The variable $name has not been assigned.")
+                            }
                         }
+                        else {
+                            if (PQL.dh.debugging) {
+                                Output.writeWarning(s"The variable $name hasn't property ${m.group(2)}.")
+                            }
+                        }
+                        sentence = sentence.replace(whole, "UNDEFINED")
                     })
                 })
 
@@ -511,8 +531,9 @@ object Solver {
                                 }
                             })
                             .ifNotFound(() => {
+                                // @name 标记与MySQL和SQL Server冲突, 不做处理
                                 if (PQL.dh.debugging) {
-                                    Output.writeWarning(s"The global variable $name has not been assigned.")
+                                    Output.writeWarning(s"The global variable $name maybe has not been assigned.")
                                 }
                             })
                         }
@@ -549,6 +570,7 @@ object Solver {
         //解析表达式中的函数
         def replaceFunctions(PQL: PQL, quote: String = "'"): String = {
 
+            //review时需要修改循环嵌套的逻辑，改成 while(true)
             while (GLOBAL_FUNCTION.test(sentence)) { //循环防止嵌套
                 GLOBAL_FUNCTION
                     .findAllMatchIn(sentence)
@@ -665,19 +687,26 @@ object Solver {
             }
         }
 
-        //计算表达式, 不包括查询表达式, $clean的子集, 在计算查询表达式时使用
+        //计算表达式, 不包括查询表达式, 在计算查询表达式时使用
         def $express(PQL: PQL): String = {
-            sentence.replaceVariables(PQL)
-                .replaceFunctions(PQL)
-                .replaceSharpExpressions(PQL)
-                .replaceJsExpressions(PQL)
-                .replaceJsStatements(PQL)
+            sentence.restoreSharps(PQL)
+                    .replaceVariables(PQL)
+                    .replaceFunctions(PQL)
+                    .replaceSharpExpressions(PQL)
+                    .replaceJsExpressions(PQL)
+                    .replaceJsStatements(PQL)
         }
 
         //计算表达式, 但保留字符串和中间值
         //先计算查询表达式的原因是如果子表达式过早的被替换掉, 在解析SHARP表达式时会出现字符串解析冲突
         def $clean(PQL: PQL): String = {
-            sentence.replaceQueryExpressions(PQL).$express(PQL)
+            sentence.restoreSharps(PQL)
+                    .replaceQueryExpressions(PQL)
+                    .replaceVariables(PQL)
+                    .replaceFunctions(PQL)
+                    .replaceSharpExpressions(PQL)
+                    .replaceJsExpressions(PQL)
+                    .replaceJsStatements(PQL)
         }
 
         //按顺序计算嵌入式表达式、变量和函数

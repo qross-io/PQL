@@ -174,6 +174,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private[pql] val jsons = new ArrayBuffer[String]()
     //计算过程中的中间结果~value[n]
     private[pql] val values = new ArrayBuffer[DataCell]()
+    //暂存的sharp表达式
+    private[pql] val sharps = new ArrayBuffer[String]()
 
     private[pql] var SQL: String = originalSQL
 
@@ -295,15 +297,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         breakable {
             for (statement <- statements) {
                 if (NON_QUERY_CAPTIONS.contains(statement.caption)) {
-                    val SQL = statement.sentence.$restore(this)
-                    AFFECTED_ROWS_OF_LAST_NON_QUERY = dh.set(SQL).AFFECTED_ROWS_OF_LAST_SET
-
-                    if (dh.debugging) {
-                        Output.writeLine("                                                                        ")
-                        Output.writeLine(SQL)
-                        Output.writeLine("------------------------------------------------------------------------")
-                        Output.writeLine(s"$AFFECTED_ROWS_OF_LAST_NON_QUERY row(s) affected. ")
-                    }
+                    AFFECTED_ROWS_OF_LAST_NON_QUERY = dh.set(statement.sentence.$restore(this)).AFFECTED_ROWS_OF_LAST_SET
                 }
                 else if (statement.caption == "CONTINUE") {
                     if (CONTINUE.execute(this, statement)) {

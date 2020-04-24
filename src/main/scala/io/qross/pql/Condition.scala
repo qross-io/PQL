@@ -44,7 +44,7 @@ class Condition(val expression: String) {
     NOT
     */
 
-    private val $OPERATOR = """(?i)===|!==|==|!=|<>|>=|<=|>|<|=|\sNOT\s+IN\b|\sIS\s+NOT\s|\sIN\b|\sIS\s|\sAND\s|\sOR\s|\bNOT\s+EXISTS\b|\bEXISTS\b|\sNOT\s""".r
+    private val $OPERATOR = """(?i)===|!==|==|!=|<>|>=|<=|>|<|=|\sNOT\s+IN\b|\sIS\s+NOT\s|\sIN\b|\sIS\s|\sAND\s|\sOR\s|\bNOT\s+EXISTS\b|\bEXISTS\b|^NOT\s""".r
 
     $OPERATOR.findFirstIn(expression) match {
         case Some(opt) =>

@@ -189,14 +189,24 @@ object TypeExt {
             }
         }
 
-        def $trim(prefix: String, suffix: String = ""): String = {
+        def $trim(prefixOrSuffix: String): String = {
             string = string.trim
-            if (string.startsWith(prefix)) {
+            while (string.startsWith(prefixOrSuffix)) {
+                string = string.drop(prefixOrSuffix.length)
+            }
+            while (string.endsWith(prefixOrSuffix)) {
+                string = string.dropRight(prefixOrSuffix.length)
+            }
+            string
+        }
+
+        def $trim(prefix: String, suffix: String): String = {
+            string = string.trim
+            while (string.startsWith(prefix)) {
                 string = string.drop(prefix.length)
             }
-            val sfx = if (suffix == "") prefix else suffix
-            if (string.endsWith(sfx)) {
-                string = string.dropRight(sfx.length)
+            while (string.endsWith(suffix)) {
+                string = string.dropRight(suffix.length)
             }
             string
         }
@@ -520,9 +530,22 @@ object TypeExt {
     //for Sharp Expression
     implicit class AnyExt(any: Any) {
 
-        def print: Any = {
+        def print[T]: T = {
             println(any)
-            any
+            any.asInstanceOf[T]
+        }
+
+        def printMore[T](prefix: String): T = {
+            Predef.print(prefix)
+            Predef.println(any)
+            any.asInstanceOf[T]
+        }
+
+        def printMore[T](prefix: String, suffix: String): T = {
+            Predef.print(prefix)
+            Predef.print(any)
+            Predef.println(suffix)
+            any.asInstanceOf[T]
         }
 
         def toText: String = {
@@ -648,10 +671,10 @@ object TypeExt {
         def toBoolean: Boolean = {
             any match {
                 case str: String =>
-                    if (Set("yes", "true", "1", "on", "ok").contains(str.toLowerCase())) {
+                    if (Set("yes", "true", "1", "on", "ok", "y").contains(str.toLowerCase())) {
                         true
                     }
-                    else if (Set("no", "false", "0", "off", "cancel").contains(str.toLowerCase())) {
+                    else if (Set("no", "false", "0", "off", "cancel", "n").contains(str.toLowerCase())) {
                         false
                     }
                     else {
