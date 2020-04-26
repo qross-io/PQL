@@ -13,7 +13,7 @@ import io.qross.ext.Console
 import io.qross.pql._
 import io.qross.fs._
 import io.qross.jdbc.DataSource
-import io.qross.net.{Email, Json}
+import io.qross.net.{Email, Json, Session}
 import io.qross.ext.TypeExt._
 import io.qross.fs.Path._
 import io.qross.pql.Solver._
@@ -21,7 +21,7 @@ import io.qross.time.{ChronExp, CronExp, DateTime}
 import io.qross.pql.Patterns._
 import io.qross.pql.PQL._
 import io.qross.security.{Base64, MD5}
-import io.qross.setting.{Environment, Global, Properties}
+import io.qross.setting.{Environment, Global, Language, Properties}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -101,18 +101,20 @@ object Main {
             "time" -> "2020-02-27 18:30:33",
             "filter" -> ""
         ).run().print */
-        PQL.openFile("/sql/date.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
+        //PQL.openFile("/sql/date.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
+
+
 
 
         //"abc".shuffle(100).print
         //"abcdefghijklmnopqrstuvwxyz0123456789".shuffle(10).print
 
-
-
         //println(Base64.encode("str-world"))
         //println(Base64.decode("c3RyLXdvcmxk"))
 
-        //PQL.openEmbeddedFile("/sql/test.html").place("jobId=595").set("jobId=595").run().print
+        //Language.loadAll
+        //PQL.openEmbeddedFile("/templates/example.html").place("jobId=595").set("jobId=595").run().print
+        println(new Session())
 
 
         //val cookie = new Cookie("", "")

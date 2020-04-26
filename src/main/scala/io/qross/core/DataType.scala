@@ -47,7 +47,8 @@ object DataType extends Enumeration {
             }, typeName.toUpperCase(), className)
     }
 
-    //java type name
+    //从java类名判断
+    // java class name
     def ofClassName(className: String): DataType = {
         val firstName = {
             if (className.contains(".")) {
@@ -57,6 +58,7 @@ object DataType extends Enumeration {
                 className
             }
         }
+
         new DataType(
              firstName.toLowerCase() match {
                     case "string" => "TEXT"
@@ -70,11 +72,12 @@ object DataType extends Enumeration {
                     case "datatable" => "TABLE"
                     case "regex" | "pattern" => "REGEX"
                     case "json" => "JSON"
-                    case _ => "TEXT"
+                    case _ => className
                 }, firstName.toUpperCase(), className)
     }
 
-    //data value
+    // 从值判断数据类型
+    // data value
     def ofValue(value: Any): DataType = {
         if (value != null) {
             DataType.ofClassName(value.getClass.getName)
@@ -84,6 +87,7 @@ object DataType extends Enumeration {
         }
     }
 
+    //从json节点判断类型
     def ofJsonNodeType(node: JsonNode): DataType = {
 
         new DataType(
@@ -120,8 +124,13 @@ object DataType extends Enumeration {
                 }
             }.toUpperCase(), node.getNodeType.name())
     }
+
+    def forClassName(className: String): DataType = {
+        new DataType(className, (if (className.contains(".")) className.takeAfterLast(".") else className).toUpperCase(), className)
+    }
 }
 
+// typeName 类型名, 如 TEXT  INTEGER 等
 // originalName来自数据库的原始类型, 如INT, VARCHAR等
 // className 语言类类型, 如java.lang.String
 class DataType(val typeName: String, val originalName: String, val className: String) {
@@ -143,7 +152,6 @@ class DataType(val typeName: String, val originalName: String, val className: St
 
 /*
 -- DataType --
-
 
 -- JsonNodeDataType --
 ARRAY,

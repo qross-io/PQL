@@ -1,22 +1,16 @@
 <!DOCTYPE html>
-<%
-DEBUG ON;
-OPEN DEFAULT;
-%>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>example</title>
 </head>
 <body>
 <h1>Hello World &nbsp; <%=@NOW FORMAT "yyyy-MM-dd" %></h1>
 #{a}
 <hr/>
-<% =SELECT * FROM tc -> TO HTML TABLE %>
+# job.page.search.text #
 <hr/>
-<%
-OUTPUT # SELECT * FROM td -> TO HTML TABLE;
-%>
+# job.page.search.key #
 <br/>
 #{b}
 <br/>

@@ -4,6 +4,8 @@ import io.qross.core.DataHub;
 import io.qross.ext.Console;
 import io.qross.fs.ResourceFile;
 import io.qross.pql.PQL;
+import io.qross.setting.Language;
+import io.qross.setting.Properties;
 import org.springframework.web.servlet.view.AbstractTemplateView;
 import scala.collection.immutable.Stream;
 
@@ -32,19 +34,33 @@ public class Voyager extends AbstractTemplateView {
             }
 
             String content = ResourceFile.open(url).content();
+            String modules = "";
 
             //替换server includes
-            Pattern p = Pattern.compile("<#\\s*include\\s+[\"'](.+?)[\"']\\s*/>", Pattern.CASE_INSENSITIVE);
-            Matcher m;
-            while ((m = p.matcher(content)).find()) {
-                String path = dir + m.group(1);
-                path = path.replace("//", "/");
-                if (path.endsWith(".sql")) {
-                    content = content.replace(m.group(0), "<%" + ResourceFile.open(path).content() + "%>");
+            Pattern p = Pattern.compile("<#\\s*include\\s+(file|language)=[\"'](.+?)[\"']\\s*/>", Pattern.CASE_INSENSITIVE);
+            Matcher m = p.matcher(content);
+            while (m.find()) {
+                if (m.group(1).equalsIgnoreCase("language")) {
+                    modules = m.group(2).toLowerCase();
+                    content = content.replace(m.group(1), "");
                 }
                 else {
-                    content = content.replace(m.group(0), ResourceFile.open(path).content());
+                    String path = dir + m.group(2);
+                    path = path.replace("//", "/");
+                    if (path.endsWith(".sql")) {
+                        content = content.replace(m.group(0), "<%" + ResourceFile.open(path).content() + "%>");
+                    }
+                    else {
+                        content = content.replace(m.group(0), ResourceFile.open(path).content());
+                    }
                 }
+            }
+
+            //替换语言
+            p = Pattern.compile("#\\s*([a-z][a-z0-9]+(\\.[a-z0-9]+)*)\\s*#", Pattern.CASE_INSENSITIVE);
+            m = p.matcher(content);
+            while (m.find()) {
+                content = content.replace(m.group(0), Language.get("", modules, m.group(1)));
             }
 
             Map<String, Object> attributes = getAttributesMap();
