@@ -56,6 +56,7 @@ public class DataAccess extends DataSource {
         return this.executeJavaMap(SQL, ToScala.ArrayToSeq(values));
     }
 
+    @SuppressWarnings("unchecked")
     public <S, T> Map<S, T> executeDataMap(String SQL, Object... values) {
         Map<S, T> map = new HashMap<>();
         ResultSet rs = this.executeResultSet(SQL, values);

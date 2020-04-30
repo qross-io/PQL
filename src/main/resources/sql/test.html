@@ -5,14 +5,14 @@
     <title>Title</title>
 </head>
 <body>
-${ '20200120185100' TO DATETIME }
-
+@{language}<br/>
+<%=@language%> <br/>
 <%
 VAR $row := SELECT * FROM qross_tasks LIMIT 10 -> LAST ROW;
 %>
-${ $row.ready_time IF NULL $row.start_time }
-<div>${ $row.id }</div>
-<div><%= $row.job_id %></div>
+<%= $row.ready_time IF NULL $row.start_time %>
+<div>${row.id}</div>
+<div> ${ row.job_id }</div>
 <div>
     <%
     IF $row.id IS INT THEN
@@ -24,38 +24,5 @@ ${ $row.ready_time IF NULL $row.start_time }
 </div>
 
 
-Spent: <span id="Spent" class="mono">${ IF $row.spent IS NOT NULL THEN $row.spent CONCAT 's' ELSE 'N/A' END }</span> <br/>
-
-Started: <span id="StartTime" class="mono"><%=$row X 'start_time' IF NULL 'N/A' %></span> <br/>
-Finished: <span id="FinishTime" class="mono"><%=$row X 'finish_time' IF NULL 'N/A' %></span> <br/>
-Spent: <span id="Spent1" class="mono"> <%= IF $row.spent IS NULL THEN 'N/A' ELSE $row.spent + 's' END %> <br/>
-                    <% IF $row.spent IS NULL THEN %>
-                        N/A
-                    <% ELSE %>
-                        <%= $row.spent %>s
-                    <% END IF %></span> <br/>
-
-${ CASE WHEN $row.ready_time IS NOT NULL THEN $row.ready_time ELSE $row.start_time END }
-<br/>
-${ CASE $row.ready_time IS NULL WHEN 1 < 2 THEN $row.start_time ELSE $row.ready_time END }
-<br/>
-<%= IF $row.ready_time IS NOT NULL THEN 'N/A' ELSE $row.ready_time + 's' END %>
-<br/>
-
-<%
-VAR $finished := 'success,checking_limit,failed,timeout,incorrect,no_commands,ignore,interrupted,killed';
-VAR $unfinished := 'new,initialized,ready,executing';
-SET $running := SELECT status FROM qross_keeper_beats WHERE actor_name='Keeper';
-IF $running == 'running' THEN
-%>
-<button id="RestartButton" class="medium-button prime operate-button" style="${ IF $finished CONTAINS $row.status THEN '' ELSE 'display: none' END }" confirm-text="Are you sure to restart this Task?" action="/api/task/restart?taskId=&(taskId)&recordTime=&(recordTime)" method="put">Restart</button> <br/>
-<button id="KillButton" class="medium-button task-failed-badge operate-button" style="${ IF $unfinished CONTAINS $row.status THEN '' ELSE 'display: none' END }" confirm-text="Are you sure to kill this Task?" action="/api/task/kill?taskId=&(taskId)&recordTime=&(recordTime)" method="put">Kill</button>
-<%
-ELSE
-%>
-<span style="color: #F03030; border-bottom: 1px dashed #F03030;">Keeper isn't running.</span>
-<%
-END IF;
-%>
 </body>
 </html>

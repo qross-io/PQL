@@ -19,7 +19,7 @@ class ConditionGroup(expression: String) {
     def evalAll(PQL: PQL): Boolean = {
 
         //解析表达式
-        var exp = expression.$clean(PQL)
+        var exp = expression.trim().$clean(PQL)
 
         //replace SELECT to ~value[n]
         breakable {

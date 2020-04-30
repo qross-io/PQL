@@ -4,7 +4,6 @@ import java.util
 
 import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.ext.NumberExt._
-import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.fql.Fragment
 import io.qross.pql.Patterns._
@@ -27,12 +26,8 @@ object Sharp {
             DataCell(data.asDateTime.express(arg.asText), DataType.DATETIME)
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at SET/EXPRESS. " + origin)
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at EXPRESS. " + origin)
         }
-    }
-
-    def SET(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        EXPRESS(data, arg, origin)
     }
 
     def FORMAT(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -1462,20 +1457,20 @@ object Sharp {
     //TURN 'a' AND 'b' TO ROW
     //TURN (a, b) TO ROW
     //TURN ['a', 'b'] TO ROW
-    //将来 TURN a, b TO ROW
+    //TURN a, b TO ROW
     def TURN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         SELECT(data, arg, origin)
     }
 
     // SELECT * 无意义
-    // 将来 SELECT a, b
+    // SELECT a, b
     def SELECT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (arg.isJavaList) {
                 data.asTable.select(arg.asList[String]: _*).toDataCell(DataType.TABLE)
             }
             else if (arg.isText) {
-                data.asTable.select(arg.asText.$trim("(", ")").split(",").map(_.removeQuotes()): _*).toDataCell(DataType.TABLE)
+                data.asTable.select(arg.asText).toDataCell(DataType.TABLE)
             }
             else {
                 throw SharpLinkArgumentException.occur("SELECT", origin)
@@ -1491,7 +1486,6 @@ object Sharp {
     }
 
     //TURN TO ROW
-    //TURN TO ROW (column1, column2)
     def TURN$TO$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
         DataCell(data.asTable.turnToRow, DataType.ROW)
     }
@@ -1512,22 +1506,68 @@ object Sharp {
         DataCell(data.asTable.toHtmlString, DataType.TEXT)
     }
 
-   /* ---------- DataRow ---------- */
+    /* ---------- DataRow ---------- */
+    //对于DataRow, 可以和GET通用
+//    def X(data: DataCell, arg: DataCell, origin: String): DataCell = {
+//        if (data.isRow) {
+//            if (arg.valid && arg.isInteger) {
+//                data.asRow.getCell(arg.asInteger.toInt - 1)
+//            }
+//            else if (arg.valid && arg.isText) {
+//                data.asRow.getCell(arg.asText)
+//            }
+//            else {
+//                throw SharpLinkArgumentException.occur("X", origin)
+//            }
+//        }
+//        else {
+//            throw SharpInapplicableLinkNameException.occur("X", origin)
+//        }
+//    }
 
-    def X(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (data.isRow) {
-            if (arg.valid && arg.isInteger) {
-                data.asRow.getCell(arg.asInteger.toInt - 1)
+    def SET(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid && arg.isRow) {
+            if (data.isRow) {
+                data.asRow.combine(arg.asRow)
+                data
             }
-            else if (arg.valid && arg.isText) {
-                data.asRow.getCell(arg.asText)
+            else if (data.is("io.qross.net.Cookies")) {
+                //Cookie.set(arg.asRow)
+                null
+            }
+            else if (data.is("io.qross.net.Session")) {
+                //Session.set(arg.asRow)
+                null
+            }
+            else if (data.isDateTime) {
+                EXPRESS(data, arg, origin)
             }
             else {
-                throw SharpLinkArgumentException.occur("X", origin)
+                throw SharpInapplicableLinkNameException.occur("SET", origin)
             }
         }
         else {
-            throw SharpInapplicableLinkNameException.occur("X", origin)
+            throw SharpLinkArgumentException.occur("SET", origin)
+        }
+    }
+
+    def REMOVE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.isRow) {
+                if (arg.isJavaList) {
+                    arg.asList[String].foreach(field => data.asRow.remove(field.toString))
+                }
+                else {
+                    data.asRow.remove(arg.asText)
+                }
+                data
+            }
+            else {
+                throw SharpInapplicableLinkNameException.occur("REMOVE", origin)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("REMOVE", origin)
         }
     }
 
@@ -1574,7 +1614,12 @@ object Sharp {
     def ADD(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (data.isJavaList) {
             if (arg.valid) {
-                data.asJavaList.add(arg.value)
+                if (arg.isJavaList) {
+                    data.asJavaList.addAll(arg.asJavaList)
+                }
+                else {
+                    data.asJavaList.add(arg.value)
+                }
                 data
             }
             else {
@@ -1799,13 +1844,24 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
         }
 
         //分组数据即(..)包围的数据如 (1, "2")，去掉空白字符
-        $TUPLE.findAllIn(sentence).foreach(tuple => {
-            sentence = sentence.replace(tuple, tuple.replaceAll("\\s", ""))
+        //SET a=1, b=2, c=3 去掉空白字符
+        //SELECT a, b, c, d 去掉空白字符
+        //val $TUPLE: Regex = """\([^\)]+\)""".r
+        """\s+[,=]\s+|\s+[,=\)]|[,=\(]\s+""".r.findAllIn(sentence).foreach(comma => {
+            sentence = sentence.replace(comma, comma.trim())
+        })
+
+        //处理 AS
+        $AS.findAllIn(sentence).foreach(as => {
+            sentence = sentence.replace(as, "##AS##")
         })
 
         val links = new mutable.ListBuffer[Link$Argument]()
 
         val matches = $LINK.findAllIn(sentence).toArray
+
+        //恢复 AS
+        sentence = sentence.replace("##AS##", " AS ")
 
         if (data.invalid) {
             //必须是等号, 不能用replace方法, 否则变量内容会保存
@@ -1821,16 +1877,16 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
 
         for (i <- matches.indices) {
             if (i == matches.length - 1) {
-                links += new Link$Argument(matches(i), sentence.takeAfter(matches(i)))
+                links ++= SharpLink.parse(matches(i), sentence.takeAfter(matches(i)))
             }
             else {
                 sentence = sentence.takeAfter(matches(i))
-                links += new Link$Argument(matches(i), sentence.takeBefore(matches(i+1)))
+                links ++= SharpLink.parse(matches(i), sentence.takeBefore(matches(i+1)))
             }
         }
 
         for (i <- links.indices) {
-            if (SHARP_LINKS.contains(links(i).linkName)) {
+            if (SharpLink.all.contains(links(i).linkName)) {
                 //必须是等号, 不能用replace方法, 否则变量内容会保存
                 data = Class.forName("io.qross.pql.Sharp")
                             .getDeclaredMethod(links(i).linkName,
@@ -1840,9 +1896,8 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
                                 .invoke(null,
                                     data,
                                     if (i + 1 < links.length &&
-                                            (Patterns.MULTI$ARGS$LINKS.contains(links(i).linkName) &&
-                                            Patterns.MULTI$ARGS$LINKS(links(i).linkName).contains(links(i+1).linkName)
-                                            || PRIORITIES.contains(links(i+1).linkName)) //prioritization of execution
+                                            (SharpLink.priorities.contains(links(i).linkName) &&
+                                                SharpLink.priorities(links(i).linkName).contains(links(i+1).linkName)) //prioritization of execution
                                     ) {
                                         val name = links(i+1).linkName
                                         links(i+1).linkName = "" //mark as executed
@@ -1872,8 +1927,106 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
     }
 }
 
+object SharpLink {
+    val all: Set[String] = Sharp.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z\d]+$|^[A-Z]$""".r.test(n)).toSet
+    val priorities: Map[String, Set[String]] =
+        Map[String, Set[String]](
+            "SUBSTRING" -> Set[String]("TO"),
+            "SUBSTR" -> Set[String]("TO"),
+            "SPLIT" -> Set[String]("AND"),
+            "BRACKET" -> Set[String]("AND"),
+            "REPLACE" -> Set[String]("TO"),
+            "REPLACE$FIRST" -> Set[String]("TO"),
+            "REPLACE$ALL" -> Set[String]("TO"),
+            "ADD" -> Set[String]("TO", "UNTIL"),
+            "TRIM" -> Set[String]("AND"),
+            "PLUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
+            "MINUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
+            "INSERT" -> Set[String]("VALUES"),
+            "INSERT$IF$EMPTY" -> Set[String]("VALUES"),
+            "TURN" -> Set[String]("AND"))
+    //有可能属性值是一个参数（至少有一个参数，不能为空参数）且参数可能是英文单词的link名称
+    val columns: Set[String] = Set[String]("SELECT", "REMOVE", "ORDER$BY", "GROUP$BY")
+
+    def format(linkName: String): String = {
+        linkName.trim().replaceAll(BLANKS, "\\$").toUpperCase()
+    }
+
+    def parse(link: String, args: String): mutable.ArrayBuffer[Link$Argument] = {
+
+        val links = new mutable.ArrayBuffer[Link$Argument]()
+        var linkName = SharpLink.format(link)
+
+        if (SharpLink.all.contains(linkName)) {
+            links += new Link$Argument(link, args)
+        }
+        else if (linkName.contains("$")) {
+            //一种是 SELECT / DELETE 增link只有一个字段
+            //二是两个或多个无参link合在了一起
+
+            //解析原理
+            // 一个单词一个单词向后退，直到找到匹配
+            //找到之后剩下的继续解析，同样一个单词一个单词向后退
+
+            var origin = link.trim().takeBeforeLast(Patterns.$BLANK).trim()
+            var more = link.trim().takeAfterLast(Patterns.$BLANK).trim()
+            linkName = linkName.takeBeforeLast("$")
+
+            while (origin != "") {
+                if (SharpLink.all.contains(linkName)) {
+                    if (SharpLink.columns.contains(linkName)) {
+                        Patterns.$BLANK.findFirstIn(more) match {
+                            case Some(blank) =>
+                                links += new Link$Argument(origin, more.takeBefore(blank))
+
+                                origin = more.takeAfter(blank).trim
+                                more = ""
+                                linkName = SharpLink.format(origin)
+                            case None =>
+                                if (more != "") {
+                                    links += new Link$Argument(origin, more)
+                                    origin = ""
+                                    if (args.trim != "") {
+                                        throw new SharpLinkArgumentException("Wrong link name: " + link + " or redundant args: " + args)
+                                    }
+                                }
+                                else {
+                                    links += new Link$Argument(origin, args)
+                                }
+                        }
+                    }
+                    else if (more != "") {
+                        links += new Link$Argument(origin, "")
+
+                        origin = more
+                        more = ""
+                        linkName = SharpLink.format(origin)
+                    }
+                    else {
+                        links += new Link$Argument(origin, args)
+                        origin = ""
+                    }
+                }
+                else if (linkName.contains("$")) {
+                    more = (origin.takeAfterLast(Patterns.$BLANK) + " " + more).trim()
+                    origin = origin.takeBeforeLast(Patterns.$BLANK).trim()
+                    linkName = linkName.takeBeforeLast("$")
+                }
+                else {
+                    throw new SharpLinkArgumentException("Wrong link name: " + link)
+                }
+            }
+        }
+        else {
+            throw new SharpLinkArgumentException("Wrong link name: " + link)
+        }
+
+        links
+    }
+}
+
 class Link$Argument(val originalLinkName: String, val originalArgument: String) {
-    var linkName: String = originalLinkName.trim().replaceAll(BLANKS, "\\$").toUpperCase()
+    var linkName: String = SharpLink.format(originalLinkName)
     val argument: String = {
         originalArgument.trim() match {
             case "->" | "#" => ""
@@ -1883,7 +2036,29 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
 
     def solve(PQL: PQL): DataCell = {
         if (argument != "") {
-            argument.$sharp(PQL)
+            if (""",|\sAS\s|^\*$""".r.test(argument)) {
+                //SET或SELECT
+                if (argument.contains("=")) {
+                    val row = new DataRow()
+                    argument
+                        .split(",")
+                        .foreach(item => {
+                            if (item.contains("=")) {
+                                row.set(item.takeBefore("=").popStash(PQL), item.takeAfter("=").$sharp(PQL))
+                            }
+                            else {
+                                row.set(item, null, DataType.NULL)
+                            }
+                        })
+                    DataCell(row, DataType.ROW)
+                }
+                else {
+                    DataCell(argument.split(",").map(item => item.$sharp(PQL)).map(_.value).toList.asJava, DataType.ARRAY)
+                }
+            }
+            else {
+                argument.$sharp(PQL)
+            }
         }
         else {
             DataCell.NULL
@@ -1891,7 +2066,7 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
     }
 
     def originate(PQL: PQL): String = {
-        if (argument != null) {
+        if (argument != "") {
             originalLinkName + " " + originalArgument.popStash(PQL)
         }
         else {

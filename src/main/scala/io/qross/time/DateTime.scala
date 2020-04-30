@@ -5,7 +5,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.{ChronoField, ChronoUnit}
 import java.util.regex.Pattern
 
-import io.qross.core.ConvertFailureException
+import io.qross.core.{ConvertFailureException, DataRow}
 import io.qross.ext.TypeExt._
 import io.qross.setting.Global
 
@@ -456,7 +456,19 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
             }
         }
     }
-    
+
+//    def express(row: DataRow): DateTime = {
+//        var datatime = this
+//
+//        row.foreach((name, value) => {
+//            if (name.contains("+") || name.contains("-")) {
+//
+//            }
+//        })
+//
+//        datatime
+//    }
+
     def express(expression: String): DateTime = {
         // Second|Minute|Hour|Day|Month|Year +|-|= num
         // exp includes num|Sun-Sat:1-7(only in day section)

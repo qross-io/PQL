@@ -10,14 +10,14 @@ object BaseClass {
     def bubble: Class[_] = {
         val classes = Thread.currentThread().getStackTrace
         var className = "io.qross.setting.BaseClass"
-        var findable = false
+        var found = false
         breakable {
             for (stack <- classes) {
-                if (!findable && stack.getClassName.startsWith("io.qross")) {
-                    findable = true
+                if (!found && stack.getClassName.startsWith("io.qross")) {
+                    found = true
                 }
 
-                if (findable) {
+                if (found) {
                     className = stack.getClassName
                     if (!stack.getClassName.$startsWith(
                         "io.qross.app",

@@ -251,7 +251,7 @@ object TypeExt {
                         case Some(v) => string.substring(string.indexOf(v) + v.length)
                         case None => string
                     }
-                case _ => ""
+                case _ => string
             }
         }
 
@@ -278,7 +278,7 @@ object TypeExt {
             value match {
                 case char: String =>
                     if (char == "" || !string.contains(char)) {
-                        ""
+                        string
                     }
                     else {
                         string.substring(string.lastIndexOf(char) + char.length)
@@ -289,7 +289,7 @@ object TypeExt {
                         case Some(v) => string.substring(string.lastIndexOf(v) + v.length)
                         case None => ""
                     }
-                case _ => ""
+                case _ => string
             }
         }
 
@@ -331,8 +331,12 @@ object TypeExt {
             string.startsWith(left) && string.endsWith(right)
         }
 
-        def bracket(left: String, right: String = "NULL"): String = {
-            left + string + (if (right == "NULL") left else right)
+        def bracket(side: String): String = {
+            side + string + side
+        }
+
+        def bracket(left: String, right: String): String = {
+            left + string + right
         }
 
         def $startsWith(strings: String*): Boolean = {

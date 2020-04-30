@@ -19,6 +19,7 @@ import org.apache.poi.ss.usermodel._
 import org.apache.poi.ss.util.CellRangeAddress
 import org.apache.poi.xssf.streaming.SXSSFWorkbook
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.springframework.web.context.request.{RequestContextHolder, ServletRequestAttributes}
 
 import scala.collection.mutable
 import scala.util.{Success, Try}
@@ -83,13 +84,15 @@ object Excel {
             saveAsExcel(fileNameOrPath)
         }
 
-        def useTemplate(templateName: String): DataHub = {
-            EXCEL$W.useTemplate(templateName)
+        def saveAsStreamExcel(fileName: String): DataHub = {
+            dh.plug("EXCEL$W", new Excel(fileName).debug(dh.debugging).setAutoCommit(false).saveAsStream())
             dh
         }
 
-        def useDefaultTemplate(): DataHub = {
-            EXCEL$W.useDefaultTemplate()
+        def useTemplate(templateName: String): DataHub = {
+            if (templateName != "") {
+                EXCEL$W.useTemplate(templateName)
+            }
             dh
         }
 
@@ -104,8 +107,10 @@ object Excel {
 
 class Excel(val fileName: String) {
 
+    var output: String = "file" // file or stream
+    var autoCommit: Boolean = true //是否自动关闭文件, 在单线程模式下, 查询或修改一次即关闭, 在多线程模式下或流模式下需要手动关闭
+
     var templatePath: String = ""
-    var autoCommit: Boolean = true //是否自动关闭文件, 在单线程模式下, 查询或修改一次即关闭, 在多线程模式下需要手动关闭
 
     val path: String = {if (fileName.contains(".")) fileName else fileName + ".xlsx"}.locate()
     private val file = new File(path)
@@ -115,13 +120,27 @@ class Excel(val fileName: String) {
 
     //是否启用调试
     private var DEBUG = false
+    def debugging: Boolean = DEBUG
 
     def debug(enabled: Boolean = true): Excel = {
         DEBUG = enabled
         this
     }
 
-    def debugging: Boolean = DEBUG
+    def saveAsStream(): Excel = {
+        output = "stream"
+        this
+    }
+
+    def saveAsFile(): Excel = {
+        output = "file"
+        this
+    }
+
+    def setAutoCommit(toCommit: Boolean): Excel = {
+        autoCommit = toCommit
+        this
+    }
 
     def open(fileNameOrPath: String): Excel = {
         this
@@ -486,11 +505,6 @@ class Excel(val fileName: String) {
         }
     }
 
-    def setAutoCommit(toCommit: Boolean): Excel = {
-        autoCommit = toCommit
-        this
-    }
-
     //须在关闭之后执行
     def attachToEmail(title: String): Email = {
         close()
@@ -500,9 +514,23 @@ class Excel(val fileName: String) {
 
     def close(): Unit = {
         if (!closed) {
-            val fos = new FileOutputStream(file)
-            $workbook.write(fos)
-            fos.close()
+            if (output == "file") {
+                val fos = new FileOutputStream(file)
+                $workbook.write(fos)
+                fos.close()
+            }
+            else {
+                //必须在web环境下才可以
+                val attributes: ServletRequestAttributes = RequestContextHolder.getRequestAttributes.asInstanceOf[ServletRequestAttributes]
+                if (attributes != null) {
+                    val response = attributes.getResponse
+                    response.setHeader("Content-type", "application/octet-stream")
+                    response.setCharacterEncoding("UTF-8")
+                    response.setHeader("Content-disposition", "attachment;filename=\"" + new String(path.takeAfterLast("/").getBytes("UTF-8"), "ISO-8859-1") + "\"")
+                    response.flushBuffer()
+                    $workbook.write(response.getOutputStream)
+                }
+            }
 
             $workbook.close()
             $workbook = null

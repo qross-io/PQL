@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Qross System</title>
+    <script type="text/javascript" src="/root/root.js"></script>
+    <script type="text/javascript" src="/root/root.callout.js"></script>
+    <script type="text/javascript" src="/root/root.focusview.js"></script>
+    <script type="text/javascript" src="/root/root.storage.js"></script>
+    <link href="/root/root.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<%
+SET $value := 123;
+%>
+@{SECURITY_AUTHENTICATION_MODE} <br/>
+${value}
+<div style="display: flex; width: 100%; height: calc(100vh - 150px)" >
+    <div id="Frame" method="post">
+        <form id="LoginForm" method="post" action="/login">
+            <div class="word">Login Qross System</div>
+            <% IF @SECURITY_AUTHENTICATION_MODE CONTAINS ',' THEN %>
+                <div id="Switch" class="tab" focusView="yes" elements="TD" exclusions="n" default-class="tab-normal" hover-class="tab-hover" active-class="" focus-class="tab-focus">
+                    <table width="100%" cellpadding="6" cellspacing="0" border="0">
+                        <tr>
+                            <% IF @SECURITY_AUTHENTICATION_MODE CONTAINS 'ldap' THEN %>
+                                <td id="LDAP" class="tab-${ IF @SECURITY_AUTHENTICATION_MODE STARTS WITH 'ldap' THEN 'focus' ELSE 'normal' END }">LDAP</td>
+                            <% END IF %>
+                            <% IF @SECURITY_AUTHENTICATION_MODE CONTAINS 'sso' THEN  %>
+                                <td id="SSO" class="tab-${ IF @SECURITY_AUTHENTICATION_MODE STARTS WITH 'sso' THEN 'focus' ELSE 'normal' END }">SSO</td>
+                            <% END IF %>
+                            <% IF @SECURITY_AUTHENTICATION_MODE CONTAINS 'standard' THEN  %>
+                                <td id="Standard" class="tab-${ IF @SECURITY_AUTHENTICATION_MODE STARTS WITH 'standard' THEN 'focus' ELSE 'normal' END }">Standard</td>
+                            <% END IF %>
+                            <td>&nbsp;</td>
+                        </tr>
+                    </table>
+                </div>
+            <% END IF %>
+            <div class="lbl" id="UserText">
+                <% CASE 
+                    WHEN @SECURITY_AUTHENTICATION_MODE STARTS WITH 'ldap' THEN %>
+                    LDAP User Account
+                 <% WHEN @SECURITY_AUTHENTICATION_MODE STARTS WITH 'sso' THEN  %>
+                    SSO User Account
+                <% ELSE %>
+                    Username/Email/Mobile
+                <% END CASE %>
+            </div>
+            <div class="ipt"><input type="text" id="username" name="username"></div>
+            <div class="lbl">Password</div>
+            <div class="ipt"><input type="password" id="password" name="password" autocomplete></div>
+            <div class="lbl" style="text-align: right; line-height: 270%">
+                <span id="Error" class="error"></span> &nbsp;
+                <input id="Mode" type="hidden" name="mode" value="<%= IF @SECURITY_AUTHENTICATION_MODE CONTAINS ',' THEN @SECURITY_AUTHENTICATION_MODE TAKE BEFORE ',' ELSE @SECURITY_AUTHENTICATION_MODE END %>" />
+                <button id="LoginButton" type="button" class="prime medium-button"> &nbsp; Sign in &nbsp; </button> <br/>
+                <a href="/forget" class="minor-a">Forget password?</a>
+            </div>
+        </form>
+    </div>
+</div>
+<script type="text/javascript">
+FocusView$('Switch').on('change', function(element) {
+    if (element.id == 'LDAP')  {
+        $x('#UserText').html('LDAP User Account');
+        $s('#Mode').value = 'ldap';
+        $cookie('LOGIN_MODE', 'ldap');
+    }
+    else if (element.id == 'SSO') {
+        $x('#UserText').html('SSO User Account');
+        $s('#Mode').value = 'sso';
+        $cookie('LOGIN_MODE', 'sso');
+    }
+    else {
+        $x('#UserText').html('Username/Email/Mobile');
+        $s('#Mode').value = 'standard';
+        $cookie('LOGIN_MODE', 'standard');
+    }
+});
+
+$x('#LoginButton').on('click', function(ev) {
+    if ($s('#username').value == '') {
+        $x('#Error').html('Please input your username.');
+    }
+    else if ($s('#password').value == '') {
+        $x('#Error').html('Please enter your password.');
+    }
+    else {
+        $s('#LoginForm').submit();
+    }
+});
+
+$finish(function() {
+    if (self != parent) {
+        top.location.href = '/login';
+    }
+
+    if (window.location.search.startsWith('?error')) {
+        $x('#Error').html('Incorrect username or password!');
+    }
+
+    if ($focus('Switch') != null) {
+        if ($cookie('LOGIN_MODE') == 'ldap') {        
+            $focus('Switch').change('#LDAP');
+        }
+        else if ($cookie('LOGIN_MODE') == 'sso') {
+            $focus('Switch').change('#SSO');
+        }
+        else if ($cookie('LOGIN_MODE') == 'standard') {
+            $focus('Switch').change('#Standard');
+        }
+    }
+});
+</script>
+</body>
+</html>

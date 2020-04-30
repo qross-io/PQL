@@ -4,7 +4,7 @@ import java.io.{BufferedReader, InputStreamReader}
 
 import io.qross.fs.ResourceDir
 import io.qross.ext.TypeExt._
-import io.qross.security.Cookies
+import io.qross.net.Cookies
 
 import scala.collection.mutable
 import scala.util.control.Breaks._
@@ -15,7 +15,7 @@ object Language {
     private val props = new java.util.Properties()
 
     //从languages/english/*.lang加载
-    def loadAll: Unit = {
+    def loadAll(): Unit = {
         ResourceDir.listFiles("/languages")
             .foreach(path => {
                 if (path.endsWith(".lang")) {
@@ -36,23 +36,35 @@ object Language {
     }
 
     def name: String = {
-        //if (Cookies.get())
-        ""
+        val language = Cookies.get("language")
+        if (language == null) {
+            Configurations.getPropertyOrElse("voyager.language", "VOYAGER_LANGUAGE", "chinese")
+        }
+        else {
+            language
+        }
     }
 
     def get(label: String): String = {
         props.getProperty(label, "NULL")
     }
 
-    //model.getOrDefault("language", Properties.get("voyager.language")).toString
+    def get(modules: String, holder: String): String = {
+        get(Language.name, modules, holder)
+    }
 
     def get(language: String, modules: String, holder: String): String = {
+
+        if (labels.isEmpty) {
+            loadAll()
+        }
+
         var text = "NULL"
         breakable {
             for (module <- modules.split(",")) {
                 val label = (language + "." + module.trim() + "." + holder).replace("..", ".")
-                if (props.contains(label)) {
-                    text = props.getProperty(label)
+                if (labels.contains(label)) {
+                    text = labels(label)
                     break
                 }
             }

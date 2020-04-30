@@ -1,33 +1,37 @@
 package io.qross.net
 
 import io.qross.core.{DataCell, DataType}
+import javax.servlet.http.Cookie
 import org.springframework.web.context.request.{RequestContextHolder, ServletRequestAttributes}
 
-class Session {
+object Session {
 
-    def getCell(name: String): DataCell = {
-        val attributes: ServletRequestAttributes = RequestContextHolder.getRequestAttributes.asInstanceOf[ServletRequestAttributes]
-        if (attributes != null) {
-            val value = attributes.getRequest.getSession.getAttribute(name)
-            if (value == null) {
-                DataCell(null, DataType.TEXT)
-            }
-            else {
-                DataCell(value)
-            }
+    def get(name: String): Any = {
+        val request = Servlet.httpRequest
+        if (request != null) {
+            request.getSession.getAttribute(name)
         }
         else {
-            DataCell.NOT_FOUND
+            null
         }
     }
 
-    def set(): Boolean = {
-        val attributes: ServletRequestAttributes = RequestContextHolder.getRequestAttributes.asInstanceOf[ServletRequestAttributes]
-        if (attributes != null) {
-            true
+    def set(name: String, value: Any): Unit = {
+        val request = Servlet.httpRequest
+        if (request != null) {
+            request.getSession.setAttribute(name, value)
+        }
+    }
+}
+
+class Session {
+    def getCell(name: String): DataCell = {
+        val value = Session.get(name)
+        if (value != null) {
+            DataCell(value)
         }
         else {
-            false
+            DataCell.NOT_FOUND
         }
     }
 

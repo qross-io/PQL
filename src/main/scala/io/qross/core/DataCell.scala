@@ -410,6 +410,19 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         }
     }
 
+    def is(dataType: String): Boolean = {
+        this.dataType.typeName == dataType || this.dataType.className == dataType || this.dataType.originalName == dataType
+    }
+
+    def isExtensionType: Boolean = {
+        this.dataType.typeName.contains(".")
+    }
+
+    def asClass: Unit = {
+        Class.forName(this.dataType.typeName).getClass.getDeclaredMethod("getCell")
+        //this.value
+    }
+
     def toOption[T]: Option[T] = {
         if (this.valid) {
             Some(this.value.asInstanceOf[T])

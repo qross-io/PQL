@@ -81,8 +81,7 @@ object Patterns {
     val $REQUEST: Regex = """(?i)^REQUEST\s+""".r
     val $SEND$MAIL: Regex = """(?i)^SEND\s+E?MAIL\s+""".r
     val $PARSE: Regex = """(?i)^PARSE\s""".r
-    val $LINK: Regex = """(?i)\s[A-Z][A-Z\$]*([ \t]+[A-Z][A-Z\d]+)*(\s|$)""".r
-    val $TUPLE: Regex = """\([^\)]+\)""".r
+    val $LINK: Regex = """(?i)\s[A-Z][A-Z\$]+([ \t]+[A-Z][A-Z\d]+)*(\s|$)""".r
 
     val $LET: Regex = """(?i)^LET\s+""".r
     val $DEBUG: Regex = """(?i)^DEBUG\s""".r
@@ -96,26 +95,10 @@ object Patterns {
     val $INTERMEDIATE$N: Regex = """^~value\[(\d+)\]$""".r
     val FUNCTION_NAMES: Set[String] = GlobalFunction.getClass.getDeclaredMethods.map(m => m.getName).filter(n => "^[A-Z]".r.test(n)).toSet
     val $RESERVED: Regex = """^[_A-Za-z0-9\.]+$""".r
-    val $CONSTANT: Regex = """^[A-Za-z][A-Za-z0-9_]*$|^[_][A-Za-z0-9_]+$""".r
+    val $CONSTANT: Regex = """^\*$|^[A-Za-z][A-Za-z0-9_]*$|^[_][A-Za-z0-9_]+$""".r
+    val $AS: Regex = """(?i)\s+AS\s+""".r
     val $NULL: Regex = """(?i)^NULL$""".r
 
-    val SHARP_LINKS: Set[String] = Sharp.getClass.getDeclaredMethods.map(m => m.getName).filter(n => """^[A-Z][A-Z\$]*[A-Z\d]+$|^[A-Z]$""".r.test(n)).toSet
-    val MULTI$ARGS$LINKS: Map[String, Set[String]] =
-        Map[String, Set[String]](
-            "SUBSTRING" -> Set[String]("TO"),
-            "SUBSTR" -> Set[String]("TO"),
-            "SPLIT" -> Set[String]("AND"),
-            "BRACKET" -> Set[String]("AND"),
-            "REPLACE" -> Set[String]("TO"),
-            "REPLACE$FIRST" -> Set[String]("TO"),
-            "REPLACE$ALL" -> Set[String]("TO"),
-            "TRIM" -> Set[String]("AND"),
-            "PLUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
-            "MINUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MILLISECONDS"),
-            "INSERT" -> Set[String]("VALUES"),
-            "INSERT$IF$EMPTY" -> Set[String]("VALUES"),
-            "TURN" -> Set[String]("AND"))
-    val PRIORITIES: Set[String] = Set[String]("X")
     val $DATETIME_UNITS: Regex = """^(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND|MILLI|MICRO|NONA)=(\d+)$""".r
     val GLOBAL_VARIABLES: Set[String] = GlobalVariableDeclaration.getClass.getDeclaredMethods.map(m => m.getName).toSet
     val ARROW: String = "->"

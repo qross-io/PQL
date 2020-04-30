@@ -31,6 +31,7 @@ import javax.servlet.http.Cookie
 
 import scala.util.Random
 
+
 object Main {
 
     def main(args: Array[String]): Unit = {
@@ -101,21 +102,26 @@ object Main {
             "time" -> "2020-02-27 18:30:33",
             "filter" -> ""
         ).run().print */
+
+        //PQL.openEmbeddedFile("/sql/test.html").place("jobId=595").set("jobId=595").run().print
         //PQL.openFile("/sql/date.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
 
-
-
+        //"""\s+[,=]\s+|\s+[,=\)]|[,=\(]\s+""".r.findAllIn("id = 0, title ='HELLO WROLD'").foreach(println)
 
         //"abc".shuffle(100).print
         //"abcdefghijklmnopqrstuvwxyz0123456789".shuffle(10).print
 
-        //println(Base64.encode("str-world"))
-        //println(Base64.decode("c3RyLXdvcmxk"))
+        val any = null
+        println("123".replace("2", any.asInstanceOf[String]))
 
         //Language.loadAll
-        //PQL.openEmbeddedFile("/templates/example.html").place("jobId=595").set("jobId=595").run().print
-        println(new Session())
 
+//        println(new Session())
+//        println(Class.forName("io.qross.net.Cookies")
+//                .getDeclaredMethod("getDefault")
+//                )
+        //, Class.forName("java.lang.String")
+            //.invoke(new io.qross.net.Cookies(), "hello & world")
 
         //val cookie = new Cookie("", "")
         //cookie.setDomain()
@@ -127,6 +133,7 @@ object Main {
         cookie.setSecure()
         cookie.setVersion(int)
         */
+
 
 //        val row = new DataRow()
 //        row.set("r", new DataRow(), DataType.ROW)

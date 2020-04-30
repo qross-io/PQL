@@ -34,7 +34,7 @@ object Configurations {
         }
     }
 
-    //如果优先从配置项中获取，如果不存在 ，则从Properties中获取
+    //如果优先从配置项中获取，如果不存在, 则从Properties中获取
     def getOrProperty(name: String, propertyName: String, defaultValue: String = ""): String = {
         CONFIG.getStringOption(name).getOrElse(Properties.get(propertyName, defaultValue))
     }

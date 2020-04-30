@@ -4,7 +4,7 @@ import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
-import io.qross.pql.Patterns.{$CONSTANT, $INTERMEDIATE$N, $NULL, $LINK, FUNCTION_NAMES}
+import io.qross.pql.Patterns._
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -28,6 +28,7 @@ object Solver {
         """@([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\(?""".r,
         """@([a-zA-Z0-9_]+)\(?""".r
     )
+    val EMBEDDED_VARIABLE: Regex = """(\$|@)\{\s*([a-zA-Z0-9_]+)(.[a-zA-Z0-9_]+)?\s*\}""".r
     val USER_DEFINED_FUNCTION: Regex = """$[a-zA-Z_]+\(\)""".r //用户函数, 未完成
     val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\s*\(([^\)]*)\)""".r //系统函数
     val JS_EXPRESSION: Regex = """\~\{([\s\S]+?)}""".r //js表达式
@@ -65,19 +66,21 @@ object Solver {
                 c match {
                     //单行注释开始
                     case '-' =>
-                       if (i > 0 && sentence.charAt(i - 1) == '-' && closing.isEmpty) {
+                        if (closing.isEmpty
+                                && i > 0 && sentence.charAt(i - 1) == '-'
+                                && !(i > 2 && sentence.charAt(i - 1) == '-' && sentence.charAt(i - 2) == '!' && sentence.charAt(i - 3) == '<')) {
                             closing += new Closing('-', i)
                             blocks += new Block$Range("SINGLE-LINE-COMMENT", i - 1)
                         }
                     //单行注释结束
-                    case '\r' =>
+                    case '\r' | '\n' =>
                         if (closing.nonEmpty && closing.head.char == '-') {
-                            blocks.head.end = i + 1
+                            blocks.head.end = i
                             closing.pop()
                         }
                     //多行注释开始
                     case '*' =>
-                        if (i > 0 && sentence.charAt(i - 1) == '/' && closing.isEmpty) {
+                        if (closing.isEmpty && i > 0 && sentence.charAt(i - 1) == '/') {
                             closing += new Closing('*', i)
                             blocks += new Block$Range("MULTI-LINES-COMMENT", i - 1)
                         }
@@ -115,7 +118,7 @@ object Solver {
                 }
             }
 
-            //最后一行是注释
+            //如果最后一行是注释
             if (closing.nonEmpty) {
                 val clip = sentence.takeAfter(closing.head.index - 1).take(20)
                 closing.head.char match {
@@ -498,7 +501,27 @@ object Solver {
                             sentence = sentence.replace(whole, PQL.$stash(data))
                         }
                         else {
-                            sentence = sentence.replace(whole, PQL.$stash(data.asRow.getCell(m.group(2))))
+                            sentence = sentence.replace(whole,
+                                PQL.$stash(
+                                    if (data.isRow) {
+                                        data.asRow.getCell(m.group(2))
+                                    }
+                                    else if(data.isExtensionType) {
+                                        try {
+                                            Class.forName(data.dataType.typeName)
+                                                            .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
+                                                            .invoke(data.value, m.group(2))
+                                                            .asInstanceOf[DataCell]
+                                        }
+                                        catch {
+                                            case _: Exception => throw new SQLExecuteException("Class " + data.dataType.typeName + " must contains method getCell(String).")
+                                        }
+                                    }
+                                    else {
+                                        DataCell.NOT_FOUND
+                                    }
+                                )
+                            )
                         }
                     }).ifNotFound(() => {
                         if (m.groupCount == 1) {
@@ -527,7 +550,28 @@ object Solver {
                                     sentence = sentence.replace(whole, PQL.$stash(data))
                                 }
                                 else {
-                                    sentence = sentence.replace(whole, PQL.$stash(data.asRow.getCell(m.group(2))))
+                                    sentence = sentence.replace(whole,
+                                        PQL.$stash(
+                                            if (data.isRow) {
+                                                data.asRow.getCell(m.group(2))
+                                            }
+                                            else if(data.isExtensionType) {
+                                                try {
+                                                    Class.forName(data.dataType.typeName)
+                                                        .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
+                                                        .invoke(data.value, m.group(2))
+                                                        .asInstanceOf[DataCell]
+                                                }
+                                                catch {
+                                                    case _: Exception => throw new SQLExecuteException("Class " + data.dataType.typeName + " must contains method getCell(String).")
+                                                }
+                                            }
+                                            else {
+                                                DataCell.NOT_FOUND
+                                            }
+                                        )
+                                    )
+                                    //sentence = sentence.replace(whole, PQL.$stash(data.asRow.getCell(m.group(2))))
                                 }
                             })
                             .ifNotFound(() => {
@@ -538,6 +582,46 @@ object Solver {
                             })
                         }
                     })
+
+            sentence
+        }
+
+        def replaceEmbeddedVariables(PQL: PQL): String = {
+            EMBEDDED_VARIABLE.findAllMatchIn(sentence)
+                .foreach(m => {
+                    val whole = m.group(0)
+                    val symbol = m.group(1)
+                    val name = m.group(2)
+
+                    PQL.findVariable(symbol + name).ifFound(data => {
+                        if (m.group(3) == null) {
+                            sentence = sentence.replace(whole, if (data.value == null || data.invalid) "null" else data.value.toString)
+                        }
+                        else {
+                            val name = m.group(3).drop(1)
+                            val cell: DataCell = {
+                                if (data.isRow) {
+                                    data.asRow.getCell(name)
+                                }
+                                else if (data.isExtensionType) {
+                                    try {
+                                        Class.forName(data.dataType.typeName)
+                                            .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
+                                            .invoke(data.value, name)
+                                            .asInstanceOf[DataCell]
+                                    }
+                                    catch {
+                                        case _: Exception => throw new SQLExecuteException("Class " + data.dataType.typeName + " must contains method getCell(String).")
+                                    }
+                                }
+                                else {
+                                    DataCell.NOT_FOUND
+                                }
+                            }
+                            sentence = sentence.replace(whole, if (cell.value == null || cell.invalid) "null" else cell.value.toString)
+                        }
+                    })
+                })
 
             sentence
         }
@@ -597,21 +681,11 @@ object Solver {
             SHARP_EXPRESSION
                 .findAllMatchIn(sentence)
                 .foreach(m => {
-                    $CONSTANT.findFirstIn(m.group(1)) match {
-                        case Some(name) =>
-                            //如果内容是变量形式
-                            PQL.findVariable("$" + name)
-                                .ifFound(data => {
-                                    sentence = sentence.replace(m.group(0), PQL.$stash(data))
-                                })
-                        case None =>
-                            //已在clean过程中, 不需要clean
-                            //替换变量是因为sharp表达式中可能存在未解析的变量, 如ECHO语句中只支持内嵌 ${ }
-                            new Sharp(m.group(1).replaceVariables(PQL)).execute(PQL).ifValid(data => {
-                                sentence = sentence.replace(m.group(0), PQL.$stash(data))
-                            })
-                    }
-
+                    //已在clean过程中, 不需要clean
+                    //m.group(1).replaceVariables(PQL)
+                    new Sharp(m.group(1)).execute(PQL).ifValid(data => {
+                        sentence = sentence.replace(m.group(0), PQL.$stash(data))
+                    })
                 })
 
             sentence
@@ -671,7 +745,7 @@ object Solver {
                 DataCell.NULL
             }
             //常量
-            else if ($CONSTANT.test(sentence)) {
+            else if ($CONSTANT.test(sentence) || $AS.test(sentence)) {
                 DataCell(sentence, DataType.TEXT)
             }
             //SHARP表达式

@@ -1,8 +1,14 @@
 DEBUG ON;
 
-OPEN QROSS;
+--OPEN QROSS;
 
-GET # SELECT id, title FROM qross_jobs LIMIT 10;
-SAVE AS NEW CSV FILE '123.csv' WITH HEADERS ('id', 'title');
+--SAVE AS EXCEL STREAM FILE "hello.xlsx" TEMPLATE "template.xlsx";
+
+--VAR $table := SELECT id, title, next_tick FROM qross_jobs LIMIT 1 -> SELECT id AS name;
+
+--PRINT $table;
+
+OUTPUT # IF @SECURITY_AUTHENTICATION_MODE STARTS WITH 'ldap' THEN 'focus' ELSE 'normal' END;
+
 
 

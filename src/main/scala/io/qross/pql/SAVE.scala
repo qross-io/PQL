@@ -117,14 +117,12 @@ class SAVE(val sentence: String) {
                     }
                     else {
                         PQL.dh.saveAsExcel(file)
-                    }
-
-                    if (plan.contains("USE DEFAULT TEMPLATE", "DEFAULT TEMPLATE")) {
-                        PQL.dh.useDefaultTemplate()
-                    }
-                    else if (plan.contains("USE TEMPLATE")) {
-                        PQL.dh.useTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
-                    }
+                    }.useTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
+                }
+            case "EXCEL STREAM FILE" =>
+                val fileName = plan.headArgs
+                if (fileName != "") {
+                    PQL.dh.saveAsStreamExcel(fileName).useTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
                 }
             case "DEFAULT" =>
                 PQL.dh.saveAsDefault()

@@ -1,12 +1,8 @@
 package io.qross.pql
 
-import java.util
-
 import io.qross.core._
-import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.fs.SourceFile
-import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.net.Json
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
@@ -230,7 +226,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                     .flatMap(block => {
                         if (block.contains(EM$LEFT)) {
                             val s = new ArrayBuffer[String]()
-                            val p1 = block.takeBefore(EM$LEFT)
+                            var p1 = block.takeBefore(EM$LEFT)
                             if (p1.nonEmpty) {
                                 s += "ECHO " + p1
                             }

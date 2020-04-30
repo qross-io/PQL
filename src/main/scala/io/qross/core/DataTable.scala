@@ -563,13 +563,26 @@ class DataTable() {
     }
 
     //仅SELECT, 选择部分字段生成一个新表
-    def select(fieldNames: String*): DataTable = {
+    def select(fields: String*): DataTable = {
         val table = new DataTable()
         rows.foreach(row => {
             val newRow = new DataRow()
-            fieldNames.foreach(fieldName => {
-                if (contains(fieldName)) {
-                    newRow.set(fieldName, row.getCell(fieldName))
+            fields.foreach(field => {
+                if (field.equals("*")) {
+                    this.fields.foreach(column => newRow.set(column, row.getCell(column)))
+                }
+                else {
+                    """(?i)\sAS\s""".r.findFirstIn(field) match {
+                        case Some(as) =>
+                            val origin = field.takeBefore(as).trim()
+                            if (contains(origin)) {
+                                newRow.set(field.takeAfter(as).trim(), row.getCell(origin))
+                            }
+                        case None =>
+                            if (contains(field)) {
+                                newRow.set(field, row.getCell(field))
+                            }
+                    }
                 }
             })
             table.addRow(newRow)
@@ -600,10 +613,10 @@ class DataTable() {
     // SELECT "A, B, PARTITION(C,D)"  二次分组聚合
     // 二次分组排序, TOP N, 再次聚合, 参与SQL SERVER和第一版FSQL
     // SELECT ... WHERE ... HAVING ... LIMIT N
-    def select(fragment: String): DataTable = {
+    //def select(fragment: String): DataTable = {
         //"select value from cookies where name='name' limit 1"
-        null
-    }
+    //    null
+    //}
 
     // 删除列
     def drop(fieldNames: String*): Unit = {

@@ -2,9 +2,9 @@ package io.qross.pql
 
 import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.net.{Cookie, Session}
+import io.qross.net.{Cookies, Session}
 import io.qross.pql.Patterns.FUNCTION_NAMES
-import io.qross.setting.Configurations
+import io.qross.setting.{Configurations, Language}
 import io.qross.time.DateTime
 
 object GlobalVariable {
@@ -165,6 +165,7 @@ object GlobalVariableDeclaration {
     def BUFFER(PQL: PQL): DataCell = DataCell(PQL.dh.getData, DataType.TABLE)
     def CLEAN_PQL_BODY(PQL: PQL): DataCell = DataCell(PQL.SQL, DataType.TEXT)
 
-    def COOKIE(PQL: PQL): DataCell = DataCell(new Cookie(), DataType.forClassName("io.qross.net.Cookie"))
+    def COOKIES(PQL: PQL): DataCell = DataCell(new Cookies(), DataType.forClassName("io.qross.net.Cookies"))
     def SESSION(PQL: PQL): DataCell = DataCell(new Session(), DataType.forClassName("io.qross.net.Session"))
+    def LANGUAGE(PQL: PQL): DataCell = DataCell(Language.name, DataType.TEXT)
 }
