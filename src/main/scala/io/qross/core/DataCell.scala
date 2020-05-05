@@ -11,8 +11,8 @@ import scala.util.matching.Regex
 
 object DataCell {
     val NULL: DataCell = DataCell(null, DataType.NULL) //一个DataCell的默认值, 类型未定义, 值未赋值
-    val NOT_FOUND: DataCell = DataCell("NOT_FOUND", DataType.EXCEPTION) //表示未按预期找到想要的结果
-    val ERROR: DataCell = DataCell("ERROR", DataType.EXCEPTION) //计算值时发生错误
+    val UNDEFINED: DataCell = DataCell("UNDEFINED", DataType.EXCEPTION) //表示未按预期找到想要的结果，比如变量名未找到，属性值未找到
+    val ERROR: DataCell = DataCell("ERROR", DataType.EXCEPTION) //计算值时发生错误, 不支持的数据类型也在其中
     val EMPTY: DataCell = DataCell("EMPTY", DataType.NULL) //表示一种空状态, 比如列表为空, 字符串为空等
 }
 
@@ -44,8 +44,8 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         }
     }
     def nonEmpty: Boolean = !isEmpty
-    def found: Boolean = !notFound
-    def notFound: Boolean = dataType == DataType.EXCEPTION && value == "NOT_FOUND"
+    def defined: Boolean = !undefined
+    def undefined: Boolean = dataType == DataType.EXCEPTION && value == "UNDEFINED"
     def isError: Boolean = dataType == DataType.EXCEPTION && value == "ERROR"
     def nonError: Boolean = !isError
     def isExceptional: Boolean = dataType == DataType.EXCEPTION
@@ -84,14 +84,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     }
 
     def ifFound(handler: DataCell => Unit): DataCell = {
-        if (found) {
+        if (defined) {
             handler(this)
         }
         this
     }
 
     def ifNotFound(handler: () => Unit): DataCell = {
-        if (notFound) {
+        if (undefined) {
             handler()
         }
         this

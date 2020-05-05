@@ -92,14 +92,14 @@ class Condition(val expression: String) {
             case "IS$NOT" =>
                 val v = value.asText
                 if (v == null) {
-                    field.value != null
+                    field.valid && field.value != null
                 }
                 else if ("""(?i)^[a-z]+$""".r.test(v)) {
                     v.toUpperCase match {
-                        case "NULL" => field.value != null
+                        case "NULL" => field.valid && field.value != null
                         case "EMPTY" => field.nonEmpty
                         case "DEFINED" =>
-                            if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                            if (field.undefined) {
                                 true
                             }
                             else if (field.asText.removeQuotes().containsArguments) {
@@ -109,7 +109,7 @@ class Condition(val expression: String) {
                                 false
                             }
                         case "UNDEFINED" =>
-                            if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                            if (field.undefined) {
                                 false
                             }
                             else if (field.asText.removeQuotes().containsArguments) {
@@ -135,14 +135,14 @@ class Condition(val expression: String) {
             case "IS" =>
                 val v = value.asText
                 if (v == null) {
-                    field.value == null
+                    field.invalid || field.value == null
                 }
                 else if ("""(?i)^[a-z]+$""".r.test(v)) {
                     v.toUpperCase match {
-                        case "NULL" => field.value == null
+                        case "NULL" => field.invalid || field.value == null
                         case "EMPTY" => field.isEmpty
                         case "DEFINED" =>
-                            if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                            if (field.undefined) {
                                 false
                             }
                             else if (field.asText.removeQuotes().containsArguments) {
@@ -152,7 +152,7 @@ class Condition(val expression: String) {
                                 true
                             }
                         case "UNDEFINED" =>
-                            if (field.dataType == DataType.EXCEPTION && field.value == "NOT_FOUND") {
+                            if (field.undefined) {
                                 true
                             }
                             else if (field.asText.removeQuotes().containsArguments) {
@@ -175,10 +175,45 @@ class Condition(val expression: String) {
                 else {
                     field.value == value.value
                 }
-            case "===" => field.asText == value.asText
-            case "!==" => field.asText != value.asText
-            case "=" | "==" => field.asText.equalsIgnoreCase(value.asText)
-            case "!=" | "<>" => !field.asText.equalsIgnoreCase(value.asText)
+            case "===" => field.dataType == value.dataType && field.value == value.value
+            case "!==" => field.dataType != value.dataType || field.value != value.value
+            case "=" | "==" =>
+                // null == undefined
+                {
+                    if (field.undefined || field.value == null) {
+                        "null"
+                    }
+                    else {
+                        field.asText
+                    }
+                }.equalsIgnoreCase({
+                    if (value.undefined || value.value == null) {
+                        "null"
+                    }
+                    else {
+                        value.asText
+                    }
+                })
+                //field.asText.equalsIgnoreCase(value.asText)
+            case "!=" | "<>" =>
+                !{
+                    {
+                        if (field.undefined || field.value == null) {
+                            "null"
+                        }
+                        else {
+                            field.asText
+                        }
+                    }.equalsIgnoreCase({
+                        if (value.undefined || value.value == null) {
+                            "null"
+                        }
+                        else {
+                            value.asText
+                        }
+                    })
+                }
+            //!field.asText.equalsIgnoreCase(value.asText)
             case ">=" => field >= value
             case "<=" => field <= value
             case ">" => field > value

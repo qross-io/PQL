@@ -370,7 +370,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         val symbol = field.take(1)
         val name = field.drop(1).toUpperCase()
 
-        var cell = DataCell.NOT_FOUND
+        var cell = DataCell.UNDEFINED
 
         if (symbol == "$") {
             breakable {

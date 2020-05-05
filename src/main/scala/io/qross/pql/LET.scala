@@ -26,7 +26,7 @@ class LET(variable:String, expression: String) {
     def execute(PQL: PQL): Unit = {
         if (variable.startsWith("$")) {
             val data = PQL.findVariable(variable)
-            if (data.found) {
+            if (data.defined) {
                 new Sharp(expression.$clean(PQL), data).execute(PQL)
             }
         }

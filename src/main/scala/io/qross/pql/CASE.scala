@@ -39,7 +39,7 @@ object CASE {
 
         var sentence = expression
         val words = """\b(CASE|WHEN|THEN|ELSE|END)\b""".r.findAllIn(sentence).toList
-        var equivalent = DataCell.NOT_FOUND
+        var equivalent = DataCell.UNDEFINED
         var met = false
         var result = ""
         var wrong = ""

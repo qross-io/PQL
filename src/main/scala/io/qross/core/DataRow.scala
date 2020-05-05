@@ -135,7 +135,7 @@ class DataRow() {
             DataCell(this.values(name), this.columns(name))
         }
         else {
-            DataCell.NOT_FOUND
+            DataCell.UNDEFINED
         }
     }
 
@@ -145,7 +145,7 @@ class DataRow() {
             DataCell(this.values(name), this.columns(name))
         }
         else {
-            DataCell.NOT_FOUND
+            DataCell.UNDEFINED
         }
     }
 
@@ -158,7 +158,7 @@ class DataRow() {
             getCell(this.fields.size - 1)
         }
         else {
-            DataCell.NOT_FOUND
+            DataCell.UNDEFINED
         }
     }
 

@@ -5,8 +5,14 @@
     <title>Title</title>
 </head>
 <body>
-@{language}<br/>
-<%=@language%> <br/>
+
+<%= { "hello": "world" } GET 'hello' %>
+
+<% IF @cookies.language is null then%>
+HELLO WORLD
+<% ELSE %>
+WORLD HELLO
+<%END IF%>
 <%
 VAR $row := SELECT * FROM qross_tasks LIMIT 10 -> LAST ROW;
 %>

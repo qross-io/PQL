@@ -496,46 +496,49 @@ object Solver {
                     val whole = m.group(0)
                     val name = m.group(1)
 
-                    PQL.findVariable("$" + name).ifFound(data => {
-                        if (m.groupCount == 1) {
-                            sentence = sentence.replace(whole, PQL.$stash(data))
-                        }
-                        else {
-                            sentence = sentence.replace(whole,
-                                PQL.$stash(
-                                    if (data.isRow) {
-                                        data.asRow.getCell(m.group(2))
-                                    }
-                                    else if(data.isExtensionType) {
-                                        try {
-                                            Class.forName(data.dataType.typeName)
-                                                            .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
-                                                            .invoke(data.value, m.group(2))
-                                                            .asInstanceOf[DataCell]
+                    PQL.findVariable("$" + name)
+                        .ifFound(data => {
+                            if (m.groupCount == 1) {
+                                sentence = sentence.replace(whole, PQL.$stash(data))
+                            }
+                            else {
+                                sentence = sentence.replace(whole,
+                                    PQL.$stash(
+                                        if (data.isRow) {
+                                            data.asRow.getCell(m.group(2))
                                         }
-                                        catch {
-                                            case _: Exception => throw new SQLExecuteException("Class " + data.dataType.typeName + " must contains method getCell(String).")
+                                        else if(data.isExtensionType) {
+                                            try {
+                                                Class.forName(data.dataType.typeName)
+                                                                .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
+                                                                .invoke(data.value, m.group(2))
+                                                                .asInstanceOf[DataCell]
+                                            }
+                                            catch {
+                                                case _: Exception => throw new SQLExecuteException("Class " + data.dataType.typeName + " must contains method getCell(String).")
+                                            }
                                         }
-                                    }
-                                    else {
-                                        DataCell.NOT_FOUND
-                                    }
+                                        else {
+                                            //不支持的数据类型
+                                            DataCell.ERROR
+                                        }
+                                    )
                                 )
-                            )
-                        }
-                    }).ifNotFound(() => {
-                        if (m.groupCount == 1) {
-                            if (PQL.dh.debugging) {
-                                Output.writeWarning(s"The variable $name has not been assigned.")
                             }
-                        }
-                        else {
-                            if (PQL.dh.debugging) {
-                                Output.writeWarning(s"The variable $name hasn't property ${m.group(2)}.")
+                        }).ifNotFound(() => {
+                            if (m.groupCount == 1) {
+                                if (PQL.dh.debugging) {
+                                    Output.writeWarning(s"The variable $name has not been assigned.")
+                                }
                             }
-                        }
-                        sentence = sentence.replace(whole, "UNDEFINED")
-                    })
+                            else {
+                                if (PQL.dh.debugging) {
+                                    Output.writeWarning(s"The variable $name hasn't property ${m.group(2)}.")
+                                }
+                            }
+                            //变量未定义
+                            sentence = sentence.replace(whole, "UNDEFINED")
+                        })
                 })
 
             GLOBAL_VARIABLE
@@ -545,41 +548,42 @@ object Solver {
                         val whole = m.group(0)
                         if (!whole.endsWith("(")) {
                             val name = m.group(1)
-                            PQL.findVariable("@" + name).ifFound(data => {
-                                if (m.groupCount == 1) {
-                                    sentence = sentence.replace(whole, PQL.$stash(data))
-                                }
-                                else {
-                                    sentence = sentence.replace(whole,
-                                        PQL.$stash(
-                                            if (data.isRow) {
-                                                data.asRow.getCell(m.group(2))
-                                            }
-                                            else if(data.isExtensionType) {
-                                                try {
-                                                    Class.forName(data.dataType.typeName)
-                                                        .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
-                                                        .invoke(data.value, m.group(2))
-                                                        .asInstanceOf[DataCell]
+                            PQL.findVariable("@" + name)
+                                .ifFound(data => {
+                                    if (m.groupCount == 1) {
+                                        sentence = sentence.replace(whole, PQL.$stash(data))
+                                    }
+                                    else {
+                                        sentence = sentence.replace(whole,
+                                            PQL.$stash(
+                                                if (data.isRow) {
+                                                    data.asRow.getCell(m.group(2))
                                                 }
-                                                catch {
-                                                    case _: Exception => throw new SQLExecuteException("Class " + data.dataType.typeName + " must contains method getCell(String).")
+                                                else if(data.isExtensionType) {
+                                                    try {
+                                                        Class.forName(data.dataType.typeName)
+                                                            .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
+                                                            .invoke(data.value, m.group(2))
+                                                            .asInstanceOf[DataCell]
+                                                    }
+                                                    catch {
+                                                        case _: Exception => throw new SQLExecuteException("Class " + data.dataType.typeName + " must contains method getCell(String).")
+                                                    }
                                                 }
-                                            }
-                                            else {
-                                                DataCell.NOT_FOUND
-                                            }
+                                                else {
+                                                    DataCell.ERROR
+                                                }
+                                            )
                                         )
-                                    )
-                                    //sentence = sentence.replace(whole, PQL.$stash(data.asRow.getCell(m.group(2))))
-                                }
-                            })
-                            .ifNotFound(() => {
-                                // @name 标记与MySQL和SQL Server冲突, 不做处理
-                                if (PQL.dh.debugging) {
-                                    Output.writeWarning(s"The global variable $name maybe has not been assigned.")
-                                }
-                            })
+                                        //sentence = sentence.replace(whole, PQL.$stash(data.asRow.getCell(m.group(2))))
+                                    }
+                                })
+                                .ifNotFound(() => {
+                                    // @name 标记与MySQL和SQL Server冲突, 不做处理
+                                    if (PQL.dh.debugging) {
+                                        Output.writeWarning(s"The global variable $name maybe has not been assigned.")
+                                    }
+                                })
                         }
                     })
 
@@ -615,10 +619,10 @@ object Solver {
                                     }
                                 }
                                 else {
-                                    DataCell.NOT_FOUND
+                                    DataCell.ERROR
                                 }
                             }
-                            sentence = sentence.replace(whole, if (cell.value == null || cell.invalid) "null" else cell.value.toString)
+                            sentence = sentence.replace(whole, if (cell.value == null) "null" else cell.value.toString)
                         }
                     })
                 })

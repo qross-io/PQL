@@ -81,7 +81,7 @@ object Patterns {
     val $REQUEST: Regex = """(?i)^REQUEST\s+""".r
     val $SEND$MAIL: Regex = """(?i)^SEND\s+E?MAIL\s+""".r
     val $PARSE: Regex = """(?i)^PARSE\s""".r
-    val $LINK: Regex = """(?i)\s[A-Z][A-Z\$]+([ \t]+[A-Z][A-Z\d]+)*(\s|$)""".r
+    val $LINK: Regex = """(?i)\s[A-Z][A-Z]+(\s+[A-Z][A-Z\d]+)*(\s|$)""".r
 
     val $LET: Regex = """(?i)^LET\s+""".r
     val $DEBUG: Regex = """(?i)^DEBUG\s""".r

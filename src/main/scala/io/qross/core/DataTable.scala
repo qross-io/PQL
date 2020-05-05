@@ -824,14 +824,14 @@ class DataTable() {
     def getCell(rowIndex: Int, colIndex: Int): DataCell = {
         getRow(rowIndex) match {
             case Some(row) => row.getCell(colIndex)
-            case None => DataCell.NOT_FOUND
+            case None => DataCell.UNDEFINED
         }
     }
 
     def getCell(rowIndex: Int, fieldName: String): DataCell = {
         getRow(rowIndex) match {
             case Some(row) => row.getCell(fieldName)
-            case None => DataCell.NOT_FOUND
+            case None => DataCell.UNDEFINED
         }
     }
 

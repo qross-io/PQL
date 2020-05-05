@@ -31,7 +31,7 @@ class Session {
             DataCell(value)
         }
         else {
-            DataCell.NOT_FOUND
+            DataCell.UNDEFINED
         }
     }
 

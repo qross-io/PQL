@@ -40,7 +40,7 @@ class OUTPUT(val content: String) {
                 //对象或数组类型不能eval
                 Json.fromText(content.$restore(PQL, "\"")).findNode("/")
             }
-            else if ("""~json\[\d+\]""".r.test(content)) {
+            else if ("""^~json\[\d+\]$""".r.test(content)) {
                 Json.fromText(content.restoreJsons(PQL).$restore(PQL, "\"")).findNode("/")
             }
             else {

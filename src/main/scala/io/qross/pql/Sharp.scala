@@ -1065,7 +1065,7 @@ object Sharp {
         if (arg.valid) {
             ChronExp(data.asText).getNextTick(arg.asDateTime) match {
                 case Some(dt) => DataCell(dt, DataType.DATETIME)
-                case None => DataCell.NOT_FOUND
+                case None => DataCell.NULL
             }
         }
         else {
@@ -1120,7 +1120,7 @@ object Sharp {
         if (arg.valid) {
             data.asRegex.findFirstIn(arg.asText) match {
                 case Some(value) => DataCell(value, DataType.TEXT)
-                case None => DataCell.NULL
+                case None => DataCell.UNDEFINED
             }
         }
         else {
@@ -1352,7 +1352,7 @@ object Sharp {
                         arg
                     }
                     else {
-                        DataCell.NOT_FOUND
+                        DataCell.UNDEFINED
                     }
             }
         }
@@ -1366,7 +1366,7 @@ object Sharp {
                     arg
                 }
                 else {
-                    DataCell.NOT_FOUND
+                    DataCell.UNDEFINED
                 }
         }
     }
@@ -1381,7 +1381,7 @@ object Sharp {
                     else {
                         row.getCell(arg.asText)
                     }
-                case None => DataCell.NOT_FOUND
+                case None => DataCell.UNDEFINED
             }
         }
         else {
@@ -1399,7 +1399,7 @@ object Sharp {
                     else {
                         row.getCell(arg.asText)
                     }
-                case None => DataCell.NOT_FOUND
+                case None => DataCell.UNDEFINED
             }
         }
         else {

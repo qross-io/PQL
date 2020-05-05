@@ -28,7 +28,7 @@ object Language {
 
                     val module = path.takeAfter("/languages/").dropRight(4).replace("/", ".")
                     props.forEach((key, value) => {
-                        labels.put(module + key.toString, value.toString)
+                        labels.put((module + key.toString).toLowerCase(), value.toString)
                     })
                     props.clear()
                 }
@@ -59,13 +59,19 @@ object Language {
             loadAll()
         }
 
-        var text = "NULL"
-        breakable {
-            for (module <- modules.split(",")) {
-                val label = (language + "." + module.trim() + "." + holder).replace("..", ".")
-                if (labels.contains(label)) {
-                    text = labels(label)
-                    break
+        var text: String = null
+        val label = (language + "." + holder).toLowerCase()
+        if (labels.contains(label)) {
+            text = labels(label)
+        }
+        else {
+            breakable {
+                for (module <- modules.split(",")) {
+                    val label = (language + "." + module.trim() + "." + holder).replace("..", ".").toLowerCase()
+                    if (labels.contains(label)) {
+                        text = labels(label)
+                        break
+                    }
                 }
             }
         }

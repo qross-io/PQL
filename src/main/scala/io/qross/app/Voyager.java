@@ -43,7 +43,12 @@ public class Voyager extends AbstractTemplateView {
             Matcher m = p.matcher(content);
             while (m.find()) {
                 if (m.group(1).equalsIgnoreCase("language")) {
-                    modules = m.group(2).toLowerCase();
+                    if (modules.isEmpty()) {
+                        modules = m.group(2).toLowerCase();
+                    }
+                    else {
+                        modules += "," + m.group(2).toLowerCase();
+                    }
                     content = content.replace(m.group(0), "");
                 }
                 else {
@@ -59,10 +64,13 @@ public class Voyager extends AbstractTemplateView {
             }
 
             //替换语言标记
-            p = Pattern.compile("#\\s*([a-z][a-z0-9-]+(\\.[a-z0-9-]+)*)\\s*#", Pattern.CASE_INSENSITIVE);
+            p = Pattern.compile("#\\s*([a-z0-9-]+(\\.[a-z0-9-]+)*)\\s*#", Pattern.CASE_INSENSITIVE);
             m = p.matcher(content);
             while (m.find()) {
-                content = content.replace(m.group(0), Language.get(modules, m.group(1)));
+                String text = Language.get(modules, m.group(1));
+                if (text != null) {
+                    content = content.replace(m.group(0), text);
+                }
             }
 
             Map<String, Object> attributes = getAttributesMap();

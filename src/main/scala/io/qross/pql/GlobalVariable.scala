@@ -126,7 +126,7 @@ object GlobalVariable {
             //DataCell(Class.forName("io.qross.setting.Global").getDeclaredMethod(name).invoke(null))
         }
         else {
-            DataCell.NOT_FOUND
+            DataCell.UNDEFINED
         }
     }
 }
@@ -159,7 +159,7 @@ object GlobalVariableDeclaration {
     def RESULT(PQL: PQL): DataCell = {
         PQL.RESULT.lastOption match {
             case Some(v) => DataCell(v)
-            case None => DataCell.NOT_FOUND
+            case None => DataCell.UNDEFINED
         }
     }
     def BUFFER(PQL: PQL): DataCell = DataCell(PQL.dh.getData, DataType.TABLE)

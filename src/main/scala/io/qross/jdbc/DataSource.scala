@@ -485,7 +485,7 @@ class DataSource (var connectionName: String, var databaseName: String) {
             println("------------------------------------------------------------------------")
         }
 
-        var data: DataCell = DataCell.NOT_FOUND
+        var data: DataCell = DataCell.UNDEFINED
         this.executeResultSet(SQL, values: _*) match {
             case Some(rs) =>
                 if (rs.next()) {
