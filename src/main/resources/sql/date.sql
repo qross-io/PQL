@@ -1,14 +1,9 @@
 DEBUG ON;
 
---OPEN QROSS;
+OPEN QROSS;
 
---SAVE AS EXCEL STREAM FILE "hello.xlsx" TEMPLATE "template.xlsx";
+GET # select IFNULL(switch_time, '') AS switch_time, IFNULL(unchecked_exceptional_tasks, '') AS unchecked_exceptional_tasks from qross_jobs limit 10;
 
---VAR $table := SELECT id, title, next_tick FROM qross_jobs LIMIT 1 -> SELECT id AS name;
-
---PRINT $table;
-
-OUTPUT # IF @SECURITY_AUTHENTICATION_MODE STARTS WITH 'ldap' THEN 'focus' ELSE 'normal' END;
-
-
+SAVE AS NEW EXCEL 'a123.xlsx';
+PUT # INSERT INTO SHEET sheet1 (A, B) VALUES (&switch_time, &unchecked_exceptional_tasks);
 

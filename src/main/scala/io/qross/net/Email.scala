@@ -1,18 +1,17 @@
 package io.qross.net
 
 import io.qross.core._
-import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.fs.Path._
 import io.qross.fs.SourceFile
 import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.pql.PQL
 import io.qross.pql.Solver._
-import io.qross.setting.Global
+import io.qross.setting.{Global, Language}
 import io.qross.time.Timer
 import javax.activation.{DataHandler, FileDataSource}
 import javax.mail.internet._
-import javax.mail.{Message, SendFailedException, Session, Transport}
+import javax.mail.{Message, SendFailedException, Transport}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -358,6 +357,16 @@ class Email(private var title: String) {
     def send(): String = {
         if (toRecipients.nonEmpty || ccRecipients.nonEmpty || bccRecipients.nonEmpty) {
             if (this.content != "") {
+
+                val modules = Language.include.r.findAllMatchIn(this.content).map(_.group(1)).mkString(",")
+                Language.holder.r.findAllMatchIn(this.content)
+                    .foreach(m => {
+                        val text = Language.get(modules, m.group(1))
+                        if (text != null) {
+                            this.content = this.content.replace(m.group(0), text)
+                        }
+                    })
+
                 this.content = PQL.openEmbedded(this.content).run().toString
             }
             transfer()
@@ -371,7 +380,7 @@ class Email(private var title: String) {
 
         val result = new mutable.ArrayBuffer[String]()
 
-        val session = Session.getInstance(smtp)
+        val session = javax.mail.Session.getInstance(smtp)
         session.setDebug(false)
     
         val message = new MimeMessage(session)

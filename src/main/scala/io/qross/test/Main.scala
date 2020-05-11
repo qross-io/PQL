@@ -103,10 +103,8 @@ object Main {
             "filter" -> ""
         ).run().print */
 
-        "(?i)#\\s*([a-z][a-z0-9-]+(\\.[a-z0-9-]+)*)\\s*#".r.test("# recent-top-100-elapse #").print
-
         //PQL.openEmbeddedFile("/sql/test.html").place("jobId=595").set("jobId=595").run().print
-        //PQL.openFile("/sql/date.sql").place("jobId=604&guid=1585018220569-7389285796&dag=&commands=&params=").run().print
+        PQL.openFile("/sql/date.sql").place("jobId=634&cronExp=0").run().print
 
         //"""\s+[,=]\s+|\s+[,=\)]|[,=\(]\s+""".r.findAllIn("id = 0, title ='HELLO WROLD'").foreach(println)
 

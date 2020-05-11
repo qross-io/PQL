@@ -323,7 +323,6 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable]
                 case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].toTable
                 case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]].asScala.toList.toTable()
-                case DataType.TEXT => this.value.asInstanceOf[String].split("").toList.toTable()
                 case _ => new DataTable(new DataRow("value" -> this.value))
             }
         }

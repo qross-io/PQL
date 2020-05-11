@@ -64,10 +64,11 @@ public class Voyager extends AbstractTemplateView {
             }
 
             //替换语言标记
+            String language = Language.name();
             p = Pattern.compile("#\\s*([a-z0-9-]+(\\.[a-z0-9-]+)*)\\s*#", Pattern.CASE_INSENSITIVE);
             m = p.matcher(content);
             while (m.find()) {
-                String text = Language.get(modules, m.group(1));
+                String text = Language.get(language, modules, m.group(1));
                 if (text != null) {
                     content = content.replace(m.group(0), text);
                 }

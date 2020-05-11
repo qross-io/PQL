@@ -1,6 +1,7 @@
 package io.qross.pql
 
 import io.qross.core.{DataCell, DataType}
+import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
@@ -28,89 +29,88 @@ class SET(val declare: String, val symbol: String, val expression: String) {
         //6. 数学表达式 - 其他 - 解析函数和变量然后求值，出错则抛出异常
 
         val variables: Array[String] = declare.split(",").map(_.trim)
+        val result = {
+            if ($SELECT.test(expression)) {
+                new SELECT(expression).select(PQL)
+            }
+            else if ($PARSE.test(expression)) {
+                new PARSE(expression).doParse(PQL)
+                //throw new SQLExecuteException("Columns amount in PARSE must equals variables number.")
+            }
+            else if ($INSERT$INTO.test(expression)) {
+                new INSERT(expression).insert(PQL)
+                //throw new SQLParseException("Only 1 variable name allowed when save affected rows of a INSERT sentence. " + expression)
+            }
+            else if ($DELETE.test(expression)) {
+                new DELETE(expression).delete(PQL)
+                //throw new SQLParseException("Only 1 variable name allowed when save affected rows of a DELETE sentence. " + expression)
+            }
+            else if ($NON$QUERY.test(expression)) {
+                //INSERT + UPDATE + DELETE + REPLACE
+                DataCell(PQL.dh.executeNonQuery(expression.$restore(PQL)), DataType.INTEGER)
+                //throw new SQLParseException("Only 1 variable name allowed when save affected rows of an INSERT/UPDATE/DELETE sentence. " + expression)
+            }
+            else {
+                //在SHARP表达式内部再恢复字符串和中间值
+                new Sharp(expression.$clean(PQL)).execute(PQL)
+                //throw new SQLParseException("Only 1 variable name allowed when declare a new variable. " + expression)
+            }
+        }
 
-        if ($SELECT.test(expression)) { //SELECT
-
-            val result = new SELECT(expression).select(PQL)
-
-            if (symbol == ":=") {
+        if (symbol == ":=") {
+            if (result.isTable) {
                 result.asTable.firstRow match {
                     case Some(row) =>
-                        if (row.size >= variables.length) {
-                            for (i <- variables.indices) {
+                        for (i <- variables.indices) {
+                            if (i < row.size) {
                                 PQL.updateVariable(variables(i), row.getCell(i))
                             }
+                            else {
+                                PQL.updateVariable(variables(i), DataCell.NULL)
+                            }
                         }
-                        else {
-                            throw new SQLExecuteException("Columns amount in SELECT must equals variables number.")
-                        }
+                    //throw new SQLExecuteException("Columns amount in SELECT must equals variables number.")
                     case None =>
                         for (i <- variables.indices) {
                             PQL.updateVariable(variables(i), DataCell.NULL)
                         }
                 }
-
             }
-            else if (symbol == "=:") {
-                PQL.updateVariable(variables.head, result)
-            }
-        }
-        else if ($PARSE.test(expression)) {
-            val data = new PARSE(expression).doParse(PQL)
-            if (symbol == ":=") {
-                data.asTable.firstRow match {
-                    case Some(row) =>
-                        if (row.size >= variables.length) {
-                            for (i <- variables.indices) {
-                                PQL.updateVariable(variables(i), row.getCell(i))
-                            }
-                        }
-                        else {
-                            throw new SQLExecuteException("Columns amount in PARSE must equals variables number.")
-                        }
-                    case None =>
-                        for (i <- variables.indices) {
-                            PQL.updateVariable(variables(i), null)
-                        }
+            else if (result.isJavaList) {
+                val list = result.asJavaList
+                for (i <- variables.indices) {
+                    if (i < list.size()) {
+                        PQL.updateVariable(variables(i), DataCell(list.get(i)))
+                    }
+                    else {
+                        PQL.updateVariable(variables(i), DataCell.NULL)
+                    }
                 }
             }
-            else if (symbol == "=:") {
-                PQL.updateVariable(variables.head, data)
-            }
-        }
-        else if ($INSERT$INTO.test(expression)) {
-            if (variables.length == 1) {
-                PQL.updateVariable(variables.head, new INSERT(expression).insert(PQL))
-            }
-            else {
-                throw new SQLParseException("Only 1 variable name allowed when save affected rows of a INSERT sentence. " + expression)
-            }
-        }
-        else if ($DELETE.test(expression)) {
-            if (variables.length == 1) {
-                PQL.updateVariable(variables.head, new DELETE(expression).delete(PQL))
+            else if (result.isRow) {
+                val row = result.asRow
+                for (i <- variables.indices) {
+                    if (i < row.size) {
+                        PQL.updateVariable(variables(i), row.getCell(i))
+                    }
+                    else {
+                        PQL.updateVariable(variables(i), DataCell.NULL)
+                    }
+                }
             }
             else {
-                throw new SQLParseException("Only 1 variable name allowed when save affected rows of a DELETE sentence. " + expression)
+                //单值
+                PQL.updateVariable(variables.head, result)
+                if (variables.length > 1) {
+                    for (i <- 1 until variables.length) {
+                        PQL.updateVariable(variables(i), DataCell.NULL)
+                    }
+                    Output.writeWarning()
+                }
             }
         }
-        else if ($NON$QUERY.test(expression)) {
-            //INSERT + UPDATE + DELETE
-            if (variables.length == 1) {
-                PQL.updateVariable(variables.head, DataCell(PQL.dh.executeNonQuery(expression.$restore(PQL)), DataType.INTEGER))
-            }
-            else {
-                throw new SQLParseException("Only 1 variable name allowed when save affected rows of an INSERT/UPDATE/DELETE sentence. " + expression)
-            }
-        }
-        else {
-            //在SHARP表达式内部再恢复字符串和中间值
-            if (variables.length == 1) {
-                PQL.updateVariable(variables.head, new Sharp(expression.$clean(PQL)).execute(PQL))
-            }
-            else {
-                throw new SQLParseException("Only 1 variable name allowed when declare a new variable. " + expression)
-            }
+        else if (symbol == "=:") {
+            PQL.updateVariable(variables.head, result)
         }
     }
 }

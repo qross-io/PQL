@@ -11,6 +11,9 @@ import scala.util.control.Breaks._
 
 object Language {
 
+    val include: String = "(?i)<#\\s*include\\s+language=[\"'](.+?)[\"']\\s*/>"
+    val holder: String = "(?i)#\\s*([a-z0-9-]+(\\.[a-z0-9-]+)*)\\s*#"
+
     private val labels: mutable.HashMap[String, String] = new mutable.HashMap[String, String]()
     private val props = new java.util.Properties()
 
@@ -35,10 +38,14 @@ object Language {
             })
     }
 
+    def nonEmpty: Boolean = {
+        labels.nonEmpty
+    }
+
     def name: String = {
         val language = Cookies.get("language")
         if (language == null) {
-            Configurations.getPropertyOrElse("voyager.language", "VOYAGER_LANGUAGE", "chinese")
+            Configurations.getOrProperty("VOYAGER_LANGUAGE", "voyager.language", "english")
         }
         else {
             language

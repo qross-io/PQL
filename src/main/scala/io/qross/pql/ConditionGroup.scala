@@ -28,7 +28,7 @@ class ConditionGroup(expression: String) {
                     case Some(m) =>
                         val select = findOutSelect(exp, m.group(0))
                         exp = exp.replace(select, PQL.$stash(DataCell(
-                            PQL.dh.executeJavaList(select.$trim("(", ")").trim().$restore(PQL)),
+                            PQL.dh.executeJavaList(select.$trim("(", ")").$restore(PQL)),
                             DataType.ARRAY
                         )))
                     case _ => break

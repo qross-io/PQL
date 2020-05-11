@@ -201,11 +201,11 @@ object TypeExt {
         }
 
         def $trim(prefix: String, suffix: String): String = {
-            string = string.trim
-            while (string.startsWith(prefix)) {
+            string = string.trim()
+            if (string.startsWith(prefix)) {
                 string = string.drop(prefix.length)
             }
-            while (string.endsWith(suffix)) {
+            if (string.endsWith(suffix)) {
                 string = string.dropRight(suffix.length)
             }
             string
