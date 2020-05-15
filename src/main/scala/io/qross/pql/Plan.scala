@@ -101,4 +101,33 @@ class Plan {
         }.split(Plan.brake).map(_.split(Plan.joint).map(_.removeQuotes()))
     }
 
+    def setArgs(phrase: String, alternativePhrase: String = ""): Map[String, String] = {
+        val args = get(phrase, alternativePhrase).getOrElse("")
+        if (args.contains("&")) {
+            args.removeQuotes().$split()
+        }
+        else {
+            args.split(Plan.joint).filter(_.contains("=")).map(pair => {
+                (pair.takeBefore("="), pair.takeAfter("=").removeQuotes())
+            }).toMap
+        }
+    }
+
+    //select -> list
+    def listArgs(phrase: String, alternativePhrase: String = ""): Array[String] = {
+        val args = get(phrase, alternativePhrase).getOrElse("")
+        if (args.contains(Plan.joint)) {
+            args.split(Plan.joint).map(_.removeQuotes())
+        }
+        else if (args.contains(",")) {
+            args.removeQuotes().split(",")
+        }
+        else {
+            Array[String](args.removeQuotes())
+        }
+    }
+
+    def selectArgs(phrase: String, alternativePhrase: String = ""): Map[String, String] = {
+        get(phrase, alternativePhrase).getOrElse("").$split(Plan.joint, " AS ")
+    }
 }

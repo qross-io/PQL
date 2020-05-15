@@ -1844,10 +1844,9 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
         }
 
         //分组数据即(..)包围的数据如 (1, "2")，去掉空白字符
-        //SET a=1, b=2, c=3 去掉空白字符
+        //SET a=1, b = 2, c=3 去掉空白字符
         //SELECT a, b, c, d 去掉空白字符
-        //val $TUPLE: Regex = """\([^\)]+\)""".r
-        """\s+[,=]\s+|\s+[,=\)]|[,=\(]\s+""".r.findAllIn(sentence).foreach(comma => {
+        $ARGS.findAllIn(sentence).foreach(comma => {
             sentence = sentence.replace(comma, comma.trim())
         })
 

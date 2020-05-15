@@ -3,10 +3,11 @@ package io.qross.core
 import io.qross.core.Parameter._
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
+import io.qross.fql.SELECT
 import io.qross.fs.Excel
 import io.qross.fs.Path._
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.pql.Patterns.$SHEET$NONE$QUERY
+import io.qross.pql.Patterns.{$SELECT$CUSTOM, $SHEET$NONE$QUERY}
 import io.qross.setting.Environment
 import io.qross.thread.Parallel
 import io.qross.time.{DateTime, Timer}
@@ -1160,7 +1161,14 @@ class DataHub (var defaultConnectionName: String) {
 
     // ---------- DataSource ----------
 
-    def executeDataTable(SQL: String, values: Any*): DataTable = CURRENT.executeDataTable(SQL, values: _*)
+    def executeDataTable(SQL: String, values: Any*): DataTable = {
+        if ($SELECT$CUSTOM.test(SQL)) {
+            new SELECT(SQL).executeDataTable()
+        }
+        else {
+            CURRENT.executeDataTable(SQL, values: _*)
+        }
+    }
     def executeDataRow(SQL: String, values: Any*): DataRow = CURRENT.executeDataRow(SQL, values: _*)
     def executeJavaMap(SQL: String, values: Any*): java.util.Map[String, Any] = CURRENT.executeJavaMap(SQL, values: _*)
     def executeJavaMapList(SQL: String, values: Any*): java.util.List[java.util.Map[String, Any]] = CURRENT.executeJavaMapList(SQL, values: _*)

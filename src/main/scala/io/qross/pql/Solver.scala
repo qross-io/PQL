@@ -5,6 +5,7 @@ import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.pql.Patterns._
+import io.qross.setting.Language
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -586,6 +587,19 @@ object Solver {
                                 })
                         }
                     })
+
+            sentence
+        }
+
+        //替换多语言标记
+        def replaceLanguageHolder(PQL: PQL): String = {
+            Language.holder.findAllMatchIn(sentence)
+                .foreach(m => {
+                    val text = Language.get(PQL.language, PQL.languageModules, m.group(1))
+                    if (text != null) {
+                        sentence = sentence.replace(m.group(0), text)
+                    }
+                })
 
             sentence
         }

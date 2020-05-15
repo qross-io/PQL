@@ -9,11 +9,9 @@ import scala.collection.mutable
 
 object REQUEST {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($REQUEST.test(sentence)) {
-            PQL.PARSING.head.addStatement(new Statement("REQUEST", sentence, new REQUEST(sentence.takeAfter($REQUEST).trim())))
-        }
-        else {
-            throw new SQLParseException("Incorrect REQUEST JSON API sentence: " + sentence)
+        $REQUEST.findFirstIn(sentence) match {
+            case Some(caption) => PQL.PARSING.head.addStatement(new Statement("REQUEST", sentence, new REQUEST(sentence.takeAfter(caption))))
+            case None => throw new SQLParseException("Incorrect REQUEST JSON API sentence: " + sentence)
         }
     }
 }

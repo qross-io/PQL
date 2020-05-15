@@ -5,8 +5,8 @@ import io.qross.ext.TypeExt._
 import io.qross.fs.Path._
 import io.qross.fs.SourceFile
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.pql.PQL
 import io.qross.pql.Solver._
+import io.qross.pql.{EmailInvalidSenderException, PQL}
 import io.qross.setting.{Global, Language}
 import io.qross.time.Timer
 import javax.activation.{DataHandler, FileDataSource}
@@ -63,8 +63,18 @@ object Email {
             dh
         }
 
+        def setFrom(fromName: String): DataHub = {
+            EMAIL.setFrom(fromName)
+            dh
+        }
+
+        def setFromPersonal(personal: String): DataHub = {
+            EMAIL.setFromPersonal(personal)
+            dh
+        }
+
         def fromTemplate(template: String): DataHub = {
-            EMAIL.fromTemplate(template)
+            EMAIL.useTemplate(template)
             dh
         }
 
@@ -175,6 +185,7 @@ class Email(private var title: String) {
     smtp.setProperty("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory")
     smtp.setProperty("mail.smtp.port", Global.EMAIL_SMTP_PORT)
 
+    //系统默认值
     private val from = mutable.HashMap[String, String] (
         "account" -> Global.EMAIL_SENDER_ACCOUNT,
         "personal" -> Global.EMAIL_SENDER_PERSONAL,
@@ -187,6 +198,7 @@ class Email(private var title: String) {
     private var ccRecipients = new mutable.HashMap[String, String]()
     private var bccRecipients = new mutable.HashMap[String, String]()
     private var content: String = ""
+    private var language: String = Language.name
     private var placement: String = "NOTHING"
 
     def setSmtpServer(host: String, port: String): Email = {
@@ -196,14 +208,75 @@ class Email(private var title: String) {
         this
     }
 
-    def setFrom(address: String, password: String, name: String = ""): Email = {
-        from += "account" -> address
-        from += "password" -> password
-        from += "personal" -> name
+    def setSmtpHost(host: String): Email = {
+        smtp.setProperty("mail.smtp.host", host)
         this
     }
 
-    def fromTemplate(template: String): Email = {
+    def setSmtpPort(port: String): Email = {
+        smtp.setProperty("mail.smtp.socketFactory.port", port)
+        smtp.setProperty("mail.smtp.port", port)
+        this
+    }
+
+    def setFrom(address: String, password: String, personal: String = ""): Email = {
+        from += "account" -> address
+        from += "password" -> password
+        from += "personal" -> personal
+        this
+    }
+
+    def setFrom(personal: String): Email = {
+        if (personal.contains("@")) {
+            if (personal.contains("<") && personal.trim().endsWith(">")) {
+                from += "personal" -> personal.takeBefore("<")
+                from += "account" -> personal.takeAfter("<").takeBefore(">")
+            }
+            else {
+                from += "account" -> personal
+            }
+        }
+        else if (JDBC.hasQrossSystem) {
+            val sender = DataSource.QROSS.queryDataRow("SELECT smtp_host, smtp_port, sender_address, sender_password FROM qross_email_senders WHERE sender_personal=?", personal)
+            if (sender.nonEmpty) {
+                val host = sender.getString("smtp_host")
+                val port = sender.getString("smtp_port")
+                if (host != "") {
+                    smtp.setProperty("mail.smtp.host", host)
+                }
+                if (port != "") {
+                    smtp.setProperty("mail.smtp.socketFactory.port", port)
+                    smtp.setProperty("mail.smtp.port", port)
+                }
+
+                from += "account" -> sender.getString("sender_address")
+                from += "password" -> sender.getString("sender_password")
+                from += "personal" -> personal
+            }
+            else {
+                throw new EmailInvalidSenderException("Invalid sender personal: " + personal)
+            }
+        }
+        this
+    }
+
+    //只设置发送人签名
+    def setFromPersonal(personal: String): Email = {
+        from += "personal" -> personal
+        this
+    }
+
+    def setFromAddress(address: String): Email = {
+        from += "account" -> address
+        this
+    }
+
+    def setFromPassword(password: String): Email = {
+        from += "password" -> password
+        this
+    }
+
+    def useTemplate(template: String): Email = {
 
         //name, filePath - .htm/.html/.txt, content
         //io.qross.pql.PQL.runEmbeddedFile(args.head.asText).toString
@@ -226,8 +299,8 @@ class Email(private var title: String) {
         this
     }
 
-    def fromDefaultTemplate(): Email = {
-        fromTemplate(Global.EMAIL_DEFAULT_TEMPLATE.toPath)
+    def useDefaultTemplate(): Email = {
+        useTemplate(Global.EMAIL_DEFAULT_TEMPLATE.toPath)
         this
     }
 
@@ -269,6 +342,11 @@ class Email(private var title: String) {
         this
     }
 
+    def setTemplateLanguage(language: String): Email = {
+        this.language = language
+        this
+    }
+
     def setTitle(title: String): Email = {
         this.title = title
         this
@@ -299,6 +377,11 @@ class Email(private var title: String) {
 
     def placeData(row: DataRow): Email = {
         this.content = this.content.replaceArguments(row)
+        this
+    }
+
+    def placeData(map: Map[String, String]): Email = {
+        this.content = this.content.replaceArguments(map)
         this
     }
 
@@ -357,17 +440,7 @@ class Email(private var title: String) {
     def send(): String = {
         if (toRecipients.nonEmpty || ccRecipients.nonEmpty || bccRecipients.nonEmpty) {
             if (this.content != "") {
-
-                val modules = Language.include.r.findAllMatchIn(this.content).map(_.group(1)).mkString(",")
-                Language.holder.r.findAllMatchIn(this.content)
-                    .foreach(m => {
-                        val text = Language.get(modules, m.group(1))
-                        if (text != null) {
-                            this.content = this.content.replace(m.group(0), text)
-                        }
-                    })
-
-                this.content = PQL.openEmbedded(this.content).run().toString
+                this.content = PQL.openEmbedded(this.content).setLanguage(language).run().toString
             }
             transfer()
         }

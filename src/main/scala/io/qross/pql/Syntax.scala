@@ -1,7 +1,7 @@
 package io.qross.pql
 
 import scala.collection.mutable
-import io.qross.pql.Patterns.{$PHRASE, $BLANK, BLANKS}
+import io.qross.pql.Patterns._
 import io.qross.ext.TypeExt._
 
 object Syntax {
@@ -38,6 +38,24 @@ object Syntax {
 
             INSERT INTO  SHEET [sheetName]  ROW [startRow]  (A, B, C, ...)  VALUES (value1, value2, ...), (value1, value2, ...);
 
+            SEND  E?MAIL [title]
+                SET? SMTP HOST [host]  SET? PORT [25]
+                FROM [personal/sender@domain.com/personal<sedner@domain.com>] PASSWORD [password]
+                SET? PERSONAL [name]
+                SET? PASSWORD [password]
+                SET? LANGUAGE [chinese/english]
+                USE? DEFAULT TEMPLATE
+                USE? TEMPLATE [name/template.html]
+                WITH? DEFAULT SIGNATURE
+                WITH? SIGNATURE [name,signature.html]
+                SET? CONTENT [content/<html>]
+                PLACE? DATA name=value,...
+                PLACE [data]  AT [placeholder]
+                ATTACH file1.txt,file2.xlsx,*
+                TO personal,sender@domain.com,personal<sedner@domain.com>,*
+                CC *
+                BCC *;
+
             REQUEST  JSON API [url]  USE? METHOD [GET/POST/PUT/DELETE]  SEND? DATA {"data": "value"}  SET? HEADER {"name": "value"};
 
             PARSE  [path]  AS TABLE;
@@ -48,26 +66,26 @@ object Syntax {
             PARSE  [path]  AS ARRAY;
             PARSE  [path]  AS VALUE;
             PARSE  [path]  AS SINGLE VALUE;
+
+            SELECT  *  FROM JSON FILE file1.json,file2.log,*  SEEK [cursor]  WHERE |condition|  LIMIT m,n;
+            SELECT  *  FROM CSV FILE file1.csv,*.csv,*  SEEK [cursor]  WHERE |condition|  LIMIT m,n;
+            SELECT  *  FROM TXT FILE file.txt,*.log,*  DELIMITED BY ','  SEEK [cursor]  WHERE |condition|  LIMIT m,n;
+            SELECT  *  FROM GZ FILE file.gz,*.gz,*  DELIMITED BY ','  WHERE |condition|  LIMIT m,n;
+
+            SELECT  *  FROM SHEET [sheetName]  WHERE |condition|  LIMIT m,n;
         """
-
-
-//      SAVE AS  TXT FILE [fileName]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...);
-//      SAVE AS  JSON FILE [fileName];
-//      SAVE AS  EXCEL [fileName]  USE DEFAULT TEMPLATE  USE TEMPLATE [templateName];
 
 //    --UPDATE  SHEET [sheetName]  SET &field1=value1,field2=value2,...&  WHERE |conditions|;
 //    --DELETE  FROM SHEET [sheetName]  WHERE |conditions|;
-//    --SELECT  *  FROM JSON FILE [fileName]  WHERE |conditions|  LIMIT m,n;
 
 
     sentences.split(";")
         .foreach(sentence => {
-            val sections = sentence.trim().split("  ")
+            val sections = sentence.trim().split("""\s\s+""")  //两个空白字符以上
             if (sections.nonEmpty) {
                 val caption = sections.head
                 if (!Tree.contains(caption)) {
                     Tree += caption -> new mutable.LinkedHashMap[String, Int]()
-                    //Tree += caption -> new mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, Int]]()
                 }
 
                 if (sections.length > 1) {
@@ -75,15 +93,12 @@ object Syntax {
                     groups.foreach(group => {
                         //# 代表group
                         Tree(caption) += ("#" + HASH + group._1) -> group._2
-                        //Tree(caption) += group._1 -> new mutable.LinkedHashMap[String, Int]()
-                        //Tree(caption)(group._1) += "#" -> group._2
                     })
 
                     for (i <- 2 until sections.length) {
                         groups.foreach(group => {
                             analysePhrase(sections(i)).foreach(phrase => {
                                 Tree(caption) += (group._1 + HASH + phrase._1) -> phrase._2
-                                //Tree(caption)(group._1) += phrase._1 -> phrase._2
                             })
                         })
                     }
@@ -100,8 +115,8 @@ object Syntax {
             case "'" => ("'", Args.Char)
             case "\"" => ("\"", Args.Char)
             case "|" => ("|", Args.Condition)
-            case "*" => ("*", Args.Select)
-            case "&" => ("&", Args.Set)
+            case "*" => ("""(\S+)?\*""".r, Args.Select)
+            case "." => ("(?i)[a-z0-9]+=".r, Args.Set)
             case "n" => ("m", Args.Limit)
             case _ => ("", Args.None)
         }
@@ -147,20 +162,14 @@ case class Syntax(caption: String) {
         //提取字符串，好处可避免参数与关键短语同名冲突
         var sentence = body.pickChars(chars)
 
-//        val found = $GROUP.findFirstIn(sentence).getOrElse("")
-//        var origin = found.trim()
-//        var group = origin.replaceAll(BLANKS, " ").toUpperCase()
-//
-//        while (!tree.contains(group) && group.contains(" ")) {
-//            group = group.takeBeforeLast(" ")
-//            origin = origin.takeBeforeLast(" ").trim()
-//        }
-//
-//        if (tree.contains(group)) {
-//            sentence = sentence.takeAfter(origin).trim()
-//
-//
-//        }
+        $ARGS.findAllIn(sentence).foreach(comma => {
+            sentence = sentence.replace(comma, comma.trim())
+        })
+
+        //处理 AS
+        $AS.findAllIn(sentence).foreach(as => {
+            sentence = sentence.replace(as, "##AS##")
+        })
 
         var group = "#"
         while (sentence != "") {
@@ -178,19 +187,19 @@ case class Syntax(caption: String) {
                 tree(group + Syntax.HASH + phrase) match {
                     case Args.None => plan += phrase -> ""
                     case Args.One =>
-                        var args = ""
                         $BLANK.findFirstIn(sentence) match {
                             case Some(blank) =>
-                                args = sentence.takeBefore(blank).trim()
+                                plan += phrase -> sentence.takeBefore(blank).trim().restoreChars(chars)
                                 sentence = sentence.takeAfter(blank).trim()
                             case None =>
-                                args = sentence.trim()
-                                sentence = ""
+                                if (sentence != "") {
+                                    plan += phrase -> sentence.restoreChars(chars)
+                                    sentence = ""
+                                }
+                                else {
+                                    throw new SQLParseException("Empty arguments at phrase " + origin)
+                                }
                         }
-                        if (args == "") {
-                            throw new SQLParseException("Empty arguments at phrase " + origin)
-                        }
-                        plan += phrase -> args.restoreChars(chars)
                     case Args.Multi =>
                         if (sentence.contains("(") && sentence.contains(")")) {
                             plan += phrase ->
@@ -234,23 +243,84 @@ case class Syntax(caption: String) {
                             sentence = sentence.takeAfter("}").trim()
                         }
                         else {
-                            var args = ""
                             $BLANK.findFirstIn(sentence) match {
                                 case Some(blank) =>
-                                    args = sentence.takeBefore(blank).trim()
-                                    sentence = sentence.takeAfter(blank)
+                                    plan += phrase -> sentence.takeBefore(blank).trim()
+                                    sentence = sentence.takeAfter(blank).trim()
                                 case None =>
-                                    args = sentence.trim()
-                                    sentence = ""
+                                    if (sentence != "") {
+                                        plan += phrase -> sentence.restoreChars(chars)
+                                        sentence = ""
+                                    }
+                                    else {
+                                        throw new SQLParseException("Empty arguments at phrase " + origin)
+                                    }
                             }
-                            if (args == "") {
-                                throw new SQLParseException("Empty arguments at phrase " + origin)
-                            }
-                            plan += phrase -> args.restoreChars(chars)
                         }
                     case Args.Select =>
+                        var args = ""
+                        $BLANK.findFirstIn(sentence) match {
+                            case Some(blank) =>
+                                args = sentence.takeBefore(blank).trim()
+                                sentence = sentence.takeAfter(blank).trim()
+                            case None =>
+                                if (sentence != "") {
+                                    args = sentence
+                                    sentence = ""
+                                }
+                                else {
+                                    throw new SQLParseException("Empty arguments at phrase " + origin)
+                                }
+                        }
+                        plan += phrase -> args.replace("##AS##", " AS ").split(",")
+                                                .map(arg => arg.trim().restoreChars(chars))
+                                                .mkString(Plan.joint)
                     case Args.Set =>
-                    case Args.Condition =>
+                        var args = ""
+                        $BLANK.findFirstIn(sentence) match {
+                            case Some(blank) =>
+                                args = sentence.takeBefore(blank).trim()
+                                sentence = sentence.takeAfter(blank).trim()
+                            case None =>
+                                if (sentence != "") {
+                                    args = sentence
+                                    sentence = ""
+                                }
+                                else {
+                                    throw new SQLParseException("Empty arguments at phrase " + origin)
+                                }
+                        }
+                        plan += phrase -> args.split(",")
+                            .map(arg => arg.trim().restoreChars(chars))
+                            .mkString(Plan.joint)
+
+                    case Args.Condition => //只存在于WHERE/ON/HAVING/WHEN后面, 单独解析SELECT语句
+                        val next = phrase match {
+                            case "WHERE" =>
+                                """(?i)\s(GROUP\s+BY|ORDER\s+BY|LIMIT)\s"""
+                            case "ON" =>
+                                """(?i)\s(INNER JOIN|LEFT JOIN|OUTER JOIN|RIGHT JOIN|WHERE)\s"""
+                            case "HAVING" =>
+                                """(?i)\sLIMIT\s"""
+                            case "WHEN" =>
+                                """(?i)\sTHEN\s"""
+                            case _ => ""
+                        }
+
+                        if (next != "") {
+                            next.r.findFirstIn(sentence) match {
+                                case Some(word) =>
+                                    val condition = sentence.takeBefore(word)
+                                    plan += phrase -> condition.trim().restoreChars(chars)
+                                    sentence = sentence.takeAfter(condition).trim()
+                                case None =>
+                                    plan += phrase -> sentence.restoreChars(chars)
+                                    sentence = ""
+                            }
+                        }
+                    case Args.Limit =>
+                        plan += phrase -> sentence.restoreChars(chars)
+                        sentence = ""
                     case _ =>
                 }
             }

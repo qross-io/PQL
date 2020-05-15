@@ -8,11 +8,12 @@ import io.qross.net.Cookies
 
 import scala.collection.mutable
 import scala.util.control.Breaks._
+import scala.util.matching.Regex
 
 object Language {
 
-    val include: String = "(?i)<#\\s*include\\s+language=[\"'](.+?)[\"']\\s*/>"
-    val holder: String = "(?i)#\\s*([a-z0-9-]+(\\.[a-z0-9-]+)*)\\s*#"
+    val include: Regex = """(?i)<#\s*include\s+language=["'](.+?)["']\s*/>""".r
+    val holder: Regex = """(?i)#\s*([a-z0-9-]+(\.[a-z0-9-]+)*)\s*#""".r
 
     private val labels: mutable.HashMap[String, String] = new mutable.HashMap[String, String]()
     private val props = new java.util.Properties()
@@ -49,6 +50,14 @@ object Language {
         }
         else {
             language
+        }
+    }
+
+    def verify(languageName: String): String = {
+        languageName.toLowerCase match {
+            case "cn" | "中文" | "简体中文" | "chinese" => "chinese"
+            case "en" | "english" => "english"
+            case _ => Language.name
         }
     }
 

@@ -36,46 +36,23 @@ public class Voyager extends AbstractTemplateView {
             }
 
             String content = ResourceFile.open(url).content();
-            String modules = "";
 
             //替换server includes
-            Pattern p = Pattern.compile("<#\\s*include\\s+(file|language)=[\"'](.+?)[\"']\\s*/>", Pattern.CASE_INSENSITIVE);
-            Matcher m = p.matcher(content);
-            while (m.find()) {
-                if (m.group(1).equalsIgnoreCase("language")) {
-                    if (modules.isEmpty()) {
-                        modules = m.group(2).toLowerCase();
-                    }
-                    else {
-                        modules += "," + m.group(2).toLowerCase();
-                    }
-                    content = content.replace(m.group(0), "");
+            Pattern p = Pattern.compile("<#\\s*include\\s+file=[\"'](.+?)[\"']\\s*/>", Pattern.CASE_INSENSITIVE);
+            Matcher m;
+            //include file 可嵌套
+            while ((m = p.matcher(content)).find()) {
+                String path = dir + m.group(1);
+                path = path.replace("//", "/");
+                if (path.endsWith(".sql")) {
+                    content = content.replace(m.group(0), "<%" + ResourceFile.open(path).content() + "%>");
                 }
                 else {
-                    String path = dir + m.group(2);
-                    path = path.replace("//", "/");
-                    if (path.endsWith(".sql")) {
-                        content = content.replace(m.group(0), "<%" + ResourceFile.open(path).content() + "%>");
-                    }
-                    else {
-                        content = content.replace(m.group(0), ResourceFile.open(path).content());
-                    }
-                }
-            }
-
-            //替换语言标记
-            String language = Language.name();
-            p = Pattern.compile("#\\s*([a-z0-9-]+(\\.[a-z0-9-]+)*)\\s*#", Pattern.CASE_INSENSITIVE);
-            m = p.matcher(content);
-            while (m.find()) {
-                String text = Language.get(language, modules, m.group(1));
-                if (text != null) {
-                    content = content.replace(m.group(0), text);
+                    content = content.replace(m.group(0), ResourceFile.open(path).content());
                 }
             }
 
             Map<String, Object> attributes = getAttributesMap();
-
             response.setCharacterEncoding(attributes.get("charset").toString());
 
             Object result =

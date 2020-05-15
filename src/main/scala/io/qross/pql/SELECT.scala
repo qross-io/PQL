@@ -1,9 +1,8 @@
 package io.qross.pql
 
 import io.qross.core.{DataCell, DataType}
-import io.qross.ext.Output
 import io.qross.ext.TypeExt._
-import io.qross.pql.Patterns.{ARROW}
+import io.qross.pql.Patterns.{$SELECT$CUSTOM, ARROW}
 import io.qross.pql.Solver._
 
 object SELECT {
@@ -25,14 +24,16 @@ class SELECT(val sentence: String) {
                 (sentence, "")
             }
 
-        val data = PQL.dh.executeDataTable({
-            if (express) {
-                _select.$express(PQL).popStash(PQL)
-            }
-            else {
-                _select.$restore(PQL)
-            }
-        }).toDataCell(DataType.TABLE)
+        val data = {
+            PQL.dh.executeDataTable({
+                if (express) {
+                    _select.$express(PQL).popStash(PQL)
+                }
+                else {
+                    _select.$restore(PQL)
+                }
+            }).toDataCell(DataType.TABLE)
+        }
 
         PQL.COUNT_OF_LAST_SELECT = data.dataType match {
             case DataType.TABLE => data.asTable.size
@@ -52,11 +53,3 @@ class SELECT(val sentence: String) {
         PQL.RESULT += this.select(PQL).value
     }
 }
-
-/*
-output match {
-    case "TABLE" | "AUTO" => DataCell(PQL.dh.executeDataTable(query), DataType.TABLE)
-    case "ROW" | "MAP" | "OBJECT" => DataCell(PQL.dh.executeDataTable(query).firstRow.getOrElse(DataRow()), DataType.ROW)
-    case "LIST" | "ARRAY" => DataCell(PQL.dh.executeSingleList(query), DataType.ARRAY)
-    case "VALUE" => PQL.dh.executeSingleValue(query)
-}*/

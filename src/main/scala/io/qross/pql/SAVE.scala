@@ -9,11 +9,9 @@ import io.qross.pql.Solver._
 
 object SAVE {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($SAVE$AS.test(sentence)) {
-            PQL.PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE(sentence.takeAfter($SAVE$AS))))
-        }
-        else {
-            throw new SQLParseException("Incorrect SAVE sentence: " + sentence)
+        $SAVE$AS.findFirstIn(sentence) match {
+            case Some(caption) => PQL.PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE(sentence.takeAfter(caption))))
+            case None => throw new SQLParseException("Incorrect SAVE sentence: " + sentence)
         }
     }
 }

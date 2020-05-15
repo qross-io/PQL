@@ -6,6 +6,7 @@ import io.qross.fs.SourceFile
 import io.qross.net.Json
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
+import io.qross.setting.Language
 import io.qross.time.DateTime
 import javax.servlet.http.HttpServletRequest
 
@@ -175,10 +176,12 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private[pql] var SQL: String = originalSQL
 
-    val embedded: Boolean = SQL.startsWith(EMBEDDED) || SQL.bracketsWith("<", ">") || (SQL.contains("<%") && SQL.contains("%>"))
+    private[pql] val embedded: Boolean = SQL.startsWith(EMBEDDED) || SQL.bracketsWith("<", ">") || (SQL.contains("<%") && SQL.contains("%>"))
     if (embedded && SQL.startsWith(EMBEDDED)) {
         SQL = SQL.drop(9)
     }
+    private[pql] var language: String = Language.name
+    private[pql] var languageModules: String = ""
 
     private[pql] val root: Statement = new Statement("ROOT", SQL)
 
@@ -222,6 +225,18 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 SQL.split(";").map(_.trim)
             }
             else {
+
+                Language.include.findAllMatchIn(SQL)
+                        .foreach(m => {
+                            if (languageModules == "") {
+                                languageModules = m.group(1)
+                            }
+                            else {
+                                languageModules += "," + m.group(1)
+                            }
+                            SQL = SQL.replace(m.group(0), "")
+                        })
+
                 SQL.split(EM$RIGHT)
                     .flatMap(block => {
                         if (block.contains(EM$LEFT)) {
@@ -570,6 +585,11 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
         GlobalVariable.loadUserVariables(userId)
 
+        this
+    }
+
+    def setLanguage(languageName: String): PQL = {
+        this.language = Language.verify(languageName)
         this
     }
 

@@ -50,7 +50,9 @@ object Patterns {
     val $DELETE: Regex = """(?i)^DELETE\s""".r
     val $DELETE$FILE: Regex = """(?i)^DELETE\s+FILE\s""".r
     val $NON$QUERY: Regex = s"(?i)^(${NON_QUERY_CAPTIONS.mkString("|")})\\s".r
+
     val $SHEET$NONE$QUERY: Regex = """^(INSERT\s+INTO|UPDATE|DELETE|DELETE\s+FROM)\s+SHEET\s""".r
+    val $SELECT$CUSTOM: Regex = """(?)\bFROM\s+(SHEET|JSON\s+FILE|CSV\s+FILE|TXT\s+FILE|GZ\s+FILE)""".r
 
     val $FOR: Regex = """(?i)^FOR\s+([\s\S]+?)\s+IN\s+([\s\S]+?)\s+LOOP(\s|$)""".r
     val $EXIT: Regex = """(?i)^EXIT(\s+WHEN\s([\s\S]+))?$""".r
@@ -79,9 +81,12 @@ object Patterns {
     val $SHOW: Regex = """(?i)^SHOW\s+(\d+)$""".r
     val $RUN: Regex = """(?i)^RUN\s+(COMMAND|SHELL)\s+""".r
     val $REQUEST: Regex = """(?i)^REQUEST\s+""".r
-    val $SEND$MAIL: Regex = """(?i)^SEND\s+E?MAIL\s+""".r
+    val $SEND: Regex = """(?i)^SEND\s+""".r
     val $PARSE: Regex = """(?i)^PARSE\s""".r
+
     val $LINK: Regex = """(?i)\s[A-Z][A-Z]+(\s+[A-Z][A-Z\d]+)*(\s|$)""".r
+    val $ARGS: Regex = """\s+[,=]\s+|\s+[,=\)]|[,=\(]\s+""".r
+    val $AS: Regex = """(?i)\s+AS\s+""".r
 
     val $LET: Regex = """(?i)^LET\s+""".r
     val $DEBUG: Regex = """(?i)^DEBUG\s""".r
@@ -96,7 +101,6 @@ object Patterns {
     val FUNCTION_NAMES: Set[String] = GlobalFunction.getClass.getDeclaredMethods.map(m => m.getName).filter(n => "^[A-Z]".r.test(n)).toSet
     val $RESERVED: Regex = """^[_A-Za-z0-9\.]+$""".r
     val $CONSTANT: Regex = """^\*$|^[A-Za-z][A-Za-z0-9_]*$|^[_][A-Za-z0-9_]+$""".r
-    val $AS: Regex = """(?i)\s+AS\s+""".r
     val $NULL: Regex = """(?i)^NULL$""".r
 
     val $DATETIME_UNITS: Regex = """^(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND|MILLI|MICRO|NONA)=(\d+)$""".r
