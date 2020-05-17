@@ -14,29 +14,40 @@ object Syntax {
     //val Tree: mutable.HashMap[String, mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, Int]]] = new mutable.HashMap[String, mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, Int]]]()
 
     val sentences: String = """
-            OPEN  [JDBC-DataSource];
-            OPEN  QROSS;
-            OPEN  DEFAULT;
-            OPEN  EXCEL [fileName];
+            OPEN  [JDBC-DataSource]  AS [alias];
+            OPEN  QROSS  AS [alias];
+            OPEN  DEFAULT  AS [alias];
+            OPEN  EXCEL [fileName]  AS [alias];
 
-            SAVE AS  [JDBC-DataSource]  USE [databaseName];
-            SAVE AS  DEFAULT;
-            SAVE AS  QROSS;
-            SAVE AS  CACHE;
+            SAVE AS  [JDBC-DataSource]  AS [alias]  USE [databaseName];
+            SAVE AS  DEFAULT  AS [alias];
+            SAVE AS  QROSS  AS [alias];
+            SAVE AS  CACHE  AS [alias];
             SAVE AS  CACHE TABLE [tableName]  PRIMARY KEY [columnName];
-            SAVE AS  TEMP;
+            SAVE AS  TEMP  AS [alias];
             SAVE AS  TEMP TABLE [tableName]  PRIMARY KEY [columnName]  UNIQUE KEY (column1, column2, ...)  KEY (column1, column2, ...);
-            SAVE AS  NEW? CSV FILE [fileName]  WITHOUT HEADERS;
-            SAVE AS  NEW? CSV FILE [fileName]  WITH HEADERS (column1 AS header1, column2 AS header2, ...);
-            SAVE AS  NEW? TXT FILE [fileName]  DELIMITED BY 'delimiter'  WITHOUT HEADERS;
-            SAVE AS  NEW? TXT FILE [fileName]  DELIMITED BY 'delimiter'  WITH HEADERS (header1, column2 AS header2, ...);
-            SAVE AS  NEW? JSON FILE [fileName];
-            SAVE AS  NEW? EXCEL [fileName]  USE? TEMPLATE [templateName];
-            SAVE AS  EXCEL STREAM FILE [fileName]  USE? TEMPLATE [templateName];
+            SAVE AS  NEW? CSV FILE [fileName]  AS [alias]  WITHOUT HEADERS;
+            SAVE AS  NEW? CSV FILE [fileName]  AS [alias]  WITH HEADERS (column1 AS header1, column2 AS header2, ...);
+            SAVE AS  NEW? TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS;
+            SAVE AS  NEW? TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITH HEADERS (header1, column2 AS header2, ...);
+            SAVE AS  NEW? JSON FILE [fileName]  AS [alias];
+            SAVE AS  NEW? EXCEL [fileName]  AS [alias]  USE? TEMPLATE [templateName];
+            SAVE AS  EXCEL STREAM FILE [fileName]  AS [alias]  USE? TEMPLATE [templateName];
+
+            SAVE TO  [JDBC-DataSource]  AS [alias]  USE [databaseName];
+            SAVE TO  DEFAULT  AS [alias];
+            SAVE TO  QROSS  AS [alias];
+            SAVE TO  CACHE  AS [alias];
+            SAVE TO  TEMP  AS [alias];
+            SAVE TO  CSV FILE [fileName]  AS [alias]  WITHOUT HEADERS;
+            SAVE TO  CSV FILE [fileName]  AS [alias]  WITH HEADERS (column1 AS header1, column2 AS header2, ...);
+            SAVE TO  TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS;
+            SAVE TO  TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITH HEADERS (header1, column2 AS header2, ...);
+            SAVE TO  JSON FILE [fileName]  AS [alias];
+            SAVE TO  EXCEL [fileName]  AS [alias]  USE? TEMPLATE [templateName];
+            SAVE TO  EXCEL STREAM FILE [fileName]  AS [alias]  USE? TEMPLATE [templateName];
 
             BLOCK  FROM [startId]  TO [endId]  PER [blockSize];
-
-            INSERT INTO  SHEET [sheetName]  ROW [startRow]  (A, B, C, ...)  VALUES (value1, value2, ...), (value1, value2, ...);
 
             SEND  E?MAIL [title]
                 SET? SMTP HOST [host]  SET? PORT [25]
@@ -57,7 +68,6 @@ object Syntax {
                 BCC *;
 
             REQUEST  JSON API [url]  USE? METHOD [GET/POST/PUT/DELETE]  SEND? DATA {"data": "value"}  SET? HEADER {"name": "value"};
-
             PARSE  [path]  AS TABLE;
             PARSE  [path]  AS ROW;
             PARSE  [path]  AS MAP;
@@ -67,16 +77,13 @@ object Syntax {
             PARSE  [path]  AS VALUE;
             PARSE  [path]  AS SINGLE VALUE;
 
-            SELECT  *  FROM JSON FILE file1.json,file2.log,*  SEEK [cursor]  WHERE |condition|  LIMIT m,n;
-            SELECT  *  FROM CSV FILE file1.csv,*.csv,*  SEEK [cursor]  WHERE |condition|  LIMIT m,n;
-            SELECT  *  FROM TXT FILE file.txt,*.log,*  DELIMITED BY ','  SEEK [cursor]  WHERE |condition|  LIMIT m,n;
-            SELECT  *  FROM GZ FILE file.gz,*.gz,*  DELIMITED BY ','  WHERE |condition|  LIMIT m,n;
-
-            SELECT  *  FROM SHEET [sheetName]  WHERE |condition|  LIMIT m,n;
+            SELECT  *  FROM alias:file.txt,*.log,*  DELIMITED BY ','  SEEK [cursor]  WHERE |condition|  LIMIT m,n;
+            INSERT INTO  SHEET [sheetName]  ROW [startRow]  (A, B, C, ...)  VALUES (value1, value2, ...), (value1, value2, ...);
         """
 
 //    --UPDATE  SHEET [sheetName]  SET &field1=value1,field2=value2,...&  WHERE |conditions|;
 //    --DELETE  FROM SHEET [sheetName]  WHERE |conditions|;
+//      标准的增删改查语句以后放到FQL中
 
 
     sentences.split(";")

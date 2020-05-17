@@ -9,21 +9,21 @@ import io.qross.pql.Solver._
 
 object SAVE {
     def parse(sentence: String, PQL: PQL): Unit = {
-        $SAVE$AS.findFirstIn(sentence) match {
-            case Some(caption) => PQL.PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE(sentence.takeAfter(caption))))
+        $SAVE.findFirstMatchIn(sentence) match {
+            case Some(m) => PQL.PARSING.head.addStatement(new Statement("SAVE", sentence, new SAVE(m.group(1).toUpperCase(), sentence.takeAfter(m.group(0)).trim())))
             case None => throw new SQLParseException("Incorrect SAVE sentence: " + sentence)
         }
     }
 }
 
-class SAVE(val sentence: String) {
+class SAVE(val action: String, val sentence: String) {
 
     def execute(PQL: PQL): Unit = {
 
-        val plan = Syntax("SAVE AS").plan(sentence.$restore(PQL))
+        val plan = Syntax("SAVE " + action).plan(sentence.$restore(PQL))
 
         plan.head match {
-            case "CACHE" => PQL.dh.saveAsCache()
+            case "CACHE" => PQL.dh.saveToCache()
             case "CACHE TABLE" =>
                 if (plan.size == 1) {
                     PQL.dh.cache(plan.headArgs)
@@ -31,7 +31,7 @@ class SAVE(val sentence: String) {
                 else {
                     PQL.dh.cache(plan.headArgs, plan.lastArgs)
                 }
-            case "TEMP" => PQL.dh.saveAsTemp()
+            case "TEMP" => PQL.dh.saveToTemp()
             case "TEMP TABLE" =>
                 if (plan.size == 1) {
                     PQL.dh.temp(plan.headArgs)
@@ -123,16 +123,16 @@ class SAVE(val sentence: String) {
                     PQL.dh.saveAsStreamExcel(fileName).useTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
                 }
             case "DEFAULT" =>
-                PQL.dh.saveAsDefault()
+                PQL.dh.saveToDefault()
             case "QROSS" =>
-                PQL.dh.saveAsQross()
+                PQL.dh.saveToQross()
             case _ =>
                 val connectionName = plan.headArgs
                 if (plan.size == 1) {
-                    PQL.dh.saveAs(connectionName)
+                    PQL.dh.saveTo(connectionName)
                 }
                 else if (plan.last == "USE") {
-                    PQL.dh.saveAs(connectionName, plan.lastArgs)
+                    PQL.dh.saveTo(connectionName, plan.lastArgs)
                 }
         }
     }

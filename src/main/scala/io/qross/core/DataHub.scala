@@ -161,7 +161,7 @@ class DataHub (var defaultConnectionName: String) {
 
     // ---------- save as ----------
 
-    def saveAsCache(): DataHub = {
+    def saveToCache(): DataHub = {
         if (!SOURCES.contains("CACHE")) {
             this += "CACHE" -> DataSource.MEMORY
         }
@@ -169,7 +169,7 @@ class DataHub (var defaultConnectionName: String) {
         this
     }
 
-    def saveAsTemp(): DataHub = {
+    def saveToTemp(): DataHub = {
         if (!SOURCES.contains("TEMP")) {
             this += "TEMP" -> new DataSource(holder)
         }
@@ -177,12 +177,12 @@ class DataHub (var defaultConnectionName: String) {
         this
     }
 
-    def saveAsDefault(): DataHub = {
+    def saveToDefault(): DataHub = {
         TARGET = SOURCES("DEFAULT")
         this
     }
 
-    def saveAsQross(): DataHub = {
+    def saveToQross(): DataHub = {
         if (!SOURCES.contains("QROSS")) {
             this += "QROSS" -> DataSource.QROSS
         }
@@ -190,11 +190,11 @@ class DataHub (var defaultConnectionName: String) {
         this
     }
 
-    def saveAs(connectionName: String): DataHub = {
-        saveAs(connectionName, "")
+    def saveTo(connectionName: String): DataHub = {
+        saveTo(connectionName, "")
     }
 
-    def saveAs(connectionName: String, database: String): DataHub = {
+    def saveTo(connectionName: String, database: String): DataHub = {
         if (!SOURCES.contains(connectionName)) {
             this += connectionName -> new DataSource(connectionName, database)
         }

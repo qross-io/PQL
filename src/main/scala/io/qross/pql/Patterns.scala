@@ -64,7 +64,7 @@ object Patterns {
     val $DATA_TYPE: Regex = """(?i)^(INT|INTEGER|DECIMAL|BOOLEAN|TEXT|DATETIME|MAP|OBJECT|ROW|TABLE|ARRAY|LIST|JSON|REGEX)$""".r
     val $OPEN: Regex = """(?i)^OPEN\s+""".r
     val $USE: Regex = """(?i)^USE\s+""".r
-    val $SAVE$AS: Regex = """(?i)^SAVE\s+AS\s+""".r
+    val $SAVE: Regex = """(?i)^SAVE\s+(AS|TO)\s""".r
     val $CACHE: Regex = """(?i)^CACHE\s+([\s\S]+)#""".r
     val $TEMP: Regex = """(?i)^TEMP\s+([\s\S]+)#""".r
     val $GET: Regex = """(?i)^GET\s*#""".r
