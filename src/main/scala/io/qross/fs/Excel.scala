@@ -4,13 +4,14 @@ import java.io.{File, FileInputStream, FileOutputStream}
 import java.nio.file.Files
 
 import io.qross.core._
-import io.qross.net.{Email, HttpClient, Json}
+import io.qross.exception.{IncorrectDataSourceException, SQLParseException, UnsupportedSentenceException}
+import io.qross.net.Email
 import io.qross.setting.Global
 import io.qross.fs.Path._
 import io.qross.pql.Patterns._
 import io.qross.ext.TypeExt._
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.pql.{Patterns, SQLParseException, Syntax}
+import io.qross.pql.{Patterns, Syntax}
 import io.qross.pql.Solver._
 import org.apache.poi.hssf.record.cf.FontFormatting
 import org.apache.poi.hssf.usermodel.{HSSFDataFormat, HSSFWorkbook}
@@ -21,7 +22,6 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.springframework.web.context.request.{RequestContextHolder, ServletRequestAttributes}
 
-import scala.collection.mutable
 import scala.util.{Success, Try}
 import scala.util.control.Breaks._
 
@@ -53,53 +53,48 @@ object Excel {
 
     implicit class DataHub$Excel(val dh: DataHub) {
 
-        def EXCEL$R: Excel = {
-            dh.pick[Excel]("EXCEL$R") match {
-                case Some(excel) => excel
-                case None => throw new ExtensionNotFoundException("Must open an excel file first.")
-            }
-        }
-
-        def EXCEL$W: Excel = {
-            dh.pick[Excel]("EXCEL$W") match {
-                case Some(excel) => excel
-                case None => throw new ExtensionNotFoundException("Must save as an excel file first.")
-            }
-        }
-
         def ZIP: Zip = dh.pick[Zip]("ZIP").orNull
 
-        def openExcel(fileNameOrPath: String): DataHub = ???
+        def openExcel(fileNameOrFullPath: String): DataHub = {
+            dh.openSource(fileNameOrFullPath, new Excel(fileNameOrFullPath).debug(dh.debugging))
+        }
 
-        def saveAsExcel(fileNameOrPath: String): DataHub = {
-            dh.plug("EXCEL$W", new Excel(fileNameOrPath).debug(dh.debugging))
+        def saveToExcel(fileNameOrFullPath: String): DataHub = {
+            val excel = new Excel(fileNameOrFullPath).debug(dh.debugging)
+            dh.saveToDestination(fileNameOrFullPath, excel)
             if (dh.slots("ZIP")) {
-                ZIP.addFile(EXCEL$W.path)
+                ZIP.addFile(excel.path)
             }
             dh
         }
 
-        def saveAsNewExcel(fileNameOrPath: String): DataHub = {
-            fileNameOrPath.delete()
-            saveAsExcel(fileNameOrPath)
+        def saveAsExcel(fileNameOrFullPath: String): DataHub = {
+            fileNameOrFullPath.delete()
+            saveToExcel(fileNameOrFullPath)
         }
 
         def saveAsStreamExcel(fileName: String): DataHub = {
-            dh.plug("EXCEL$W", new Excel(fileName).debug(dh.debugging).setAutoCommit(false).saveAsStream())
-            dh
+            dh.saveToDestination(fileName, new Excel(fileName).debug(dh.debugging).setAutoCommit(false).saveAsStream())
         }
 
         def useTemplate(templateName: String): DataHub = {
             if (templateName != "") {
-                EXCEL$W.useTemplate(templateName)
+                dh.getDestination match {
+                    case excel: Excel => excel.useTemplate(templateName)
+                    case _ => throw new IncorrectDataSourceException("Must save an excel file first.")
+                }
             }
             dh
         }
 
         def attachExcelToEmail(title: String) : DataHub = {
-            dh.plug("EMAIL", new Email(title))
-              .pick[Email]("EMAIL").orNull
-              .attach(EXCEL$W.path)
+            dh.getDestination match {
+                case excel: Excel =>
+                    dh.plug("EMAIL", new Email(title))
+                        .pick[Email]("EMAIL").orNull
+                        .attach(excel.path)
+                case _ => throw new IncorrectDataSourceException("Must save an excel file first.")
+            }
             dh
         }
     }
@@ -142,13 +137,13 @@ class Excel(val fileName: String) {
         this
     }
 
-    def open(fileNameOrPath: String): Excel = {
+    def open(fileNameOrFullPath: String): Excel = {
         this
     }
 
-    def useTemplate(fileNameOrPathOrTemplateName: String): Excel = {
+    def useTemplate(fileNameOrFullPathOrTemplateName: String): Excel = {
 
-        templatePath = fileNameOrPathOrTemplateName
+        templatePath = fileNameOrFullPathOrTemplateName
 
         if (!templatePath.endsWith(".xlsx")) {
             if (JDBC.hasQrossSystem) {
@@ -363,31 +358,29 @@ class Excel(val fileName: String) {
     }
 
     //插入多行, 返回受影响的记录数
-    //INSERT INTO NEW SHEET sheet1 ROW 2 (A1, B1, C1) VALUES ('姓名', '年龄', '分数');
+    //INSERT INTO sheet1 ROW 2 (A1, B1, C1) VALUES ('姓名', '年龄', '分数');
     def insert(sentence: String, table: DataTable): Int = {
 
         if (DEBUG) {
             println("EXCEL INSERT # " + sentence)
         }
 
-        val plan = Syntax("INSERT INTO").plan(
+        val plan = Syntax("INSERT").plan(
             $INSERT$INTO.findFirstIn(sentence) match {
                 case Some(capital) => sentence.takeAfter(capital).trim()
                 case None => sentence
             })
 
+        //暂时不判断格式正确性
+
         var sheet: Sheet = null
         var cursor = 0 //startRow and cursorRow
         val columns = plan.multiArgs("").map(_.removeQuotes())
 
-        if (plan.contains("SHEET")) {
-            sheet = workbook.getSheet(plan.oneArgs("SHEET"))
-            if (sheet == null) {
-                sheet = workbook.createSheet(plan.oneArgs("SHEET"))
-            }
-        }
-        else {
-            throw new SQLParseException("Miss SHEET name in INSERT sentence. " + sentence)
+        val sheetName = plan.oneArgs("INTO")
+        sheet = workbook.getSheet(sheetName)
+        if (sheet == null) {
+            sheet = workbook.createSheet(sheetName)
         }
 
         if (plan.contains("ROW")) {
@@ -466,8 +459,8 @@ class Excel(val fileName: String) {
         0
     }
 
-    def select(sentence: String): Int = {
-        0
+    def select(sentence: String, values: Any*): DataTable = {
+        new DataTable()
     }
 
     def executeNonQuery(nonQuerySQL: String): Int = {
@@ -475,7 +468,13 @@ class Excel(val fileName: String) {
             case "INSERT" => insert(nonQuerySQL)
             case "UPDATE" => update(nonQuerySQL)
             case "DELETE" => delete(nonQuerySQL)
-            case _ => throw new IllegalArgumentException("Unsupported sentence at executeNonQuery method: " + nonQuerySQL)
+            case "DROP" =>
+                """(?i)^DROP\s+(SHEET|TABLE)\s""".r.findFirstIn(nonQuerySQL) match {
+                    case Some(sheet) => dropSheet(nonQuerySQL.takeAfter(sheet).trim())
+                    case _ => dropSheet(nonQuerySQL.takeAfter("\\s").trim())
+                }
+                0
+            case _ => throw new UnsupportedSentenceException("Unsupported sentence at executeNonQuery method in Excel: " + nonQuerySQL)
         }
     }
 
@@ -484,8 +483,13 @@ class Excel(val fileName: String) {
             case "INSERT" => insert(nonQuerySQL, table)
             case "UPDATE" => update(nonQuerySQL, table)
             case "DELETE" => delete(nonQuerySQL, table)
-            case _ => throw new IllegalArgumentException("Unsupported sentence at tableUpdate method: " + nonQuerySQL)
+            case _ => throw new UnsupportedSentenceException("Unsupported sentence at tableUpdate method in Excel: " + nonQuerySQL)
         }
+    }
+
+    def tableSelect(sentence: String, table: DataTable): DataTable = {
+        //pass
+        new DataTable()
     }
 
     //EDIT Sheet1 SET A1, A2 STYLE 'styles' MERGE A1, B2 SPLIT A3;
@@ -505,10 +509,9 @@ class Excel(val fileName: String) {
         }
     }
 
-    //须在关闭之后执行
     def attachToEmail(title: String): Email = {
+        //须在关闭之后执行
         close()
-
         Email.write(title).attach(path)
     }
 

@@ -51,8 +51,9 @@ object Patterns {
     val $DELETE$FILE: Regex = """(?i)^DELETE\s+FILE\s""".r
     val $NON$QUERY: Regex = s"(?i)^(${NON_QUERY_CAPTIONS.mkString("|")})\\s".r
 
-    val $SHEET$NONE$QUERY: Regex = """^(INSERT\s+INTO|UPDATE|DELETE|DELETE\s+FROM)\s+SHEET\s""".r
-    val $SELECT$CUSTOM: Regex = """(?)\bFROM\s+(SHEET|JSON\s+FILE|CSV\s+FILE|TXT\s+FILE|GZ\s+FILE)""".r
+    //自定义SQL语句
+    val $NONE$QUERY$CUSTOM: Regex = """(?i)^(INSERT\s+INTO|UPDATE|DELETE|DELETE\s+FROM)\s+(\S+?:|:|\$|@)\S+\s""".r
+    val $SELECT$CUSTOM: Regex = """(?)\b(FROM|JOIN)\s+(\S+?:|:|\$|@)\S+\s""".r
 
     val $FOR: Regex = """(?i)^FOR\s+([\s\S]+?)\s+IN\s+([\s\S]+?)\s+LOOP(\s|$)""".r
     val $EXIT: Regex = """(?i)^EXIT(\s+WHEN\s([\s\S]+))?$""".r

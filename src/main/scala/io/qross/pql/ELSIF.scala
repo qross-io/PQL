@@ -1,5 +1,6 @@
 package io.qross.pql
 
+import io.qross.exception.SQLParseException
 import io.qross.pql.Patterns.$ELSIF
 
 object ELSIF {

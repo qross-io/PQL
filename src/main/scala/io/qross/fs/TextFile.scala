@@ -1,39 +1,35 @@
 package io.qross.fs
 
-import io.qross.core.{DataHub, ExtensionNotFoundException}
+import java.io.RandomAccessFile
+
+import io.qross.core.{DataHub, DataTable, DataType}
+import io.qross.exception.IncorrectDataSourceException
 import io.qross.ext.TypeExt._
+import io.qross.fs.Path._
 import io.qross.net.Json
+import io.qross.pql.Syntax
+import io.qross.setting.Global
+
+import scala.collection.mutable
 
 object TextFile {
-    implicit class DataHub$TextFile(val dh: DataHub) {
 
-        def WITH_HEADER: Boolean = {
-            if (!dh.slots("WITH_HEADER")) {
-                dh.plug("WITH_HEADER", false)
-            }
-            dh.pick[Boolean]("WITH_HEADER").getOrElse(true)
-        }
+    val TXT = 1
+    val CSV = 2
+    val JSON = 3
+    val GZ = 4
+    val FILE = "file"
+    val STREAM = "stream"
+
+    val TERMINATOR: String = System.getProperty("line.separator")
+
+    implicit class DataHub$TextFile(val dh: DataHub) {
 
         //private var READER: FileReader = _
 
         /*
-        def openTextFile(path: String): DataHub = {
-            READER = FileReader(path)
-            this
-        }
-
         def useDelimiter(delimiter: String): DataHub = {
             READER.delimit(delimiter)
-            this
-        }
-
-        def asTable(tableName: String): DataHub = {
-            READER.asTable(tableName)
-            this
-        }
-
-        def withColumns(fields: String*): DataHub = {
-            READER.withColumns(fields: _*)
             this
         }
 
@@ -60,37 +56,120 @@ object TextFile {
             TABLE.cut(READER.readAllAsTable(fields: _*))
             this
         }
-
         */
 
-        def saveAsNewJsonFile(fileNameOrFullPath: String): DataHub = {
-            dh.plug("WRITER", FileWriter(fileNameOrFullPath))
-                .plug("WRITER_FORMAT", "JSON_LINE")
+        def openTextFile(fileNameOrFullPath: String): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.TXT))
+            dh
+        }
+
+        def openJsonFile(fileNameOrFullPath: String): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.JSON).bracketedBy("{", "}"))
+            dh
+        }
+
+        def openCsvFile(fileNameOrFullPath: String): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.CSV).delimitedBy(","))
+            dh
+        }
+
+        def openGzFile(fileNameOrFullPath: String): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.GZ))
+            dh
+        }
+
+        def withColumns(fields: String*): DataHub = {
+            dh.FQL.getTable match {
+                case file: TextFile => file.withColumns(fields: _*)
+                case _ =>
+            }
+            dh
+        }
+
+        def bracketedBy(head: String, tail: String = ""): DataHub = {
+            dh.FQL.getTable match {
+                case file: TextFile => file.bracketedBy(head, tail)
+                case _ =>
+            }
+            dh
+        }
+
+        //适用于openSource中的分隔符修改
+        def delimitedBy(delimiter: String): DataHub = {
+            dh.FQL.getTable match {
+                case file: TextFile => file.delimitedBy(delimiter)
+                case _ =>
+            }
+            dh
+        }
+
+        def skipLines(amount: Int): DataHub = {
+            dh.FQL.getTable match {
+                case file: TextFile => file.skipLines(amount)
+                case _ =>
+            }
+            dh
+        }
+
+        def cursor: Long = {
+            dh.FQL.getTable match {
+                case file: TextFile => file.cursor
+                case _ => 0
+            }
         }
 
         def saveAsJsonFile(fileNameOrFullPath: String): DataHub = {
-            dh.plug("WRITER", FileWriter(fileNameOrFullPath, deleteFileIfExists = false))
-                .plug("WRITER_FORMAT", "JSON_LINE")
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.JSON, TextFile.FILE, true))
+            dh
         }
 
-        def saveAsNewTextFile(fileNameOrFullPath: String, delimiter: String = ","): DataHub = {
-            dh.plug("WRITER", FileWriter(fileNameOrFullPath).delimit(delimiter))
+        def saveToJsonFile(fileNameOrFullPath: String): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.JSON, TextFile.FILE, false))
+            dh
         }
 
-        def saveAsTextFile(fileNameOrFullPath: String, delimiter: String = ","): DataHub = {
-            dh.plug("WRITER", FileWriter(fileNameOrFullPath, deleteFileIfExists = false).delimit(delimiter))
+        def saveAsStreamJsonFile(fileNameOrFullPath: String): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.JSON, TextFile.STREAM))
+            dh
         }
 
-        def saveAsNewCsvFile(fileNameOrFullPath: String): DataHub = {
-            dh.plug("WRITER", FileWriter(fileNameOrFullPath).delimit(","))
+        def saveAsTextFile(fileNameOrFullPath: String): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.TXT, TextFile.FILE, true))
+            dh
+        }
+
+        def saveToTextFile(fileNameOrFullPath: String): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.TXT, TextFile.FILE, false))
+            dh
+        }
+
+        def saveAsStreamFile(fileNameOrFullPath: String): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.TXT, TextFile.STREAM))
+            dh
         }
 
         def saveAsCsvFile(fileNameOrFullPath: String): DataHub = {
-            dh.plug("WRITER", FileWriter(fileNameOrFullPath, deleteFileIfExists = false).delimit(","))
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.CSV, TextFile.FILE, true))
+            dh
         }
 
+        def saveToCsvFile(fileNameOrFullPath: String): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.CSV, TextFile.FILE, false))
+            dh
+        }
+
+        def saveAsStreamCsvFile(fileNameOrFullPath: String): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.CSV, TextFile.STREAM))
+            dh
+        }
+
+        //适用于saveDestination中的分隔符修改
         def delimit(delimiter: String): DataHub = {
-            dh.plug("DELIMITER", delimiter)
+            dh.FQL.getTable match {
+                case file: TextFile => file.writer.delimit(delimiter)
+                case _ =>
+            }
+            dh
         }
 
         def withHeaders(): DataHub = {
@@ -128,29 +207,206 @@ object TextFile {
         }
 
         def write(): DataHub = {
-            if (dh.slots("WRITER")) {
-                val writer = dh.pick[FileWriter]("WRITER").orNull
-                val format = dh.pick[String]("WRITER_FORMAT").getOrElse("STRING_LINE")
+            dh.FQL.getTable match {
+                case file: TextFile =>
+                    file.writer.writeTable(dh.getData, dh.pick[Boolean]("WITH_HEADERS").getOrElse(true))
+                    file.writer.close()
 
-                if (format == "JSON_LINE") {
-                    writer.writeTableAsJsonLine(dh.getData)
-                }
-                else {
-                    writer.writeTable(dh.getData, WITH_HEADER)
-                }
-
-                writer.close()
-                dh.pull("WRITER")
-                dh.pull("WRITER_FORMAT")
-
-                if (dh.slots("ZIP")) {
-                    dh.pick[Zip]("ZIP").orNull.addFile(writer.filePath)
-                }
-            }
-            else {
-                throw new ExtensionNotFoundException("Must use SAVE AS method to save file first.")
+                    if (dh.slots("ZIP")) {
+                        dh.pick[Zip]("ZIP").orNull.addFile(file.writer.filePath)
+                    }
+                case _ => throw new IncorrectDataSourceException("Must use SAVE sentence to save file first.")
             }
             dh
         }
+    }
+}
+
+class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, deleteIfExists: Boolean = false) {
+
+    private lazy val access = new RandomAccessFile(fileNameOrPath.locate(), "r") //read
+    private lazy val reader = new FileReader(fileNameOrPath, format) //read gz
+    private lazy val writer = new FileWriter(fileNameOrPath, format, outputType, deleteIfExists) //write
+
+    private var row = 0 //行号
+    private var skip = 0 //如果是从头读, 略过多少行
+    private var start = 0 //limit 起始行
+    private var most = -1 //limit 限制行
+    private var head = "" //row head mark
+    private var tail = "" //row tail mark
+    private var separator = if (format == TextFile.CSV) "," else "" //row delimiter
+    private val columns = new mutable.ArrayBuffer[(String, DataType)]()
+    //private val fields = new mutable.ArrayBuffer[(String, String)]()
+
+    private var values = "" //中间变量
+    private val table = new DataTable()  //result
+
+    def this(fileNameOrPath: String) {
+        this(fileNameOrPath, TextFile.TXT, TextFile.FILE)
+    }
+
+    def this(fileNameOrPath: String, format: Int) {
+        this(fileNameOrPath, format, TextFile.FILE)
+    }
+
+    def this(fileNameOrPath: String, format: Int, deleteIfExists: Boolean) {
+        this(fileNameOrPath, format, TextFile.FILE, deleteIfExists)
+    }
+
+    def withColumns(fields: String*): TextFile = {
+        fields.foreach(field => {
+            """\s""".r.findFirstIn(field) match {
+                case Some(blank) => columns.append((field.takeBefore(blank).trim, DataType.ofTypeName(field.takeAfter(blank).trim)))
+                case None => columns.append((field, DataType.TEXT))
+            }
+        })
+        this
+    }
+
+    def bracketedBy(start: String, end: String = ""): TextFile = {
+        head = start
+        tail = end
+        this
+    }
+
+    def delimitedBy(delimiter: String): TextFile = {
+        separator = delimiter
+        this
+    }
+
+    def skipLines(amount: Int): TextFile = {
+        skip = amount
+        this
+    }
+
+    def cursor: Long = access.getFilePointer
+
+    def seek(position: Long): Unit = access.seek(position)
+
+    def where(conditions: String): Unit = ???
+
+    def limit(m: Int): TextFile = {
+        start = 0
+        most = m
+        this
+    }
+    def limit(m: Int, n: Int): TextFile = {
+        start = m
+        most = n
+        this
+    }
+
+    def orderBy(rule: String): Unit = ???
+
+    def select(fields: String*): DataTable = {
+        select(fields.map(field => (field, field)): _*)
+    }
+
+    def select(fields: (String, String)*): DataTable = {
+
+        table.clear()
+
+        //只有从头读时才跳过行
+        if (cursor > 0 && skip > 0) {
+            skip = 0
+        }
+
+        values = ""
+        row = 0
+
+        if (format != TextFile.GZ) {
+            var line: String = null
+            do {
+                line = access.readLine()
+                if (line != null) {
+                    recognize(new String(line.getBytes("ISO-8859-1"), Global.CHARSET))
+                }
+            }
+            while (line != null)
+        }
+        else {
+            while(reader.hasNextLine) {
+                recognize(reader.readLine())
+            }
+        }
+
+        //收尾
+        parse(values)
+
+        table
+    }
+
+    private def recognize(line: String): Unit = {
+
+        //head 为空 tail 为空，读一行是一行
+        if (head == "" && tail == "") {
+            parse(line)
+        }
+        //head 不为空 tail 为空
+        else if (head != "" && tail == "") {
+            if (line.startsWith(head)) {
+                if (values != "") {
+                    parse(values)
+                }
+                //新一行
+                values = line
+            }
+            else {
+                values += TextFile.TERMINATOR + line
+            }
+        }
+        //head 为空 tail 不为空
+        else if (head == "" && tail != "") {
+            if (line.endsWith(tail)) {
+                if (values != "") {
+                    values += TextFile.TERMINATOR + line
+                    parse(values)
+                    values = ""
+                }
+                else {
+                    parse(line)
+                }
+            }
+            else {
+                values += TextFile.TERMINATOR + line
+            }
+        }
+        //head 不为空 tail 不为空
+        else if (head != "" && tail != "") {
+            if (line.startsWith(head) && line.endsWith(tail) && values == "") {
+                parse(line)
+            }
+            else if (line.startsWith(head) && values == "") {
+                values = line
+            }
+            else if (line.endsWith(tail) && values != "") {
+                values += TextFile.TERMINATOR + line
+                parse(values)
+                values = ""
+            }
+            else {
+                values += TextFile.TERMINATOR + line
+            }
+        }
+    }
+
+    private def parse(line: String): Unit = {
+        if (line != "") {
+            row += 1
+            //skip, limit
+            if (row > skip && row > start && (most == - 1 || row <= start + most) ) {
+                println (line)
+            }
+        }
+    }
+
+    def close(): Unit = {
+        if (format != TextFile.GZ) {
+            access.close()
+        }
+        else {
+            reader.close()
+        }
+        writer.close()
     }
 }

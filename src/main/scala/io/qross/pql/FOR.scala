@@ -1,6 +1,7 @@
 package io.qross.pql
 
 import io.qross.core.{DataRow, DataTable}
+import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.pql.Patterns._

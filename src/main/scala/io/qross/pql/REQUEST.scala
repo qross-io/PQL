@@ -1,10 +1,12 @@
 package io.qross.pql
 
+import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
 import io.qross.net.Http
 import io.qross.net.Json._
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
+
 import scala.collection.mutable
 
 object REQUEST {

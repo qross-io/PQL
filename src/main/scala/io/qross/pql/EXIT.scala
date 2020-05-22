@@ -1,7 +1,9 @@
 package io.qross.pql
 
+import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.pql.Patterns.{$EXIT, $EXIT$CODE}
 import io.qross.ext.TypeExt._
+
 import scala.util.control.Breaks.{break, breakable}
 
 object EXIT {

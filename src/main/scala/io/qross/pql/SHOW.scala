@@ -2,6 +2,7 @@ package io.qross.pql
 
 import java.util.regex.Matcher
 
+import io.qross.exception.SQLParseException
 import io.qross.pql.Patterns.$SHOW
 import io.qross.pql.Solver._
 

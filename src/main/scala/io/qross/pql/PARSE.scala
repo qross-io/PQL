@@ -1,6 +1,7 @@
 package io.qross.pql
 
 import io.qross.core.DataCell
+import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.net.Json._

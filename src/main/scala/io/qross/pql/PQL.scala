@@ -1,7 +1,9 @@
 package io.qross.pql
 
 import io.qross.core._
+import io.qross.exception.{ExtensionNotFoundException, SQLParseException}
 import io.qross.ext.TypeExt._
+import io.qross.fql.FQL
 import io.qross.fs.SourceFile
 import io.qross.net.Json
 import io.qross.pql.Patterns._

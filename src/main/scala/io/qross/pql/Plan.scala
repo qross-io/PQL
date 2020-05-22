@@ -127,7 +127,29 @@ class Plan {
         }
     }
 
-    def selectArgs(phrase: String, alternativePhrase: String = ""): Map[String, String] = {
-        get(phrase, alternativePhrase).getOrElse("").$split(Plan.joint, " AS ")
+    def selectArgs(phrase: String, alternativePhrase: String = ""): Array[(String, String)] = {
+        get(phrase, alternativePhrase)
+            .getOrElse("")
+            .$trim("(", ")")
+            .split(Plan.joint)
+            .map(field => {
+                if (field.contains(" AS ")) {
+                    (field.takeBefore(" AS "), field.takeAfter(" AS "))
+                }
+                else {
+                    (field, field)
+                }
+            })
+    }
+
+    def limitArgs(phrase: String, alternativePhrase: String = ""): (String, String) = {
+        val args = get(phrase, alternativePhrase).getOrElse("")
+
+        if (args.contains(Plan.joint)) {
+            (args.takeBefore(Plan.joint).removeQuotes(), args.takeAfter(Plan.joint).removeQuotes())
+        }
+        else {
+            (args.removeQuotes(), "")
+        }
     }
 }

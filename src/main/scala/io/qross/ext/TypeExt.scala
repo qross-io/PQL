@@ -4,8 +4,8 @@ import java.util
 import java.util.regex.Pattern
 
 import io.qross.core._
+import io.qross.exception.{ConvertFailureException, SQLExecuteException}
 import io.qross.net.Json
-import io.qross.pql.SQLExecuteException
 import io.qross.setting.Global
 import io.qross.time.{DateTime, Timer}
 import io.qross.pql.Solver._
@@ -76,7 +76,7 @@ object TypeExt {
             val queries = new mutable.LinkedHashMap[String, String]()
             for (param <- params) {
                 if (param.contains(terminator)) {
-                    queries += param.substring(0, param.indexOf(terminator)) -> param.substring(param.indexOf(terminator) + 1)
+                    queries += param.takeBefore(terminator) -> param.takeAfter(terminator)
                 }
                 else {
                     queries += param -> ""

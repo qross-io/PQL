@@ -2,8 +2,10 @@ package io.qross.net
 
 import java.io._
 import java.net.{HttpURLConnection, URL}
+
 import io.qross.ext.TypeExt._
-import io.qross.core.{DataHub, ExtensionNotFoundException}
+import io.qross.core.DataHub
+import io.qross.exception.ExtensionNotFoundException
 import io.qross.fs.Path._
 import org.apache.commons.codec.binary.Base64
 

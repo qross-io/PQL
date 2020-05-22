@@ -1,9 +1,12 @@
 package io.qross.pql
 
+import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.{$OPEN, $RESERVED, BLANKS}
 import io.qross.setting.Properties
 import io.qross.pql.Solver._
+import io.qross.fs.Excel._
+import io.qross.fs.TextFile._
 
 /*
 OPEN "connectionName";
@@ -18,14 +21,9 @@ OPEN abbrName USE "databaseName";
 object OPEN {
 
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($OPEN.test(sentence)) {
-            PQL.PARSING.head.addStatement(new Statement("OPEN", sentence, new OPEN(sentence.takeAfter($OPEN))))
-            //            if (m.group(2).trim == ":") {
-            //                parseStatement(sentence.takeAfter(m.group(2)).trim)
-            //            }
-        }
-        else {
-            throw new SQLParseException("Incorrect OPEN sentence: " + sentence)
+        $OPEN.findFirstIn(sentence) match {
+            case Some(open) => PQL.PARSING.head.addStatement(new Statement("OPEN", sentence, new OPEN(sentence.takeAfter(open))))
+            case None => throw new SQLParseException("Incorrect OPEN sentence: " + sentence)
         }
     }
 }
@@ -34,33 +32,94 @@ class OPEN(val sentence: String) {
 
     def execute(PQL: PQL): Unit = {
 
-        val sections = sentence.split(BLANKS)
+        val plan = Syntax("OPEN").plan(sentence.$restore(PQL))
 
-        sections(0).toUpperCase() match {
+        plan.head match {
             case "CACHE" => PQL.dh.openCache()
             case "TEMP" => PQL.dh.openTemp()
-            case "DEFAULT" => PQL.dh.openDefault()
-            case "QROSS" => PQL.dh.openQross()
-            case _ =>
-                val connectionName = {
-                    if ($RESERVED.test(sections(0))) {
-                        if (!Properties.contains(sections(0))) {
-                            throw new SQLExecuteException("Wrong connection name: " + sections(0))
-                        }
-                        sections(0)
-                    }
-                    else {
-                        sections(0).$eval(PQL).asText
-                    }
+            case "DEFAULT" =>
+                PQL.dh.openDefault()
+                if (plan.contains("AS")) {
+                    PQL.dh.as(plan.oneArgs("AS"))
                 }
-
-                if (sections.length > 2) {
-                    if (sections(1).equalsIgnoreCase("USE")) {
-                        PQL.dh.open(connectionName, sections(2).$eval(PQL).asText)
-                    }
+                if (plan.contains("USE")) {
+                    PQL.dh.use(plan.oneArgs("USE"))
+                }
+            case "QROSS" =>
+                PQL.dh.openQross()
+                if (plan.contains("USE")) {
+                    PQL.dh.use(plan.oneArgs("USE"))
+                }
+            case "EXCEL" => PQL.dh.openExcel(plan.oneArgs("EXCEL"))
+            case "JSON FILE" => PQL.dh.openJsonFile(plan.headArgs)
+            case "TXT FILE" =>
+                PQL.dh.openTextFile(plan.headArgs)
+                if (plan.contains("")) {
+                    PQL.dh.withColumns(plan.multiArgs(""): _*)
                 }
                 else {
-                    PQL.dh.open(connectionName)
+                    throw new SQLExecuteException("Must contains columns definition of table in OPEN TXT FILE: " + sentence)
+                }
+                if (plan.contains("BRACKETED BY")) {
+                    val brackets = plan.limitArgs("BRACKETED BY")
+                    PQL.dh.bracketedBy(brackets._1, brackets._2)
+                }
+                if (plan.contains("DELIMITED BY")) {
+                    PQL.dh.delimitedBy(plan.oneArgs("DELIMITED BY"))
+                }
+                if (plan.contains("SKIP")) {
+                    PQL.dh.skipLines(plan.oneArgs("SKIP").toInteger(0).toInt)
+                }
+                if (plan.contains("AS")) {
+                    PQL.dh.as(plan.oneArgs("AS"))
+                }
+            case "CSV FILE" =>
+                PQL.dh.openCsvFile(plan.headArgs)
+                if (plan.contains("")) {
+                    PQL.dh.withColumns(plan.multiArgs(""): _*)
+                }
+                else {
+                    throw new SQLExecuteException("Must contains columns definition of table in OPEN CSV FILE: " + sentence)
+                }
+                if (plan.contains("AS")) {
+                    PQL.dh.as(plan.oneArgs("AS"))
+                }
+                if (plan.contains("BRACKETED BY")) {
+                    val brackets = plan.limitArgs("BRACKETED BY")
+                    PQL.dh.bracketedBy(brackets._1, brackets._2)
+                }
+                if (plan.contains("SKIP")) {
+                    PQL.dh.skipLines(plan.oneArgs("SKIP").toInteger(0).toInt)
+                }
+            case "GZ FILE" =>
+                if (plan.contains("")) {
+                    PQL.dh.withColumns(plan.multiArgs(""): _*)
+                }
+                else {
+                    throw new SQLExecuteException("Must contains columns definition of table in OPEN GZ FILE: " + sentence)
+                }
+                if (plan.contains("AS")) {
+                    PQL.dh.as(plan.oneArgs("AS"))
+                }
+                if (plan.contains("BRACKETED BY")) {
+                    val brackets = plan.limitArgs("BRACKETED BY")
+                    PQL.dh.bracketedBy(brackets._1, brackets._2)
+                }
+                if (plan.contains("DELIMITED BY")) {
+                    PQL.dh.delimitedBy(plan.oneArgs("DELIMITED BY"))
+                }
+                if (plan.contains("SKIP")) {
+                    PQL.dh.skipLines(plan.oneArgs("SKIP").toInteger(0).toInt)
+                }
+            case _ =>
+                if (plan.contains("USE")) {
+                    PQL.dh.open(plan.headArgs, plan.oneArgs("USE"))
+                }
+                else {
+                    PQL.dh.open(plan.headArgs)
+                }
+                if (plan.contains("AS")) {
+                    PQL.dh.as(plan.oneArgs("AS"))
                 }
         }
     }

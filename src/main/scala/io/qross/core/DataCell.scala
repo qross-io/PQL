@@ -2,6 +2,7 @@ package io.qross.core
 
 import java.util
 
+import io.qross.exception.ConvertFailureException
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.time.DateTime

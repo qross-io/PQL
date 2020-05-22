@@ -22,7 +22,7 @@ object DataSource {
 
 }
 
-class DataSource (var connectionName: String, var databaseName: String) {
+class DataSource (val connectionName: String, val databaseName: String) {
 
     private[jdbc] val batchSQLs = new mutable.ArrayBuffer[String]()
     private[jdbc] val batchValues = new mutable.ArrayBuffer[Vector[Any]]()

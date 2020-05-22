@@ -1,6 +1,7 @@
 package io.qross.pql
 
-import io.qross.pql.Patterns.{$END$IF, $END$LOOP, $END$CASE}
+import io.qross.exception.SQLParseException
+import io.qross.pql.Patterns.{$END$CASE, $END$IF, $END$LOOP}
 import io.qross.ext.TypeExt._
 
 object END {

@@ -1,6 +1,7 @@
 package io.qross.pql
 
 import io.qross.core.{DataCell, DataRow, DataType}
+import io.qross.exception.SQLExecuteException
 import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.net.{Cookies, Session}
 import io.qross.pql.Patterns.FUNCTION_NAMES

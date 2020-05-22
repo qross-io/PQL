@@ -23,23 +23,30 @@ object FileReader {
     val DATA: ConcurrentLinkedQueue[DataTable] = new ConcurrentLinkedQueue[DataTable]()
 }
 
-case class FileReader(file: File) {
+class FileReader(val filePath: String, val format: Int, val delimiter: String) {
 
     def this(filePath: String) {
-        this(new File(filePath.locate()))
+        this(filePath, TextFile.TXT, ",")
     }
 
-    private var delimiter: String = ","
+    def this(filePath: String, format: Int) {
+        this(filePath, format, ",")
+    }
+
+    def this(filePath: String, delimiter: String) {
+        this(filePath, TextFile.TXT, delimiter)
+    }
+
+    val file = new File(filePath.locate())
+
     //field, defaultValue
     private val fields = new mutable.LinkedHashMap[String, String]()
 
     if (!file.exists) throw new IOException("File not found: " + file.getPath)
+
     private val extension = file.getPath.takeAfterLast(".")
     
     private val scanner: Scanner =
-//        if (".log".equalsIgnoreCase(extension) || ".txt".equalsIgnoreCase(extension) || ".csv".equalsIgnoreCase(extension)) {
-//
-//        }
         if (".gz".equalsIgnoreCase(extension)) {
             new Scanner(new GZIPInputStream(new FileInputStream(this.file)), Global.CHARSET)
         }
@@ -53,16 +60,69 @@ case class FileReader(file: File) {
 //            throw new IOException("Unrecognized Format: " + file.getPath)
 //        }
 
-    def delimitedBy(delimiter: String): FileReader = {
-        this.delimiter = delimiter
-        this
+    def hasNextLine: Boolean = scanner.hasNextLine
+        
+    def readLine(): String = scanner.nextLine
+
+    def countLines: Int = {
+        var lines = 0
+        while(this.hasNextLine) {
+            this.readLine()
+            lines += 1
+        }
+        this.close()
+        lines
     }
 
-    //file is json
-    //readLineAsJsonObject
-    def asJsonLines: FileReader = {
-        this.delimiter = "JSON$OBJECT$LINE"
-        this
+    def parseLine: DataRow = {
+        if (format != TextFile.JSON) {
+            val row = new DataRow()
+            val line = this.readLine().split(this.delimiter, -1)
+            var i = 0
+            for (field <- fields.keys) {
+                row.set(field, if (i < line.length) line(i) else fields(field))
+                i += 1
+            }
+            row
+        }
+        else {
+            val row = Json.fromText(this.readLine()).parseRow("/")
+            for (field <- fields.keys) {
+                if (!row.contains(field)) {
+                    row.set(field, fields(field))
+                }
+            }
+            row
+        }
+    }
+
+    def readToEnd: String = {
+        var lines = new mutable.ArrayBuffer[String]()
+        while(this.hasNextLine) {
+            lines += this.readLine
+        }
+        this.close()
+        lines.mkString("\r\n")
+    }
+
+    def readToEnd(filter: String => Boolean): String = {
+        var lines = new mutable.ArrayBuffer[String]()
+        while(this.hasNextLine) {
+            val line = this.readLine
+            if (filter(line)) {
+                lines += line
+            }
+        }
+        this.close()
+        lines.mkString("\r\n")
+    }
+
+    def readAllAsTable(): DataTable = {
+        val table = new DataTable()
+        while (this.hasNextLine) {
+            table.addRow(this.parseLine)
+        }
+        table
     }
 
     //field, defaultValue
@@ -129,72 +189,6 @@ case class FileReader(file: File) {
         Output.writeMessage("Finish reading.")
 
         this
-    }
-
-    def hasNextLine: Boolean = scanner.hasNextLine
-        
-    def readLine: String = scanner.nextLine
-
-    def countLines: Int = {
-        var lines = 0
-        while(this.hasNextLine) {
-            this.readLine
-            lines += 1
-        }
-        this.close()
-        lines
-    }
-
-    def parseLine: DataRow = {
-        if (this.delimiter != "JSON$OBJECT$LINE") {
-            val row = new DataRow()
-            val line = this.readLine.split(this.delimiter, -1)
-            var i = 0
-            for (field <- fields.keys) {
-                row.set(field, if (i < line.length) line(i) else fields(field))
-                i += 1
-            }
-            row
-        }
-        else {
-            val row = Json.fromText(this.readLine).parseRow("/")
-            for (field <- fields.keys) {
-                if (!row.contains(field)) {
-                    row.set(field, fields(field))
-                }
-            }
-            row
-        }
-    }
-
-    def readToEnd: String = {
-        var lines = new mutable.ArrayBuffer[String]()
-        while(this.hasNextLine) {
-            lines += this.readLine
-        }
-        this.close()
-        lines.mkString("\r\n")
-    }
-
-    def readToEnd(filter: String => Boolean): String = {
-        var lines = new mutable.ArrayBuffer[String]()
-        while(this.hasNextLine) {
-            val line = this.readLine
-            if (filter(line)) {
-                lines += line
-            }
-        }
-        this.close()
-        lines.mkString("\r\n")
-    }
-
-    //field, defaultValue
-    def readAllAsTable(): DataTable = {
-        val table = new DataTable()
-        while (this.hasNextLine) {
-            table.addRow(this.parseLine)
-        }
-        table
     }
         
     def close(): Unit = {

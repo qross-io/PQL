@@ -1,5 +1,6 @@
 package io.qross.pql
 
+import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.pql.Patterns.$CONTINUE
 
 import scala.util.control.Breaks.{break, breakable}

@@ -6,24 +6,11 @@ import io.qross.ext.TypeExt._
 
 class SELECT(sentence: String) {
 
+
+
     def executeDataTable(source: Any = null): DataTable = {
 
-        val plan = Syntax("SELECT").plan(sentence.takeAfter("\\s".r).trim())
 
-        plan.options.head match {
-            case "FROM JSON FILE" =>
-                //select = headArgs
-                //file = listArgs(from json file)
-                //where
-                //seek
-                //limit
-            case "FROM TXT FILE" | "FROM CSV FILE" =>
-
-            case "FROM GZ FILE" =>
-            case "FROM SHEET" =>
-            case "FROM JSON" =>
-            case _ =>
-        }
 
         new DataTable()
     }

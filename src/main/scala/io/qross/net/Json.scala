@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import org.json4s.{Formats, NoTypeHints}
 import org.json4s.jackson.Serialization
 import io.qross.core._
+import io.qross.exception.{ExtensionNotFoundException, JsonParseException}
 import io.qross.ext.TypeExt._
 
 import scala.collection.mutable

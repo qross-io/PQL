@@ -1,5 +1,6 @@
 package io.qross.pql
 
+import io.qross.exception.SQLParseException
 import io.qross.pql.Patterns.{$BLANK, $USE}
 import io.qross.pql.Solver._
 import io.qross.ext.TypeExt._

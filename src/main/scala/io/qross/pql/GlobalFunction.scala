@@ -1,6 +1,7 @@
 package io.qross.pql
 
 import io.qross.core.{DataCell, DataType}
+import io.qross.exception.SQLParseException
 import io.qross.pql.Solver._
 import io.qross.ext.TypeExt._
 

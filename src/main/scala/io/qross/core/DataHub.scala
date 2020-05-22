@@ -1,13 +1,14 @@
 package io.qross.core
 
 import io.qross.core.Parameter._
+import io.qross.exception.{DefineAliasException, OpenDataSourceException, WrongSourceNameException}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
-import io.qross.fql.SELECT
-import io.qross.fs.Excel
+import io.qross.fql.FQL
+import io.qross.fs.{Excel, FileReader, FileWriter, TextFile}
 import io.qross.fs.Path._
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.pql.Patterns.{$SELECT$CUSTOM, $SHEET$NONE$QUERY}
+import io.qross.pql.Patterns
 import io.qross.setting.Environment
 import io.qross.thread.Parallel
 import io.qross.time.{DateTime, Timer}
@@ -23,7 +24,7 @@ object DataHub {
 
 class DataHub (var defaultConnectionName: String) {
     
-    private val SOURCES = mutable.HashMap[String, DataSource](
+    private[qross] val SOURCES = mutable.HashMap[String, Any](
         "DEFAULT" -> {
                                 if (defaultConnectionName == "") {
                                     DataSource.DEFAULT
@@ -33,15 +34,18 @@ class DataHub (var defaultConnectionName: String) {
                                 }
                              }
     )
+    private[qross] val ALIASES = new mutable.HashMap[String, String]()
 
-    //temp database
-    private lazy val holder = s"temp_${DateTime.now.getString("yyyyMMddHHmmssSSS")}_${Math.round(Math.random() * 10000000D)}.sqlite".locate()
+    //虚库
+    private[qross] lazy val FQL = new FQL(this)
 
-    private var CURRENT: DataSource = SOURCES("DEFAULT")   //current dataSource - open
-    private var TARGET: DataSource = SOURCES("DEFAULT")    //current dataDestination - saveAs
+    private var lastSourceName = ""
+    private[qross] var currentSourceName = "DEFAULT"  //current dataSource - open
+    private[qross] var currentDestinationName = "DEFAULT"  //current dataDestination - saveTo
 
     private var DEBUG: Boolean = false
-    
+
+    private val HOLDER = s"temp_${DateTime.now.getString("yyyyMMddHHmmssSSS")}_${Math.round(Math.random() * 10000000D)}.sqlite".locate()
     private val TABLE = new DataTable()  //current buffer
     private val BUFFER = new mutable.HashMap[String, DataTable]() //all buffer
 
@@ -71,18 +75,41 @@ class DataHub (var defaultConnectionName: String) {
         this("")
     }
 
+    def currentSource[T]: T = Source[T](currentSourceName)
+    def currentDestination[T]: T = Source[T](currentDestinationName)
+    def getSource: Any = {
+        if (SOURCES.contains(currentSourceName)) {
+            SOURCES(currentSourceName)
+        }
+        else {
+            SOURCES(ALIASES(currentSourceName.toLowerCase()))
+        }
+    }
+    def getDestination: Any = {
+        if (SOURCES.contains(currentDestinationName)) {
+            SOURCES(currentDestinationName)
+        }
+        else {
+            SOURCES(ALIASES(currentDestinationName.toLowerCase()))
+        }
+    }
+    def Source[T](sourceName: String): T = {
+        if (SOURCES.contains(sourceName)) {
+            SOURCES(sourceName).asInstanceOf[T]
+        }
+        else {
+            SOURCES(ALIASES(sourceName.toLowerCase())).asInstanceOf[T]
+        }
+    }
+
     // ---------- system ----------
 
     def debug(enabled: Boolean = true): DataHub = {
         DEBUG = enabled
-        SOURCES.values.foreach(_.debug(enabled))
-        this.pick[Excel]("EXCEL$R") match {
-            case Some(excel) => excel.debug(enabled)
-            case None =>
-        }
-        this.pick[Excel]("EXCEL$W") match {
-            case Some(excel) => excel.debug(enabled)
-            case None =>
+        SOURCES.values.foreach {
+            case db: DataSource => db.debug(enabled)
+            case excel: Excel => excel.debug(enabled)
+            case _ =>
         }
 
         this
@@ -90,44 +117,68 @@ class DataHub (var defaultConnectionName: String) {
 
     def debugging: Boolean = DEBUG
 
-    def +=(dataSource:(String, DataSource)): DataHub = {
-        SOURCES += dataSource._1 -> dataSource._2.debug(DEBUG)
+    def +=(dataSource:(String, Any)): DataHub = {
+        SOURCES += dataSource._1 -> {
+            dataSource._2 match {
+                case db: DataSource => db.debug(DEBUG)
+                case excel: Excel => excel.debug(DEBUG)
+                case o => o
+            }
+        }
         this
     }
 
     // ---------- open ----------
 
-    def openCache(): DataHub = {
+    private[qross] def openSource(sourceName: String, source: Any): DataHub = {
         reset()
-        if (!SOURCES.contains("CACHE")) {
-            this += "CACHE" -> DataSource.MEMORY
+        if (!SOURCES.contains(sourceName) && !ALIASES.contains(sourceName.toLowerCase())) {
+            this += sourceName -> source
         }
-        CURRENT = SOURCES("CACHE")
+        currentSourceName = sourceName
+        lastSourceName = sourceName
         this
+    }
+
+    private[qross] def saveToDestination(destinationName: String, destination: Any): DataHub = {
+        if (!SOURCES.contains(destinationName) && !ALIASES.contains(destinationName.toLowerCase())) {
+            this += destinationName -> destination
+        }
+        currentDestinationName = destinationName
+        lastSourceName = destinationName
+        this
+    }
+
+    def as(alias: String): DataHub = {
+        if (ALIASES.contains(lastSourceName.toLowerCase())) {
+            throw new DefineAliasException("Can not define alias for a alias.")
+        }
+        ALIASES += alias.toLowerCase() -> lastSourceName
+        this
+    }
+
+    def asTable(alias: String): DataHub = {
+        if (FQL.ALIASES.contains(FQL.recentTableName.toLowerCase())) {
+            throw new DefineAliasException("Can not define alias for a alias.")
+        }
+        FQL.ALIASES += alias.toLowerCase() -> FQL.recentTableName
+        this
+    }
+
+    def openCache(): DataHub = {
+        openSource("CACHE", DataSource.MEMORY)
     }
 
     def openTemp(): DataHub = {
-        reset()
-        if (!SOURCES.contains("TEMP")) {
-            this += "TEMP" -> new DataSource(holder)
-        }
-        CURRENT = SOURCES("TEMP")
-        this
+        openSource("TEMP", new DataSource(HOLDER))
     }
 
     def openDefault(): DataHub = {
-        reset()
-        CURRENT = SOURCES("DEFAULT")
-        this
+        openSource("DEFAULT", DataSource.DEFAULT)
     }
 
     def openQross(): DataHub = {
-        reset()
-        if (!SOURCES.contains("QROSS")) {
-            this += "QROSS" -> DataSource.QROSS
-        }
-        CURRENT = SOURCES("QROSS")
-        this
+        openSource("QROSS", DataSource.QROSS)
     }
 
     def open(connectionNameOrDataSource: Any): DataHub = {
@@ -135,59 +186,34 @@ class DataHub (var defaultConnectionName: String) {
     }
 
     def open(connectionNameOrDataSource: Any, database: String): DataHub = {
-        reset()
         connectionNameOrDataSource match {
-            case connectionName: String =>
-                    if (!SOURCES.contains(connectionName)) {
-                        this += connectionName -> new DataSource(connectionName, database)
-                    }
-                    CURRENT = SOURCES(connectionName)
-            case dataSource: DataSource =>
-                if (!SOURCES.contains(dataSource.connectionName)) {
-                    this += dataSource.connectionName -> dataSource
-                }
-                CURRENT = dataSource
-            case _ => throw new Exception("Unsupported data source parameter format, only support String or DataSource")
+            case connectionName: String => openSource(connectionName, new DataSource(connectionName, database))
+            case dataSource: DataSource => openSource(dataSource.connectionName, dataSource)
+            case _ => throw new OpenDataSourceException("Unsupported data source parameter format, only support String or DataSource")
         }
-
-        this
     }
 
     def use(databaseName: String): DataHub = {
-        CURRENT.use(databaseName)
+        currentSource[DataSource].use(databaseName)
         this
     }
-
 
     // ---------- save as ----------
 
     def saveToCache(): DataHub = {
-        if (!SOURCES.contains("CACHE")) {
-            this += "CACHE" -> DataSource.MEMORY
-        }
-        TARGET = SOURCES("CACHE")
-        this
+        saveToDestination("CACHE", DataSource.MEMORY)
     }
 
     def saveToTemp(): DataHub = {
-        if (!SOURCES.contains("TEMP")) {
-            this += "TEMP" -> new DataSource(holder)
-        }
-        TARGET = SOURCES("TEMP")
-        this
+        saveToDestination("TEMP", new DataSource(HOLDER))
     }
 
     def saveToDefault(): DataHub = {
-        TARGET = SOURCES("DEFAULT")
-        this
+        saveToDestination("DEFAULT", DataSource.DEFAULT)
     }
 
     def saveToQross(): DataHub = {
-        if (!SOURCES.contains("QROSS")) {
-            this += "QROSS" -> DataSource.QROSS
-        }
-        TARGET = SOURCES("QROSS")
-        this
+        saveToDestination("QROSS", DataSource.QROSS)
     }
 
     def saveTo(connectionName: String): DataHub = {
@@ -195,11 +221,7 @@ class DataHub (var defaultConnectionName: String) {
     }
 
     def saveTo(connectionName: String, database: String): DataHub = {
-        if (!SOURCES.contains(connectionName)) {
-            this += connectionName -> new DataSource(connectionName, database)
-        }
-        TARGET = SOURCES(connectionName)
-        this
+        saveToDestination(connectionName, new DataSource(connectionName, database))
     }
 
     // ---------- Reset ----------
@@ -261,7 +283,7 @@ class DataHub (var defaultConnectionName: String) {
             placeHolders += "?"
         }
         createSQL += fields.mkString(", ") + ")"
-        SOURCES("CACHE").executeNonQuery(createSQL)
+        Source[DataSource]("CACHE").executeNonQuery(createSQL)
         fields.clear()
 
         if (DEBUG) {
@@ -270,7 +292,7 @@ class DataHub (var defaultConnectionName: String) {
         }
 
         if (table.nonEmpty) {
-            SOURCES("CACHE").tableUpdate("INSERT INTO " + tableName + " ([" + table.getFieldNames.mkString("], [") + "]) VALUES (" + placeHolders.mkString(",") + ")", table)
+            Source[DataSource]("CACHE").tableUpdate("INSERT INTO " + tableName + " ([" + table.getFieldNames.mkString("], [") + "]) VALUES (" + placeHolders.mkString(",") + ")", table)
         }
         placeHolders.clear()
 
@@ -324,7 +346,7 @@ class DataHub (var defaultConnectionName: String) {
         })
 
         if (!SOURCES.contains("TEMP")) {
-            this += "TEMP" -> new DataSource(holder)
+            this += "TEMP" -> new DataSource(HOLDER)
         }
 
         //var createSQL = "CREATE TABLE IF NOT EXISTS " + tableName + " (__pid INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE"
@@ -339,7 +361,7 @@ class DataHub (var defaultConnectionName: String) {
             placeHolders += "?"
         }
         createSQL += fields.mkString(", ") + ")"
-        SOURCES("TEMP").executeNonQuery(createSQL)
+        Source[DataSource]("TEMP").executeNonQuery(createSQL)
         fields.clear()
 
         if (DEBUG) {
@@ -348,13 +370,13 @@ class DataHub (var defaultConnectionName: String) {
         }
 
         if (table.nonEmpty) {
-            SOURCES("TEMP").tableUpdate("INSERT INTO " + tableName + " ([" + table.getFieldNames.mkString("],[") + "]) VALUES (" + placeHolders.mkString(",") + ")", table)
+            Source[DataSource]("TEMP").tableUpdate("INSERT INTO " + tableName + " ([" + table.getFieldNames.mkString("],[") + "]) VALUES (" + placeHolders.mkString(",") + ")", table)
         }
         placeHolders.clear()
 
         if (indexes.nonEmpty) {
             indexes.foreach(SQL => {
-                SOURCES("TEMP").executeNonQuery(SQL)
+                Source[DataSource]("TEMP").executeNonQuery(SQL)
             })
         }
 
@@ -367,15 +389,10 @@ class DataHub (var defaultConnectionName: String) {
 
     //execute SQL on target dataSource
     def set(nonQuerySQL: String, values: Any*): DataHub = {
-
-        if ($SHEET$NONE$QUERY.test(nonQuerySQL)) {
-            this.pick[Excel]("EXCEL$W") match {
-                case Some(excel) => AFFECTED_ROWS_OF_LAST_SET = excel.executeNonQuery(nonQuerySQL)
-                case None => throw new ExtensionNotFoundException("Must open an excel file first.")
-            }
-        }
-        else {
-            AFFECTED_ROWS_OF_LAST_SET = CURRENT.executeNonQuery(nonQuerySQL, values: _*)
+        getSource match {
+            case ds: DataSource => AFFECTED_ROWS_OF_LAST_SET = ds.executeNonQuery(nonQuerySQL, values: _*)
+            case excel: Excel => AFFECTED_ROWS_OF_LAST_SET = excel.executeNonQuery(nonQuerySQL)
+            case None =>
         }
 
         this
@@ -391,7 +408,12 @@ class DataHub (var defaultConnectionName: String) {
             println("GET # " + selectSQL)
         }
 
-        TABLE.merge(CURRENT.executeDataTable(selectSQL, values: _*))
+        getSource match {
+            case ds: DataSource => TABLE.merge(ds.executeDataTable(selectSQL, values: _*))
+            case excel: Excel => TABLE.merge(excel.select(selectSQL))
+            case _ =>
+        }
+
         TOTAL_COUNT_OF_RECENT_GET += TABLE.count()
         COUNT_OF_LAST_GET = TABLE.count()
 
@@ -399,7 +421,7 @@ class DataHub (var defaultConnectionName: String) {
     }
 
     def join(selectSQL: String, on: (String, String)*): DataHub = {
-        TABLE.join(CURRENT.executeDataTable(selectSQL), on: _*)
+        TABLE.join(currentSource[DataSource].executeDataTable(selectSQL), on: _*)
         this
     }
 
@@ -417,7 +439,13 @@ class DataHub (var defaultConnectionName: String) {
                 throw new Exception("No data to pass. Please ensure data exists or provide default value")
             }
         }
-        TABLE.cut(CURRENT.tableSelect(querySentence, TABLE))
+
+        getSource match {
+            case ds: DataSource => TABLE.cut(currentSource[DataSource].tableSelect(querySentence, TABLE))
+            case excel: Excel => TABLE.cut(excel.tableSelect(querySentence, TABLE))
+            case _ =>
+        }
+
         TOTAL_COUNT_OF_RECENT_GET = TABLE.count()
         COUNT_OF_LAST_GET = TABLE.count()
 
@@ -426,14 +454,10 @@ class DataHub (var defaultConnectionName: String) {
 
     //execute SQL on target dataSource
     def prep(nonQuerySQL: String, values: Any*): DataHub = {
-        if ($SHEET$NONE$QUERY.test(nonQuerySQL)) {
-            this.pick[Excel]("EXCEL$W") match {
-                case Some(excel) => AFFECTED_ROWS_OF_LAST_PREP = excel.executeNonQuery(nonQuerySQL)
-                case None => throw new ExtensionNotFoundException("Must save as an excel file first.")
-            }
-        }
-        else {
-            AFFECTED_ROWS_OF_LAST_PREP = TARGET.executeNonQuery(nonQuerySQL, values: _*)
+        AFFECTED_ROWS_OF_LAST_PREP = getDestination match {
+            case ds: DataSource =>  ds.executeNonQuery(nonQuerySQL, values: _*)
+            case excel: Excel => excel.executeNonQuery(nonQuerySQL)
+            case _ => 0
         }
 
         this
@@ -450,14 +474,10 @@ class DataHub (var defaultConnectionName: String) {
 
         if (TABLE.nonEmpty) {
             AFFECTED_ROWS_OF_LAST_PUT = {
-                if ($SHEET$NONE$QUERY.test(nonQuerySQL)) {
-                    this.pick[Excel]("EXCEL$W") match {
-                        case Some(excel) => excel.tableUpdate(nonQuerySQL, TABLE)
-                        case None => throw new ExtensionNotFoundException("Must save as an excel file first.")
-                    }
-                }
-                else {
-                    TARGET.tableUpdate(nonQuerySQL, TABLE)
+                getDestination match {
+                    case ds: DataSource =>  ds.tableUpdate(nonQuerySQL, TABLE)
+                    case excel: Excel => excel.tableUpdate(nonQuerySQL, TABLE)
+                    case _ => 0
                 }
             }
             TOTAL_AFFECTED_ROWS_OF_RECENT_PUT += AFFECTED_ROWS_OF_LAST_PUT
@@ -468,7 +488,7 @@ class DataHub (var defaultConnectionName: String) {
 
         if (pageSQLs.nonEmpty || blockSQLs.nonEmpty) {
             stream(table => {
-                TARGET.tableUpdate(nonQuerySQL, table)
+                currentDestination[DataSource].tableUpdate(nonQuerySQL, table)
                 table.clear()
             })
         }
@@ -487,16 +507,18 @@ class DataHub (var defaultConnectionName: String) {
             println("PUT # " + nonQuerySQL)
         }
 
-        if (TABLE.nonEmpty) {
-            if ($SHEET$NONE$QUERY.test(nonQuerySQL)) {
-                this.pick[Excel]("EXCEL$W") match {
-                    case Some(excel) => excel.tableUpdate(nonQuerySQL, TABLE)
-                    case None => throw new ExtensionNotFoundException("Must save as an excel file first.")
+        if (table.nonEmpty) {
+            AFFECTED_ROWS_OF_LAST_PUT = {
+                getDestination match {
+                    case ds: DataSource =>  ds.tableUpdate(nonQuerySQL, table)
+                    case excel: Excel => excel.tableUpdate(nonQuerySQL, table)
+                    case _ => 0
                 }
             }
-            else {
-                TARGET.tableUpdate(nonQuerySQL, TABLE)
-            }
+            TOTAL_AFFECTED_ROWS_OF_RECENT_PUT += AFFECTED_ROWS_OF_LAST_PUT
+        }
+        else {
+            AFFECTED_ROWS_OF_LAST_PUT = 0
         }
 
         this
@@ -531,7 +553,7 @@ class DataHub (var defaultConnectionName: String) {
 
         selectSQL.matchBatchMark match {
             case Some(param) => pageSQLs += selectSQL -> param
-            case None => TABLE.merge(CURRENT.executeDataTable(selectSQL))
+            case None => TABLE.merge(currentSource[DataSource].executeDataTable(selectSQL))
         }
 
         this
@@ -556,19 +578,19 @@ class DataHub (var defaultConnectionName: String) {
             case Some(param) =>
                 blockSQLs += selectSQL -> (param,
                         beginKeyOrSQL match {
-                            case sentence: String => CURRENT.executeDataRow(sentence).getLong(0)
+                            case sentence: String => currentSource[DataSource].executeDataRow(sentence).getLong(0)
                             case key: Long => key
                             case key: Int => key.toLong
                             case _ => beginKeyOrSQL.toString.toLong
                         },
                         endKeyOrSQL match {
-                            case sentence: String => CURRENT.executeDataRow(sentence).getLong(0)
+                            case sentence: String => currentSource[DataSource].executeDataRow(sentence).getLong(0)
                             case key: Long => key
                             case key: Int => key.toLong
                             case _ => endKeyOrSQL.toString.toLong
                         },
                         blockSize)
-            case None => TABLE.merge(CURRENT.executeDataTable(selectSQL))
+            case None => TABLE.merge(currentSource[DataSource].executeDataTable(selectSQL))
         }
 
         this
@@ -586,13 +608,13 @@ class DataHub (var defaultConnectionName: String) {
         nonQuerySQL.matchBatchMark match {
             case Some(param) =>
                 var begin = beginKeyOrSQL match {
-                    case sentence: String => CURRENT.executeDataRow(sentence).getLong(0) - 1
+                    case sentence: String => currentSource[DataSource].executeDataRow(sentence).getLong(0) - 1
                     case key: Int => key.toLong
                     case key: Long => key
                     case _ => beginKeyOrSQL.toString.toLong
                 }
                 val end = endKeyOrSQL match {
-                    case sentence: String => CURRENT.executeDataRow(sentence).getLong(0)
+                    case sentence: String => currentSource[DataSource].executeDataRow(sentence).getLong(0)
                     case key: Int => key.toLong
                     case key: Long => key
                     case _ => beginKeyOrSQL.toString.toLong
@@ -606,13 +628,13 @@ class DataHub (var defaultConnectionName: String) {
                 val parallel = new Parallel()
                 //producer
                 for (i <- 0 until LINES) {
-                    parallel.add(new Bulker(CURRENT))
+                    parallel.add(new Bulker(currentSource[DataSource]))
                 }
                 parallel.startAll()
                 parallel.waitAll()
 
             //blockSize
-            case None => CURRENT.executeNonQuery(nonQuerySQL)
+            case None => currentSource[DataSource].executeNonQuery(nonQuerySQL)
         }
 
         this
@@ -662,7 +684,7 @@ class DataHub (var defaultConnectionName: String) {
 
                 //producer
                 for (i <- 0 until LINES) { //Global.CORES
-                    parallel.add(new Pager(CURRENT, selectSQL, param, pageSize, TANKS))
+                    parallel.add(new Pager(currentSource[DataSource], selectSQL, param, pageSize, TANKS))
                 }
             }
         }
@@ -686,20 +708,20 @@ class DataHub (var defaultConnectionName: String) {
 
             //producer
             for (i <- 0 until LINES) { //Global.CORES
-                parallel.add(new Blocker(CURRENT))
+                parallel.add(new Blocker(currentSource[DataSource]))
             }
         }
 
         //中间多个加工者
         for (index <- processSQLs.indices) {
             for (i <- 0 until LINES) {
-                parallel.add(new Processer(CURRENT, processSQLs(index), index, TANKS))
+                parallel.add(new Processer(currentSource[DataSource], processSQLs(index), index, TANKS))
             }
         }
 
         //最终消费者
         for (i <- 0 until LINES) {
-            parallel.add(new Batcher(TARGET, nonQuerySentence))
+            parallel.add(new Batcher(currentDestination[DataSource], nonQuerySentence))
         }
 
         parallel.startAll()
@@ -728,7 +750,7 @@ class DataHub (var defaultConnectionName: String) {
                 val parallel = new Parallel()
                 //producer
                 for (i <- 0 until LINES) {
-                    parallel.add(new Pager(CURRENT, selectSQL, param, pageSize, TANKS))
+                    parallel.add(new Pager(currentSource[DataSource], selectSQL, param, pageSize, TANKS))
                 }
                 parallel.startAll()
                 //consumer
@@ -753,7 +775,7 @@ class DataHub (var defaultConnectionName: String) {
                 val field = param.$trim("@{", "}")
                 var continue = true
                 do {
-                    val table = CURRENT.executeDataTable(selectSQL.replace(param, String.valueOf(id)))
+                    val table = currentSource[DataSource].executeDataTable(selectSQL.replace(param, String.valueOf(id)))
                     TOTAL_COUNT_OF_RECENT_GET += table.count()
                     COUNT_OF_LAST_GET = table.count()
                     if (table.nonEmpty) {
@@ -795,7 +817,7 @@ class DataHub (var defaultConnectionName: String) {
             val parallel = new Parallel()
             //producer
             for (i <- 0 until LINES) {  //Global.CORES
-                parallel.add(new Blocker(CURRENT, TANKS))
+                parallel.add(new Blocker(currentSource, TANKS))
             }
             parallel.startAll()
             //consumer
@@ -851,7 +873,7 @@ class DataHub (var defaultConnectionName: String) {
 
         this
     }
-    
+
     def buffer(tableName: String): DataHub = {
         BUFFER += tableName -> DataTable.from(TABLE)
 
@@ -859,12 +881,12 @@ class DataHub (var defaultConnectionName: String) {
 
         this
     }
-    
+
     def merge(table: DataTable): DataHub = {
         TABLE.merge(table)
         this
     }
-    
+
     def merge(tableName: String, table: DataTable): DataHub = {
         if (BUFFER.contains(tableName)) {
             BUFFER(tableName).merge(table)
@@ -874,12 +896,12 @@ class DataHub (var defaultConnectionName: String) {
         }
         this
     }
-    
+
     def union(table: DataTable): DataHub = {
         TABLE.union(table)
         this
     }
-    
+
     def union(tableName: String, table: DataTable): DataHub = {
         if (BUFFER.contains(tableName)) {
             BUFFER(tableName).union(table)
@@ -893,7 +915,7 @@ class DataHub (var defaultConnectionName: String) {
     def containsBuffer(tableName: String): Boolean = {
         BUFFER.contains(tableName)
     }
-    
+
     def takeOut(): DataTable = {
         val table = DataTable.from(TABLE)
         TABLE.clear()
@@ -984,18 +1006,18 @@ class DataHub (var defaultConnectionName: String) {
     def firstCellFloatValue: Float = TABLE.getFirstCellFloatValue()
     def firstCellDoubleValue: Double = TABLE.getFirstCellDoubleValue()
     def firstCellBooleanValue: Boolean = TABLE.getFirstCellBooleanValue()
-    
+
     def discard(tableName: String): DataHub = {
         if (BUFFER.contains(tableName)) {
             BUFFER.remove(tableName)
         }
         this
     }
-    
+
     def nonEmpty: Boolean = {
         TABLE.nonEmpty
     }
-    
+
     def isEmpty: Boolean = {
         TABLE.isEmpty
     }
@@ -1014,9 +1036,9 @@ class DataHub (var defaultConnectionName: String) {
 
         this
     }
-    
+
     // ---------- buffer action ----------
-    
+
     def label(alias: (String, String)*): DataHub = {
         TABLE.label(alias: _*)
         this
@@ -1036,29 +1058,29 @@ class DataHub (var defaultConnectionName: String) {
         TABLE.foreach(callback)
         this
     }
-    
+
     def map(callback: DataRow => DataRow) : DataHub = {
         TABLE.cut(TABLE.map(callback))
         this
     }
-    
+
     def table(fields: (String, DataType)*)(callback: DataRow => DataTable): DataHub = {
         TABLE.cut(TABLE.table(fields: _*)(callback))
         this
     }
-    
+
     def flat(callback: DataTable => DataRow): DataHub = {
         val row = callback(TABLE)
         TABLE.clear()
         TABLE.addRow(row)
         this
     }
-    
+
     def filter(callback: DataRow => Boolean): DataHub = {
         TABLE.cut(TABLE.filter(callback))
         this
     }
-    
+
     def collect(filter: DataRow => Boolean)(map: DataRow => DataRow): DataHub = {
         TABLE.cut(TABLE.collect(filter)(map))
         this
@@ -1068,27 +1090,27 @@ class DataHub (var defaultConnectionName: String) {
         TABLE.cut(TABLE.count(groupBy: _*))
         this
     }
-    
+
     def sum(fieldName: String, groupBy: String*): DataHub = {
         TABLE.cut(TABLE.sum(fieldName, groupBy: _*))
         this
     }
-    
+
     def avg(fieldName: String, groupBy: String*): DataHub = {
         TABLE.cut(TABLE.avg(fieldName, groupBy: _*))
         this
     }
-    
+
     def min(fieldName: String, groupBy: String*): DataHub = {
         TABLE.cut(TABLE.min(fieldName, groupBy: _*))
         this
     }
-    
+
     def max(fieldName: String, groupBy: String*): DataHub = {
         TABLE.cut(TABLE.max(fieldName, groupBy: _*))
         this
     }
-    
+
     def take(amount: Int): DataHub = {
         TABLE.cut(TABLE.take(amount))
         this
@@ -1099,7 +1121,7 @@ class DataHub (var defaultConnectionName: String) {
         this
     }
 
-    
+
     def insertRow(fields: (String, Any)*): DataHub = {
 
         if (TO_BE_CLEAR) {
@@ -1110,7 +1132,7 @@ class DataHub (var defaultConnectionName: String) {
         TABLE.insert(fields: _*)
         this
     }
-    
+
     def insertRowIfEmpty(fields: (String, Any)*): DataHub = {
 
         if (TO_BE_CLEAR) {
@@ -1127,7 +1149,7 @@ class DataHub (var defaultConnectionName: String) {
     def getColumn(fieldName: String): List[Any] = {
         TABLE.getColumn(fieldName)
     }
-    
+
     def clear(): DataHub = {
         TABLE.clear()
         this
@@ -1162,33 +1184,42 @@ class DataHub (var defaultConnectionName: String) {
     // ---------- DataSource ----------
 
     def executeDataTable(SQL: String, values: Any*): DataTable = {
-        if ($SELECT$CUSTOM.test(SQL)) {
-            new SELECT(SQL).executeDataTable()
+        if (Patterns.$SELECT$CUSTOM.test(SQL)) {
+            FQL.select(SQL, values: _*)
         }
         else {
-            CURRENT.executeDataTable(SQL, values: _*)
+            getSource match {
+                case ds: DataSource => ds.executeDataTable(SQL, values: _*)
+                case excel: Excel => excel.select(SQL, values: _*)
+                case _ => new DataTable()
+            }
         }
     }
-    def executeDataRow(SQL: String, values: Any*): DataRow = CURRENT.executeDataRow(SQL, values: _*)
-    def executeJavaMap(SQL: String, values: Any*): java.util.Map[String, Any] = CURRENT.executeJavaMap(SQL, values: _*)
-    def executeJavaMapList(SQL: String, values: Any*): java.util.List[java.util.Map[String, Any]] = CURRENT.executeJavaMapList(SQL, values: _*)
-    def executeJavaList(SQL: String, values: Any*): java.util.List[Any] = CURRENT.executeJavaList(SQL, values: _*)
-    def executeHashMap(SQL: String, values: Any*): Map[String, Any] = CURRENT.executeHashMap(SQL, values: _*)
-    def executeMapList(SQL: String, values: Any*): List[Map[String, Any]] = CURRENT.executeMapList(SQL, values: _*)
-    def executeSingleList[T](SQL: String, values: Any*): List[Any] = CURRENT.executeSingleList[T](SQL, values: _*)
-    def executeSingleValue(SQL: String, values: Any*): DataCell = CURRENT.executeSingleValue(SQL, values: _*)
-    def executeExists(SQL: String, values: Any*): Boolean = CURRENT.executeExists(SQL, values: _*)
-    def executeNonQuery(SQL: String, values: Any*): Int = CURRENT.executeNonQuery(SQL, values: _*)
+    def executeDataRow(SQL: String, values: Any*): DataRow = currentSource[DataSource].executeDataRow(SQL, values: _*)
+    def executeJavaMap(SQL: String, values: Any*): java.util.Map[String, Any] = currentSource[DataSource].executeJavaMap(SQL, values: _*)
+    def executeJavaMapList(SQL: String, values: Any*): java.util.List[java.util.Map[String, Any]] = currentSource[DataSource].executeJavaMapList(SQL, values: _*)
+    def executeJavaList(SQL: String, values: Any*): java.util.List[Any] = currentSource[DataSource].executeJavaList(SQL, values: _*)
+    def executeHashMap(SQL: String, values: Any*): Map[String, Any] = currentSource[DataSource].executeHashMap(SQL, values: _*)
+    def executeMapList(SQL: String, values: Any*): List[Map[String, Any]] = currentSource[DataSource].executeMapList(SQL, values: _*)
+    def executeSingleList[T](SQL: String, values: Any*): List[Any] = currentSource[DataSource].executeSingleList[T](SQL, values: _*)
+    def executeSingleValue(SQL: String, values: Any*): DataCell = currentSource[DataSource].executeSingleValue(SQL, values: _*)
+    def executeExists(SQL: String, values: Any*): Boolean = currentSource[DataSource].executeExists(SQL, values: _*)
+    def executeNonQuery(SQL: String, values: Any*): Int = currentSource[DataSource].executeNonQuery(SQL, values: _*)
 
     def close(): Unit = {
-        SOURCES.values.foreach(_.close())
+        SOURCES.values.foreach {
+            case db: DataSource => db.close()
+            case excel: Excel => excel.close()
+            case _ =>
+        }
+
+        FQL.close()
+
         SOURCES.clear()
         BUFFER.clear()
         TABLE.clear()
 
-        if (SLOTS.contains("EXCEL$R")) pick[Excel]("EXCEL$R").orNull.close()
-        if (SLOTS.contains("EXCEL$W")) pick[Excel]("EXCEL$W").orNull.close()
         SLOTS.clear()
-        holder.delete()
+        HOLDER.delete()
     }
 }

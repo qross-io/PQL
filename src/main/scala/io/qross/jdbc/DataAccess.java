@@ -25,19 +25,18 @@ public class DataAccess extends DataSource {
     }
 
     public DataAccess() {
-        this.connectionName_$eq(JDBC.DEFAULT());
-        this.config_$eq(JDBC.get(this.connectionName()));
+        super(JDBC.DEFAULT());
+        //this.config_$eq(JDBC.get(this.connectionName()));
     }
 
     public DataAccess(String connectionName) {
-        this.connectionName_$eq(connectionName);
-        this.config_$eq(JDBC.get(this.connectionName()));
+        super(connectionName);
+        //this.config_$eq(JDBC.get(this.connectionName()));
     }
 
     public DataAccess(String connectionName, String databaseName) {
-        this.connectionName_$eq(connectionName);
-        this.databaseName_$eq(databaseName);
-        this.config_$eq(JDBC.get(this.connectionName()));
+        super(connectionName, databaseName);
+        //this.config_$eq(JDBC.get(this.connectionName()));
     }
 
     public DataTable executeDataTable(String SQL, Object... values) {

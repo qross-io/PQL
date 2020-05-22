@@ -1,5 +1,6 @@
 package io.qross.pql
 
+import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.time.Timer
 import io.qross.time.TimeSpan._
 import io.qross.ext.TypeExt._

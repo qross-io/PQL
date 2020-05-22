@@ -5,7 +5,8 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.{ChronoField, ChronoUnit}
 import java.util.regex.Pattern
 
-import io.qross.core.{ConvertFailureException, DataRow}
+import io.qross.core.DataRow
+import io.qross.exception.ConvertFailureException
 import io.qross.ext.TypeExt._
 import io.qross.setting.Global
 

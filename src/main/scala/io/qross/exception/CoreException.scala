@@ -1,4 +1,4 @@
-package io.qross.core
+package io.qross.exception
 
 class FieldNotFoundException(val s: String) extends RuntimeException(s) {
 

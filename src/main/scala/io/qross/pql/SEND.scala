@@ -1,5 +1,6 @@
 package io.qross.pql
 
+import io.qross.exception.SQLParseException
 import io.qross.ext.Output
 import io.qross.net.Email
 import io.qross.pql.Patterns._

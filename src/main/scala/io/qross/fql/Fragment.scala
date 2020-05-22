@@ -1,8 +1,8 @@
 package io.qross.fql
 
 import io.qross.core.{DataRow, DataTable, DataType}
+import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.ext.TypeExt._
-import io.qross.pql.{SQLExecuteException, SQLParseException}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex

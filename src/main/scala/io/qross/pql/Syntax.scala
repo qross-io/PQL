@@ -1,5 +1,7 @@
 package io.qross.pql
 
+import io.qross.exception.SQLParseException
+
 import scala.collection.mutable
 import io.qross.pql.Patterns._
 import io.qross.ext.TypeExt._
@@ -14,10 +16,16 @@ object Syntax {
     //val Tree: mutable.HashMap[String, mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, Int]]] = new mutable.HashMap[String, mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, Int]]]()
 
     val sentences: String = """
-            OPEN  [JDBC-DataSource]  AS [alias];
-            OPEN  QROSS  AS [alias];
-            OPEN  DEFAULT  AS [alias];
+            OPEN  [JDBC-DataSource]  AS [alias]  USE [database];
+            OPEN  QROSS  USE [database];
+            OPEN  DEFAULT  AS [alias]  USE [database];
+            OPEN  CACHE;
+            OPEN  TEMP;
             OPEN  EXCEL [fileName]  AS [alias];
+            OPEN  JSON FILE [fileName]  AS [tableName];
+            OPEN  CSV FILE [fileName]  AS [tableName]  (id INT, name TEXT, ...)  BRACKETED BY m,n  SKIP [amount];
+            OPEN  TXT FILE [fileName]  AS [tableName]  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
+            OPEN  GZ FILE [fileName]  AS [tableName]  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
 
             SAVE AS  [JDBC-DataSource]  AS [alias]  USE [databaseName];
             SAVE AS  DEFAULT  AS [alias];
@@ -26,11 +34,12 @@ object Syntax {
             SAVE AS  CACHE TABLE [tableName]  PRIMARY KEY [columnName];
             SAVE AS  TEMP  AS [alias];
             SAVE AS  TEMP TABLE [tableName]  PRIMARY KEY [columnName]  UNIQUE KEY (column1, column2, ...)  KEY (column1, column2, ...);
-            SAVE AS  NEW? CSV FILE [fileName]  AS [alias]  WITHOUT HEADERS;
-            SAVE AS  NEW? CSV FILE [fileName]  AS [alias]  WITH HEADERS (column1 AS header1, column2 AS header2, ...);
-            SAVE AS  NEW? TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS;
-            SAVE AS  NEW? TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITH HEADERS (header1, column2 AS header2, ...);
+            SAVE AS  NEW? CSV FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
+            SAVE AS  CSV STREAM FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
+            SAVE AS  NEW? TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
+            SAVE AS  TXT? STREAM FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;;
             SAVE AS  NEW? JSON FILE [fileName]  AS [alias];
+            SAVE AS  JSON STREAM FILE [fileName]  AS [alias];
             SAVE AS  NEW? EXCEL [fileName]  AS [alias]  USE? TEMPLATE [templateName];
             SAVE AS  EXCEL STREAM FILE [fileName]  AS [alias]  USE? TEMPLATE [templateName];
 
@@ -39,12 +48,13 @@ object Syntax {
             SAVE TO  QROSS  AS [alias];
             SAVE TO  CACHE  AS [alias];
             SAVE TO  TEMP  AS [alias];
-            SAVE TO  CSV FILE [fileName]  AS [alias]  WITHOUT HEADERS;
-            SAVE TO  CSV FILE [fileName]  AS [alias]  WITH HEADERS (column1 AS header1, column2 AS header2, ...);
-            SAVE TO  TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS;
-            SAVE TO  TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITH HEADERS (header1, column2 AS header2, ...);
-            SAVE TO  JSON FILE [fileName]  AS [alias];
-            SAVE TO  EXCEL [fileName]  AS [alias]  USE? TEMPLATE [templateName];
+            SAVE TO  NEW? CSV FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
+            SAVE TO  CSV STREAM FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
+            SAVE TO  NEW? TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
+            SAVE TO  TXT? STREAM FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;;
+            SAVE TO  NEW? JSON FILE [fileName]  AS [alias];
+            SAVE TO  JSON STREAM FILE [fileName]  AS [alias];
+            SAVE TO  NEW? EXCEL [fileName]  AS [alias]  USE? TEMPLATE [templateName];
             SAVE TO  EXCEL STREAM FILE [fileName]  AS [alias]  USE? TEMPLATE [templateName];
 
             BLOCK  FROM [startId]  TO [endId]  PER [blockSize];
@@ -77,8 +87,9 @@ object Syntax {
             PARSE  [path]  AS VALUE;
             PARSE  [path]  AS SINGLE VALUE;
 
-            SELECT  *  FROM alias:file.txt,*.log,*  DELIMITED BY ','  SEEK [cursor]  WHERE |condition|  LIMIT m,n;
-            INSERT INTO  SHEET [sheetName]  ROW [startRow]  (A, B, C, ...)  VALUES (value1, value2, ...), (value1, value2, ...);
+            SELECT  *  FROM [tableName]  SEEK [cursor]  WHERE |condition|  LIMIT m,n;
+            INSERT  INTO [sheetName]  ROW [startRow]  (A, B, C, ...)  VALUES (value1, value2, ...), (value1, value2, ...);
+            DROP  SHEET [sheetName];
         """
 
 //    --UPDATE  SHEET [sheetName]  SET &field1=value1,field2=value2,...&  WHERE |conditions|;
@@ -122,7 +133,7 @@ object Syntax {
             case "'" => ("'", Args.Char)
             case "\"" => ("\"", Args.Char)
             case "|" => ("|", Args.Condition)
-            case "*" => ("""(\S+)?\*""".r, Args.Select)
+            case "*" => ("""(\S+)?\*|\([^)]+\)\*""".r, Args.Select)
             case "." => ("(?i)[a-z0-9]+=".r, Args.Set)
             case "n" => ("m", Args.Limit)
             case _ => ("", Args.None)

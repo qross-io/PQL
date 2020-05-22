@@ -1,5 +1,6 @@
 package io.qross.pql
 
+import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
 import io.qross.fs.Path._
 import io.qross.fs.TextFile._
@@ -42,36 +43,53 @@ class SAVE(val action: String, val sentence: String) {
             case "CSV FILE" | "NEW CSV FILE" =>
                 val file = plan.headArgs
                 if (file.isFile) {
-                    if (plan.head.startsWith("NEW ")) {
-                        PQL.dh.saveAsNewCsvFile(file)
+                    if (plan.head.startsWith("NEW ") || action == "AS") {
+                        PQL.dh.saveAsCsvFile(file)
                     }
                     else {
-                        PQL.dh.saveAsCsvFile(file)
+                        PQL.dh.saveToCsvFile(file)
                     }
 
                     if (plan.contains("WITHOUT HEADERS")) {
                         PQL.dh.withoutHeaders()
                     }
                     else if (plan.contains("WITH HEADERS")) {
-                        PQL.dh.withHeaders(plan.multiArgs("WITH HEADERS"))
+                        PQL.dh.withHeaders(plan.selectArgs("WITH HEADERS"): _*)
                     }
                     else {
                         PQL.dh.withHeaders()
                     }
-
                     PQL.dh.write()
                 }
                 else {
-                    throw new SQLParseException("Incorrect csv file name or path at SAVE AS: " + file)
+                    throw new SQLParseException("Incorrect csv file name or path at SAVE sentence: " + file)
+                }
+            case "CSV STREAM FILE" =>
+                val file = plan.headArgs
+                if (file != "") {
+                    PQL.dh.saveAsStreamCsvFile(file)
+                    if (plan.contains("WITHOUT HEADERS")) {
+                        PQL.dh.withoutHeaders()
+                    }
+                    else if (plan.contains("WITH HEADERS")) {
+                        PQL.dh.withHeaders(plan.selectArgs("WITH HEADERS"): _*)
+                    }
+                    else {
+                        PQL.dh.withHeaders()
+                    }
+                    PQL.dh.write()
+                }
+                else {
+                    throw new SQLParseException("Empty csv stream file name at SAVE sentence.")
                 }
             case "TXT FILE" | "NEW TXT FILE" =>
                 val file = plan.headArgs
                 if (file.isFile) {
-                    if (plan.head.startsWith("NEW ")) {
-                        PQL.dh.saveAsNewTextFile(file)
+                    if (plan.head.startsWith("NEW ") || action == "AS") {
+                        PQL.dh.saveAsTextFile(file)
                     }
                     else {
-                        PQL.dh.saveAsTextFile(file)
+                        PQL.dh.saveToTextFile(file)
                     }
 
                     if (plan.contains("DELIMITED BY")) {
@@ -82,7 +100,7 @@ class SAVE(val action: String, val sentence: String) {
                         PQL.dh.withoutHeaders()
                     }
                     else if (plan.contains("WITH HEADERS")) {
-                        PQL.dh.withHeaders(plan.multiArgs("WITH HEADERS"))
+                        PQL.dh.withHeaders(plan.selectArgs("WITH HEADERS"): _*)
                     }
                     else {
                         PQL.dh.withHeaders()
@@ -91,30 +109,61 @@ class SAVE(val action: String, val sentence: String) {
                     PQL.dh.write()
                 }
                 else {
-                    throw new SQLParseException("Incorrect text file name or path at SAVE AS: " + file)
+                    throw new SQLParseException("Incorrect text file name or path at SAVE sentence: " + file)
                 }
-            case "JSON FILE" | "NEW JSON FILE" =>
+            case "STREAM FILE" | "TXT STREAM FILE" =>
                 val file = plan.headArgs
-                if (file.isFile) {
-                    if (plan.head.startsWith("NEW ")) {
-                        PQL.dh.saveAsNewJsonFile(file)
+                if (file != "") {
+                    PQL.dh.saveAsStreamFile(file)
+
+                    if (plan.contains("DELIMITED BY")) {
+                        PQL.dh.delimit(plan.get("DELIMITED BY").getOrElse(",").removeQuotes())
+                    }
+
+                    if (plan.contains("WITHOUT HEADERS")) {
+                        PQL.dh.withoutHeaders()
+                    }
+                    else if (plan.contains("WITH HEADERS")) {
+                        PQL.dh.withHeaders(plan.selectArgs("WITH HEADERS"): _*)
                     }
                     else {
-                        PQL.dh.saveAsJsonFile(file)
+                        PQL.dh.withHeaders()
                     }
                     PQL.dh.write()
                 }
                 else {
-                    throw new SQLParseException("Incorrect json file name or path at SAVE AS: " + file)
+                    throw new SQLParseException("Empty stream file name at SAVE sentence.")
+                }
+            case "JSON FILE" | "NEW JSON FILE" =>
+                val file = plan.headArgs
+                if (file.isFile) {
+                    if (plan.head.startsWith("NEW ") || action == "AS") {
+                        PQL.dh.saveAsJsonFile(file)
+                    }
+                    else {
+                        PQL.dh.saveToJsonFile(file)
+                    }
+                    PQL.dh.write()
+                }
+                else {
+                    throw new SQLParseException("Incorrect json file name or path at SAVE sentence: " + file)
+                }
+            case "JSON STREAM FILE" =>
+                val file = plan.headArgs
+                if (file != "") {
+                    PQL.dh.saveAsStreamJsonFile(file).write()
+                }
+                else {
+                    throw new SQLParseException("Empty json stream file name at SAVE sentence.")
                 }
             case "EXCEL" | "NEW EXCEL" =>
                 val file = plan.headArgs
                 if (file.isFile) {
-                    if (plan.head.startsWith("NEW ")) {
-                        PQL.dh.saveAsNewExcel(file)
+                    if (plan.head.startsWith("NEW ") || action == "AS") {
+                        PQL.dh.saveAsExcel(file)
                     }
                     else {
-                        PQL.dh.saveAsExcel(file)
+                        PQL.dh.saveToExcel(file)
                     }.useTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
                 }
             case "EXCEL STREAM FILE" =>

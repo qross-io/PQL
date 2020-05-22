@@ -1,4 +1,4 @@
-package io.qross.pql
+package io.qross.exception
 
 class SQLParseException(val s: String) extends RuntimeException(s) {
 
@@ -9,6 +9,10 @@ class SQLExecuteException(val s: String) extends RuntimeException(s) {
 }
 
 class EmailInvalidSenderException(val s: String) extends RuntimeException(s) {
+
+}
+
+class UnsupportedSentenceException(val s: String) extends RuntimeException(s) {
 
 }
 
