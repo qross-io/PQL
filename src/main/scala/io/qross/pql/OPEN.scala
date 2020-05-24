@@ -51,10 +51,17 @@ class OPEN(val sentence: String) {
                     PQL.dh.use(plan.oneArgs("USE"))
                 }
             case "EXCEL" => PQL.dh.openExcel(plan.oneArgs("EXCEL"))
-            case "JSON FILE" => PQL.dh.openJsonFile(plan.headArgs)
+            case "JSON FILE" =>
+                PQL.dh.openJsonFile(plan.headArgs)
+                if (plan.contains("AS")) {
+                    PQL.dh.asTable(plan.oneArgs("AS"))
+                }
             case "TXT FILE" =>
                 PQL.dh.openTextFile(plan.headArgs)
-                if (plan.contains("")) {
+                if (plan.contains("WITH FIRST ROW HEADERS")) {
+                    PQL.dh.withColumnsOfFirstRow()
+                }
+                else if (plan.contains("")) {
                     PQL.dh.withColumns(plan.multiArgs(""): _*)
                 }
                 else {
@@ -71,18 +78,21 @@ class OPEN(val sentence: String) {
                     PQL.dh.skipLines(plan.oneArgs("SKIP").toInteger(0).toInt)
                 }
                 if (plan.contains("AS")) {
-                    PQL.dh.as(plan.oneArgs("AS"))
+                    PQL.dh.asTable(plan.oneArgs("AS"))
                 }
             case "CSV FILE" =>
                 PQL.dh.openCsvFile(plan.headArgs)
-                if (plan.contains("")) {
+                if (plan.contains("WITH FIRST ROW HEADERS")) {
+                    PQL.dh.withColumnsOfFirstRow()
+                }
+                else if (plan.contains("")) {
                     PQL.dh.withColumns(plan.multiArgs(""): _*)
                 }
                 else {
                     throw new SQLExecuteException("Must contains columns definition of table in OPEN CSV FILE: " + sentence)
                 }
                 if (plan.contains("AS")) {
-                    PQL.dh.as(plan.oneArgs("AS"))
+                    PQL.dh.asTable(plan.oneArgs("AS"))
                 }
                 if (plan.contains("BRACKETED BY")) {
                     val brackets = plan.limitArgs("BRACKETED BY")
@@ -92,14 +102,17 @@ class OPEN(val sentence: String) {
                     PQL.dh.skipLines(plan.oneArgs("SKIP").toInteger(0).toInt)
                 }
             case "GZ FILE" =>
-                if (plan.contains("")) {
+                if (plan.contains("WITH FIRST ROW HEADERS")) {
+                    PQL.dh.withColumnsOfFirstRow()
+                }
+                else if (plan.contains("")) {
                     PQL.dh.withColumns(plan.multiArgs(""): _*)
                 }
                 else {
                     throw new SQLExecuteException("Must contains columns definition of table in OPEN GZ FILE: " + sentence)
                 }
                 if (plan.contains("AS")) {
-                    PQL.dh.as(plan.oneArgs("AS"))
+                    PQL.dh.asTable(plan.oneArgs("AS"))
                 }
                 if (plan.contains("BRACKETED BY")) {
                     val brackets = plan.limitArgs("BRACKETED BY")

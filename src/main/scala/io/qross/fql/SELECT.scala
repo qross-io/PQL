@@ -6,14 +6,9 @@ import io.qross.ext.TypeExt._
 
 class SELECT(sentence: String) {
 
+    //val subqueries =
 
 
-    def executeDataTable(source: Any = null): DataTable = {
-
-
-
-        new DataTable()
-    }
 }
 
 //以后的版本中把解析从Syntax中移出来, 专门搞查询引擎
@@ -25,14 +20,7 @@ class SELECT(sentence: String) {
 //EXISTS (SELECT...)
 
 //FROM支持的类型
-//FROM `mysql.qross`.database.table
+//FROM `mysql.qross`:database.table
 //FROM $table
 //FROM @buffer
-//FROM TXT FILE *.txt SEEK cursor DELIMITED BY 'char'
-//FROM CSV FILE *.csv SEEK cursor
-//FROM GZ FILE *.gz DELIMITED BY 'char'
-//FROM SHEET sheetName
-//FROM JSON [{"name": "Tom", age: 18 }, {"name":"Ted", age: 10 }]
-//FROM JSON FILE *.json SEEK cursor
-//FROM JSON API '/api/test' METHOD 'GET' PATH '/'
-//FROM HDFS '/api/test'
+//FROM :virtual

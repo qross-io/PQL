@@ -23,9 +23,9 @@ object Syntax {
             OPEN  TEMP;
             OPEN  EXCEL [fileName]  AS [alias];
             OPEN  JSON FILE [fileName]  AS [tableName];
-            OPEN  CSV FILE [fileName]  AS [tableName]  (id INT, name TEXT, ...)  BRACKETED BY m,n  SKIP [amount];
-            OPEN  TXT FILE [fileName]  AS [tableName]  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
-            OPEN  GZ FILE [fileName]  AS [tableName]  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
+            OPEN  CSV FILE [fileName]  AS [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  SKIP [amount];
+            OPEN  TXT FILE [fileName]  AS [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
+            OPEN  GZ FILE [fileName]  AS [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
 
             SAVE AS  [JDBC-DataSource]  AS [alias]  USE [databaseName];
             SAVE AS  DEFAULT  AS [alias];
@@ -37,7 +37,7 @@ object Syntax {
             SAVE AS  NEW? CSV FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
             SAVE AS  CSV STREAM FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
             SAVE AS  NEW? TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
-            SAVE AS  TXT? STREAM FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;;
+            SAVE AS  TXT? STREAM FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
             SAVE AS  NEW? JSON FILE [fileName]  AS [alias];
             SAVE AS  JSON STREAM FILE [fileName]  AS [alias];
             SAVE AS  NEW? EXCEL [fileName]  AS [alias]  USE? TEMPLATE [templateName];
@@ -51,7 +51,7 @@ object Syntax {
             SAVE TO  NEW? CSV FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
             SAVE TO  CSV STREAM FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
             SAVE TO  NEW? TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
-            SAVE TO  TXT? STREAM FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;;
+            SAVE TO  TXT? STREAM FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
             SAVE TO  NEW? JSON FILE [fileName]  AS [alias];
             SAVE TO  JSON STREAM FILE [fileName]  AS [alias];
             SAVE TO  NEW? EXCEL [fileName]  AS [alias]  USE? TEMPLATE [templateName];
@@ -180,14 +180,27 @@ case class Syntax(caption: String) {
         //提取字符串，好处可避免参数与关键短语同名冲突
         var sentence = body.pickChars(chars)
 
+        //去掉参数间的空格
         $ARGS.findAllIn(sentence).foreach(comma => {
             sentence = sentence.replace(comma, comma.trim())
         })
 
+        //SELECT语句和SAVE语句的AS需要处理
         //处理 AS
-        $AS.findAllIn(sentence).foreach(as => {
-            sentence = sentence.replace(as, "##AS##")
-        })
+        if (caption == "SELECT" || caption == "SAVE TO" || caption == "SAVE AS") {
+            if (caption == "SELECT") {
+                $AS.findAllIn(sentence).foreach(as => {
+                    sentence = sentence.replace(as, "##AS##")
+                })
+            }
+            else {
+                """(?i)\sWITH\s+HEADERS""".r.findFirstIn(sentence) match {
+                    case Some(headers) =>
+                        sentence = sentence.takeBefore(headers) + headers + sentence.takeAfter(headers).replaceAll("""(?i)\s+AS\s+""", "##AS##")
+                    case None =>
+                }
+            }
+        }
 
         var group = "#"
         while (sentence != "") {
@@ -195,13 +208,21 @@ case class Syntax(caption: String) {
             var origin = found.trim()
             var phrase = origin.replaceAll(BLANKS, " ").toUpperCase()
 
-            while (!tree.contains(group + Syntax.HASH + phrase) && phrase.contains(" ")) {
-                phrase = phrase.takeBeforeLast(" ")
-                origin = origin.takeBeforeLast($BLANK).trim()
+            while (!tree.contains(group + Syntax.HASH + phrase) && phrase != "") {
+                if (phrase.contains(" ")) {
+                    phrase = phrase.takeBeforeLast(" ")
+                    origin = origin.takeBeforeLast($BLANK).trim()
+                }
+                else {
+                    phrase = ""
+                    origin = ""
+                }
             }
 
             if (tree.contains(group + Syntax.HASH + phrase)) {
-                sentence = sentence.takeAfter(origin).trim()
+                if (origin != "") {
+                    sentence = sentence.takeAfter(origin).trim()
+                }
                 tree(group + Syntax.HASH + phrase) match {
                     case Args.None => plan += phrase -> ""
                     case Args.One =>
@@ -287,7 +308,7 @@ case class Syntax(caption: String) {
                                     sentence = ""
                                 }
                                 else {
-                                    throw new SQLParseException("Empty arguments at phrase " + origin)
+                                    args = "*"
                                 }
                         }
                         plan += phrase -> args.replace("##AS##", " AS ").split(",")

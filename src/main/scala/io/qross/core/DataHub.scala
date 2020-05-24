@@ -1,7 +1,7 @@
 package io.qross.core
 
 import io.qross.core.Parameter._
-import io.qross.exception.{DefineAliasException, OpenDataSourceException, WrongSourceNameException}
+import io.qross.exception.{DefineAliasException, NoDataDestinationException, NoDataSourceException, OpenDataSourceException, WrongSourceNameException}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.fql.FQL
@@ -9,7 +9,7 @@ import io.qross.fs.{Excel, FileReader, FileWriter, TextFile}
 import io.qross.fs.Path._
 import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.pql.Patterns
-import io.qross.setting.Environment
+import io.qross.setting.{Environment, Properties}
 import io.qross.thread.Parallel
 import io.qross.time.{DateTime, Timer}
 
@@ -19,29 +19,27 @@ import scala.collection.parallel.mutable.ParArray
 
 object DataHub {
     def QROSS: DataHub = new DataHub(JDBC.QROSS)
-    def DEFAULT: DataHub = new DataHub("")
+    def DEFAULT: DataHub = new DataHub(JDBC.DEFAULT)
 }
 
-class DataHub (var defaultConnectionName: String) {
+class DataHub (val defaultConnectionName: String) {
     
-    private[qross] val SOURCES = mutable.HashMap[String, Any](
-        "DEFAULT" -> {
-                                if (defaultConnectionName == "") {
-                                    DataSource.DEFAULT
-                                }
-                                else {
-                                    new DataSource(defaultConnectionName)
-                                }
-                             }
-    )
+    private[qross] val SOURCES = mutable.HashMap[String, Any]()
     private[qross] val ALIASES = new mutable.HashMap[String, String]()
+
+    if (defaultConnectionName != "") {
+        SOURCES += "DEFAULT" -> new DataSource(defaultConnectionName)
+    }
+    else if (Properties.contains(JDBC.DEFAULT)) {
+        SOURCES += "DEFAULT" ->  new DataSource(JDBC.DEFAULT)
+    }
 
     //虚库
     private[qross] lazy val FQL = new FQL(this)
 
     private var lastSourceName = ""
-    private[qross] var currentSourceName = "DEFAULT"  //current dataSource - open
-    private[qross] var currentDestinationName = "DEFAULT"  //current dataDestination - saveTo
+    private[qross] var currentSourceName = if (SOURCES.contains("DEFALT")) "DEFAULT" else ""  //current dataSource - open
+    private[qross] var currentDestinationName = if (SOURCES.contains("DEFALT")) "DEFAULT" else ""  //current dataDestination - saveTo
 
     private var DEBUG: Boolean = false
 
@@ -78,19 +76,29 @@ class DataHub (var defaultConnectionName: String) {
     def currentSource[T]: T = Source[T](currentSourceName)
     def currentDestination[T]: T = Source[T](currentDestinationName)
     def getSource: Any = {
-        if (SOURCES.contains(currentSourceName)) {
-            SOURCES(currentSourceName)
+        if (currentSourceName != "") {
+            if (SOURCES.contains(currentSourceName)) {
+                SOURCES(currentSourceName)
+            }
+            else {
+                SOURCES(ALIASES(currentSourceName.toLowerCase()))
+            }
         }
         else {
-            SOURCES(ALIASES(currentSourceName.toLowerCase()))
+            throw new NoDataSourceException("You must open a data source first.")
         }
     }
     def getDestination: Any = {
-        if (SOURCES.contains(currentDestinationName)) {
-            SOURCES(currentDestinationName)
+        if (currentSourceName != "") {
+            if (SOURCES.contains(currentDestinationName)) {
+                SOURCES(currentDestinationName)
+            }
+            else {
+                SOURCES(ALIASES(currentDestinationName.toLowerCase()))
+            }
         }
         else {
-            SOURCES(ALIASES(currentDestinationName.toLowerCase()))
+            throw new NoDataDestinationException("You must specify a data destination first using method 'saveTo' or SAVE sentence.")
         }
     }
     def Source[T](sourceName: String): T = {

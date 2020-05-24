@@ -23,21 +23,36 @@ object FileReader {
     val DATA: ConcurrentLinkedQueue[DataTable] = new ConcurrentLinkedQueue[DataTable]()
 }
 
-class FileReader(val filePath: String, val format: Int, val delimiter: String) {
+class FileReader(val file: File, val format: Int, val delimiter: String) {
+
+    def this(file: File) {
+        this(file, TextFile.TXT, ",")
+    }
 
     def this(filePath: String) {
-        this(filePath, TextFile.TXT, ",")
+        this(new File(filePath.locate()), TextFile.TXT, ",")
+    }
+
+    def this(file: File, format: Int) {
+        this(file, format, ",")
     }
 
     def this(filePath: String, format: Int) {
-        this(filePath, format, ",")
+        this(new File(filePath.locate()), format, ",")
+    }
+
+    def this(file: File, delimiter: String) {
+        this(file, TextFile.TXT, delimiter)
     }
 
     def this(filePath: String, delimiter: String) {
-        this(filePath, TextFile.TXT, delimiter)
+        this(new File(filePath.locate()), TextFile.TXT, delimiter)
     }
 
-    val file = new File(filePath.locate())
+    def this(filePath: String, format: Int, delimiter: String) {
+        this(new File(filePath.locate()), format, delimiter)
+    }
+
 
     //field, defaultValue
     private val fields = new mutable.LinkedHashMap[String, String]()

@@ -11,35 +11,62 @@ import org.springframework.web.context.request.{RequestContextHolder, ServletReq
 
 import scala.collection.mutable.ArrayBuffer
 
-class FileWriter(val filePath: String, val format: Int, val outputType: String, deleteIfExists: Boolean) {
+class FileWriter(val file: File, val format: Int, val outputType: String, deleteIfExists: Boolean) {
 
-    private var delimiter = "," //default delimiter when you write a collection
-    private val file = new File(filePath.locate())
-    private var append = false
+    def this(file: File) {
+        this(file, TextFile.TXT, TextFile.FILE, false)
+    }
 
     def this(filePath: String) {
-        this(filePath, TextFile.TXT, TextFile.FILE, false)
+        this(new File(filePath.locate()), TextFile.TXT, TextFile.FILE, false)
+    }
+
+    def this(file: File, format: Int) {
+        this(file, format, TextFile.FILE, false)
     }
 
     def this(filePath: String, format: Int) {
-        this(filePath, format, TextFile.FILE, false)
+        this(new File(filePath.locate()), format, TextFile.FILE, false)
+    }
+
+    def this(file: File, outputType: String) {
+        this(file, TextFile.TXT, outputType, false)
     }
 
     def this(filePath: String, outputType: String) {
-        this(filePath, TextFile.TXT, outputType, false)
+        this(new File(filePath.locate()), TextFile.TXT, outputType, false)
+    }
+
+    def this(file: File, deleteIfExists: Boolean) {
+        this(file, TextFile.TXT, TextFile.FILE, deleteIfExists)
     }
 
     def this(filePath: String, deleteIfExists: Boolean) {
-        this(filePath, TextFile.TXT, TextFile.FILE, deleteIfExists)
+        this(new File(filePath.locate()), TextFile.TXT, TextFile.FILE, deleteIfExists)
+    }
+
+    def this(file: File, format: Int, outputType: String) {
+        this(file, format, outputType, false)
     }
 
     def this(filePath: String, format: Int, outputType: String) {
-        this(filePath, format, outputType, false)
+        this(new File(filePath.locate()), format, outputType, false)
+    }
+
+    def this(file: File, format: Int, deleteIfExists: Boolean) {
+        this(file, format, TextFile.FILE, deleteIfExists)
     }
 
     def this(filePath: String, format: Int, deleteIfExists: Boolean) {
-        this(filePath, format, TextFile.FILE, deleteIfExists)
+        this(new File(filePath.locate()), format, TextFile.FILE, deleteIfExists)
     }
+
+    def this(filePath: String, format: Int, outputType: String, deleteIfExists: Boolean) {
+        this(new File(filePath.locate()), format, outputType, deleteIfExists)
+    }
+
+    private var delimiter = "," //default delimiter when you write a collection
+    private var append = false
 
     private val writer: BufferedWriter  = {
         val attributes: ServletRequestAttributes = {
@@ -56,7 +83,7 @@ class FileWriter(val filePath: String, val format: Int, val outputType: String, 
                 val response = attributes.getResponse
                 response.setHeader("Content-type", "application/octet-stream")
                 response.setCharacterEncoding("UTF-8")
-                response.setHeader("Content-disposition", "attachment;filename=\"" + new String(filePath.takeAfterLast("/").getBytes("UTF-8"), "ISO-8859-1") + "\"")
+                response.setHeader("Content-disposition", "attachment;filename=\"" + new String(file.getName.getBytes("UTF-8"), "ISO-8859-1") + "\"")
                 response.flushBuffer()
                 response.getOutputStream
             }
@@ -79,7 +106,7 @@ class FileWriter(val filePath: String, val format: Int, val outputType: String, 
             }
         }
 
-        if (filePath.toLowerCase().endsWith(".csv")) {
+        if (file.getName.toLowerCase().endsWith(".csv")) {
             fos.write(Array[Byte](0xEF.toByte, 0xBB.toByte, 0xBF.toByte))
         }
 

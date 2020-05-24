@@ -129,7 +129,8 @@ object Properties {
                 sameDir.takeAfter("file:").takeBefore(".jar!").takeBeforeLast("/") + "/" + fileName
             }
             else {
-                new File(sameDir).getParentFile.getAbsolutePath.replace("\\", "/") + "/" + fileName
+                sameDir.takeBefore("/classes") + "/" + fileName
+                //new File(sameDir).getParentFile.getAbsolutePath.replace("\\", "/") + "/" + fileName
             }
         }
     }

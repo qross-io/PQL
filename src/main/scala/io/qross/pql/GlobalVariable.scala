@@ -7,6 +7,7 @@ import io.qross.net.{Cookies, Session}
 import io.qross.pql.Patterns.FUNCTION_NAMES
 import io.qross.setting.{Configurations, Language}
 import io.qross.time.DateTime
+import io.qross.fs.TextFile._
 
 object GlobalVariable {
 
@@ -124,7 +125,6 @@ object GlobalVariable {
         }
         else if (Configurations.contains(name)) {
             DataCell(Configurations.getOrProperty(name.toUpperCase, name.replace("_", ".").toLowerCase(), null))
-            //DataCell(Class.forName("io.qross.setting.Global").getDeclaredMethod(name).invoke(null))
         }
         else {
             DataCell.UNDEFINED
@@ -169,4 +169,6 @@ object GlobalVariableDeclaration {
     def COOKIES(PQL: PQL): DataCell = DataCell(new Cookies(), DataType.forClassName("io.qross.net.Cookies"))
     def SESSION(PQL: PQL): DataCell = DataCell(new Session(), DataType.forClassName("io.qross.net.Session"))
     def LANGUAGE(PQL: PQL): DataCell = DataCell(Language.name, DataType.TEXT)
+
+    def POINTER(PQL: PQL): DataCell = DataCell(PQL.dh.cursor, DataType.INTEGER)
 }

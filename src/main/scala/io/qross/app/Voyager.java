@@ -40,7 +40,7 @@ public class Voyager extends AbstractTemplateView {
             //替换server includes
             Pattern p = Pattern.compile("<#\\s*include\\s+file=[\"'](.+?)[\"']\\s*/>", Pattern.CASE_INSENSITIVE);
             Matcher m;
-            //include file 可嵌套
+            //include file - can nest
             while ((m = p.matcher(content)).find()) {
                 String path = dir + m.group(1);
                 path = path.replace("//", "/");

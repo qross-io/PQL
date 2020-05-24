@@ -2,11 +2,11 @@ package io.qross.fs
 
 object CodeCounter {
     def count(path: String, filter: String): Int = {
-        Directory.listFiles(path, filter, recursive = true).map(file => FileReader(file).countLines).sum
+        Directory.listFiles(path, filter, recursive = true).map(file => new FileReader(file.getPath).countLines).sum
     }
 
     def count(path: String): Int = {
-        Directory.listFiles(path, recursive = true).map(file => FileReader(file).countLines).sum
+        Directory.listFiles(path, recursive = true).map(file => new FileReader(file.getPath). countLines).sum
     }
 
     def main(args: Array[String]): Unit = {

@@ -104,14 +104,12 @@ object Main {
         ).run().print */
 
         //PQL.openEmbeddedFile("/sql/test.html").place("jobId=595").set("jobId=595").run().print
-        //PQL.openFile("/sql/date.sql").place("jobId=634&cronExp=0").run().print
+        PQL.openFile("/sql/date.sql").place("jobId=634&cronExp=0").run().print
 
-        val reader = new TextFile("f:/547.csv", TextFile.CSV)
-
+        //val reader = new TextFile("f:/547.csv", TextFile.CSV)
         //reader.bracketedBy("\"", "\"").limit(10, 1).skipLines(1).execute()
-        reader.cursor.print
-
-        reader.close()
+        //reader.cursor.print
+        //reader.close()
 
         //"""\s+[,=]\s+|\s+[,=\)]|[,=\(]\s+""".r.findAllIn("id = 0, title ='HELLO WROLD'").foreach(println)
 

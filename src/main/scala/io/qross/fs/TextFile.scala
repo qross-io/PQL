@@ -2,12 +2,11 @@ package io.qross.fs
 
 import java.io.RandomAccessFile
 
-import io.qross.core.{DataHub, DataTable, DataType}
-import io.qross.exception.IncorrectDataSourceException
+import io.qross.core.{DataHub, DataRow, DataTable, DataType}
+import io.qross.exception.{ColumnNotFoundException, IncorrectDataSourceException}
 import io.qross.ext.TypeExt._
 import io.qross.fs.Path._
 import io.qross.net.Json
-import io.qross.pql.Syntax
 import io.qross.setting.Global
 
 import scala.collection.mutable
@@ -81,6 +80,14 @@ object TextFile {
         def withColumns(fields: String*): DataHub = {
             dh.FQL.getTable match {
                 case file: TextFile => file.withColumns(fields: _*)
+                case _ =>
+            }
+            dh
+        }
+
+        def withColumnsOfFirstRow(): DataHub = {
+            dh.FQL.getTable match {
+                case file: TextFile => file.withColumnsOfFirstRow()
                 case _ =>
             }
             dh
@@ -203,7 +210,12 @@ object TextFile {
 
         def withHeaders(labels: (String, String)*): DataHub = {
             dh.plug("WITH_HEADERS", true)
-              .label(labels: _*)
+            if (labels.length == 1 && labels(0)._1 == "*") {
+                dh
+            }
+            else {
+                dh.label(labels: _*)
+            }
         }
 
         def write(): DataHub = {
@@ -213,7 +225,7 @@ object TextFile {
                     file.writer.close()
 
                     if (dh.slots("ZIP")) {
-                        dh.pick[Zip]("ZIP").orNull.addFile(file.writer.filePath)
+                        dh.pick[Zip]("ZIP").orNull.addFile(file.writer.file.getAbsolutePath)
                     }
                 case _ => throw new IncorrectDataSourceException("Must use SAVE sentence to save file first.")
             }
@@ -230,13 +242,15 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
 
     private var row = 0 //行号
     private var skip = 0 //如果是从头读, 略过多少行
-    private var start = 0 //limit 起始行
-    private var most = -1 //limit 限制行
+    private var meet = 0 //满足条件的行数
+    private var start = 0 //limit 起始行, 从0开始
+    private var most = -1 //limit 限制行, 达到limit时停止
     private var head = "" //row head mark
     private var tail = "" //row tail mark
     private var separator = if (format == TextFile.CSV) "," else "" //row delimiter
-    private val columns = new mutable.ArrayBuffer[(String, DataType)]()
-    //private val fields = new mutable.ArrayBuffer[(String, String)]()
+    private val columns = new mutable.LinkedHashMap[String, DataType]()
+    // label, value/name, constant/map, dataType
+    private val fields = new mutable.ArrayBuffer[(String, Any, String, DataType)]()
 
     private var values = "" //中间变量
     private val table = new DataTable()  //result
@@ -256,10 +270,15 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
     def withColumns(fields: String*): TextFile = {
         fields.foreach(field => {
             """\s""".r.findFirstIn(field) match {
-                case Some(blank) => columns.append((field.takeBefore(blank).trim, DataType.ofTypeName(field.takeAfter(blank).trim)))
-                case None => columns.append((field, DataType.TEXT))
+                case Some(blank) => columns += field.takeBefore(blank).trim() -> DataType.ofTypeName(field.takeAfter(blank).trim())
+                case None => columns += field -> DataType.TEXT
             }
         })
+        this
+    }
+
+    def withColumnsOfFirstRow(): TextFile = {
+        skip = 1
         this
     }
 
@@ -298,15 +317,42 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
 
     def orderBy(rule: String): Unit = ???
 
-    def select(fields: String*): DataTable = {
-        select(fields.map(field => (field, field)): _*)
-    }
-
-    def select(fields: (String, String)*): DataTable = {
+    def select(cols: (String, String)*): DataTable = {
 
         table.clear()
+        fields.clear()
 
-        //只有从头读时才跳过行
+        cols.foreach(col => {
+//            if (col._1 == "*") {
+//                columns.foreach(column => {
+//                    fields += ((column._1, column._1, "MAP", column._2))
+//                })
+//            }
+//            else
+            if (col._1.quotesWith("'") || col._1.quotesWith("\"")) {
+                fields += ((col._2, col._1.removeQuotes(), "CONSTANT", DataType.TEXT))
+            }
+            else if ("""^-?\d+$""".r.test(col._1)) {
+                fields += ((col._2, col._1.toInteger, "CONSTANT", DataType.INTEGER))
+            }
+            else if ("""^-?\d+\.\d+$""".r.test(col._1)) {
+                fields += ((col._2, col._1.toDecimal, "CONSTANT", DataType.DECIMAL))
+            }
+            else if ("(?i)^true|false$".r.test(col._1)) {
+                fields += ((col._2, col._1.toBoolean(false), "CONSTANT", DataType.BOOLEAN))
+            }
+            else if ("""(?)^null$""".r.test(col._1)) {
+                fields += ((col._2, null, "CONSTANT", DataType.TEXT))
+            }
+            else if (columns.contains(col._1)) {
+                fields += ((col._2, col._1, "MAP", columns(col._1)))
+            }
+            else {
+                fields += ((col._2, col._1, "MAP", DataType.TEXT))
+            }
+        })
+
+        //只有从头读时才跳行
         if (cursor > 0 && skip > 0) {
             skip = 0
         }
@@ -322,10 +368,10 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
                     recognize(new String(line.getBytes("ISO-8859-1"), Global.CHARSET))
                 }
             }
-            while (line != null)
+            while (line != null && (most == -1 || meet <= start + most))
         }
         else {
-            while(reader.hasNextLine) {
+            while(reader.hasNextLine && (most == -1 || meet <= start + most)) {
                 recognize(reader.readLine())
             }
         }
@@ -390,12 +436,73 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
         }
     }
 
+    private def convert(line: String): DataRow = {
+        if (format == TextFile.JSON) {
+            val data = Json(line).parseRow("/")
+            if (columns.isEmpty) {
+                columns ++= data.columns
+            }
+            data
+        }
+        else {
+            val items = line.split(separator, -1)
+            val data = new DataRow()
+
+            var i = 0
+            columns.foreach(column => {
+                data.set(column._1,
+                    if (i < items.length) {
+                        column._2 match {
+                            case DataType.INTEGER => items(i).toInteger(0)
+                            case DataType.DECIMAL => items(i).toDecimal(0)
+                            case DataType.DATETIME => items(i).toDateTimeOrElse(null)
+                            case DataType.BOOLEAN => items(i).toBoolean(false)
+                            case _ => items(i)
+                        }
+                    }
+                    else {
+                        null
+                    }, column._2)
+                i += 1
+            })
+
+            data
+        }
+    }
+
     private def parse(line: String): Unit = {
         if (line != "") {
             row += 1
-            //skip, limit
-            if (row > skip && row > start && (most == - 1 || row <= start + most) ) {
-                println (line)
+            if (row == 1 && skip > 0 && columns.isEmpty) {
+                line.split(separator, -1)
+                    .foreach(item => {
+                        columns += item -> DataType.TEXT
+                    })
+            }
+            if (row > skip) {
+                val data = convert(line)
+                //where
+                if (true) {
+                    meet += 1
+                    //limit
+                    if (meet > start && (most == - 1 || meet <= start + most)) {
+                        val map = new DataRow()
+                        fields.foreach(field => {
+                            if (field._3 == "CONSTANT") {
+                                map.set(field._1, field._2, field._4)
+                            }
+                            else if (field._1 == "*") {
+                                columns.foreach(column => {
+                                    map.set(column._1, data.get(column._1).orNull, column._2)
+                                })
+                            }
+                            else {
+                                map.set(field._1, data.get(field._2.asInstanceOf[String]).orNull, field._4)
+                            }
+                        })
+                        table.addRow(map)
+                    }
+                }
             }
         }
     }
