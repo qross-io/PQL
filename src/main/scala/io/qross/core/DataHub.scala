@@ -38,8 +38,8 @@ class DataHub (val defaultConnectionName: String) {
     private[qross] lazy val FQL = new FQL(this)
 
     private var lastSourceName = ""
-    private[qross] var currentSourceName = if (SOURCES.contains("DEFALT")) "DEFAULT" else ""  //current dataSource - open
-    private[qross] var currentDestinationName = if (SOURCES.contains("DEFALT")) "DEFAULT" else ""  //current dataDestination - saveTo
+    private[qross] var currentSourceName = if (SOURCES.contains("DEFAULT")) "DEFAULT" else ""  //current dataSource - open
+    private[qross] var currentDestinationName = if (SOURCES.contains("DEFAULT")) "DEFAULT" else ""  //current dataDestination - saveTo
 
     private var DEBUG: Boolean = false
 

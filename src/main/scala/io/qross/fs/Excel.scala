@@ -366,8 +366,8 @@ class Excel(val fileName: String) {
         }
 
         val plan = Syntax("INSERT").plan(
-            $INSERT$INTO.findFirstIn(sentence) match {
-                case Some(capital) => sentence.takeAfter(capital).trim()
+            $BLANK.findFirstIn(sentence) match {
+                case Some(blank) => sentence.takeAfter(blank).trim()
                 case None => sentence
             })
 

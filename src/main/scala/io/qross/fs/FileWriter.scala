@@ -2,8 +2,7 @@ package io.qross.fs
 
 import java.io._
 
-import io.qross.core.{DataRow, DataTable}
-import io.qross.ext.TypeExt._
+import io.qross.core.DataTable
 import io.qross.fs.Path._
 import io.qross.net.Json
 import io.qross.setting.Global

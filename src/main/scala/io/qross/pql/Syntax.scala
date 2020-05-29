@@ -22,10 +22,10 @@ object Syntax {
             OPEN  CACHE;
             OPEN  TEMP;
             OPEN  EXCEL [fileName]  AS [alias];
-            OPEN  JSON FILE [fileName]  AS [tableName];
-            OPEN  CSV FILE [fileName]  AS [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  SKIP [amount];
-            OPEN  TXT FILE [fileName]  AS [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
-            OPEN  GZ FILE [fileName]  AS [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
+            OPEN  JSON FILE [fileName]  AS TABLE? [tableName];
+            OPEN  CSV FILE [fileName]  AS TABLE? [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  SKIP [amount];
+            OPEN  TXT FILE [fileName]  AS TABLE? [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
+            OPEN  GZ FILE [fileName]  AS TABLE? [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
 
             SAVE AS  [JDBC-DataSource]  AS [alias]  USE [databaseName];
             SAVE AS  DEFAULT  AS [alias];
@@ -34,12 +34,12 @@ object Syntax {
             SAVE AS  CACHE TABLE [tableName]  PRIMARY KEY [columnName];
             SAVE AS  TEMP  AS [alias];
             SAVE AS  TEMP TABLE [tableName]  PRIMARY KEY [columnName]  UNIQUE KEY (column1, column2, ...)  KEY (column1, column2, ...);
-            SAVE AS  NEW? CSV FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
-            SAVE AS  CSV STREAM FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
-            SAVE AS  NEW? TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
-            SAVE AS  TXT? STREAM FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
-            SAVE AS  NEW? JSON FILE [fileName]  AS [alias];
-            SAVE AS  JSON STREAM FILE [fileName]  AS [alias];
+            SAVE AS  NEW? CSV FILE [fileName]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
+            SAVE AS  CSV STREAM FILE [fileName]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
+            SAVE AS  NEW? TXT FILE [fileName]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
+            SAVE AS  TXT? STREAM FILE [fileName]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
+            SAVE AS  NEW? JSON FILE [fileName];
+            SAVE AS  JSON STREAM FILE [fileName];
             SAVE AS  NEW? EXCEL [fileName]  AS [alias]  USE? TEMPLATE [templateName];
             SAVE AS  EXCEL STREAM FILE [fileName]  AS [alias]  USE? TEMPLATE [templateName];
 
@@ -48,12 +48,12 @@ object Syntax {
             SAVE TO  QROSS  AS [alias];
             SAVE TO  CACHE  AS [alias];
             SAVE TO  TEMP  AS [alias];
-            SAVE TO  NEW? CSV FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
-            SAVE TO  CSV STREAM FILE [fileName]  AS [alias]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
-            SAVE TO  NEW? TXT FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
-            SAVE TO  TXT? STREAM FILE [fileName]  AS [alias]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
-            SAVE TO  NEW? JSON FILE [fileName]  AS [alias];
-            SAVE TO  JSON STREAM FILE [fileName]  AS [alias];
+            SAVE TO  NEW? CSV FILE [fileName]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
+            SAVE TO  CSV STREAM FILE [fileName]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
+            SAVE TO  NEW? TXT FILE [fileName]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
+            SAVE TO  TXT? STREAM FILE [fileName]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
+            SAVE TO  NEW? JSON FILE [fileName];
+            SAVE TO  JSON STREAM FILE [fileName];
             SAVE TO  NEW? EXCEL [fileName]  AS [alias]  USE? TEMPLATE [templateName];
             SAVE TO  EXCEL STREAM FILE [fileName]  AS [alias]  USE? TEMPLATE [templateName];
 

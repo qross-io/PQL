@@ -3,13 +3,15 @@ package io.qross.fs
 import java.io.RandomAccessFile
 
 import io.qross.core.{DataHub, DataRow, DataTable, DataType}
-import io.qross.exception.{ColumnNotFoundException, IncorrectDataSourceException}
+import io.qross.exception.IncorrectDataSourceException
 import io.qross.ext.TypeExt._
+import io.qross.fql.{Column, SELECT}
 import io.qross.fs.Path._
 import io.qross.net.Json
 import io.qross.setting.Global
 
 import scala.collection.mutable
+import scala.util.control.Breaks._
 
 object TextFile {
 
@@ -23,8 +25,6 @@ object TextFile {
     val TERMINATOR: String = System.getProperty("line.separator")
 
     implicit class DataHub$TextFile(val dh: DataHub) {
-
-        //private var READER: FileReader = _
 
         /*
         def useDelimiter(delimiter: String): DataHub = {
@@ -237,23 +237,19 @@ object TextFile {
 class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, deleteIfExists: Boolean = false) {
 
     private lazy val access = new RandomAccessFile(fileNameOrPath.locate(), "r") //read
-    private lazy val reader = new FileReader(fileNameOrPath, format) //read gz
     private lazy val writer = new FileWriter(fileNameOrPath, format, outputType, deleteIfExists) //write
 
     private var row = 0 //行号
     private var skip = 0 //如果是从头读, 略过多少行
     private var meet = 0 //满足条件的行数
-    private var start = 0 //limit 起始行, 从0开始
-    private var most = -1 //limit 限制行, 达到limit时停止
     private var head = "" //row head mark
     private var tail = "" //row tail mark
     private var separator = if (format == TextFile.CSV) "," else "" //row delimiter
     private val columns = new mutable.LinkedHashMap[String, DataType]()
-    // label, value/name, constant/map, dataType
-    private val fields = new mutable.ArrayBuffer[(String, Any, String, DataType)]()
 
     private var values = "" //中间变量
     private val table = new DataTable()  //result
+    private var SELECT: SELECT = _
 
     def this(fileNameOrPath: String) {
         this(fileNameOrPath, TextFile.TXT, TextFile.FILE)
@@ -299,57 +295,125 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
     }
 
     def cursor: Long = access.getFilePointer
-
     def seek(position: Long): Unit = access.seek(position)
+    def length: Long = access.length()
 
-    def where(conditions: String): Unit = ???
-
-    def limit(m: Int): TextFile = {
-        start = 0
-        most = m
-        this
-    }
-    def limit(m: Int, n: Int): TextFile = {
-        start = m
-        most = n
-        this
+    def hasNextLine: Boolean = {
+        access.getFilePointer < access.length()
     }
 
-    def orderBy(rule: String): Unit = ???
+    def readLine(): String = {
+        val line = access.readLine()
+        if (line != null) {
+            new String(line.getBytes("ISO-8859-1"), Global.CHARSET)
+        }
+        else {
+            line
+        }
+    }
 
-    def select(cols: (String, String)*): DataTable = {
+    def readLine(head: String, tail: String): String = {
+        var row: String = null
+
+        breakable {
+            while (true) {
+                val line = readLine()
+                if (line != null) {
+                    //head 为空 tail 为空，读一行是一行
+                    if (head == "" && tail == "") {
+                        row = line
+                        break
+                    }
+                    //head 不为空 tail 为空
+                    else if (head != "" && tail == "") {
+                        if (line.startsWith(head)) {
+                            //新一行
+                            row = values
+                            values = line
+                            break
+                        }
+                        else {
+                            values += TextFile.TERMINATOR + line
+                        }
+                    }
+                    //head 为空 tail 不为空
+                    else if (head == "" && tail != "") {
+                        if (line.endsWith(tail)) {
+                            if (values != "") {
+                                values += TextFile.TERMINATOR + line
+                                row = values
+                                values = ""
+                            }
+                            else {
+                                row = line
+                            }
+                            break
+                        }
+                        else {
+                            values += TextFile.TERMINATOR + line
+                        }
+                    }
+                    //head 不为空 tail 不为空
+                    else if (head != "" && tail != "") {
+                        if (line.startsWith(head) && line.endsWith(tail) && values == "") {
+                            row = line
+                            break
+                        }
+                        else if (line.startsWith(head) && values == "") {
+                            values = line
+                        }
+                        else if (line.endsWith(tail) && values != "") {
+                            values += TextFile.TERMINATOR + line
+                            row = values
+                            values = ""
+                            break
+                        }
+                        else {
+                            values += TextFile.TERMINATOR + line
+                        }
+                    }
+                }
+                else {
+                    if (values != "") {
+                        row = values
+                        values = ""
+                    }
+                    break
+                }
+            }
+        }
+
+        row
+    }
+
+    def select(SQL: String): DataTable = {
+        select(new SELECT(SQL))
+    }
+
+    def select(SELECT: SELECT): DataTable = {
+        this.SELECT = SELECT
 
         table.clear()
-        fields.clear()
 
-        cols.foreach(col => {
-//            if (col._1 == "*") {
-//                columns.foreach(column => {
-//                    fields += ((column._1, column._1, "MAP", column._2))
-//                })
-//            }
-//            else
-            if (col._1.quotesWith("'") || col._1.quotesWith("\"")) {
-                fields += ((col._2, col._1.removeQuotes(), "CONSTANT", DataType.TEXT))
+        if (SELECT.seek > 0) {
+            access.seek(SELECT.seek)
+        }
+
+        //csv文件要跳过3个特殊字符
+        if (format == TextFile.CSV && access.getFilePointer == 0) {
+            var i = 0
+            while (access.readByte() < 0 && i < 3) {
+                i += 1
             }
-            else if ("""^-?\d+$""".r.test(col._1)) {
-                fields += ((col._2, col._1.toInteger, "CONSTANT", DataType.INTEGER))
-            }
-            else if ("""^-?\d+\.\d+$""".r.test(col._1)) {
-                fields += ((col._2, col._1.toDecimal, "CONSTANT", DataType.DECIMAL))
-            }
-            else if ("(?i)^true|false$".r.test(col._1)) {
-                fields += ((col._2, col._1.toBoolean(false), "CONSTANT", DataType.BOOLEAN))
-            }
-            else if ("""(?)^null$""".r.test(col._1)) {
-                fields += ((col._2, null, "CONSTANT", DataType.TEXT))
-            }
-            else if (columns.contains(col._1)) {
-                fields += ((col._2, col._1, "MAP", columns(col._1)))
-            }
-            else {
-                fields += ((col._2, col._1, "MAP", DataType.TEXT))
-            }
+            access.seek(access.getFilePointer - 1)
+        }
+
+        //转换
+        SELECT.turnColumns(columns)
+
+        //默认数据结构
+        SELECT.columns.foreach(column => {
+            table.addField(column.label, column.dataType)
         })
 
         //只有从头读时才跳行
@@ -360,80 +424,49 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
         values = ""
         row = 0
 
-        if (format != TextFile.GZ) {
+        if (SELECT.limit != 0) {
             var line: String = null
             do {
-                line = access.readLine()
+                line = readLine()
                 if (line != null) {
-                    recognize(new String(line.getBytes("ISO-8859-1"), Global.CHARSET))
+                    row += 1
+                    if (row == 1 && skip > 0 && columns.isEmpty) {
+                        line.split(separator, -1)
+                            .foreach(item => {
+                                columns += item -> DataType.TEXT
+                            })
+                    }
+                    if (row > skip) {
+                        val data = convert(line)
+                        //where
+                        if (SELECT.where(data)) {
+                            meet += 1
+                            //limit
+                            if (meet > SELECT.start && (SELECT.limit == -1 || meet <= SELECT.most)) {
+                                val map = new DataRow()
+                                SELECT.columns.foreach(column => {
+                                    if (column.columnType == Column.CONSTANT) {
+                                        map.set(column.label, column.value, column.dataType)
+                                    }
+                                    else if (column.label == "*") {
+                                        columns.foreach(field => {
+                                            map.set(field._1, data.get(field._1).orNull, field._2)
+                                        })
+                                    }
+                                    else {
+                                        map.set(column.label, data.get(column.origin).orNull, column.dataType)
+                                    }
+                                })
+                                table.addRow(map)
+                            }
+                        }
+                    }
                 }
             }
-            while (line != null && (most == -1 || meet <= start + most))
+            while (line != null && (SELECT.limit == -1 || meet <= SELECT.most))
         }
-        else {
-            while(reader.hasNextLine && (most == -1 || meet <= start + most)) {
-                recognize(reader.readLine())
-            }
-        }
-
-        //收尾
-        parse(values)
 
         table
-    }
-
-    private def recognize(line: String): Unit = {
-
-        //head 为空 tail 为空，读一行是一行
-        if (head == "" && tail == "") {
-            parse(line)
-        }
-        //head 不为空 tail 为空
-        else if (head != "" && tail == "") {
-            if (line.startsWith(head)) {
-                if (values != "") {
-                    parse(values)
-                }
-                //新一行
-                values = line
-            }
-            else {
-                values += TextFile.TERMINATOR + line
-            }
-        }
-        //head 为空 tail 不为空
-        else if (head == "" && tail != "") {
-            if (line.endsWith(tail)) {
-                if (values != "") {
-                    values += TextFile.TERMINATOR + line
-                    parse(values)
-                    values = ""
-                }
-                else {
-                    parse(line)
-                }
-            }
-            else {
-                values += TextFile.TERMINATOR + line
-            }
-        }
-        //head 不为空 tail 不为空
-        else if (head != "" && tail != "") {
-            if (line.startsWith(head) && line.endsWith(tail) && values == "") {
-                parse(line)
-            }
-            else if (line.startsWith(head) && values == "") {
-                values = line
-            }
-            else if (line.endsWith(tail) && values != "") {
-                values += TextFile.TERMINATOR + line
-                parse(values)
-                values = ""
-            }
-            else {
-                values += TextFile.TERMINATOR + line
-            }
-        }
     }
 
     private def convert(line: String): DataRow = {
@@ -445,7 +478,7 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
             data
         }
         else {
-            val items = line.split(separator, -1)
+            val items = if (separator != "") line.split(separator, -1) else Array[String](line)
             val data = new DataRow()
 
             var i = 0
@@ -470,50 +503,10 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
         }
     }
 
-    private def parse(line: String): Unit = {
-        if (line != "") {
-            row += 1
-            if (row == 1 && skip > 0 && columns.isEmpty) {
-                line.split(separator, -1)
-                    .foreach(item => {
-                        columns += item -> DataType.TEXT
-                    })
-            }
-            if (row > skip) {
-                val data = convert(line)
-                //where
-                if (true) {
-                    meet += 1
-                    //limit
-                    if (meet > start && (most == - 1 || meet <= start + most)) {
-                        val map = new DataRow()
-                        fields.foreach(field => {
-                            if (field._3 == "CONSTANT") {
-                                map.set(field._1, field._2, field._4)
-                            }
-                            else if (field._1 == "*") {
-                                columns.foreach(column => {
-                                    map.set(column._1, data.get(column._1).orNull, column._2)
-                                })
-                            }
-                            else {
-                                map.set(field._1, data.get(field._2.asInstanceOf[String]).orNull, field._4)
-                            }
-                        })
-                        table.addRow(map)
-                    }
-                }
-            }
-        }
-    }
-
     def close(): Unit = {
-        if (format != TextFile.GZ) {
-            access.close()
+        access.close()
+        if (writer != null) {
+            writer.close()
         }
-        else {
-            reader.close()
-        }
-        writer.close()
     }
 }

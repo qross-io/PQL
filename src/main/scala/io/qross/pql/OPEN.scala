@@ -2,11 +2,10 @@ package io.qross.pql
 
 import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.ext.TypeExt._
-import io.qross.pql.Patterns.{$OPEN, $RESERVED, BLANKS}
-import io.qross.setting.Properties
-import io.qross.pql.Solver._
 import io.qross.fs.Excel._
 import io.qross.fs.TextFile._
+import io.qross.pql.Patterns.$OPEN
+import io.qross.pql.Solver._
 
 /*
 OPEN "connectionName";
@@ -19,7 +18,6 @@ OPEN abbrName USE "databaseName";
 */
 
 object OPEN {
-
     def parse(sentence: String, PQL: PQL): Unit = {
         $OPEN.findFirstIn(sentence) match {
             case Some(open) => PQL.PARSING.head.addStatement(new Statement("OPEN", sentence, new OPEN(sentence.takeAfter(open))))
@@ -53,8 +51,8 @@ class OPEN(val sentence: String) {
             case "EXCEL" => PQL.dh.openExcel(plan.oneArgs("EXCEL"))
             case "JSON FILE" =>
                 PQL.dh.openJsonFile(plan.headArgs)
-                if (plan.contains("AS")) {
-                    PQL.dh.asTable(plan.oneArgs("AS"))
+                if (plan.contains("AS", "AS TABLE")) {
+                    PQL.dh.asTable(plan.oneArgs("AS", "AS TABLE"))
                 }
             case "TXT FILE" =>
                 PQL.dh.openTextFile(plan.headArgs)
@@ -77,8 +75,8 @@ class OPEN(val sentence: String) {
                 if (plan.contains("SKIP")) {
                     PQL.dh.skipLines(plan.oneArgs("SKIP").toInteger(0).toInt)
                 }
-                if (plan.contains("AS")) {
-                    PQL.dh.asTable(plan.oneArgs("AS"))
+                if (plan.contains("AS", "AS TABLE")) {
+                    PQL.dh.asTable(plan.oneArgs("AS", "AS TABLE"))
                 }
             case "CSV FILE" =>
                 PQL.dh.openCsvFile(plan.headArgs)
@@ -91,8 +89,8 @@ class OPEN(val sentence: String) {
                 else {
                     throw new SQLExecuteException("Must contains columns definition of table in OPEN CSV FILE: " + sentence)
                 }
-                if (plan.contains("AS")) {
-                    PQL.dh.asTable(plan.oneArgs("AS"))
+                if (plan.contains("AS", "AS TABLE")) {
+                    PQL.dh.asTable(plan.oneArgs("AS", "AS TABLE"))
                 }
                 if (plan.contains("BRACKETED BY")) {
                     val brackets = plan.limitArgs("BRACKETED BY")
@@ -111,8 +109,8 @@ class OPEN(val sentence: String) {
                 else {
                     throw new SQLExecuteException("Must contains columns definition of table in OPEN GZ FILE: " + sentence)
                 }
-                if (plan.contains("AS")) {
-                    PQL.dh.asTable(plan.oneArgs("AS"))
+                if (plan.contains("AS", "AS TABLE")) {
+                    PQL.dh.asTable(plan.oneArgs("AS", "AS TABLE"))
                 }
                 if (plan.contains("BRACKETED BY")) {
                     val brackets = plan.limitArgs("BRACKETED BY")

@@ -98,15 +98,18 @@ public class OneApi {
     private static void readAPIs(String path, String[] APIs) {
         for (int i = 0; i < APIs.length; i++) {
             APIs[i] = APIs[i].trim();
-            if (!APIs[i].isEmpty()) {
-                String[] API = APIs[i].split("\\|", -1);
+            if (!APIs[i].isEmpty() && APIs[i].contains("\r")) {
+                //单个接口中必须有换行
+                String[] API = APIs[i].substring(0, APIs[i].indexOf("\r")).trim().split("\\|");
+
                 //0 name
                 //1 method
                 //2 allowed | default values
                 //3 allowed | default values
-                //4 PQL
-                if (API.length >= 2) {
+
+                if (API.length >= 1) {
                     OneApi api = new OneApi();
+                    api.sentences = APIs[i].substring(APIs[i].indexOf("\r")).trim();
                     if (api.path.endsWith("/")) {
                         api.path = path + API[0].trim();
                     }
@@ -115,17 +118,13 @@ public class OneApi {
                     }
 
                     String METHOD = "GET";
-                    if (API.length == 2) {
-                        api.sentences = API[1].trim();
-                    }
-                    else if (API.length == 3) {
+                    if (API.length == 3) {
                         if (API[1].contains("=")) {
                             api.defaultValue = API[1];
                         }
                         else {
                             METHOD = API[1];
                         }
-                        api.sentences = API[2].trim();
                     }
                     else if (API.length == 4) {
                         METHOD = API[1].trim().toUpperCase();
@@ -135,7 +134,6 @@ public class OneApi {
                         else {
                             api.allowed.addAll(Arrays.asList(API[2].trim().split(",")));
                         }
-                        api.sentences = API[3].trim();
                     }
                     else if (API.length == 5) {
                         METHOD = API[1].trim().toUpperCase();
@@ -147,7 +145,6 @@ public class OneApi {
                             api.allowed.addAll(Arrays.asList(API[2].trim().split(",")));
                             api.defaultValue = API[3].trim();
                         }
-                        api.sentences = API[4].trim();
                     }
 
                     if (!ALL.containsKey(api.path)) {

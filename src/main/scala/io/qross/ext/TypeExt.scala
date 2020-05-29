@@ -85,6 +85,19 @@ object TypeExt {
             queries.toMap
         }
 
+        def evaluate(): Any = {
+            val jse: ScriptEngine = new ScriptEngineManager().getEngineByName("JavaScript")
+            try {
+                jse.eval(string)
+            }
+            catch {
+                case e: ScriptException =>
+                    e.printStackTrace()
+                    throw new SQLExecuteException("Can't calculate expression: " + string)
+                    DataCell.ERROR
+            }
+        }
+
         //执行javascript
         def eval(): DataCell = {
             if (string.bracketsWith("{", "}")) {
@@ -733,6 +746,50 @@ object TypeExt {
 
         def toDataCell(dataType: DataType): DataCell = {
             DataCell(any, dataType)
+        }
+
+        def >=(other: Any): Boolean = {
+            any match {
+                case dt: DateTime => dt.afterOrEquals(other.toDateTime)
+                case i: Int => i >= other.toInteger(0)
+                case l: Long => l >= other.toInteger(0)
+                case f: Float => f >= other.toDecimal(0)
+                case d: Double => d >= other.toDecimal(0)
+                case _ => any.toString.compareToIgnoreCase(other.toString) >= 0
+            }
+        }
+
+        def <=(other: Any): Boolean = {
+            any match {
+                case dt: DateTime => dt.beforeOrEquals(other.toDateTime)
+                case i: Int => i <= other.toInteger(0)
+                case l: Long => l <= other.toInteger(0)
+                case f: Float => f <= other.toDecimal(0)
+                case d: Double => d <= other.toDecimal(0)
+                case _ => any.toString.compareToIgnoreCase(other.toString) <= 0
+            }
+        }
+
+        def >(other: Any): Boolean = {
+            any match {
+                case dt: DateTime => dt.after(other.toDateTime)
+                case i: Int => i > other.toInteger(0)
+                case l: Long => l > other.toInteger(0)
+                case f: Float => f > other.toDecimal(0)
+                case d: Double => d > other.toDecimal(0)
+                case _ => any.toString.compareToIgnoreCase(other.toString) > 0
+            }
+        }
+
+        def <(other: Any): Boolean = {
+            any match {
+                case dt: DateTime => dt.before(other.toDateTime)
+                case i: Int => i < other.toInteger(0)
+                case l: Long => l < other.toInteger(0)
+                case f: Float => f < other.toDecimal(0)
+                case d: Double => d < other.toDecimal(0)
+                case _ => any.toString.compareToIgnoreCase(other.toString) < 0
+            }
         }
     }
 

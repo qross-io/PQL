@@ -53,7 +53,7 @@ object Patterns {
 
     //自定义SQL语句
     val $NONE$QUERY$CUSTOM: Regex = """(?i)^(INSERT\s+INTO|UPDATE|DELETE|DELETE\s+FROM)\s+(\S+?:|:|\$|@)\S+\s""".r
-    val $SELECT$CUSTOM: Regex = """(?)\b(FROM|JOIN)\s+(\S+?:|:|\$|@)\S+\s""".r
+    val $SELECT$CUSTOM: Regex = """(?)\b(FROM|JOIN)\s+(\S+?:|:|\$|@)\S+(\s|$)""".r
 
     val $FOR: Regex = """(?i)^FOR\s+([\s\S]+?)\s+IN\s+([\s\S]+?)\s+LOOP(\s|$)""".r
     val $EXIT: Regex = """(?i)^EXIT(\s+WHEN\s([\s\S]+))?$""".r
@@ -84,6 +84,7 @@ object Patterns {
     val $REQUEST: Regex = """(?i)^REQUEST\s+""".r
     val $SEND: Regex = """(?i)^SEND\s+""".r
     val $PARSE: Regex = """(?i)^PARSE\s""".r
+    val $INVOKE: Regex = """(?i)^INVOKE\s""".r
 
     val $LINK: Regex = """(?i)\s[A-Z][A-Z]+(\s+[A-Z][A-Z\d]+)*(\s|$)""".r
     val $ARGS: Regex = """\s+[,=]\s+|\s+[,=\)]|[,=\(]\s+""".r

@@ -1,6 +1,6 @@
 package io.qross.pql
 
-import io.qross.core.{DataCell, DataType}
+import io.qross.core.{DataCell}
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.BLANKS
 import io.qross.pql.Solver._
@@ -18,16 +18,6 @@ class Condition(val expression: String) {
 
     等于 =, ==
     不等于 !=, <>
-    开始于 ^=
-    非开始于 =^
-    结束于 $=
-    非结束于 =$
-    包含于 *=
-    不包含于 =*
-    正则表达式匹配 #=
-    正则表达式不匹配 =#
-    存在 EXISTS ()
-    不存在 NOT EXISTS ()
     在列表中 IN ()
     不在列表中 NOT IN ()
     大于 >

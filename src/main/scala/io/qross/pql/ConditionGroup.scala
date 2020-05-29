@@ -106,7 +106,7 @@ class ConditionGroup(expression: String) {
             }
         }
 
-        val result = conditions(conditions.size - 1).result
+        val result = conditions.last.result
 
         conditions.clear()
 
@@ -168,9 +168,10 @@ class ConditionGroup(expression: String) {
             left = m.group(3)
             right = m.group(4)
 
+            //处理多余的OR
             while ({n = $OR.matcher(clause); n}.find) {
-                clause = clause.substring(clause.indexOf(n.group) + n.group.length)
-                left = left.substring(left.indexOf(n.group) + n.group.length)
+                clause = clause.takeAfter(n.group(0))
+                left = left.takeAfter(n.group(0))
             }
 
             if (!$CONDITION$N.test(left)) {

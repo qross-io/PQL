@@ -15,10 +15,10 @@ public class VoyagerResolver extends AbstractTemplateViewResolver {
         setPrefix(Setting.VoyagerDirectory);
         setSuffix("." + Setting.VoyagerExtension);
 
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("connection", Setting.VoyagerConnection);
-        attributes.put("charset", Setting.VoyagerCharset);
-        setAttributesMap(attributes);
+//        Map<String, Object> attributes = new HashMap<>();
+//        attributes.put("connection", Setting.VoyagerConnection);
+//        attributes.put("charset", Setting.VoyagerCharset);
+//        setAttributesMap(attributes);
     }
 
     public VoyagerResolver(String prefix, String suffix) {

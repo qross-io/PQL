@@ -52,11 +52,11 @@ public class Voyager extends AbstractTemplateView {
                 }
             }
 
-            Map<String, Object> attributes = getAttributesMap();
-            response.setCharacterEncoding(attributes.get("charset").toString());
+            //Map<String, Object> attributes = getAttributesMap();
+            response.setCharacterEncoding(Setting.VoyagerCharset);
 
             Object result =
-                    new PQL("EMBEDDED:" + content, new DataHub(attributes.get("connection").toString()))
+                    new PQL("EMBEDDED:" + content, new DataHub(Setting.VoyagerConnection))
                         .placeParameters(request.getParameterMap())
                         .setHttpRequest(request)
                         .set(model)

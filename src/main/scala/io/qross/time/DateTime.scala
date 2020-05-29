@@ -89,18 +89,20 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
     val localDateTime: LocalDateTime = {
         dateTime match {
             case localDateTime: LocalDateTime => localDateTime
-            case str: String => if (str == "") {
-                LocalDateTime.now(timezone)
-            }
-            else if ("^\\d+$".r.test(str)) {
-                str.length match {
-                    case 10 | 13 | 17 => parseLocalDateTime(str.toLong)
-                    case _ => parseLocalDateTime(str)
+            case str: String =>
+                val dt = str.trim()
+                if (dt == "") {
+                    LocalDateTime.now(timezone)
                 }
-            }
-            else {
-                parseLocalDateTime(str, formatStyle)
-            }
+                else if ("^\\d+$".r.test(dt)) {
+                    dt.length match {
+                        case 10 | 13 | 17 => parseLocalDateTime(dt.toLong)
+                        case _ => parseLocalDateTime(dt)
+                    }
+                }
+                else {
+                    parseLocalDateTime(dt, formatStyle)
+                }
             case dt: DateTime => dt.localDateTime
             case date2: java.sql.Date =>
                 mode = DateTime.DATE

@@ -11,4 +11,8 @@ public class Test {
     public static void main(String[] args) {
         Console.writeLine(DataAccess.QROSS().executeDataTable("SELECT id, status FROM qross_tasks LIMIT 10"));
     }
+
+    public void call(String message) {
+        Console.writeLine(message);
+    }
 }
