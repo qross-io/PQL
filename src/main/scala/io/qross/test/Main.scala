@@ -105,6 +105,7 @@ object Main {
 
         //PQL.openEmbeddedFile("/sql/manual.html").place("jobId=595").set("jobId=595").run().print
         //PQL.openFile("/sql/date.sql").place("jobId=634&cronExp=0").run().print
+        DateTime.now.print
 
         //val reader = new TextFile("f:/547.csv", TextFile.CSV)
         //reader.bracketedBy("\"", "\"").limit(10, 1).skipLines(1).execute()

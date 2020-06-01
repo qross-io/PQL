@@ -23,6 +23,9 @@ object Global {
 
     def PQL: String = Global.JAVA_BIN_HOME + s"java -jar ${Global.QROSS_HOME}qross-worker-${Global.QROSS_VERSION}.jar "
 
+    //PQL和DataHub调度
+    def DEBUG: Boolean = Configurations.getOrProperty("DEBUG", "debug").toBoolean(false)
+
     def JAVA_BIN_HOME: String = Configurations.getOrProperty("JAVA_BIN_HOME", "java.bin.home")
 
     def PYTHON2_HOME: String = Configurations.getOrProperty("PYTHON2_HOME", "python2.home")

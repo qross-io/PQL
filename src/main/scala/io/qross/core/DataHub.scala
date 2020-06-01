@@ -9,9 +9,10 @@ import io.qross.fs.{Excel, FileReader, FileWriter, TextFile}
 import io.qross.fs.Path._
 import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.pql.Patterns
-import io.qross.setting.{Environment, Properties}
+import io.qross.setting.{Environment, Global, Properties}
 import io.qross.thread.Parallel
 import io.qross.time.{DateTime, Timer}
+import javax.xml.bind.annotation.XmlElementDecl.GLOBAL
 
 import scala.collection.mutable
 import scala.collection.parallel.mutable.ParArray
@@ -41,7 +42,7 @@ class DataHub (val defaultConnectionName: String) {
     private[qross] var currentSourceName = if (SOURCES.contains("DEFAULT")) "DEFAULT" else ""  //current dataSource - open
     private[qross] var currentDestinationName = if (SOURCES.contains("DEFAULT")) "DEFAULT" else ""  //current dataDestination - saveTo
 
-    private var DEBUG: Boolean = false
+    private var DEBUG: Boolean = Global.DEBUG
 
     private val HOLDER = s"temp_${DateTime.now.getString("yyyyMMddHHmmssSSS")}_${Math.round(Math.random() * 10000000D)}.sqlite".locate()
     private val TABLE = new DataTable()  //current buffer

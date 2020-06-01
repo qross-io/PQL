@@ -17,7 +17,6 @@ class Bulker(source: DataSource) extends Thread {
             val SQL = Bulker.QUEUE.poll()
             if (SQL != null) {
                 ds.executeNonQuery(SQL)
-                println(SQL)
             }
             Timer.sleep(100)
         }
