@@ -295,7 +295,16 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
     }
 
     def cursor: Long = access.getFilePointer
-    def seek(position: Long): Unit = access.seek(position)
+
+    def seek(position: Long): Unit = {
+        if (position >= 0) {
+            access.seek(position)
+        }
+        else {
+            access.seek(access.length())
+        }
+    }
+
     def length: Long = access.length()
 
     def hasNextLine: Boolean = {
@@ -395,9 +404,7 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
 
         table.clear()
 
-        if (SELECT.seek > 0) {
-            access.seek(SELECT.seek)
-        }
+        seek(SELECT.seek)
 
         //csv文件要跳过3个特殊字符
         if (format == TextFile.CSV && access.getFilePointer == 0) {

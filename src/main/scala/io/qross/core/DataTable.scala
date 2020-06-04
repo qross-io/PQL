@@ -688,6 +688,21 @@ class DataTable() {
         newRow
     }
 
+    def turnToMap(fieldName: String): java.util.LinkedHashMap[String, java.util.LinkedHashMap[String, Any]] = {
+        val map = new java.util.LinkedHashMap[String, java.util.LinkedHashMap[String, Any]]()
+        //如果指定了错误的fieldName, 会使用fieldName当key, 结果会不正确
+        this.rows.foreach(row => {
+            val column = row.getString(fieldName, fieldName)
+            map.put(column, new java.util.LinkedHashMap[String, Any]())
+            row.foreach((field, value) => {
+                if (field != column) {
+                    map.get(column).put(field, value)
+                }
+            })
+        })
+        map
+    }
+
     def updateSource(SQL: String): DataTable = {
         updateSource(JDBC.DEFAULT, SQL)
         this

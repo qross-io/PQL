@@ -3,10 +3,8 @@ package io.qross.app;
 import io.qross.core.DataHub;
 import io.qross.core.DataRow;
 import io.qross.core.DataTable;
-import io.qross.fs.Directory;
-import io.qross.fs.FileReader;
-import io.qross.fs.ResourceDir;
-import io.qross.fs.ResourceFile;
+import io.qross.ext.Console;
+import io.qross.fs.*;
 import io.qross.jdbc.DataAccess;
 import io.qross.net.Json;
 import io.qross.pql.PQL;
@@ -19,6 +17,9 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.crypto.Data;
 import java.io.BufferedReader;
+import io.qross.ext.Console;
+import scala.collection.immutable.Stream;
+
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.*;
@@ -37,7 +38,6 @@ public class OneApi {
 
     //read all api settings from resources:/api/
     public static void readAll() {
-        ALL.clear();
 
         //从jar包resources目录加载接口数据
         if (!Setting.OneApiResourceDirs.isEmpty()) {
@@ -98,10 +98,9 @@ public class OneApi {
     private static void readAPIs(String path, String[] APIs) {
         for (int i = 0; i < APIs.length; i++) {
             APIs[i] = APIs[i].trim();
-            if (!APIs[i].isEmpty() && APIs[i].contains("\r")) {
+            if (!APIs[i].isEmpty() && APIs[i].contains(TextFile.TERMINATOR())) {
                 //单个接口中必须有换行
-                String[] API = APIs[i].substring(0, APIs[i].indexOf("\r")).trim().split("\\|");
-
+                String[] API = APIs[i].substring(0, APIs[i].indexOf(TextFile.TERMINATOR())).trim().split("\\|");
                 //0 name
                 //1 method
                 //2 allowed | default values
@@ -109,7 +108,7 @@ public class OneApi {
 
                 if (API.length >= 1) {
                     OneApi api = new OneApi();
-                    api.sentences = APIs[i].substring(APIs[i].indexOf("\r")).trim();
+                    api.sentences = APIs[i].substring(APIs[i].indexOf(TextFile.TERMINATOR())).trim();
                     if (api.path.endsWith("/")) {
                         api.path = path + API[0].trim();
                     }
@@ -118,7 +117,7 @@ public class OneApi {
                     }
 
                     String METHOD = "GET";
-                    if (API.length == 3) {
+                    if (API.length == 2) {
                         if (API[1].contains("=")) {
                             api.defaultValue = API[1];
                         }
@@ -126,7 +125,7 @@ public class OneApi {
                             METHOD = API[1];
                         }
                     }
-                    else if (API.length == 4) {
+                    else if (API.length == 3) {
                         METHOD = API[1].trim().toUpperCase();
                         if (API[2].contains("=")) {
                             api.defaultValue = API[2].trim();
@@ -135,7 +134,7 @@ public class OneApi {
                             api.allowed.addAll(Arrays.asList(API[2].trim().split(",")));
                         }
                     }
-                    else if (API.length == 5) {
+                    else if (API.length == 4) {
                         METHOD = API[1].trim().toUpperCase();
                         if (API[2].contains("=")) {
                             api.defaultValue = API[2].trim();
@@ -174,6 +173,7 @@ public class OneApi {
 
     //refresh all api
     public static int refresh() {
+        OneApi.ALL.clear();
         OneApi.readAll();
         return OneApi.ALL.size();
     }

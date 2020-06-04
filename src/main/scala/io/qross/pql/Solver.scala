@@ -385,6 +385,7 @@ object Solver {
             sentence.restoreJsons(PQL)
                     .restoreChars(PQL)
                     .restoreValues(PQL, quote)
+                    .replaceLanguageHolder(PQL)
                     .restoreSymbols()
         }
 
@@ -594,13 +595,15 @@ object Solver {
 
         //替换多语言标记
         def replaceLanguageHolder(PQL: PQL): String = {
-            Language.holder.findAllMatchIn(sentence)
-                .foreach(m => {
-                    val text = Language.get(PQL.language, PQL.languageModules, m.group(1))
-                    if (text != null) {
-                        sentence = sentence.replace(m.group(0), text)
-                    }
-                })
+            if (sentence != null && sentence != "") {
+                Language.holder.findAllMatchIn(sentence)
+                    .foreach(m => {
+                        val text = Language.get(PQL.language, PQL.languageModules, m.group(1))
+                        if (text != null) {
+                            sentence = sentence.replace(m.group(0), text)
+                        }
+                    })
+            }
 
             sentence
         }
@@ -758,7 +761,13 @@ object Solver {
         def $sharp(PQL: PQL, quote: String = "'"): DataCell = {
             //中间变量
             if ($INTERMEDIATE$N.test(sentence)) {
-                PQL.values(sentence.$trim("~value[", "]").toInt)
+                val data = PQL.values(sentence.$trim("~value[", "]").toInt)
+                if (data.dataType == DataType.TEXT) {
+                    DataCell(data.value.asInstanceOf[String].replaceLanguageHolder(PQL), DataType.TEXT)
+                }
+                else {
+                    data
+                }
             }
             else if ($NULL.test(sentence)) {
                 DataCell.NULL
@@ -786,8 +795,8 @@ object Solver {
                     .replaceVariables(PQL)
                     .replaceFunctions(PQL)
                     .replaceSharpExpressions(PQL)
-                    .replaceJsExpressions(PQL)
-                    .replaceJsStatements(PQL)
+                    //.replaceJsExpressions(PQL)
+                    //.replaceJsStatements(PQL)
         }
 
         //计算表达式, 但保留字符串和中间值
@@ -798,8 +807,8 @@ object Solver {
                     .replaceVariables(PQL)
                     .replaceFunctions(PQL)
                     .replaceSharpExpressions(PQL)
-                    .replaceJsExpressions(PQL)
-                    .replaceJsStatements(PQL)
+                    //.replaceJsExpressions(PQL)
+                    //.replaceJsStatements(PQL)
         }
 
         //按顺序计算嵌入式表达式、变量和函数

@@ -5,6 +5,7 @@ import io.qross.exception.SQLParseException
 import scala.collection.mutable
 import io.qross.pql.Patterns._
 import io.qross.ext.TypeExt._
+import io.qross.fs.TextFile
 
 object Syntax {
 
@@ -150,14 +151,14 @@ object Syntax {
 
     def showSentences(caption: String): Unit = {
         val word = caption.toUpperCase.trim() + " "
-        sentences.split("\r")
+        sentences.split(TextFile.TERMINATOR)
                  .map(_.trim())
                  .filter(_.startsWith(word))
                  .foreach(println)
     }
 
     def showAllSentences(): Unit = {
-        sentences.split("\r")
+        sentences.split(TextFile.TERMINATOR)
                 .map(_.trim())
                 .foreach(println)
     }

@@ -5,7 +5,7 @@ import scala.util.matching.Regex
 object Patterns {
 
     val $SELECT: Regex = """(?i)^SELECT\s([\s\S]+?)\s(FROM\b)""".r
-    val $FROM: Regex = """(?i)^FROM\s([\s\S]+?)(\bWHEN\b|\bWHERE\b|\bGROUP\b|\bORDER\b|\sLIMIT\b|$)""".r
+    val $FROM: Regex = """(?i)^FROM\s([\s\S]+?)(\bWHEN\b|\bWHERE\b|\bGROUP\b|\bORDER\b|\bLIMIT\b|$)""".r
     val $SEEK: Regex = """(?i)\sSEEK\s([\s\S]+)(\bINNER\b|\bOUTER\b|\bLEFT\b|\bRIGHT\b|\bON\b|$)""".r
     val $WHERE: Regex = """(?i)^WHERE\s([\s\S]+?)(\bGROUP\b|\bORDER\b|\bLIMIT\b|$)""".r
     val $GROUP$BY: Regex = """(?i)^GROUP\s+BY\s([\s\S]+?)(\bHAVING\b|\bORDER\b|\bLIMIT\b|$)""".r

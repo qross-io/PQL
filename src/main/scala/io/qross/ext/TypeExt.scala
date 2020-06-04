@@ -400,14 +400,31 @@ object TypeExt {
         }
 
         def bash(): Int = {
-            val exitValue = string.!(ProcessLogger(out => {
-                println(out)
-            }, err => {
-                System.err.println(err)
-                //println(err)
-            }))
 
-            exitValue
+            if (string.contains("|")) {
+                val cmd = string.split("\\|")
+                var sh = cmd(0).trim() #| cmd(1).trim()
+                for (i <- 2 until cmd.length) {
+                    sh = sh #| cmd(i).trim()
+                }
+
+                sh.!(
+                    ProcessLogger(out => {
+                        println(out)
+                    }, err => {
+                        System.err.println(err)
+                    })
+                )
+            }
+            else {
+                string.!(
+                    ProcessLogger(out => {
+                        println(out)
+                    }, err => {
+                        System.err.println(err)
+                    })
+                )
+            }
         }
 
         def go(): Int = {

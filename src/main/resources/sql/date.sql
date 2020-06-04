@@ -10,14 +10,8 @@ DEBUG ON;
 --SELECT id, project_id, owner  FROM :jobs SEEK 0 LIMIT 5;
 --PRINT @POINTER;
 
---OPEN TXT FILE 'f:/18.log' AS TABLE 'logs' (datetime DATETIME, log_type TEXT, log_info TEXT) DELIMITED BY ' \[|\]';
---OUTPUT {
---    "logs": ${{ SELECT * FROM :logs SEEK #{position} WHERE log_type='INFO' AND datetime<'2020-05-15 18:10:00' LIMIT 10 }},
---    "cursor": @POINTER
---}
-
-OPEN TXT FILE 'f:/18.log' AS TABLE 'logs' (datetime DATETIME, log_type TEXT, log_info TEXT) DELIMITED BY '\[|\]';
+OPEN TXT FILE 'f:/18.log' AS TABLE 'logs' (datetime TEXT, log_type TEXT, log_info TEXT) DELIMITED BY ' \[|\]';
 OUTPUT {
-    "logs": ${{ SELECT * FROM :logs SEEK #{position} WHERE datetime<'2020-05-15 18:10:00' LIMIT 100 }},
+    "logs": ${{ SELECT * FROM :logs SEEK -1 LIMIT 10 }},
     "cursor": @POINTER
 }

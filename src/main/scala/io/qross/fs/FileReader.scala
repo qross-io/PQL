@@ -117,7 +117,7 @@ class FileReader(val file: File, val format: Int, val delimiter: String) {
             lines += this.readLine
         }
         this.close()
-        lines.mkString("\r\n")
+        lines.mkString(TextFile.TERMINATOR)
     }
 
     def readToEnd(filter: String => Boolean): String = {
@@ -129,7 +129,7 @@ class FileReader(val file: File, val format: Int, val delimiter: String) {
             }
         }
         this.close()
-        lines.mkString("\r\n")
+        lines.mkString(TextFile.TERMINATOR)
     }
 
     def readAllAsTable(): DataTable = {

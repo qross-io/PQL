@@ -1183,6 +1183,10 @@ object Sharp {
         data.asDecimal.percent.toDataCell(DataType.TEXT)
     }
 
+    def TO$CAPACITY(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        data.asInteger(0).toHumanized.toDataCell(DataType.TEXT)
+    }
+
     /* ---------- 判断操作 ---------- */
 
     def IF$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -1505,6 +1509,21 @@ object Sharp {
 
     def TO$HTML$TABLE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         DataCell(data.asTable.toHtmlString, DataType.TEXT)
+    }
+
+    //将TABLE聚合成一个LinkedHashMap
+    def TO$MAP(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (arg.isText) {
+                data.asTable.turnToMap(arg.asText).toDataCell(DataType.forClassName("java.util.LinkedHashMap"))
+            }
+            else {
+                throw SharpLinkArgumentException.occur("TO MAP", origin)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("TO MAP", origin)
+        }
     }
 
     /* ---------- DataRow ---------- */
@@ -1867,10 +1886,10 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
             //必须是等号, 不能用replace方法, 否则变量内容会保存
             data = {
                 if (matches.nonEmpty) {
-                    sentence.takeBefore(matches.head).$eval(PQL)
+                    sentence.takeBefore(matches.head).$sharp(PQL)
                 }
                 else {
-                    sentence.$eval(PQL)
+                    sentence.$sharp(PQL)
                 }
             }
         }

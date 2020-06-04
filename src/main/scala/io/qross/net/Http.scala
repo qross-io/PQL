@@ -7,6 +7,7 @@ import io.qross.ext.TypeExt._
 import io.qross.core.DataHub
 import io.qross.exception.ExtensionNotFoundException
 import io.qross.fs.Path._
+import io.qross.fs.TextFile
 import org.apache.commons.codec.binary.Base64
 
 object Http {
@@ -166,9 +167,9 @@ class Http(var method: String, var url: String, var data: String = "") {
         val sb = new StringBuilder()
         sb.append("--"); // 必须多两道线
         sb.append(BOUNDARY)
-        sb.append("\r\n")
-        sb.append("Content-Disposition: form-data;name=\"file\";filename=\"" + file.getName + "\"\r\n")
-        sb.append("Content-Type:application/octet-stream\r\n\r\n")
+        sb.append(TextFile.TERMINATOR)
+        sb.append("Content-Disposition: form-data;name=\"file\";filename=\"" + file.getName + "\"" + TextFile.TERMINATOR)
+        sb.append("Content-Type:application/octet-stream" + TextFile.TERMINATOR)
         val head = sb.toString.getBytes("utf-8")
 
         val out = new DataOutputStream(conn.getOutputStream)
@@ -181,7 +182,7 @@ class Http(var method: String, var url: String, var data: String = "") {
             out.write(bufferOut, 0, bytes)
         }
         in.close()
-        val foot = ("\r\n--" + BOUNDARY + "--\r\n").getBytes("utf-8")
+        val foot = (TextFile.TERMINATOR + "--" + BOUNDARY + "--" + TextFile.TERMINATOR).getBytes("utf-8")
         out.write(foot)
         out.flush()
         out.close()
