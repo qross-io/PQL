@@ -191,7 +191,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private[pql] val RESULT: ArrayBuffer[Any] = new ArrayBuffer[Any]()
     private[pql] var COUNT_OF_LAST_SELECT: Int = -1 //最后一个SELECT返回的结果数量
     private[pql] var AFFECTED_ROWS_OF_LAST_NON_QUERY: Int = -1  //最后一个非SELECT语句影响的数据表行数
-    private[pql] var BOOL: Boolean = false //最后一个可返回Boolean类型的语句的执行结果
 
     //正在解析的所有语句, 控制语句包含ELSE和ELSIF
     private[pql] val PARSING = new mutable.ArrayStack[Statement]()
@@ -377,7 +376,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         }
         else if (symbol == "@") {
             //全局变量
-            GlobalVariable.set(name, value, credential.getString("username"), credential.getString("role"))
+            GlobalVariable.set(name, value.value, credential.getInt("userid"), credential.getString("role"))
         }
     }
 
@@ -509,6 +508,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 root.setVariable(key.drop(1), model.get(key))
             }
             else if (key.startsWith("#")) {
+                //用户登录信息
                 credential.set(key.drop(1), model.get(key))
             }
             else {
@@ -650,15 +650,17 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         }
     }
 
-    def output: Any = {
-        dh.close()
-        this.$return
-    }
-
     //运行但关闭DataHub
     def run(): Any = {
         this.$run()
-        this.output
+        this.dh.close()
+        this.$return
+    }
+
+    def output: ArrayBuffer[Any] = {
+        this.$run()
+        this.dh.close()
+        this.RESULT
     }
 
     def close(): Unit = {

@@ -19,7 +19,7 @@ object PARSE {
 
 }
 
-class PARSE(var sentence: String) {
+class PARSE(val sentence: String) {
 
     //sentence包含PARSE关键词
 

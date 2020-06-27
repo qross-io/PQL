@@ -141,12 +141,17 @@ class FileWriter(val file: File, val format: Int, val outputType: String, delete
         writeTable(table, true)
     }
 
+    def write(content: String): FileWriter = {
+        writer.append(content)
+        this
+    }
+
     def writeLine(line: Any*): FileWriter = {
         writer.append(line.mkString(this.delimiter) + System.getProperty("line.separator"))
         this
     }
 
-    def writeObjectLine[T](line: AnyRef): FileWriter = {
+    def writeObjectLine(line: AnyRef): FileWriter = {
         writer.append(Json.serialize(line))
         writer.append(System.getProperty("line.separator"))
         this

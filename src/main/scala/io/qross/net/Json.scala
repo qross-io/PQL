@@ -19,7 +19,7 @@ import scala.util.{Failure, Success, Try}
 
 object Json {
     def fromText(text: String): Json = Json(text)
-    def fromURL(url: String, post: String = ""): Json = Json().readURL(url, post)
+    def fromURL(url: String, method: String = "GET"): Json = Json().readURL(url, method)
 
     def serialize(obj: AnyRef): String = {
         implicit val formats: Formats = Serialization.formats(NoTypeHints)
@@ -51,8 +51,8 @@ object Json {
             dh.plug("JSON", Json.fromURL(url))
         }
 
-        def openJsonApi(url: String, post: String): DataHub = {
-            dh.plug("JSON", Json.fromURL(url, post))
+        def openJsonApi(url: String, method: String): DataHub = {
+            dh.plug("JSON", Json.fromURL(url, method))
         }
 
         def parse(jsonPath: String): DataHub = {
@@ -88,10 +88,10 @@ case class Json(text: String = "") {
         })
     }
     
-    def readURL(url: String, post: String = ""): Json = {
+    def readURL(url: String, method: String = "GET"): Json = {
         try {
             val URL = new URL(if (url.contains("://")) url else "http://" + url)
-            if (post == "") {
+            if (method.equalsIgnoreCase("GET")) {
                 root = mapper.readTree(URL)
             }
             else {
@@ -100,12 +100,12 @@ case class Json(text: String = "") {
                 conn.setDoOutput(true)
                 conn.setDoInput(true)
                 conn.addRequestProperty("Content-Type", "application/json; charset=utf-8");
-                conn.setRequestMethod("POST")
+                conn.setRequestMethod(method.trim().toUpperCase())
                 conn.connect()
     
-                val os = conn.getOutputStream
-                os.write(post.getBytes("utf-8"))
-                os.close()
+//                val os = conn.getOutputStream
+//                os.write(post.getBytes("utf-8"))
+//                os.close()
     
                 val is = conn.getInputStream
                 root = mapper.readTree(is)

@@ -287,7 +287,7 @@ class Email(private var title: String) {
             if (template.trim().bracketsWith("<", ">") || (template.contains("<%") && template.contains("%>"))) {
                 template
             }
-            else if (template.contains(".") && "(?i)^htm|html|txt$".r.test(template.takeAfter("."))) {
+            else if (template.contains(".") && "(?i)^htm|html|txt$".r.test(template)) {
                 SourceFile.read(template)
             }
             else {

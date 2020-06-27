@@ -27,15 +27,15 @@ class OUTPUT(val content: String) {
             else if ($PARSE.test(content)) {
                 new PARSE(content).doParse(PQL).value
             }
-            else if ($INSERT$INTO.test(content)) {
-                new INSERT(content).insert(PQL)
-            }
-            else if ($DELETE.test(content)) {
-                new DELETE(content).delete(PQL)
-            }
             else if ($NON$QUERY.test(content)) {
                 PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY = PQL.dh.executeNonQuery(content.$restore(PQL))
                 PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY
+            }
+            else if ($FILE.test(content)) {
+                new FILE(content).evaluate(PQL).value
+            }
+            else if ($DIR.test(content)) {
+                new DIR(content).evaluate(PQL).value
             }
             else if (content.bracketsWith("[", "]") || content.bracketsWith("{", "}")) {
                 //对象或数组类型不能eval

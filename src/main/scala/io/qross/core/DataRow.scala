@@ -437,6 +437,7 @@ class DataRow() {
     }
 
     def clear(): Unit = {
+        this.fields.clear()
         this.values.clear()
         this.columns.clear()
     }

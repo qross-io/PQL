@@ -719,7 +719,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
     def executeBatchInsert(batchSize: Int = 1000): Int = {
         var count: Int = -1
         if (this.batchSQLs.nonEmpty && this.batchValues.nonEmpty) {
-            var location: Int = 0
+
             var SQL = this.batchSQLs(0)
 
             //去掉VALUES后面的内容
@@ -756,7 +756,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
                 }
             }
             if (rows.nonEmpty) {
-                count += this.executeNonQuery(SQL + rows.mkString(","))
+                count += this.executeNonQuery(SQL + rows.mkString(",").replace("~u0027", "'"))
                 rows.clear()
             }
             this.batchValues.clear()
@@ -778,7 +778,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
             val params = SQL.pickParameters()
             if (params.nonEmpty) {
                 table.foreach(row => {
-                    result.merge(this.executeDataTable(SQL.replaceParameters(params, row)))
+                    result.merge(this.executeDataTable(SQL.replaceParameters(params, row).replace("~u0027", "'")))
                 })
             }
             else {
@@ -811,7 +811,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
                 case Parameter.SHARP =>
                     val params = SQL.pickParameters()
                     table.foreach(row => {
-                        this.addBatchCommand(SQL.replaceParameters(params, row))
+                        this.addBatchCommand(SQL.replaceParameters(params, row).replace("~u0027", "'"))
                     })
                     count = this.executeBatchCommands()
                 case Parameter.NONE =>
@@ -846,7 +846,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
                             vs.clear()
                         })
 
-                        count = this.executeNonQuery(SQL + VALUES + values.mkString(","))
+                        count = this.executeNonQuery(SQL + VALUES + values.mkString(",").replace("~u0027", "'"))
                         values.clear()
                     }
                     else {

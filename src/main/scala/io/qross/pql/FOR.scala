@@ -1,6 +1,6 @@
 package io.qross.pql
 
-import io.qross.core.{DataRow, DataTable}
+import io.qross.core.{DataCell, DataRow, DataTable, DataType}
 import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
@@ -13,7 +13,7 @@ object FOR {
     def parse(sentence: String, PQL: PQL): Unit = {
         $FOR.findFirstMatchIn(sentence) match {
             case Some(m) =>
-                val $for: Statement = new Statement("FOR", m.group(0), new FOR(m.group(1).trim(), m.group(2).trim()))
+                val $for: Statement = new Statement("FOR", m.group(0), new FOR(m.group(1).trim(), m.group(2).toUpperCase(), m.group(3).trim()))
 
                 PQL.PARSING.head.addStatement($for)
                 //只进栈
@@ -30,7 +30,10 @@ object FOR {
     }
 }
 
-class FOR(var variable: String, val collection: String) {
+class FOR(val variable: String, val method: String, val collection: String) {
+
+
+    val variables: List[String] = variable.split(",").map(_.trim).toList
 
     def execute(PQL: PQL, statement: Statement): Unit = {
         val vars: ForVariables = this.computeVariables(PQL)
@@ -49,69 +52,116 @@ class FOR(var variable: String, val collection: String) {
         }
     }
 
-
-    val variables: List[String] = variable.split(",").map(_.trim).toList
-
-    if (variable.contains(",")) {
-        variable = variable.takeBefore(",").trim()
-    }
-
     private def computeVariables(PQL: PQL): ForVariables = {
+
         val forVars = new ForVariables()
 
-        val table: DataTable = {
+        val data: DataCell = {
             if (collection.bracketsWith("(", ")")) {
                 //集合查询语句
                 //(SELECT...)
                 //(PARSE...)
                 val query = collection.$trim("(", ")").trim()
                 if ($SELECT.test(query)) {
-                    new SELECT(query).select(PQL).asTable
+                    new SELECT(query).select(PQL)
                 }
                 else if ($PARSE.test(query)) {
-                    new PARSE(query).doParse(PQL).asTable
+                    new PARSE(query).doParse(PQL)
+                }
+                else if ($FILE.test(query)) {
+                    new FILE(query).evaluate(PQL)
+                }
+                else if ($DIR.test(query)) {
+                    new DIR(query).evaluate(PQL)
                 }
                 else {
-                    throw new SQLExecuteException("Only supports SELECT or PARSE sentence in FOR loop query mode.")
+                    throw new SQLExecuteException("Unsupports sentence in FOR loop query mode:" + query)
                 }
             }
             else if ($VARIABLE.test(collection)) {
                 //集合变量
                 //@a, $b
-                PQL.findVariable(collection).asTable
+                PQL.findVariable(collection)
             }
             else if (JSON$N.test(collection)) {
                 val json = collection.$restore(PQL, "\"")
                 if (json.bracketsWith("[", "]")) {
-                    Json(json).parseTable("/")
+                    if (json.$trim("[", "]").trim().bracketsWith("{", "}")) {
+                        Json(json).parseTable("/").toDataCell(DataType.TABLE)
+                    }
+                    else {
+                        Json(json).parseJavaList("/").toDataCell(DataType.ARRAY)
+                    }
                 }
                 else if (json.bracketsWith("{", "}")) {
-                    Json(json).parseRow("/").turnToColumn("key", "value")
+                    Json(json).parseRow("/").toDataCell(DataType.ROW)
                 }
                 else {
-                    new DataTable()
+                    DataCell(new DataTable(), DataType.TABLE)
                 }
             }
             else {
                 //SHARP表达式
-                new Sharp(collection.$clean(PQL)).execute(PQL).asTable
+                new Sharp(collection.$clean(PQL)).execute(PQL)
             }
         }
 
 
-        //如果变量的数量小于集合的列数，则变量赋值为null
-        table.map(row => {
-            val newRow = new DataRow()
-            for (i <- variables.indices) {
-                newRow.set(variables(i).substring(1).toUpperCase, row.get(i).orNull)
-            }
-            newRow
-        }).foreach(forVars.addRow)
-//        }
-//        else {
-//            throw new SQLParseException("In FOR loop, result columns must equal or more than variables amount.")
-//        }
+        data.dataType match {
+            case DataType.TABLE =>
+                data.asTable.foreach(row => {
+                    val newRow = new DataRow()
+                    if (method == "IN") {
+                        for (i <- variables.indices) {
+                            newRow.set(variables(i).drop(1).toUpperCase(), row.get(i).orNull)
+                        }
+                    }
+                    else {
+                        newRow.set(variables.head.drop(1).toUpperCase(), row, DataType.ROW)
+                    }
+                    forVars.addRow(newRow)
+                })
+            case DataType.ROW | DataType.MAP | DataType.OBJECT =>
+                data.value.asInstanceOf[DataRow]
+                    .turnToColumn("key", "value")
+                    .foreach(kv => {
+                        val newRow = new DataRow()
+                        if (method == "IN") {
+                            for (i <- variables.indices) {
+                                newRow.set(variables(i).drop(1).toUpperCase(), kv.get(i).orNull)
+                            }
+                        }
+                        else {
+                            newRow.set(variables.head.drop(1).toUpperCase(), kv, DataType.ROW)
+                        }
+                        forVars.addRow(newRow)
+                    })
+            case DataType.ARRAY | DataType.LIST =>
+                data.asJavaList.forEach(item => {
+                    val newRow = new DataRow()
+                    for (i <- variables.indices) {
+                        newRow.set(variables(i).drop(1).toUpperCase(), item)
+                    }
+                    forVars.addRow(newRow)
+                })
+            case DataType.TEXT =>
+                data.asText.split("").foreach(char => {
+                    val newRow = new DataRow()
+                    for (i <- variables.indices) {
+                        newRow.set(variables(i).drop(1).toUpperCase(), char, DataType.TEXT)
+                    }
+                    forVars.addRow(newRow)
+                })
+            case value =>
+                val newRow = new DataRow()
+                for (i <- variables.indices) {
+                    newRow.set(variables(i).drop(1).toUpperCase(), value)
+                }
+                forVars.addRow(newRow)
+                //throw new SQLExecuteException("Unrecognized collection type: " + collection)
+        }
 
+        //如果变量的数量小于集合的列数，则变量赋值为null
         forVars
     }
 }

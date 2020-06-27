@@ -5,6 +5,7 @@ import java.io.{File, FileFilter}
 import io.qross.ext.TypeExt._
 
 import scala.util.matching.Regex
+import io.qross.fs.Path._
 
 object Directory {
 
@@ -13,7 +14,7 @@ object Directory {
     }
 
     def listFiles(path: String, recursive: Boolean): Array[File] = {
-        val dir = new File(path)
+        val dir = new File(path.toPath)
         if (dir.exists()) {
             if (dir.isDirectory) {
                 if (!recursive) {
@@ -38,7 +39,7 @@ object Directory {
             }
         }
         else {
-            new Array[File](0)
+            Array[File]()
         }
     }
 
@@ -58,7 +59,7 @@ object Directory {
     }
 
     def listFiles(path: String, filter: Regex, recursive: Boolean): Array[File] = {
-        val dir = new File(path)
+        val dir = new File(path.toPath)
         if (dir.exists()) {
             if (dir.isDirectory) {
                 if (!recursive) {
@@ -98,9 +99,63 @@ object Directory {
         }
     }
 
+    def list(path: String): Array[File] = {
+        if (path.contains("*") || path.contains("?")) {
+            val (dir, filter) = {
+                if (path.contains("/")) {
+                    (path.takeBeforeLast("/"), path.takeAfterLast("/"))
+                }
+                else if (path.contains("\\")) {
+                    (path.takeBeforeLast("\\"), path.takeAfterLast("\\"))
+                }
+                else {
+                    (path, "*")
+                }
+            }
+
+            Directory.listFiles(dir, filter)
+        }
+        else {
+            val dir = new File(path.toPath)
+            if (dir.exists()) {
+                dir.listFiles()
+            }
+            else {
+                Array[File]()
+            }
+        }
+    }
+
+    def listDirs(path: String): Array[File] = {
+        val dir = new File(path.toPath)
+        if (dir.exists()) {
+            if (dir.isDirectory) {
+                dir.listFiles(
+                    new FileFilter() {
+                        override def accept(f: File): Boolean = f.isDirectory
+                    })
+            }
+            else {
+                Array[File]()
+            }
+        }
+        else {
+            Array[File]()
+        }
+    }
+
     def spaceUsage(path: String): Long = {
-        var size = 0L
         val dir = new File(path)
+        if (dir.exists()) {
+            spaceUsage(dir)
+        }
+        else {
+            0
+        }
+    }
+
+    def spaceUsage(dir: File): Long = {
+        var size = 0L
         if (dir.isDirectory) {
             for (file <- dir.listFiles()) {
                 if (file.isDirectory) {

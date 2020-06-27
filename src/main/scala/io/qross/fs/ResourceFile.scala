@@ -19,12 +19,12 @@ class ResourceFile(path: String) {
 
     private val source: BufferedSource = Source.fromInputStream(BaseClass.MAIN.getResourceAsStream(path), "UTF-8")
 
-    val (content: String, exists: Boolean) =
+    val ( content: String, exists: Boolean) =
                 try {
-                    val content = source.mkString
+                    val string = source.mkString
                     source.close()
 
-                    (content, true)
+                    (string, true)
                 }
                 catch {
                     case _: Exception =>

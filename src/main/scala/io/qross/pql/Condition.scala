@@ -5,6 +5,7 @@ import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.BLANKS
 import io.qross.pql.Solver._
 import scala.collection.mutable.ListBuffer
+import io.qross.fs.Path._
 
 class Condition(val expression: String) {
     var field: String = _
@@ -49,8 +50,29 @@ class Condition(val expression: String) {
             case "AND" => field.asBoolean && value.asBoolean
             case "OR" => field.asBoolean || value.asBoolean
             case "NOT" => !value.asBoolean
-            case "EXISTS" => value.asText.$trim("(", ")").$trim("[", "]").trim() != ""
-            case "NOT$EXISTS" => value.asText.$trim("(", ")").$trim("[", "]").trim() == ""
+            case "EXISTS" =>
+                val left = field.asText
+                if (left == null || left == "") {
+                    value.asText.$trim("(", ")").$trim("[", "]").trim() != ""
+                }
+                else {
+                    left.toUpperCase() match {
+                        case "FILE" | "DIR" => value.asText.fileExists
+
+                        case _ => false
+                    }
+                }
+            case "NOT$EXISTS" =>
+                val left = field.asText
+                if (left == null || left == "") {
+                    value.asText.$trim("(", ")").$trim("[", "]").trim() == ""
+                }
+                else {
+                    left.toUpperCase() match {
+                        case "FILE" | "DIR" => !value.asText.fileExists
+                        case _ => true
+                    }
+                }
             case "IN" =>
                 if (value.isText) {
                     val chars = new ListBuffer[String]

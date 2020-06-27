@@ -1,16 +1,13 @@
 package io.qross.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.qross.exception.SQLParseException
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.fql.Fragment
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.net.Json
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import scala.collection.parallel.mutable.ParArray
 import scala.util.Random
 import scala.util.control.Breaks._

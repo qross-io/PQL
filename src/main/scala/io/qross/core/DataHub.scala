@@ -13,6 +13,7 @@ import io.qross.setting.{Environment, Global, Properties}
 import io.qross.thread.Parallel
 import io.qross.time.{DateTime, Timer}
 import javax.xml.bind.annotation.XmlElementDecl.GLOBAL
+import redis.clients.jedis.Jedis
 
 import scala.collection.mutable
 import scala.collection.parallel.mutable.ParArray
@@ -883,7 +884,8 @@ class DataHub (val defaultConnectionName: String) {
         this
     }
 
-    def buffer(tableName: String): DataHub = {
+    //将TABLE转存到buffer中
+    def bufferAs(tableName: String): DataHub = {
         BUFFER += tableName -> DataTable.from(TABLE)
 
         TO_BE_CLEAR = true
@@ -1221,6 +1223,11 @@ class DataHub (val defaultConnectionName: String) {
             case excel: Excel => excel.close()
             case _ =>
         }
+
+//        this.pick[Jedis]("REDIS") match {
+//            case Some(jedis) => jedis.close()
+//            case None =>
+//        }
 
         FQL.close()
 

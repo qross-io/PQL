@@ -1,6 +1,6 @@
 package io.qross.fs
 
-import java.io.RandomAccessFile
+import java.io.{File, RandomAccessFile}
 
 import io.qross.core.{DataHub, DataRow, DataTable, DataType}
 import io.qross.exception.IncorrectDataSourceException
@@ -19,6 +19,7 @@ object TextFile {
     val CSV = 2
     val JSON = 3
     val GZ = 4
+
     val FILE = "file"
     val STREAM = "stream"
 
@@ -236,8 +237,9 @@ object TextFile {
 
 class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, deleteIfExists: Boolean = false) {
 
-    private lazy val access = new RandomAccessFile(fileNameOrPath.locate(), "r") //read
-    private lazy val writer = new FileWriter(fileNameOrPath, format, outputType, deleteIfExists) //write
+    private val file = new File(fileNameOrPath.locate())
+    private lazy val access = new RandomAccessFile(file, "r") //read
+    private lazy val writer = new FileWriter(file, format, outputType, deleteIfExists) //write
 
     private var row = 0 //行号
     private var skip = 0 //如果是从头读, 略过多少行

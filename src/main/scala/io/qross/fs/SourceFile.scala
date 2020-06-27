@@ -22,7 +22,10 @@ class SourceFile(val path: String) {
         val file = new File(path.locate())
         if (file.exists()) {
             //如果不加编码读取不了中文
-            Source.fromFile(file, Global.CHARSET).mkString
+            val source = Source.fromFile(file, Global.CHARSET)
+            val content = source.mkString
+            source.close()
+            content
         }
         else {
             val resource = ResourceFile.open(path)
@@ -31,7 +34,10 @@ class SourceFile(val path: String) {
             }
             else if (path.toLowerCase.endsWith(".html") || path.toLowerCase.endsWith(".htm")) {
                 //可能是邮件模板
-                Source.fromFile(s"%EMAIL_TEMPLATES_PATH$path".toPath, Global.CHARSET).mkString
+                val source = Source.fromFile(s"%EMAIL_TEMPLATES_PATH$path".toPath, Global.CHARSET)
+                val content = source.mkString
+                source.close()
+                content
             }
             else {
                 throw new FileNotFoundException(s"File or Resource file $path doesn't exists.")

@@ -10,6 +10,7 @@ import io.qross.fql.Fragment
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 import io.qross.security.{Base64, MD5}
+import io.qross.setting.Global
 import io.qross.time.ChronExp
 import io.qross.time.TimeSpan._
 
@@ -184,18 +185,34 @@ object Sharp {
 
     def PLUS(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (arg.isInteger) {
-                DataCell(data.asDateTime.plusMillis(arg.asInteger), DataType.DATETIME)
+            //integer
+            if (data.isInteger) {
+                if (arg.isInteger) {
+                    DataCell(data.asInteger(0) + arg.asInteger(0), DataType.INTEGER)
+                }
+                else {
+                    DataCell(data.asInteger(0) + arg.asDecimal(0), DataType.DECIMAL)
+                }
             }
+            //decimal
+            else if (data.isDecimal) {
+                DataCell(data.asDecimal(0) + arg.asDecimal(0), DataType.DECIMAL)
+            }
+            //datetime
             else {
-                $DATETIME_UNITS.findFirstMatchIn(arg.asText) match {
-                    case Some(m) => data.asDateTime.plus(m.group(1), m.group(2).toInt).toDataCell(DataType.DATETIME)
-                    case None => throw SharpLinkArgumentException.occur("MINUS", origin)
+                if (arg.isInteger) {
+                    DataCell(data.asDateTime.plusMillis(arg.asInteger), DataType.DATETIME)
+                }
+                else {
+                    $DATETIME_UNITS.findFirstMatchIn(arg.asText) match {
+                        case Some(m) => data.asDateTime.plus(m.group(1), m.group(2).toInt).toDataCell(DataType.DATETIME)
+                        case None => throw SharpLinkArgumentException.occur("PLUS", origin)
+                    }
                 }
             }
         }
         else {
-            throw SharpLinkArgumentException.occur("MINUS", origin)
+            throw SharpLinkArgumentException.occur("PLUS", origin)
         }
     }
 
@@ -282,13 +299,26 @@ object Sharp {
 
     def MINUS(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (arg.isInteger) {
-                DataCell(data.asDateTime.minusMillis(arg.asInteger), DataType.DATETIME)
+            if (data.isInteger) {
+                if (arg.isInteger) {
+                    DataCell(data.asInteger(0) - arg.asInteger(0), DataType.INTEGER)
+                }
+                else {
+                    DataCell(data.asInteger(0) - arg.asDecimal(0), DataType.DECIMAL)
+                }
+            }
+            else if (data.isDecimal) {
+                DataCell(data.asDecimal(0) - arg.asDecimal(0), DataType.DECIMAL)
             }
             else {
-                $DATETIME_UNITS.findFirstMatchIn(arg.asText) match {
-                    case Some(m) => data.asDateTime.minus(m.group(1), m.group(2).toInt).toDataCell(DataType.DATETIME)
-                    case None => throw SharpLinkArgumentException.occur("MINUS", origin)
+                if (arg.isInteger) {
+                    DataCell(data.asDateTime.minusMillis(arg.asInteger), DataType.DATETIME)
+                }
+                else {
+                    $DATETIME_UNITS.findFirstMatchIn(arg.asText) match {
+                        case Some(m) => data.asDateTime.minus(m.group(1), m.group(2).toInt).toDataCell(DataType.DATETIME)
+                        case None => throw SharpLinkArgumentException.occur("MINUS", origin)
+                    }
                 }
             }
         }
@@ -620,6 +650,15 @@ object Sharp {
 
     def TO$DAYS(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asInteger.toDays.toDataCell(DataType.DECIMAL)
+    }
+
+    def TO$TIMESPAN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asInteger.toTimeSpan(arg.asText).toDataCell(DataType.TEXT)
+        }
+        else {
+            data.asInteger.toTimeSpan().toDataCell(DataType.TEXT)
+        }
     }
 
     /* ---------- 字符串处理 ---------- */
@@ -1106,6 +1145,24 @@ object Sharp {
         }
     }
 
+    def URL$ENCODE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            java.net.URLEncoder.encode(data.asText, arg.asText).toDataCell(DataType.TEXT)
+        }
+        else {
+            java.net.URLEncoder.encode(data.asText, Global.CHARSET).toDataCell(DataType.TEXT)
+        }
+    }
+
+    def URL$DECODE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            java.net.URLDecoder.decode(data.asText, arg.asText).toDataCell(DataType.TEXT)
+        }
+        else {
+            java.net.URLDecoder.decode(data.asText, Global.CHARSET).toDataCell(DataType.TEXT)
+        }
+    }
+
     /* ---------- 正则表达式 ---------- */
 
     def TEST(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -1185,6 +1242,53 @@ object Sharp {
 
     def TO$CAPACITY(data: DataCell, arg: DataCell, origin: String): DataCell = {
         data.asInteger(0).toHumanized.toDataCell(DataType.TEXT)
+    }
+
+    def ABS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isInteger) {
+            DataCell(data.asInteger(0).abs, DataType.INTEGER)
+        }
+        else {
+            DataCell(data.asDecimal(0).abs, DataType.DECIMAL)
+        }
+    }
+
+    def MULTIPLY(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.isInteger) {
+                if (arg.isInteger) {
+                    DataCell(data.asInteger(0) * arg.asInteger(0), DataType.INTEGER)
+                }
+                else {
+                    DataCell(data.asInteger(0) * arg.asDecimal(0), DataType.DECIMAL)
+                }
+            }
+            else {
+                DataCell(data.asDecimal(0) * arg.asDecimal(0), DataType.DECIMAL)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("MULTIPLY", origin)
+        }
+    }
+
+    def DIVIDE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (data.isInteger) {
+                if (arg.isInteger) {
+                    DataCell(data.asInteger(0) / arg.asInteger(0), DataType.INTEGER)
+                }
+                else {
+                    DataCell(data.asInteger(0) / arg.asDecimal(0), DataType.DECIMAL)
+                }
+            }
+            else {
+                DataCell(data.asDecimal(0) / arg.asDecimal(0), DataType.DECIMAL)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("DIVIDE", origin)
+        }
     }
 
     /* ---------- 判断操作 ---------- */
@@ -1594,8 +1698,7 @@ object Sharp {
     //TURN TO COLUMN "a" AND "b"
     //TURN TO COLUMN (a, b)
     //TURN TO COLUMN ["a", "b"]
-    //将来 TURN TO COLUMN a, b
-    def TURN$TO$COLUMN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def TO$TABLE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (data.isRow) {
             if (arg.valid) {
                 val args: List[String] = {
@@ -1606,7 +1709,7 @@ object Sharp {
                         arg.asText.$trim("(", ")").split(",").map(_.removeQuotes()).toList
                     }
                     else {
-                        throw SharpLinkArgumentException.occur("TURN TO COLUMN", origin)
+                        throw SharpLinkArgumentException.occur("TO COLUMNS", origin)
                     }
                 }
 
@@ -1617,15 +1720,35 @@ object Sharp {
                     data.asRow.turnToColumn(args.head, "value").toDataCell(DataType.TABLE)
                 }
                 else {
-                    data.asRow.turnToColumn("field", "value").toDataCell(DataType.TABLE)
+                    data.asRow.turnToColumn("key", "value").toDataCell(DataType.TABLE)
                 }
             }
             else {
-                data.asRow.turnToColumn("field", "value").toDataCell(DataType.TABLE)
+                data.asRow.turnToColumn("key", "value").toDataCell(DataType.TABLE)
             }
         }
+        else if (data.isJavaList) {
+            if (arg.valid) {
+                data.asTable(arg.asText.$trim("(", ")")).toDataCell(DataType.TABLE)
+            }
+            else {
+                data.asTable.toDataCell(DataType.TABLE)
+            }
+        }
+        else if (data.isTable) {
+            data
+        }
         else {
-            throw SharpInapplicableLinkNameException.occur("TURN TO COLUMN", origin)
+            throw SharpInapplicableLinkNameException.occur("TO TABLE", origin)
+        }
+    }
+
+    def TURN$TO$COLUMNS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isRow || data.isJavaList) {
+            TO$TABLE(data: DataCell, arg: DataCell, origin: String)
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("TURN TO COLUMNS", origin)
         }
     }
 
@@ -1674,6 +1797,16 @@ object Sharp {
 
     def LENGTH(data: DataCell, arg: DataCell, origin: String): DataCell = {
         SIZE(data, arg, origin)
+    }
+
+    def COUNT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.dataType match {
+            case DataType.TEXT => data.asText.length
+            case DataType.ARRAY => data.asList.size
+            case DataType.ROW => data.asRow.size
+            case DataType.TABLE => data.asTable.size
+            case _ => throw new SharpInapplicableLinkNameException("Inapplicable data type for link name COUNT. " + origin)
+        }, DataType.INTEGER)
     }
 
     def HEAD(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -1785,6 +1918,15 @@ object Sharp {
         TO$INTEGER(data, arg, origin)
     }
 
+    def TO$DECIMAL(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(data.asDecimal(arg.asDecimal), DataType.DECIMAL)
+        }
+        else {
+            DataCell(data.asDecimal, DataType.DECIMAL)
+        }
+    }
+
     def RANDOM(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (data.isText) {
             data.asText.shuffle(if (arg.valid) arg.asInteger(1).toInt else 1).toDataCell(DataType.TEXT)
@@ -1828,6 +1970,80 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
     // VALUE  v > l
     // VALUE LINK  v = l
     // VALUE LINK ARG  v > l
+
+    def execute(): DataCell = {
+
+        var sentence = " " + expression
+
+        //分组数据即(..)包围的数据如 (1, "2")，去掉空白字符
+        //SET a=1, b = 2, c=3 去掉空白字符
+        //SELECT a, b, c, d 去掉空白字符
+        $ARGS.findAllIn(sentence).foreach(comma => {
+            sentence = sentence.replace(comma, comma.trim())
+        })
+
+        //处理 AS
+        $AS.findAllIn(sentence).foreach(as => {
+            sentence = sentence.replace(as, "##AS##")
+        })
+
+        val links = new mutable.ListBuffer[Link$Argument]()
+
+        val matches = $LINK.findAllIn(sentence).toArray
+
+        //恢复 AS
+        sentence = sentence.replace("##AS##", " AS ")
+
+        for (i <- matches.indices) {
+            if (i == matches.length - 1) {
+                links ++= SharpLink.parse(matches(i), sentence.takeAfter(matches(i)))
+            }
+            else {
+                sentence = sentence.takeAfter(matches(i))
+                links ++= SharpLink.parse(matches(i), sentence.takeBefore(matches(i+1)))
+            }
+        }
+
+        for (i <- links.indices) {
+            if (SharpLink.all.contains(links(i).linkName)) {
+                //必须是等号, 不能用replace方法, 否则变量内容会保存
+                data = Class.forName("io.qross.pql.Sharp")
+                    .getDeclaredMethod(links(i).linkName,
+                        Class.forName("io.qross.core.DataCell"),
+                        Class.forName("io.qross.core.DataCell"),
+                        Class.forName("java.lang.String"))
+                    .invoke(null,
+                        data,
+                        if (i + 1 < links.length &&
+                            (SharpLink.priorities.contains(links(i).linkName) &&
+                                SharpLink.priorities(links(i).linkName).contains(links(i+1).linkName)) //prioritization of execution
+                        ) {
+                            val name = links(i+1).linkName
+                            links(i+1).linkName = "" //mark as executed
+                            Class.forName("io.qross.pql.Sharp")
+                                .getDeclaredMethod(name,
+                                    Class.forName("io.qross.core.DataCell"),
+                                    Class.forName("io.qross.core.DataCell"),
+                                    Class.forName("java.lang.String"))
+                                .invoke(null,
+                                    links(i).solve(),
+                                    links(i+1).solve(),
+                                    links(i+1).originate()
+                                )
+                        }
+                        else {
+                            links(i).solve()
+                        },
+                        links(i).originate()
+                    ).asInstanceOf[DataCell]
+            }
+            else if (links(i).linkName != "") {
+                throw new SharpLinkArgumentException("Wrong link name: " + links(i).originalLinkName)
+            }
+        }
+
+        data
+    }
 
     def execute(PQL: PQL): DataCell = {
 
@@ -2053,6 +2269,37 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
         }
     }
 
+    def solve(): DataCell = {
+        if (argument != "") {
+            if (""",|\sAS\s|^\*$""".r.test(argument)) {
+                //SET或SELECT
+                if (argument.contains("=")) {
+                    val row = new DataRow()
+                    argument
+                        .split(",")
+                        .foreach(item => {
+                            if (item.contains("=")) {
+                                row.set(item.takeBefore("="), item.takeAfter("="))
+                            }
+                            else {
+                                row.set(item, null, DataType.NULL)
+                            }
+                        })
+                    DataCell(row, DataType.ROW)
+                }
+                else {
+                    DataCell(argument.split(",").map(_.removeQuotes()).toList.asJava, DataType.ARRAY)
+                }
+            }
+            else {
+                DataCell(argument.removeQuotes(), DataType.TEXT)
+            }
+        }
+        else {
+            DataCell.NULL
+        }
+    }
+
     def solve(PQL: PQL): DataCell = {
         if (argument != "") {
             if (""",|\sAS\s|^\*$""".r.test(argument)) {
@@ -2082,6 +2329,11 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
         else {
             DataCell.NULL
         }
+    }
+
+    def originate(): String = {
+        originalLinkName
+
     }
 
     def originate(PQL: PQL): String = {

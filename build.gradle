@@ -6,7 +6,7 @@ apply plugin: 'maven'
 apply plugin: "com.github.johnrengelman.shadow"
 
 group = 'io.qross'
-version = '0.6.2-43-2-SNAPSHOT'
+version = '0.6.2-14-RELEASE'
 
 sourceCompatibility = 1.8
 archivesBaseName = "qross-pql"
@@ -61,23 +61,25 @@ dependencies {
     compile group: 'javax.servlet', name: 'javax.servlet-api', version: '4.0.1'
     implementation group: 'org.springframework', name: 'spring-web', version: '5.1.5.RELEASE'
     implementation group: 'org.springframework', name: 'spring-webmvc', version: '5.1.5.RELEASE'
+
+    compile group: 'redis.clients', name: 'jedis', version: '3.3.0'
 }
 
 //打包上传
 uploadArchives {
     repositories {
         mavenDeployer {
-             repository(url: "https://repo.rdc.aliyun.com/repository/75742-snapshot-Xkjz8l/") {
-                authentication(userName: 'zRjGml', password: 'aqGluc43el')
-            }
-//            repository(url: "https://repo.rdc.aliyun.com/repository/75742-release-biEMxs/") {
+//             repository(url: "https://repo.rdc.aliyun.com/repository/75742-snapshot-Xkjz8l/") {
 //                authentication(userName: 'zRjGml', password: 'aqGluc43el')
 //            }
+            repository(url: "https://repo.rdc.aliyun.com/repository/75742-release-biEMxs/") {
+                authentication(userName: 'zRjGml', password: 'aqGluc43el')
+            }
             //构造项目的Pom文件
             pom.project {
                 name = project.name
                 packaging = 'jar'
-                description = 'Qross PQL and development toolkit v0.6.1'
+                description = 'Qross PQL and development toolkit v0.6.2'
             }
         }
     }

@@ -41,7 +41,7 @@ class INVOKE(sentence: String) {
                         .split(",")
                         .map(_.trim)
                         .map(item => {
-                            var arg = item.$restore(PQL)
+                            var arg = item.$restore(PQL, "\"")
                             var dataType = ""
                             $BLANK.findFirstIn(arg) match {
                                 case Some(blank) =>

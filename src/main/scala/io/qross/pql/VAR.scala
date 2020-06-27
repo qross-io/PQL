@@ -64,15 +64,15 @@ class VAR(val assignments: String) {
                 }
                 else if ($PARSE.test(value)) {
                     new PARSE(value).doParse(PQL)
-                }
-                else if ($INSERT$INTO.test(value)) {
-                    new INSERT(value).insert(PQL)
-                }
-                else if ($DELETE.test(value)) {
-                    new DELETE(value).delete(PQL)
-                }
+                }//
                 else if ($NON$QUERY.test(value)) {
                     DataCell(PQL.dh.executeNonQuery(value.$restore(PQL)), DataType.INTEGER)
+                }
+                else if ($FILE.test(value)) {
+                    DataCell(new FILE(value).evaluate(PQL))
+                }
+                else if ($DIR.test(value)) {
+                    DataCell(new DIR(value).evaluate(PQL))
                 }
                 else {
                     new Sharp(value.$clean(PQL)).execute(PQL)

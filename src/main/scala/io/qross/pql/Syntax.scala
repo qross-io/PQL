@@ -88,9 +88,30 @@ object Syntax {
             PARSE  [path]  AS VALUE;
             PARSE  [path]  AS SINGLE VALUE;
 
-            SELECT  *  FROM [tableName]  SEEK [cursor]  WHERE |condition|  LIMIT m,n;
             INSERT  INTO [sheetName]  ROW [startRow]  (A, B, C, ...)  VALUES (value1, value2, ...), (value1, value2, ...);
             DROP  SHEET [sheetName];
+            
+            FILE  [filePath];
+            FILE  DELETE [filePath];
+            FILE  MOVE [filePath]  TO [newPath];
+            FILE  RENAME [filePath]  TO [newPath];
+            FILE  COPY [filePath]  TO [newPath];
+            FILE  MAKE [filePath];
+            FILE  LENGTH [filePath];
+            FILE  SIZE [filePath];
+            FILE  LIST [path];
+
+            DIR  [path];
+            DIR  LIST [path];
+            DIR  DELETE [path];
+            DIR  MOVE [path]  TO [path];
+            DIR  RENAME [filePath]  TO [newPath];
+            DIR  COPY [path]  TO [path];
+            DIR  MAKE [path];
+            DIR  LENGTH [path];
+            DIR  SPACE [path];
+            DIR  SIZE [path];
+            DIR  CAPACITY [path];
         """
 
 //    --UPDATE  SHEET [sheetName]  SET &field1=value1,field2=value2,...&  WHERE |conditions|;

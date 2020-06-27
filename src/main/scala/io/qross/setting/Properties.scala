@@ -78,6 +78,8 @@ object Properties {
         props.setProperty(key, value)
     }
 
+    def keys: Array[java.lang.Object] = props.keySet().toArray
+
     def loadLocalFile(path: String): Unit = {
         val file = new File(path)
         if (file.exists()) {
@@ -125,8 +127,13 @@ object Properties {
     def loadSiblingFile(fileName: String): Unit = {
         loadLocalFile{
             val sameDir = BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath
+            //spring boot - Master
             if (sameDir.contains(".jar!")) {
                 sameDir.takeAfter("file:").takeBefore(".jar!").takeBeforeLast("/") + "/" + fileName
+            }
+            //一般jar包 - Keeper
+            else if (sameDir.endsWith(".jar")) {
+                sameDir.takeBeforeLast("/") + "/" + fileName
             }
             else {
                 sameDir.takeBefore("/classes") + "/" + fileName

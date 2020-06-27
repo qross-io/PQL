@@ -367,8 +367,8 @@ object TypeExt {
 
         def initCap: String = string.take(1).toUpperCase + string.substring(1)
 
-        def preventInjection: String = string.replace("'", "''").replace("\\", "\\\\")
-        def preventInjectionOfDoubleQuote: String = string.replace("\"", "\"\"").replace("\\", "\\\\")
+        def preventInjection: String = string.replace("'", "~u0027~u0027").replace("\\", "\\\\")
+        def preventInjectionOfDoubleQuote: String = string.replace("\"", "~u0022~u0022").replace("\\", "\\\\")
 
         def isJsRegex: Boolean = string.startsWith("/") && string.indexOf("/") < string.lastIndexOf("/") && "/[ig]*$".r.test(string)
 
@@ -564,6 +564,7 @@ object TypeExt {
     //for Sharp Expression
     implicit class AnyExt(any: Any) {
 
+        //打印并返回该对象
         def print[T]: T = {
             println(any)
             any.asInstanceOf[T]
@@ -719,6 +720,11 @@ object TypeExt {
                 case l: Long => l > 0l
                 case f: Float => f > 0f
                 case d: Double => d > 0d
+                case cell: DataCell => cell.asBoolean(false)
+                case dt: DataTable => dt.nonEmpty
+                case row: DataRow => row.nonEmpty
+                case JavaList(list) => !list.isEmpty
+                case null => false
                 case _ => throw new ConvertFailureException("Can't recognize as or convert to Boolean: " + any)
             }
         }

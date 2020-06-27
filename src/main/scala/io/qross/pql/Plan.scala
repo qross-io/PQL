@@ -103,13 +103,13 @@ class Plan {
 
     def setArgs(phrase: String, alternativePhrase: String = ""): Map[String, String] = {
         val args = get(phrase, alternativePhrase).getOrElse("")
-        if (args.contains("&")) {
-            args.removeQuotes().$split()
-        }
-        else {
+        if (args.contains(Plan.joint)) {
             args.split(Plan.joint).filter(_.contains("=")).map(pair => {
                 (pair.takeBefore("="), pair.takeAfter("=").removeQuotes())
             }).toMap
+        }
+        else {
+            args.removeQuotes().$split()
         }
     }
 

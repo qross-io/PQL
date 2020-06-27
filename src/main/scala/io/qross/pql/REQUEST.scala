@@ -26,7 +26,7 @@ class REQUEST(private val sentence: String) {
 
         plan.head match {
             case "JSON API" =>
-                val url = plan.headArgs
+                val url = plan.headArgs.replace(" ", "%20")
                 val method = plan.get("METHOD", "USE METHOD").getOrElse("GET").removeQuotes().toUpperCase()
                 val data = plan.oneArgs("DATA", "SEND DATA")
                 val header = plan.mapArgs("HEADER", "SET HEADER")

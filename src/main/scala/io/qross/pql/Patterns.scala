@@ -43,19 +43,18 @@ object Patterns {
     val IN$$: Regex = """(?i)\sIN\s*\([^\(\)]*\)""".r  // IN (...)
 
     val STATEMENTS: Set[String] = Set[String]("IF", "ELSIF", "ELSE", "FOR", "WHILE", "CALL", "CASE", "WHEN")
-    val NON_QUERY_CAPTIONS: Set[String] = Set[String]("UPDATE", "REPLACE", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT")
+    val NON_QUERY_CAPTIONS: Set[String] = Set[String]("INSERT", "UPDATE", "DELETE", "REPLACE", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT")
     val $INSERT$INTO: Regex = """(?i)^INSERT\s+INTO\s""".r
-    val $VALUES: Regex = """(?i)\bVALUES\b""".r
+    //val $DELETE: Regex = """(?i)^DELETE\s""".r
+    //val $VALUES: Regex = """(?i)\bVALUES\b""".r
     val $SELECT: Regex = """(?i)^SELECT\s""".r
-    val $DELETE: Regex = """(?i)^DELETE\s""".r
-    val $DELETE$FILE: Regex = """(?i)^DELETE\s+FILE\s""".r
     val $NON$QUERY: Regex = s"(?i)^(${NON_QUERY_CAPTIONS.mkString("|")})\\s".r
 
     //自定义SQL语句
     val $NONE$QUERY$CUSTOM: Regex = """(?i)^(INSERT\s+INTO|UPDATE|DELETE|DELETE\s+FROM)\s+(\S+?:|:|\$|@)\S+\s""".r
     val $SELECT$CUSTOM: Regex = """(?)\b(FROM|JOIN)\s+(\S+?:|:|\$|@)\S+(\s|$)""".r
 
-    val $FOR: Regex = """(?i)^FOR\s+([\s\S]+?)\s+IN\s+([\s\S]+?)\s+LOOP(\s|$)""".r
+    val $FOR: Regex = """(?i)^FOR\s+([\s\S]+?)\s+(IN|OF)\s+([\s\S]+?)\s+LOOP(\s|$)""".r
     val $EXIT: Regex = """(?i)^EXIT(\s+WHEN\s([\s\S]+))?$""".r
     val $EXIT$CODE: Regex = """(?i)^EXIT\s+(CODE|PROCEDURE)(\s|$)""".r
     val $CONTINUE: Regex = """(?i)^CONTINUE(\s+WHEN\s([\s\S]+))?$""".r
@@ -85,6 +84,9 @@ object Patterns {
     val $SEND: Regex = """(?i)^SEND\s+""".r
     val $PARSE: Regex = """(?i)^PARSE\s""".r
     val $INVOKE: Regex = """(?i)^INVOKE\s""".r
+    
+    val $FILE: Regex = """(?i)^FILE\s""".r
+    val $DIR: Regex = """(?i)^DIR\s""".r
 
     val $LINK: Regex = """(?i)\s[A-Z][A-Z]+(\s+[A-Z][A-Z\d]+)*(\s|$)""".r
     val $ARGS: Regex = """\s+[,=]\s+|\s+[,=\)]|[,=\(]\s+""".r

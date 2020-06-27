@@ -2,8 +2,10 @@ package io.qross.fs
 
 import java.io.File
 
+import io.qross.core.{DataRow, DataType}
 import io.qross.ext.TypeExt._
 import io.qross.setting.Global
+import io.qross.time.DateTime
 
 object Path {
 
@@ -26,22 +28,11 @@ object Path {
         }
 
         def isDir: Boolean = {
-            """(?i)^([a-z]+:/|/)?([a-z0-9$_-]/)*""".r.test(path.toDir)
+            val dir = new File(path.toPath)
+            dir.exists() && dir.isDirectory
         }
 
-        def isFile: Boolean = {
-            val full = path.toPath
-            if (full.contains("/")) {
-                val p = full.takeBeforeLast("/") + "/"
-                val f = full.takeAfterLast("/")
-                p.isDir && f.isFile
-            }
-            else {
-                """^[a-zA-Z0-9\$_-]+\.[a-z0-9]+$""".r.test(full)
-            }
-        }
-
-        def isFileExists: Boolean = {
+        def fileExists: Boolean = {
             new File(path.locate()).exists()
         }
 
@@ -89,6 +80,75 @@ object Path {
             else {
                 false
             }
+        }
+
+        def fileLength(): Long = {
+            val file = new File(path.locate())
+            if (file.exists() && file.isFile) {
+                file.length()
+            }
+            else {
+                -1
+            }
+        }
+
+        def makeFile(): Boolean = {
+            val file = new File(path.locate())
+            if (file.exists()) {
+                false
+            }
+            else {
+                file.createNewFile()
+            }
+        }
+
+        def fileInfo: DataRow = {
+            new File(path.locate()).info
+        }
+
+        def dirInfo: DataRow = {
+            new File(path).info
+        }
+    }
+
+    implicit class PathFileExt(path: File) {
+        def info: DataRow = {
+            val info = new DataRow()
+            if (path.exists()) {
+                val fileName = path.getName
+                info.set("path", path.getAbsolutePath)
+                info.set("exists", true, DataType.BOOLEAN)
+                info.set("name", fileName, DataType.TEXT)
+                info.set("extension",
+                        if (path.isFile) {
+                            if (fileName.contains(".")) fileName.takeAfter(".").toLowerCase() else ""
+                        }
+                        else {
+                            "<DIR>"
+                        }, DataType.TEXT)
+                info.set("last_modified", new DateTime(path.lastModified()), DataType.DATETIME)
+                info.set("length",
+                    if (path.isFile) {
+                        path.length()
+                    }
+                    else {
+                        Directory.spaceUsage(path)
+                    }, DataType.INTEGER)
+                info.set("size",
+                    if (path.isFile) {
+                        path.length()
+                    }
+                    else {
+                        Directory.spaceUsage(path)
+                    }.toHumanized, DataType.TEXT)
+                info.set("parent", path.getParent, DataType.TEXT)
+            }
+            else {
+                info.set("path", path.getAbsolutePath)
+                info.set("exists", false, DataType.BOOLEAN)
+            }
+
+            info
         }
     }
 }

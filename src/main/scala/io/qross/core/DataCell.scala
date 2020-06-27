@@ -322,9 +322,22 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         if (valid) {
             this.dataType match {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable]
-                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].toTable
+                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].turnToColumn("key", "value")
                 case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]].asScala.toList.toTable()
                 case _ => new DataTable(new DataRow("value" -> this.value))
+            }
+        }
+        else {
+            new DataTable()
+        }
+    }
+    def asTable(fields: String*): DataTable = {
+        if (valid) {
+            this.dataType match {
+                case DataType.TABLE => this.value.asInstanceOf[DataTable]
+                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].turnToColumn(if (fields.nonEmpty) fields.head else "key", if (fields.length > 1) fields(1) else "value")
+                case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]].asScala.toList.toTable(if (fields.nonEmpty) fields.head else "item")
+                case _ => new DataTable(new DataRow((if (fields.nonEmpty) fields.head else "value") -> this.value))
             }
         }
         else {

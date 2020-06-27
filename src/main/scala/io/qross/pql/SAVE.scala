@@ -42,7 +42,7 @@ class SAVE(val action: String, val sentence: String) {
                 }
             case "CSV FILE" | "NEW CSV FILE" =>
                 val file = plan.headArgs
-                if (file.isFile) {
+                if (file != "") {
                     if (plan.head.startsWith("NEW ") || action == "AS") {
                         PQL.dh.saveAsCsvFile(file)
                     }
@@ -62,7 +62,7 @@ class SAVE(val action: String, val sentence: String) {
                     PQL.dh.write()
                 }
                 else {
-                    throw new SQLParseException("Incorrect csv file name or path at SAVE sentence: " + file)
+                    throw new SQLParseException("Empty CSV file name at SAVE sentence.")
                 }
             case "CSV STREAM FILE" =>
                 val file = plan.headArgs
@@ -80,11 +80,11 @@ class SAVE(val action: String, val sentence: String) {
                     PQL.dh.write()
                 }
                 else {
-                    throw new SQLParseException("Empty csv stream file name at SAVE sentence.")
+                    throw new SQLParseException("Empty CSV stream file name at SAVE sentence.")
                 }
             case "TXT FILE" | "NEW TXT FILE" =>
                 val file = plan.headArgs
-                if (file.isFile) {
+                if (file != "") {
                     if (plan.head.startsWith("NEW ") || action == "AS") {
                         PQL.dh.saveAsTextFile(file)
                     }
@@ -109,7 +109,7 @@ class SAVE(val action: String, val sentence: String) {
                     PQL.dh.write()
                 }
                 else {
-                    throw new SQLParseException("Incorrect text file name or path at SAVE sentence: " + file)
+                    throw new SQLParseException("Empty TXT file name or path at SAVE sentence: " + file)
                 }
             case "STREAM FILE" | "TXT STREAM FILE" =>
                 val file = plan.headArgs
@@ -136,7 +136,7 @@ class SAVE(val action: String, val sentence: String) {
                 }
             case "JSON FILE" | "NEW JSON FILE" =>
                 val file = plan.headArgs
-                if (file.isFile) {
+                if (file != "") {
                     if (plan.head.startsWith("NEW ") || action == "AS") {
                         PQL.dh.saveAsJsonFile(file)
                     }
@@ -146,7 +146,7 @@ class SAVE(val action: String, val sentence: String) {
                     PQL.dh.write()
                 }
                 else {
-                    throw new SQLParseException("Incorrect json file name or path at SAVE sentence: " + file)
+                    throw new SQLParseException("Empty JSON file name or path at SAVE sentence: " + file)
                 }
             case "JSON STREAM FILE" =>
                 val file = plan.headArgs
@@ -158,7 +158,7 @@ class SAVE(val action: String, val sentence: String) {
                 }
             case "EXCEL" | "NEW EXCEL" =>
                 val file = plan.headArgs
-                if (file.isFile) {
+                if (file != "") {
                     if (plan.head.startsWith("NEW ") || action == "AS") {
                         PQL.dh.saveAsExcel(file)
                     }
@@ -166,10 +166,16 @@ class SAVE(val action: String, val sentence: String) {
                         PQL.dh.saveToExcel(file)
                     }.useTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
                 }
+                else {
+                    throw new SQLParseException("Empty Excel file name at SAVE sentence.")
+                }
             case "EXCEL STREAM FILE" =>
-                val fileName = plan.headArgs
-                if (fileName != "") {
-                    PQL.dh.saveAsStreamExcel(fileName).useTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
+                val file = plan.headArgs
+                if (file != "") {
+                    PQL.dh.saveAsStreamExcel(file).useTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
+                }
+                else {
+                    throw new SQLParseException("Empty Excel stream file name at SAVE sentence.")
                 }
             case "DEFAULT" =>
                 PQL.dh.saveToDefault()

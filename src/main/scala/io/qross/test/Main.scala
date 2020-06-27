@@ -103,8 +103,14 @@ object Main {
             "filter" -> ""
         ).run().print */
 
+
         //PQL.openEmbeddedFile("/sql/manual.html").place("jobId=595").set("jobId=595").run().print
-        PQL.openFile("/sql/date.sql").place("position=0&date=2020-06-01&hour=00&min=&max=").run().print
+        PQL.openFile("/sql/date.sql").place("date=2020-05-12").run().print
+        //PQL.openFile("""C:\io.Qross\Keeper\src\main\resources\pql/keeper_clean.sql""").place("date=2020-06-23&hour=15").run()
+
+        //Directory.list("c:/io.qross/coding").foreach(println)
+
+        //new Sharp("FORMAT yyyy", DataCell(DateTime.now, DataType.DATETIME)).execute().value.print
 
         //val reader = new TextFile("f:/547.csv", TextFile.CSV)
         //reader.bracketedBy("\"", "\"").limit(10, 1).skipLines(1).execute()
@@ -165,9 +171,5 @@ object Main {
         //val row = new DataRow()
         //println(DataType.ofClassName(row.getClass.getName))
 
-    }
-
-    def get[T]: T = {
-        new DateTime().asInstanceOf[T]
     }
 }

@@ -486,8 +486,8 @@ object Solver {
                     .replace("~u002f", "/")
                     .replace("~u0028", "(")
                     .replace("~u0029", ")")
-                    //.replace("~u0022", "\"")
-                    //.replace("~u0027", "'")
+                    .replace("~u0022", "\"")
+                    .replace("~u0027", "'")
         }
 
         //解析表达式中的变量
@@ -748,8 +748,8 @@ object Solver {
                         caption match {
                             case "SELECT" => new SELECT(query).select(PQL, express = true)
                             case "PARSE" => new PARSE(query).doParse(PQL, express = true)
-                            case "INSERT" => new INSERT(query).insert(PQL, express = true)
-                            case "DELETE" => new DELETE(query).delete(PQL, express = true)
+//                            case "INSERT" => new INSERT(query).insert(PQL, express = true)
+//                            case "DELETE" => new DELETE(query).delete(PQL, express = true)
                             case _ => DataCell(PQL.dh.executeNonQuery(query), DataType.INTEGER)
                         }))
                 })

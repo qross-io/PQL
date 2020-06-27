@@ -63,7 +63,7 @@ object GlobalVariable {
 //    }
 
     //更新用户变量
-    def set(name: String, value: Any, username: String, role: String): Unit = {
+    def set(name: String, value: Any, userid: Int, role: String): Unit = {
 
         if (Patterns.GLOBAL_VARIABLES.contains(name)) {
             throw new SQLExecuteException("Can't update process variable. This variable is readonly.")
@@ -72,24 +72,19 @@ object GlobalVariable {
             throw new SQLExecuteException(s"$name is a global function.")
         }
         else if (SYSTEM.contains(name) || Configurations.contains(name)) {
-            if (role == "master") {
-                if (SYSTEM.contains(name)) {
-                    SYSTEM.set(name, value)
-                    //更新数据库
-                    DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('SYSTEM', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""", value match {
-                        case _: Int => "INTEGER"
-                        case _: Long => "INTEGER"
-                        case _: Float => "DECIMAL"
-                        case _: Double => "DECIMAL"
-                        case _ => "TEXT"
-                    }, name, value, value)
-                }
-                else if (Configurations.contains(name)) {
-                    Configurations.set(name, value)
-                }
+            if (SYSTEM.contains(name)) {
+                SYSTEM.set(name, value)
+                //更新数据库
+                DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('SYSTEM', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""", value match {
+                    case _: Int => "INTEGER"
+                    case _: Long => "INTEGER"
+                    case _: Float => "DECIMAL"
+                    case _: Double => "DECIMAL"
+                    case _ => "TEXT"
+                }, name, value, value)
             }
-            else {
-                throw new SQLExecuteException(s"Can't update system variable. This variable is readonly for $role.")
+            else if (Configurations.contains(name)) {
+                Configurations.set(name, value)
             }
         }
         else {
@@ -102,7 +97,7 @@ object GlobalVariable {
                     case _: Float => "DECIMAL"
                     case _: Double => "DECIMAL"
                     case _ => "TEXT"
-                }, username, name, value, value)
+                }, userid, name, value, value)
             }
         }
     }
@@ -149,8 +144,6 @@ object GlobalVariableDeclaration {
     def AFFECTED_ROWS_OF_LAST_PUT(PQL: PQL): DataCell = DataCell(PQL.dh.AFFECTED_ROWS_OF_LAST_PUT, DataType.INTEGER)
     def TOTAL_AFFECTED_ROWS_OF_RECENT_PUT(PQL: PQL): DataCell = DataCell(PQL.dh.TOTAL_AFFECTED_ROWS_OF_RECENT_PUT, DataType.INTEGER)
     def AFFECTED_ROWS_OF_LAST_PREP(PQL: PQL): DataCell = DataCell(PQL.dh.AFFECTED_ROWS_OF_LAST_PREP, DataType.INTEGER)
-
-    def BOOL(PQL: PQL): DataCell = DataCell(PQL.BOOL, DataType.BOOLEAN)
 
     def USERID(PQL: PQL): DataCell =  PQL.credential.getCell("userid")
     def USERNAME(PQL: PQL): DataCell = PQL.credential.getCell("username")
