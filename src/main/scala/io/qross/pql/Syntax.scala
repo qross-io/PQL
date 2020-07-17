@@ -6,6 +6,7 @@ import scala.collection.mutable
 import io.qross.pql.Patterns._
 import io.qross.ext.TypeExt._
 import io.qross.fs.TextFile
+import scala.util.control.Breaks._
 
 object Syntax {
 
@@ -300,8 +301,9 @@ case class Syntax(caption: String) {
                         }
                     case Args.Map =>
                         if (sentence.startsWith("{")) {
-                            plan += phrase -> sentence.substring(0, sentence.indexOf("}") + 1).restoreChars(chars)
-                            sentence = sentence.takeAfter("}").trim()
+                            val brace = sentence.indexPairOf('{', '}')._2
+                            plan += phrase -> sentence.substring(0, brace + 1).restoreChars(chars)
+                            sentence = sentence.substring(brace + 1).trim()
                         }
                         else {
                             $BLANK.findFirstIn(sentence) match {

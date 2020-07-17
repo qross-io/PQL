@@ -6,7 +6,7 @@ object CodeCounter {
     }
 
     def count(path: String): Int = {
-        Directory.listFiles(path, recursive = true).map(file => new FileReader(file.getPath). countLines).sum
+        Directory.listFiles(path, recursive = true).map(file => new FileReader(file.getPath).countLines).sum
     }
 
     def main(args: Array[String]): Unit = {

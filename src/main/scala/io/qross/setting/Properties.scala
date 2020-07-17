@@ -33,13 +33,10 @@ object Properties {
     loadSiblingFile("qross.properties")
     //load mybatis config
     loadMyBatisConfigEnvironments()
-    //load config from database table
-    if (containsQross) {
-        loadPropertiesAndConnections()
-    }
+
     //default connection
     if (!contains("jdbc.default") && containsQross) {
-        props.setProperty("jdbc.default", "mysql.qross")
+        props.setProperty("jdbc.default", props.getProperty("mysql.qross"))
     }
 
     def containsQross: Boolean = {
@@ -51,13 +48,7 @@ object Properties {
     }
 
     def get(key: String, defaultValue: String): String = {
-        val value = props.getProperty(key, defaultValue)
-        if (props.containsKey(value)) {
-            props.getProperty(value, defaultValue)
-        }
-        else {
-            value
-        }
+        props.getProperty(key, defaultValue)
     }
 
     def getAllPropertyNames: java.util.Set[String] = {
@@ -65,13 +56,7 @@ object Properties {
     }
 
     def get(key: String): String = {
-        val value = props.getProperty(key)
-        if (props.containsKey(value)) {
-            props.getProperty(value)
-        }
-        else {
-            value
-        }
+        props.getProperty(key)
     }
 
     def set(key: String, value: String): Unit = {
@@ -102,9 +87,6 @@ object Properties {
         if (xml != null) {
             val config = XML.load(xml)
             val default = config \ "environments" \ "@default"
-            if (default.nonEmpty) {
-                Properties.set("jdbc.default", default.toString())
-            }
 
             (config \ "environments" \\ "environment").foreach(environment => {
                 val id = environment \ "@id"
@@ -114,9 +96,10 @@ object Properties {
                         val value = property \ "@value"
                         if (name.nonEmpty && value.nonEmpty && !value.toString().bracketsWith("${", "}")) {
                             Properties.set(s"$id.$name", value.toString())
-                        }
-                        if (name.toString() == "url") {
-                            Properties.set(id.toString(), value.toString())
+
+                            if (default.nonEmpty && default.toString() == id.toString()) {
+                                Properties.set(s"$default.$name", value.toString())
+                            }
                         }
                     })
                 }
@@ -140,26 +123,5 @@ object Properties {
                 //new File(sameDir).getParentFile.getAbsolutePath.replace("\\", "/") + "/" + fileName
             }
         }
-    }
-
-    //加载保存在数据库中的properties文件
-    def loadPropertiesAndConnections(): Unit = {
-        val ds = DataSource.QROSS
-
-        ds.executeDataTable("SELECT * FROM qross_connections WHERE enabled='yes'")
-                        .foreach(row => {
-                            //从数据行新建
-                            JDBC.connections += row.getString("connection_name") -> new JDBC(
-                                row.getString("db_type"),
-                                row.getString("connection_string"),
-                                row.getString("jdbc_driver"),
-                                row.getString("username"),
-                                row.getString("password"),
-                                row.getInt("overtime"),
-                                row.getInt("retry_limit")
-                            )
-                        }).clear()
-
-        ds.close()
     }
 }

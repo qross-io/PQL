@@ -10,16 +10,16 @@ object Patterns {
     val $USER$FUNCTION: Regex = """^FUNCTION\s+\$([a-z0-9_]+)\s*\(([^\)]*)\)\s*BEGIN\s""".r
     val $FUNCTION$ARGUMENT: Regex = """(?i)^\$[a-z0-9]+(\s+[a-z]+)?(\s+DEFAULT\s+.+)?$""".r
 
-    val $IF: Regex = """(?i)^IF\s+([\s\S]+?)\s+THEN(\s|$)""".r
-    val $ELSIF: Regex = """(?i)^ELSIF\s+([\s\S]+?)\s+THEN(\s|$)""".r
-    val $ELSE: Regex = """(?i)^ELSE(\s|$)""".r
+    val $IF: Regex = """(?i)^IF\s+([\s\S]+?)\s+THEN\b""".r
+    val $ELSIF: Regex = """(?i)^ELSIF\s+([\s\S]+?)\s+THEN\b""".r
+    val $ELSE: Regex = """(?i)^ELSE\b""".r
     val $END$IF: Regex = """(?i)^END\s+IF$""".r
 
-    val $WHILE: Pattern = Pattern.compile("""^WHILE\s+([\s\S]+)\s+LOOP(\s|$)""", Pattern.CASE_INSENSITIVE)
+    val $WHILE: Pattern = Pattern.compile("""^WHILE\s+([\s\S]+)\s+LOOP\b""", Pattern.CASE_INSENSITIVE)
     val $END$LOOP: Regex = """(?i)^END\s+LOOP$""".r
 
     val $CASE: Regex = """(?i)^CASE\b""".r
-    val $WHEN: Regex = """(?i)^WHEN\s+([\s\S]+?)\s+THEN(\s|$)""".r
+    val $WHEN: Regex = """(?i)^WHEN\s+([\s\S]+?)\s+THEN\b""".r
     val $END$CASE: Regex = """(?i)^END\s+CASE$""".r
     val $WHEN$: Regex = """(?i)\sWHEN\s""".r
 
@@ -29,7 +29,7 @@ object Patterns {
 
     val $BLANK: Regex = """\s""".r
     val BLANKS: String = """\s+"""
-    val $PHRASE: Regex = """(?i)^\b[a-z]+(\s+[a-z]+)*(\s|$)""".r
+    val $PHRASE: Regex = """(?i)^\b[a-z]+(\s+[a-z]+)*\b""".r
 
     val $BRACKET: Regex = """\(([^\(\)]+?)\)""".r
     val $AND$: Pattern = Pattern.compile("""(^|\sOR\s)(([\s\S]+?)\s+AND\s+([\s\S]+?))($|\sAND|\sOR)""", Pattern.CASE_INSENSITIVE)
@@ -52,11 +52,11 @@ object Patterns {
 
     //自定义SQL语句
     val $NONE$QUERY$CUSTOM: Regex = """(?i)^(INSERT\s+INTO|UPDATE|DELETE|DELETE\s+FROM)\s+(\S+?:|:|\$|@)\S+\s""".r
-    val $SELECT$CUSTOM: Regex = """(?)\b(FROM|JOIN)\s+(\S+?:|:|\$|@)\S+(\s|$)""".r
+    val $SELECT$CUSTOM: Regex = """(?)\b(FROM|JOIN)\s+(\S+?:|:|\$|@)\S+\b""".r
 
-    val $FOR: Regex = """(?i)^FOR\s+([\s\S]+?)\s+(IN|OF)\s+([\s\S]+?)\s+LOOP(\s|$)""".r
+    val $FOR: Regex = """(?i)^FOR\s+([\s\S]+?)\s+(IN|OF)\s+([\s\S]+?)\s+LOOP\b""".r
     val $EXIT: Regex = """(?i)^EXIT(\s+WHEN\s([\s\S]+))?$""".r
-    val $EXIT$CODE: Regex = """(?i)^EXIT\s+(CODE|PROCEDURE)(\s|$)""".r
+    val $EXIT$CODE: Regex = """(?i)^EXIT\s+(CODE|PROCEDURE)\b""".r
     val $CONTINUE: Regex = """(?i)^CONTINUE(\s+WHEN\s([\s\S]+))?$""".r
     val $SET: Regex = """(?i)^SET\s+([\s\S]+?)(:=|=:)([\s\S]+)$""".r
     val $VAR: Regex = """(?i)^VAR\s+\$[a-z0-9_]""".r
@@ -88,16 +88,16 @@ object Patterns {
     val $FILE: Regex = """(?i)^FILE\s""".r
     val $DIR: Regex = """(?i)^DIR\s""".r
 
-    val $LINK: Regex = """(?i)\s[A-Z][A-Z]+(\s+[A-Z][A-Z\d]+)*(\s|$)""".r
+    val $LINK: Regex = """(?i)\s[A-Z][A-Z]+(\s+[A-Z][A-Z\d]+)*\b""".r
     val $ARGS: Regex = """\s+[,=]\s+|\s+[,=\)]|[,=\(]\s+""".r
     val $AS: Regex = """(?i)\s+AS\s+""".r
 
     val $LET: Regex = """(?i)^LET\s+""".r
     val $DEBUG: Regex = """(?i)^DEBUG\s""".r
-    val $ECHO: Regex = """(?i)^ECHO(\s|$)""".r
+    val $ECHO: Regex = """(?i)^ECHO\b""".r
     val $SLEEP: Regex = """(?i)^SLEEP\s""".r
     val $CALL: Regex = """(?i)^CALL\s""".r
-    val $RETURN: Regex = """(?i)^RETURN(\s|$)""".r
+    val $RETURN: Regex = """(?i)^RETURN\b""".r
     val $EXEC: Regex = """(?i)EXEC\s""".r
 
     val $VARIABLE: Regex = """^(\$|@)\(?[A-Za-z0-9_]+\)?$""".r

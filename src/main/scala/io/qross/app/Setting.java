@@ -14,6 +14,7 @@ public class Setting {
     public static String VoyagerExtension = Properties.get("voyager.extension", "html");
     public static String VoyagerConnection = Properties.get("voyager.connection", "jdbc.default");
     public static String VoyagerCharset = Properties.get("voyager.charset", Global.CHARSET());
+    public static String VoyagerLanguage = Properties.get("voyager.language", Global.VOYAGER_LANGUAGE());
 
     public static void handleArguments(String[] args) {
         for (int i = 0; i < args.length; i++) {
@@ -56,6 +57,11 @@ public class Setting {
                 case "--voyager.connection":
                     if (i + 1 < args.length) {
                         VoyagerConnection = args[i+1];
+                    }
+                    break;
+                case "--voyager.language":
+                    if (i + 1 < args.length) {
+                        VoyagerLanguage = args[i+1];
                     }
                     break;
                 case "--voyager.charset":

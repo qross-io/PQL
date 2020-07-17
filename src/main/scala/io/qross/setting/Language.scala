@@ -46,7 +46,7 @@ object Language {
     def name: String = {
         val language = Cookies.get("language")
         if (language == null) {
-            Configurations.getOrProperty("VOYAGER_LANGUAGE", "voyager.language", "english")
+            Global.VOYAGER_LANGUAGE
         }
         else {
             language

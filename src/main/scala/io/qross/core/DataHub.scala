@@ -141,7 +141,7 @@ class DataHub (val defaultConnectionName: String) {
     // ---------- open ----------
 
     private[qross] def openSource(sourceName: String, source: Any): DataHub = {
-        reset()
+        //reset()
         if (!SOURCES.contains(sourceName) && !ALIASES.contains(sourceName.toLowerCase())) {
             this += sourceName -> source
         }
@@ -876,10 +876,6 @@ class DataHub (val defaultConnectionName: String) {
         TABLE.merge(table)
         TOTAL_COUNT_OF_RECENT_GET += TABLE.count()
         COUNT_OF_LAST_GET = TABLE.count()
-
-        if (DEBUG) {
-            TABLE.show(10)
-        }
 
         this
     }

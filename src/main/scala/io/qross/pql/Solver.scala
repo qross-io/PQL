@@ -30,16 +30,14 @@ object Solver {
         """@([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\(?""".r,
         """@([a-zA-Z0-9_]+)\(?""".r
     )
-    val EMBEDDED_VARIABLE: Regex = """(\$|@)\{\s*([a-zA-Z0-9_]+)(.[a-zA-Z0-9_]+)?\s*\}""".r
+    val EMBEDDED_VARIABLE: Regex = """([$@])\{\s*([a-zA-Z0-9_]+)(.[a-zA-Z0-9_]+)?\s*\}""".r
     val USER_DEFINED_FUNCTION: Regex = """$[a-zA-Z_]+\(\)""".r //用户函数, 未完成
     val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\s*\(([^\)]*)\)""".r //系统函数
-    val JS_EXPRESSION: Regex = """\~\{([\s\S]+?)}""".r //js表达式
-    val JS_STATEMENT: Regex = """\~\{\{([\s\S]+?)}}""".r// js语句块
     val SHARP_EXPRESSION: Regex = """(?i)\$\{([^\{\}]+?)\}""".r //Sharp表达式
     val QUERY_EXPRESSION: Regex = """(?i)\$\{\{\s*((SELECT|DELETE|INSERT|UPDATE|PARSE)\s[\s\S]+?)\}\}""".r //查询表达式
 
-    val RICH_CHAR: List[Regex] = List[Regex]("\"\"\"[\\s\\S]*?\"\"\"".r, "'''[\\s\\S]*?'''".r) //富字符串
-    val CHAR$STRING$N: Regex = """~(char|string)\[(\d+)\]""".r  //字符串占位符
+    val RICH_CHAR: List[Regex] = List[Regex]("%rich-string%\"[\\s\\S]*?\"%rich-string%".r, "%rich-string%'[\\s\\S]*?'%rich-string%".r) //富字符串
+    val CHAR$N: Regex = """~char\[(\d+)\]""".r  //字符串占位符
     val TEXT$N: Regex = """~text\[(\d+)\]""".r  //富字符串占位符
     val JSON$N: Regex = """~json\[(\d+)\]""".r  //JSON占位符
     val SHARP$N: Regex = """~sharp\[(\d+)\]""".r  //Sharp表达式
@@ -53,15 +51,15 @@ object Solver {
         //close examination  ( ) [ ] { } <% %>
         def cleanCommentsAndStashConstants(PQL: PQL): String = {
 
-            //internal class
             class Block$Range(val name: String, val start: Int, var end: Int = -1) { }
             class Closing(val char: Char, val index: Int) { }
 
-            sentence = sentence.replace("'''", "%three-single-quotes%")
-                               .replace("\"\"\"", "%three-double-quotes%")
+//            sentence = sentence.replace("'''", "%three-single-quotes%")
+//                               .replace("\"\"\"", "%three-double-quotes%")
 
             val blocks = new mutable.ArrayStack[Block$Range]()
             val closing = new mutable.ArrayStack[Closing]()
+            val length = sentence.length
 
             for (i <- sentence.indices) {
                 val c = sentence.charAt(i)
@@ -94,27 +92,93 @@ object Solver {
                         }
                     //单引号字符串
                     case '\'' =>
-                        if (closing.isEmpty) {
-                            closing += new Closing('\'', i)
-                            blocks += new Block$Range("SINGLE-QUOTE-STRING", i)
+                        //判断顺序这样是为了应对极端情况，如 ''''''
+                        //单引号富字符串第三位，前两个字符都是单引号
+                        if (i > 1 && sentence.charAt(i - 1) == '\'' && sentence.charAt(i - 2) == '\'') {
+                            if (closing.isEmpty) {
+                                if (i == 2 || i > 2 && sentence.charAt(i - 3) != '\'') {
+                                    closing += new Closing('&', i)
+                                    blocks += new Block$Range("SINGLE-RICH-STRING-", i - 2, i + 1)
+                                }
+                            }
+                            else if (closing.head.char == '&' && i >= closing.head.index + 3) {
+                                //单引号富字符串结束 - 必须前两个字符是单引号, 但后面的字符不是单引号, 且索引位置大于开始位置至少3个位置
+                                if (i < length - 1 && sentence.charAt(i + 1) != '\'' || i == length - 1) {
+                                    blocks += new Block$Range("-SINGLE-RICH-STRING", i - 2, i + 1)
+                                    closing.pop()
+                                }
+                            }
                         }
-                        else if (closing.head.char == '\'') {
-                            if (i > 0 && sentence.charAt(i - 1) != '\\') {
-                                blocks.head.end = i + 1
-                                closing.pop()
+                        //单引号富字符串第二位，前后两位是单引号
+                        else if (i > 0 && i + 1 < length && sentence.charAt(i - 1) == '\'' && sentence.charAt(i + 1) == '\'') {
+                            //do nothing
+                        }
+                        //单引号富字符串第一位, 后面两位是单引号
+                        else if (i + 2 < length && sentence.charAt(i + 1) == '\'' && sentence.charAt(i + 2) == '\'') {
+                            //do nothing
+                        }
+                        //单引号字符串
+                        else {
+                            if (closing.isEmpty || closing.head.char == '{') {
+                                closing += new Closing('\'', i)
+                                blocks += new Block$Range("SINGLE-QUOTE-STRING", i)
+                            }
+                            else if (closing.head.char == '\'') {
+                                if (i > 0 && sentence.charAt(i - 1) != '\\') {
+                                    blocks.head.end = i + 1
+                                    closing.pop()
+                                }
                             }
                         }
                     //双引号字符串
                     case '"' =>
-                        if (closing.isEmpty) {
-                            closing += new Closing('"', i)
-                            blocks += new Block$Range("DOUBLE-QUOTE-STRING", i)
-                        }
-                        else if (closing.head.char == '"') {
-                            if (i > 0 && sentence.charAt(i - 1) != '\\') {
-                                blocks.head.end = i + 1
-                                closing.pop()
+                        //双引号富字符串第三位，前两个字符都是双引号
+                        if (i > 1 && sentence.charAt(i - 1) == '"' && sentence.charAt(i - 2) == '"') {
+                            println("rich string third")
+                            if (closing.isEmpty) {
+                                if (i == 2 || i > 2 && sentence.charAt(i - 3) != '"') {
+                                    closing += new Closing('&', i)
+                                    blocks += new Block$Range("DOUBLE-RICH-STRING-", i - 2, i + 1)
+                                }
                             }
+                            else if (closing.head.char == '&' && i >= closing.head.index + 3) {
+                                //双引号富字符串结束 - 必须前两个字符是双引号, 但后面的字符不是双引号, 且索引位置大于开始位置至少3个位置
+                                if (i < length - 1 && sentence.charAt(i + 1) != '"' || i == length - 1) {
+                                    blocks += new Block$Range("-DOUBLE-RICH-STRING", i - 2, i + 1)
+                                    closing.pop()
+                                }
+                            }
+                        }
+                        //双引号富字符串第二位，前后两位是双引号
+                        else if (i > 0 && i + 1 < length && sentence.charAt(i - 1) == '"' && sentence.charAt(i + 1) == '"') {
+                            //do nothing
+                        }
+                        //双引号富字符串第一位, 后面两位是双引号
+                        else if (i + 2 < length && sentence.charAt(i + 1) == '"' && sentence.charAt(i + 2) == '"') {
+                            //do nothing
+                        }
+                        else {
+                            if (closing.isEmpty || closing.head.char == '{') {
+                                closing += new Closing('"', i)
+                                blocks += new Block$Range("DOUBLE-QUOTE-STRING", i)
+                            }
+                            else if (closing.head.char == '"') {
+                                if (i > 0 && sentence.charAt(i - 1) != '\\') {
+                                    blocks.head.end = i + 1
+                                    closing.pop()
+                                }
+                            }
+                        }
+                    case '{' =>
+                        //仅处理在富字符串中的大括号
+                        if (i > 0 && sentence.charAt(i - 1) == '$') {
+                            if (closing.nonEmpty && (closing.head.char == '&' || closing.head.char == '%')) {
+                                closing += new Closing('{', i)
+                            }
+                        }
+                    case '}' =>
+                        if (closing.nonEmpty && closing.head.char == '{') {
+                            closing.pop()
                         }
                     case _ =>
                 }
@@ -126,8 +190,9 @@ object Solver {
                 closing.head.char match {
                     case '-' => blocks.head.end = sentence.length
                     case '*' => throw new SQLParseException("Multi-lines comment isn't closed. " + clip)
-                    case '\'' => throw new SQLParseException("Char isn't closed. " + clip)
-                    case '"' => throw new SQLParseException("String isn't closed. " + clip)
+                    case '\'' | '"' => throw new SQLParseException("String isn't closed. " + clip)
+                    case '&' | '%' => throw new SQLParseException("Rich string isn't closed. " + clip)
+                    case '{' => throw new SQLParseException("Embedded expression isn't closed. " + clip)
                 }
                 closing.pop()
             }
@@ -135,34 +200,31 @@ object Solver {
             blocks.foreach(closed => {
                     val before = sentence.takeBefore(closed.start)
                     val after = sentence.takeAfter(closed.end - 1)
-                    val replacement =  {
-                        if (closed.name == "SINGLE-QUOTE-STRING") {
-                            PQL.chars += sentence.substring(closed.start, closed.end)
-                            "~char[" + (PQL.chars.size - 1) + "]"
-                        }
-                        else if (closed.name == "DOUBLE-QUOTE-STRING") {
-                            PQL.chars += sentence.substring(closed.start, closed.end)
-                            "~string[" + (PQL.chars.size - 1) + "]"
-                        }
-                        else {
-                            ""
+                    val replacement = {
+                        closed.name match {
+                            case "SINGLE-QUOTE-STRING" | "DOUBLE-QUOTE-STRING" =>
+                                PQL.chars += sentence.substring(closed.start, closed.end)
+                                "~char[" + (PQL.chars.size - 1) + "]"
+                            case "SINGLE-RICH-STRING-" => "%rich-string%'"
+                            case "-SINGLE-RICH-STRING" => "'%rich-string%"
+                            case "DOUBLE-RICH-STRING-" => "%rich-string%\""
+                            case "-DOUBLE-RICH-STRING" => "\"%rich-string%"
+                            case _ => ""
                         }
                     }
 
                     sentence = before + replacement + after
                 })
 
-            sentence = sentence.replace("%three-single-quotes%", "'''")
-                               .replace("%three-double-quotes%", "\"\"\"")
-
-            //找出富字符串
+            //处理富字符串
+            //因为富字符串中可能嵌套子字符串，造成解析出错，只能单独解析
             RICH_CHAR.foreach(regex => {
-                regex.findAllIn(sentence)
-                    .foreach(string => {
-                        PQL.strings += string
-                        sentence = sentence.replace(string, "~text[" + (PQL.strings.size - 1) + "]")
-                    })
-            })
+                                regex.findAllIn(sentence)
+                                    .foreach(string => {
+                                        PQL.strings += string
+                                        sentence = sentence.replace(string, "~text[" + (PQL.strings.size - 1) + "]")
+                                    })
+                            })
 
             blocks.clear()
             closing.clear()
@@ -270,7 +332,11 @@ object Solver {
                 }
             }
 
-            val jsons = ranges.map(closed => sentence.substring(closed.start, closed.end))
+            //处理char 160 - 网页端提交的代码很有可能包含这个字符 \u00A0 即 &nbsp;
+            sentence = sentence.replace("\u00A0", " ");
+
+            //提取json常量, 量其中可能包含变量和表达式
+            val jsons = ranges.map(closed => sentence.substring(closed.start, closed.end)).reverse
             for (i <- jsons.indices) {
                 val replacement = "~json[" + PQL.jsons.size + "]"
                 PQL.jsons += jsons(i)
@@ -301,11 +367,13 @@ object Solver {
             sentence
         }
 
+        //恢复Json常量
         def restoreJsons(PQL: PQL): String = {
             breakable {
                 while (true) {
                     JSON$N.findFirstMatchIn(sentence) match {
-                        case Some(m) => sentence = sentence.replace(m.group(0), PQL.jsons(m.group(1).toInt).$clean(PQL))
+                        case Some(m) =>
+                            sentence = sentence.replace(m.group(0), PQL.jsons(m.group(1).toInt)) //.$clean(PQL).popStash(PQL, "\"")
                         case None => break
                     }
                 }
@@ -317,10 +385,10 @@ object Solver {
         //恢复字符串
         def restoreChars(PQL: PQL): String = {
 
-            CHAR$STRING$N
+            CHAR$N
                 .findAllMatchIn(sentence)
                 .foreach(m => {
-                    val i = m.group(2).toInt
+                    val i = m.group(1).toInt
                     if (i < PQL.chars.size) {
                         sentence = sentence.replace(m.group(0), PQL.chars(i))
                     }
@@ -333,23 +401,23 @@ object Solver {
                     if (i < PQL.strings.size) {
                         val string = PQL.strings(i)
                         sentence = sentence.replace(m.group(0),
-                            if (string.startsWith("\"\"\"")) {
-                                string.$trim("\"\"\"")
+                            if (string.startsWith("%rich-string%\"")) {
+                                string.$trim("%rich-string%\"", "\"%rich-string%")
                                     .$restore(PQL, "")
                                     .replace("\\", "\\\\")
                                     .replace("\"", "\\\"")
-                                    .bracket("\"")
                                     .replace("\r", "~u000d")
                                     .replace("\n", "~u000a")
+                                    .bracket("\"")
                             }
-                            else if (string.startsWith("'''")) {
-                                string.$trim("'''")
+                            else if (string.startsWith("%rich-string%'")) {
+                                string.$trim("%rich-string%'", "'%rich-string%")
                                     .$restore(PQL, "")
                                     .replace("\\", "\\\\")
                                     .replace("'", "\\'")
-                                    .bracket("'")
                                     .replace("\r", "~u000d")
                                     .replace("\n", "~u000a")
+                                    .bracket("'")
                             }
                             else {
                                 string
@@ -708,29 +776,6 @@ object Solver {
                     new Sharp(m.group(1)).execute(PQL).ifValid(data => {
                         sentence = sentence.replace(m.group(0), PQL.$stash(data))
                     })
-                })
-
-            sentence
-        }
-
-        //js表达式
-        def replaceJsExpressions(PQL: PQL): String = {
-
-            JS_EXPRESSION
-                .findAllMatchIn(sentence)
-                .foreach(m => {
-                    sentence = sentence.replace(m.group(0), PQL.$stash(m.group(1).popStash(PQL).eval()))
-                })
-
-            sentence
-        }
-
-        //js语句块
-        def replaceJsStatements(PQL: PQL): String = {
-            JS_STATEMENT
-                .findAllMatchIn(sentence)
-                .foreach(m => {
-                    sentence = sentence.replace(m.group(0), PQL.$stash(m.group(1).popStash(PQL).call()))
                 })
 
             sentence

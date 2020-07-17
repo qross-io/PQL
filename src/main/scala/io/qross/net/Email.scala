@@ -418,7 +418,7 @@ class Email(private var title: String) {
     }
     
     def to(recipients: String): Email = {
-        if (recipients != "") {
+        if (recipients != null && recipients != "") {
             this.toRecipients ++= parseRecipients(recipients)
         }
         this
@@ -439,14 +439,19 @@ class Email(private var title: String) {
     }
 
     def send(): String = {
-        if (toRecipients.nonEmpty || ccRecipients.nonEmpty || bccRecipients.nonEmpty) {
-            if (this.content != "") {
-                this.content = PQL.openEmbedded(this.content).setLanguage(language).run().toString
+        if (Global.EMAIL_SENDER_ACCOUNT_AVAILABLED) {
+            if (toRecipients.nonEmpty || ccRecipients.nonEmpty || bccRecipients.nonEmpty) {
+                if (this.content != "") {
+                    this.content = PQL.openEmbedded(this.content).setLanguage(language).run().toString
+                }
+                transfer()
             }
-            transfer()
+            else {
+                "No recipients."
+            }
         }
         else {
-            "No recipients."
+            "Email sender account is not set."
         }
     }
 

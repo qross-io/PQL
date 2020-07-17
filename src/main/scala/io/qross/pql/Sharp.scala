@@ -7,6 +7,7 @@ import io.qross.exception.{SQLExecuteException, SharpInapplicableLinkNameExcepti
 import io.qross.ext.NumberExt._
 import io.qross.ext.TypeExt._
 import io.qross.fql.Fragment
+import io.qross.net.Json
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 import io.qross.security.{Base64, MD5}
@@ -1820,7 +1821,7 @@ object Sharp {
     def GET(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (data.isJavaList) {
-                val index = arg.asInteger.toInt
+                val index = arg.asInteger.toInt - 1
                 val list = data.asList
                 if (index < list.size) {
                     DataCell(list(index))
@@ -1835,6 +1836,35 @@ object Sharp {
                 }
                 else {
                     data.asRow.getCell(arg.asText)
+                }
+            }
+            else if (data.isText) {
+                val text = data.asText.trim()
+                if (text.bracketsWith("{", "}")) {
+                    if (arg.isInteger) {
+                        Json(text).parseRow("/").getCell(arg.asInteger.toInt - 1)
+                    }
+                    else {
+                        Json(text).parseRow("/").getCell(arg.asText)
+                    }
+                }
+                else if (text.bracketsWith("[", "]")) {
+                    val list = Json(text).parseJavaList("/")
+                    if (arg.isInteger) {
+                        val index = arg.asInteger.toInt - 1
+                        if (index  < list.size()) {
+                            DataCell(list.get(index))
+                        }
+                        else {
+                            throw new SharpLinkArgumentException(s"Out of index at GET, index: $index. " + origin)
+                        }
+                    }
+                    else {
+                        throw SharpLinkArgumentException.occur("GET", origin)
+                    }
+                }
+                else {
+                    throw SharpInapplicableLinkNameException.occur("GET", origin)
                 }
             }
             else {
@@ -1900,6 +1930,105 @@ object Sharp {
         }
         else {
             throw SharpLinkArgumentException.occur(s"NOT IN", origin)
+        }
+    }
+
+    /* JSON */
+
+    def FIND(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        val json = data.asJson
+        if (arg.isText) {
+            json.parseTable(arg.asText).toDataCell(DataType.TABLE)
+        }
+        else if (arg.isJavaList) {
+            val list = arg.asJavaList
+            if (!list.isEmpty) {
+                val option = list.get(0).asInstanceOf[String]
+                """(?i)\sAS\s""".r.findFirstIn(option) match {
+                    case Some(as) =>
+                        val path = option.takeBefore(as).trim().removeQuotes()
+                        option.takeAfter(as).trim() match {
+                            case "ROW" => json.parseRow(path).toDataCell(DataType.ROW)
+                            case "ARRAY" => json.parseJavaList(path).toDataCell(DataType.ARRAY)
+                            case "VALUE" => json.parseValue(path)
+                            case _ => json.parseTable(path).toDataCell(DataType.TABLE)
+                        }
+                    case None => json.parseTable(arg.asText).toDataCell(DataType.TABLE)
+                }
+            }
+            else {
+                throw SharpLinkArgumentException.occur(s"FIND", origin)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur(s"FIND", origin)
+        }
+    }
+
+    def AS$TABLE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isTable) {
+            data
+        }
+        else if (data.isText) {
+            List[String](data.asText, "TABLE").asJava.toDataCell(DataType.ARRAY)
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("AS TABLE", origin)
+        }
+    }
+
+    def AS$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isTable) {
+            data.asTable.firstRow match {
+                case Some(row) => DataCell(row, DataType.ROW)
+                case None => DataCell.UNDEFINED
+            }
+        }
+        else if (data.isText) {
+            List[String](data.asText, "ROW").asJava.toDataCell(DataType.ARRAY)
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("AS TABLE", origin)
+        }
+    }
+
+    def AS$ARRAY(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isTable) {
+            data.asTable.firstColumn match {
+                case Some(column) => DataCell(column, DataType.ROW)
+                case None => DataCell.UNDEFINED
+            }
+        }
+        else if (data.isText) {
+            List[String](data.asText, "ARRAY").asJava.toDataCell(DataType.ARRAY)
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("AS ARRAY/LIST", origin)
+        }
+    }
+
+    def AS$LIST(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        AS$ROW(data, arg, origin)
+    }
+
+    def AS$VALUE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isTable) {
+            data.asTable.firstColumn match {
+                case Some(column) =>
+                    if (column.nonEmpty) {
+                        DataCell(column.head)
+                    }
+                    else {
+                        DataCell.UNDEFINED
+                    }
+                case None => DataCell.UNDEFINED
+            }
+        }
+        else if (data.isText) {
+            List[String](data.asText, "VALUE").asJava.toDataCell(DataType.ARRAY)
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("AS ARRAY/LIST", origin)
         }
     }
 
@@ -2169,6 +2298,7 @@ object SharpLink {
             "SUBSTRING" -> Set[String]("TO"),
             "SUBSTR" -> Set[String]("TO"),
             "SPLIT" -> Set[String]("AND"),
+            "BRACKETS$WITH" -> Set[String]("AND"),
             "BRACKET" -> Set[String]("AND"),
             "REPLACE" -> Set[String]("TO"),
             "REPLACE$FIRST" -> Set[String]("TO"),
@@ -2263,9 +2393,11 @@ object SharpLink {
 class Link$Argument(val originalLinkName: String, val originalArgument: String) {
     var linkName: String = SharpLink.format(originalLinkName)
     val argument: String = {
-        originalArgument.trim() match {
-            case "->" | "#" => ""
-            case o => o
+        if (originalArgument.trim().endsWith("->")) {
+            originalArgument.takeBeforeLast("->").trim()
+        }
+        else {
+            originalArgument.trim()
         }
     }
 
@@ -2302,10 +2434,11 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
 
     def solve(PQL: PQL): DataCell = {
         if (argument != "") {
-            if (""",|\sAS\s|^\*$""".r.test(argument)) {
+            if ("""(?i),|\sAS\s|^\*$""".r.test(argument)) {
                 //SET或SELECT
                 if (argument.contains("=")) {
                     val row = new DataRow()
+                    //SET
                     argument
                         .split(",")
                         .foreach(item => {
@@ -2319,7 +2452,18 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
                     DataCell(row, DataType.ROW)
                 }
                 else {
-                    DataCell(argument.split(",").map(item => item.$sharp(PQL)).map(_.value).toList.asJava, DataType.ARRAY)
+                    //SELECT/FIND
+                    DataCell(
+                        argument
+                            .split(",")
+                            .map(item =>
+                                if ("""(?i)\sAS\s""".r.test(item)) {
+                                    item.popStash(PQL)
+                                }
+                                else {
+                                    item.$sharp(PQL).value
+                                }
+                            ).toList.asJava, DataType.ARRAY)
                 }
             }
             else {

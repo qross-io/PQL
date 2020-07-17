@@ -10,22 +10,37 @@ DEBUG ON;
 --SELECT id, project_id, owner  FROM :jobs SEEK 0 LIMIT 5;
 --PRINT @POINTER;
 
-DEBUG ON;
-
-OPEN QROSS;
+SET $applies := SELECT event_applies FROM qross_keeper_custom_events WHERE id=#{id};
+IF $applies != '#{applies}' THEN
+    FOR $apply IN ${ $applies SPLIT ',' } LOOP
+        IF NOT ('#{applies}' CONTAINS $apply) THEN
+            DELETE FROM qross_jobs_events WHERE event_name='''onTask${ $apply INIT CAP }''' AND event_function='CUSTOM_#{id}';
+        END IF;
+    END LOOP;
+END IF;
 
 -- REQUEST JSON API '''http://localhost:7700/task/instant?creator=1&info={"jobId":4,"dag":"","params":"","commands":"","delay":0,"ignoreDepends":"yes"}'''
 --    METHOD 'PUT';
 
+--OPEN QROSS;
+--SET $record_time := '#{record_time}';
+--SET $record_day := '#{record_time}' FORMAT 'yyyyMMdd';
+--SET $record_time := '#{record_time}' FORMAT 'HHmmss';
+--SET $file := @QROSS_HOME + 'tasks/' + $record_day + '/#{job_id}/#{task_id}_' + $record_time + '.log';
+--IF FILE EXISTS $file THEN
+--    OPEN JSON FILE $file AS TABLE 'logs';
+--
+--    GET # SELECT logTime, logType, logText FROM :logs WHERE logType != 'INFO';
+--    SHOW 20;
+--
+--    FOR $time, $type, $text IN (SELECT logTime, logType, logText FROM :logs WHERE logType != 'INFO') LOOP
+--        PRINT $time;
+--        PRINT $type;
+--        PRINT $text;
+--    END LOOP;
+--END IF;
 
-
-PRINT $row;
-PRINT $row.id;
-PRINT $row.name;
-
-
-
---REQUEST JSON API '''https://api-bigdata-staging.zichan360.com/phone/singleCallByTtsOfkeeper?calledShowNumber=01086483133&calledNumber=${ $mobile JOIN ','  }&amp;ttsCode=TTS_169899687&amp;deptNo=0007&amp;token=7f0e43a86e15a20bdff07a160e0b9cc4&amp;cId=9999&amp;name=SingleCallByVoice&amp;jobId=$job_id&amp;jobTitle=$title''';
+-- REQUEST JSON API  '''https://api-bigdata-staging.zichan360.com/phone/singleCallByTtsOfkeeper?calledShowNumber=01086483133&calledNumber=18631675795&ttsCode=TTS_169899687&deptNo=0007&token=7f0e43a86e15a20bdff07a160e0b9cc4&cId=9999&name=SingleCallByVoice&jobId=652&jobTitle=${ "aaa" URL ENCODE }''';
 
 -- OUTPUT # DIR CAPACITY 'c:/io.Qross/Coding';
 

@@ -7,11 +7,15 @@ object Configurations {
 
     private val CONFIG = new DataRow()
 
-    if (JDBC.hasQrossSystem) {
-        DataSource.QROSS.queryDataTable("SELECT conf_key, conf_value FROM qross_conf")
+    load()
+
+    def load(): Unit = {
+        if (JDBC.hasQrossSystem) {
+            DataSource.QROSS.executeDataTable("SELECT conf_key, conf_value FROM qross_conf")
                 .foreach(row => {
                     CONFIG.set(row.getString("conf_key"), row.getString("conf_value"))
                 }).clear()
+        }
     }
 
     def contains(name: String): Boolean = {

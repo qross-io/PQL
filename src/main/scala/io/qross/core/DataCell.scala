@@ -208,7 +208,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
     def isText: Boolean = this.dataType == DataType.TEXT
     def asText: String = this.value.toText
     def asText(defaultValue: Any): String = {
-        if (valid) {
+        if (valid && this.value != null) {
             this.value.toText
         }
         else {

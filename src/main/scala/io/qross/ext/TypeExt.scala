@@ -506,6 +506,30 @@ object TypeExt {
             string
         }
 
+        def indexPairOf(left: Char, right: Char): (Int, Int) = {
+            var s = 0 //stack
+            var l = -1
+            var r = -1
+            breakable {
+                for (i <- string.indices) {
+                    val c = string.charAt(i)
+                    if (c == left) {
+                        s += 1
+                        l = i
+                    }
+                    else if (c == right) {
+                        s -= 1
+                        if (s == 0) {
+                            r = i
+                            break
+                        }
+                    }
+                }
+            }
+
+            (l, r)
+        }
+
         def shuffle(digit: Int = 1): String = {
             val length = string.length
             val sb = new mutable.StringBuilder()

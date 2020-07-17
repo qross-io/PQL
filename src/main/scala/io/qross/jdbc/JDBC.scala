@@ -57,28 +57,15 @@ object JDBC {
             if (Properties.contains(QROSS) || Properties.contains(QROSS + ".url")) {
                 QrossExists = true
             }
-            else {
-                //Output.writeWarning(s"Can't find properties key $QROSS, it must be set in .properties files.")
-            }
         }
 
         if (QrossExists && !QrossConnectable) {
-
             if (!DataSource.QROSS.queryTest()) {
                 Output.writeException(s"Can't open database, please check your connection string of $QROSS.")
             }
             else {
-                var version: String = ""
-                try {
-                    version = DataSource.QROSS.querySingleValue("SELECT conf_value FROM qross_conf WHERE conf_key='QROSS_VERSION'").asText
+                if (DataSource.QROSS.queryExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_conf'")) {
                     QrossConnectable = true
-                }
-                catch {
-                    case e: Exception => e.printStackTrace()
-                }
-
-                if (version == "") {
-                    Output.writeException("Can't find Qross system, please create your Qross system use Qross Master.")
                 }
             }
         }
@@ -191,6 +178,26 @@ object JDBC {
 
     def remove(connectionName: String): Unit = {
         connections.remove(connectionName)
+    }
+
+    //加载保存在数据库中的连接
+    def loadConnections(): Unit = {
+        val ds = DataSource.QROSS
+        ds.executeDataTable("SELECT * FROM qross_connections WHERE db_class='system' AND enabled='yes'")
+            .foreach(row => {
+                //从数据行新建
+                JDBC.connections += row.getString("connection_name") -> new JDBC(
+                    row.getString("db_type"),
+                    row.getString("connection_string"),
+                    row.getString("jdbc_driver"),
+                    row.getString("username"),
+                    row.getString("password"),
+                    row.getInt("overtime"),
+                    row.getInt("retry_limit")
+                )
+            }).clear()
+
+        ds.close()
     }
 }
 

@@ -56,7 +56,7 @@ public class Voyager extends AbstractTemplateView {
             response.setCharacterEncoding(Setting.VoyagerCharset);
 
             Object result =
-                    new PQL("EMBEDDED:" + content, new DataHub(Setting.VoyagerConnection))
+                    new PQL("EMBEDDED:" + content, new DataHub(Properties.contains(Setting.VoyagerConnection) ? Setting.VoyagerConnection : ""))
                         .placeParameters(request.getParameterMap())
                         .setHttpRequest(request)
                         .set(model)

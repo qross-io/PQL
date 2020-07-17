@@ -13,6 +13,8 @@ object Global {
 
     def COMPANY_NAME: String = Configurations.getOrProperty("COMPANY_NAME", "company.name")
 
+    def VOYAGER_LANGUAGE: String = Configurations.getOrProperty("VOYAGER_LANGUAGE", "voyager.language", "english")
+
     def CHARSET: String = Configurations.getOrProperty("CHARSET", "charset").ifNullOrEmpty("UTF-8")
 
     def TIMEZONE: String = Configurations.getOrProperty("TIMEZONE", "timezone").ifNullOrEmpty(ZoneId.systemDefault().toString)
@@ -21,10 +23,10 @@ object Global {
 
     def QROSS_HOME: String = Configurations.getOrProperty("QROSS_HOME", "qross.home").ifNullOrEmpty(USER_HOME).toDir.replace("%USER_HOME", USER_HOME).replace("//", "/")
 
-    def PQL: String = Global.JAVA_BIN_HOME + s"java -jar ${Global.QROSS_HOME}qross-worker-${Global.QROSS_VERSION}.jar "
+    def PQL: String = Global.JAVA_BIN_HOME + s"java -Dfile.encoding=${Global.CHARSET} -jar ${Global.QROSS_HOME}qross-worker-${Global.QROSS_VERSION}.jar "
 
     //PQL和DataHub调试
-    def DEBUG: Boolean = Configurations.getOrProperty("PQL.DEBUG", "pql.debug").toBoolean(false)
+    def DEBUG: Boolean = Configurations.getOrProperty("DEBUG", "pql.debug").toBoolean(false)
 
     def JAVA_BIN_HOME: String = Configurations.getOrProperty("JAVA_BIN_HOME", "java.bin.home")
 
@@ -43,6 +45,8 @@ object Global {
     def EMAIL_SENDER_PASSWORD: String = Configurations.getOrProperty("EMAIL_SENDER_PASSWORD", "email.sender.password")
 
     def EMAIL_SSL_AUTH_ENABLED: Boolean = Configurations.getOrProperty("EMAIL_SSL_AUTH_ENABLED", "email.ssl.auth.enabled").toBoolean(false)
+
+    def EMAIL_SENDER_ACCOUNT_AVAILABLED: Boolean = EMAIL_SMTP_HOST != "" && EMAIL_SMTP_HOST != "smtp.domain.com" && EMAIL_SENDER_ACCOUNT != "" && EMAIL_SENDER_ACCOUNT != "user@domain.com"
 
     def EMAIL_TEMPLATES_PATH: String = Configurations.getOrProperty("EMAIL_TEMPLATES_PATH", "email.templates.path")
 

@@ -1,7 +1,7 @@
 package io.qross.fql
 
 import io.qross.core.{DataHub, DataTable, DataType}
-import io.qross.fs.TextFile
+import io.qross.fs.{FileReader, FileWriter, TextFile}
 import io.qross.pql.{PQL, Syntax}
 import io.qross.ext.TypeExt._
 
@@ -69,7 +69,7 @@ class FQL(dh: DataHub, PQL: PQL) {
         val symbol = from.take(1)
 
         if (symbol == ":") {
-            TABLES(ALIASES(from.drop(1))).asInstanceOf[TextFile].select(SELECT)
+            TABLES(ALIASES(from.drop(1).toLowerCase())).asInstanceOf[TextFile].select(SELECT)
         }
         else {
             new DataTable()
@@ -91,6 +91,8 @@ class FQL(dh: DataHub, PQL: PQL) {
     def close(): Unit = {
         TABLES.values.foreach {
             case file: TextFile => file.close()
+            case reader: FileReader => reader.close()
+            case writer: FileWriter => writer.close()
             case _ =>
         }
     }

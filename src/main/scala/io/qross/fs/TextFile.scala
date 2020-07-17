@@ -73,8 +73,9 @@ object TextFile {
             dh
         }
 
-        def openGzFile(fileNameOrFullPath: String): DataHub = {
-            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.GZ))
+        //暂时未实现
+        def openGzFile(fileNameOrFullPath: String, delimiter: String = ","): DataHub = {
+            dh.FQL.create(fileNameOrFullPath, new FileReader(fileNameOrFullPath, TextFile.GZ, delimiter))
             dh
         }
 
@@ -127,54 +128,54 @@ object TextFile {
         }
 
         def saveAsJsonFile(fileNameOrFullPath: String): DataHub = {
-            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.JSON, TextFile.FILE, true))
+            dh.FQL.create(fileNameOrFullPath, new FileWriter(fileNameOrFullPath, TextFile.JSON, TextFile.FILE, true))
             dh
         }
 
         def saveToJsonFile(fileNameOrFullPath: String): DataHub = {
-            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.JSON, TextFile.FILE, false))
+            dh.FQL.create(fileNameOrFullPath, new FileWriter(fileNameOrFullPath, TextFile.JSON, TextFile.FILE, false))
             dh
         }
 
         def saveAsStreamJsonFile(fileNameOrFullPath: String): DataHub = {
-            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.JSON, TextFile.STREAM))
+            dh.FQL.create(fileNameOrFullPath, new FileWriter(fileNameOrFullPath, TextFile.JSON, TextFile.STREAM))
             dh
         }
 
         def saveAsTextFile(fileNameOrFullPath: String): DataHub = {
-            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.TXT, TextFile.FILE, true))
+            dh.FQL.create(fileNameOrFullPath, new FileWriter(fileNameOrFullPath, TextFile.TXT, TextFile.FILE, true))
             dh
         }
 
         def saveToTextFile(fileNameOrFullPath: String): DataHub = {
-            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.TXT, TextFile.FILE, false))
+            dh.FQL.create(fileNameOrFullPath, new FileWriter(fileNameOrFullPath, TextFile.TXT, TextFile.FILE, false))
             dh
         }
 
         def saveAsStreamFile(fileNameOrFullPath: String): DataHub = {
-            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.TXT, TextFile.STREAM))
+            dh.FQL.create(fileNameOrFullPath, new FileWriter(fileNameOrFullPath, TextFile.TXT, TextFile.STREAM))
             dh
         }
 
         def saveAsCsvFile(fileNameOrFullPath: String): DataHub = {
-            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.CSV, TextFile.FILE, true))
+            dh.FQL.create(fileNameOrFullPath, new FileWriter(fileNameOrFullPath, TextFile.CSV, TextFile.FILE, true))
             dh
         }
 
         def saveToCsvFile(fileNameOrFullPath: String): DataHub = {
-            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.CSV, TextFile.FILE, false))
+            dh.FQL.create(fileNameOrFullPath, new FileWriter(fileNameOrFullPath, TextFile.CSV, TextFile.FILE, false))
             dh
         }
 
         def saveAsStreamCsvFile(fileNameOrFullPath: String): DataHub = {
-            dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.CSV, TextFile.STREAM))
+            dh.FQL.create(fileNameOrFullPath, new FileWriter(fileNameOrFullPath, TextFile.CSV, TextFile.STREAM))
             dh
         }
 
         //适用于saveDestination中的分隔符修改
         def delimit(delimiter: String): DataHub = {
             dh.FQL.getTable match {
-                case file: TextFile => file.writer.delimit(delimiter)
+                case writer: FileWriter => writer.delimit(delimiter)
                 case _ =>
             }
             dh
@@ -221,12 +222,11 @@ object TextFile {
 
         def write(): DataHub = {
             dh.FQL.getTable match {
-                case file: TextFile =>
-                    file.writer.writeTable(dh.getData, dh.pick[Boolean]("WITH_HEADERS").getOrElse(true))
-                    file.writer.close()
+                case writer: FileWriter =>
+                    writer.writeTable(dh.getData, dh.pick[Boolean]("WITH_HEADERS").getOrElse(true))
 
                     if (dh.slots("ZIP")) {
-                        dh.pick[Zip]("ZIP").orNull.addFile(file.writer.file.getAbsolutePath)
+                        dh.pick[Zip]("ZIP").orNull.addFile(writer.file.getAbsolutePath)
                     }
                 case _ => throw new IncorrectDataSourceException("Must use SAVE sentence to save file first.")
             }
@@ -235,11 +235,11 @@ object TextFile {
     }
 }
 
-class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, deleteIfExists: Boolean = false) {
+class TextFile(val fileNameOrPath: String, val format: Int) {
 
     private val file = new File(fileNameOrPath.locate())
+    val exists: Boolean = file.exists()
     private lazy val access = new RandomAccessFile(file, "r") //read
-    private lazy val writer = new FileWriter(file, format, outputType, deleteIfExists) //write
 
     private var row = 0 //行号
     private var skip = 0 //如果是从头读, 略过多少行
@@ -254,15 +254,7 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
     private var SELECT: SELECT = _
 
     def this(fileNameOrPath: String) {
-        this(fileNameOrPath, TextFile.TXT, TextFile.FILE)
-    }
-
-    def this(fileNameOrPath: String, format: Int) {
-        this(fileNameOrPath, format, TextFile.FILE)
-    }
-
-    def this(fileNameOrPath: String, format: Int, deleteIfExists: Boolean) {
-        this(fileNameOrPath, format, TextFile.FILE, deleteIfExists)
+        this(fileNameOrPath, TextFile.TXT)
     }
 
     def withColumns(fields: String*): TextFile = {
@@ -514,8 +506,5 @@ class TextFile(val fileNameOrPath: String, val format: Int, outputType: String, 
 
     def close(): Unit = {
         access.close()
-        if (writer != null) {
-            writer.close()
-        }
     }
 }

@@ -2,6 +2,7 @@ package io.qross.test
 
 import java.io.File
 import java.lang.management.ManagementFactory
+import java.nio.charset.Charset
 import java.sql.DriverManager
 import java.time.{LocalDateTime, ZoneId}
 import java.util.regex.{Matcher, Pattern}
@@ -10,6 +11,7 @@ import java.util.Date
 import io.qross.app.OneApi
 import io.qross.core._
 import io.qross.ext.Console
+import io.qross.ext.Output.writeLineWithSeal
 import io.qross.pql._
 import io.qross.fs._
 import io.qross.jdbc.DataSource
@@ -28,9 +30,10 @@ import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 import io.qross.time.TimeSpan._
 import javax.servlet.http.Cookie
+import scala.collection.JavaConverters._
 
 import scala.util.Random
-
+import io.qross.fs.TextFile._
 
 object Main {
 
@@ -105,8 +108,23 @@ object Main {
 
 
         //PQL.openEmbeddedFile("/sql/manual.html").place("jobId=595").set("jobId=595").run().print
-        PQL.openFile("/sql/date.sql").place("date=2020-05-12").run().print
+        PQL.openFile("/sql/date.sql").place("id=4&applies=ready,failed").run().print
+        //PQL.openFile("/sql/str.sql").place(("jobId=4&taskId=2869&recordTime=2020-07-09 22:25:07&position=0&action=0&mode=all")).set("jobId=4&taskId=2869&recordTime=2020-07-09 22:25:07&position=0&action=0&mode=all").run().print
+
         //PQL.openFile("""C:\io.Qross\Keeper\src\main\resources\pql/keeper_clean.sql""").place("date=2020-06-23&hour=15").run()
+
+
+//        val writer = new FileWriter("c:/Space/test.log", deleteIfExists = true)
+//
+//        writer.writeObjectLine(new NoteLogLine("INFO", "愣住你好世界"))
+//
+//        writer.close()
+
+//        val dh = DataHub.QROSS
+//        dh.get("SELECT id, title FROM qross_jobs")
+//            .saveAsCsvFile("c:/Space/jobs.csv")
+//            .write()
+//        dh.close()
 
         //Directory.list("c:/io.qross/coding").foreach(println)
 
@@ -171,5 +189,11 @@ object Main {
         //val row = new DataRow()
         //println(DataType.ofClassName(row.getClass.getName))
 
+    }
+}
+
+class NoteLogLine(val logType: String = "INFO", var logText: String = "", val logTime: String = DateTime.now.getString("yyyy-MM-dd HH:mm:ss")) {
+    if (logType != "INFO" && logType != "ERROR") {
+        logText = s"$logTime [$logType] $logText"
     }
 }

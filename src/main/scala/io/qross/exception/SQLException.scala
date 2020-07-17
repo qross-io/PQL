@@ -35,3 +35,7 @@ object SharpLinkArgumentException {
 class SharpLinkArgumentException(val s: String) extends RuntimeException(s) {
 
 }
+
+class SharpDataExceptionException(val s: String) extends RuntimeException(s) {
+
+}

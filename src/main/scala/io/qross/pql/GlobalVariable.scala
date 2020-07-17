@@ -12,6 +12,9 @@ import io.qross.fs.TextFile._
 object GlobalVariable {
 
     //除环境全局变量的其他全局变量
+
+    //系统和用户全局变量的存在依赖于进程，静态变量只有在进程启动时才会运行，所以手工更新数据库的值并不会生效
+
     //系统全局变量, 仅作用于当前PQL
     val SYSTEM: DataRow = new DataRow()
     //用户全局变量
@@ -71,33 +74,33 @@ object GlobalVariable {
         else if (FUNCTION_NAMES.contains(name)) {
             throw new SQLExecuteException(s"$name is a global function.")
         }
-        else if (SYSTEM.contains(name) || Configurations.contains(name)) {
-            if (SYSTEM.contains(name)) {
-                SYSTEM.set(name, value)
-                //更新数据库
-                DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('SYSTEM', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""", value match {
-                    case _: Int => "INTEGER"
-                    case _: Long => "INTEGER"
-                    case _: Float => "DECIMAL"
-                    case _: Double => "DECIMAL"
-                    case _ => "TEXT"
-                }, name, value, value)
-            }
-            else if (Configurations.contains(name)) {
-                Configurations.set(name, value)
+        else if (Configurations.contains(name)) {
+            Configurations.set(name, value)
+        }
+        else if (SYSTEM.contains(name)) {
+            SYSTEM.set(name, value)
+            if (JDBC.hasQrossSystem) {
+                DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('SYSTEM', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""",
+                    value match {
+                        case _: Int => "INTEGER"
+                        case _: Long => "INTEGER"
+                        case _: Float => "DECIMAL"
+                        case _: Double => "DECIMAL"
+                        case _ => "TEXT"
+                    }, name, value.toString, value.toString)
             }
         }
         else {
             USER.set(name, value)
-            //更新数据库
             if (JDBC.hasQrossSystem) {
-                DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('USER', ?, ?, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""", value match {
-                    case _: Int => "INTEGER"
-                    case _: Long => "INTEGER"
-                    case _: Float => "DECIMAL"
-                    case _: Double => "DECIMAL"
-                    case _ => "TEXT"
-                }, userid, name, value, value)
+                DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('USER', ?, ?, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""",
+                    value match {
+                        case _: Int => "INTEGER"
+                        case _: Long => "INTEGER"
+                        case _: Float => "DECIMAL"
+                        case _: Double => "DECIMAL"
+                        case _ => "TEXT"
+                    }, userid, name, value.toString, value.toString)
             }
         }
     }

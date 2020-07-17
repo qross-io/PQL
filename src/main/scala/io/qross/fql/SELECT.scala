@@ -75,10 +75,10 @@ class SELECT(statement: String, processing: Boolean) {
                 .split(",")
                 .map(field => {
                     if (field.contains(" AS ")) {
-                        fields += ((field.takeBefore(" AS "), field.takeAfter(" AS ")))
+                        fields += ((field.takeBefore(" AS ").trim(), field.takeAfter(" AS ").trim()))
                     }
                     else {
-                        fields += ((field, field))
+                        fields += ((field.trim(), field.trim()))
                     }
                 })
         case None => throw new SQLParseException("Wrong SELECT sentence: " + sentence)
@@ -231,10 +231,10 @@ class SELECT(statement: String, processing: Boolean) {
             case Some(m) =>
                 sentence = sentence.substring(m.group(0).length - m.group(2).length).trim()
                 phrase = m.group(2).toUpperCase()
-                from = m.group(1)
+                from = m.group(1).trim()
                 $SEEK.findFirstMatchIn(from) match {
                     case Some(n) =>
-                        from = from.takeBefore(n.group(0))
+                        from = from.takeBefore(n.group(0)).trim()
                         seek = n.group(1).trim().toInteger(0)
                     case None =>
                 }

@@ -67,30 +67,33 @@ public class OneApi {
             DataAccess ds = new DataAccess(Setting.OneApiMySQLConnection);
 
             if (!Setting.OneApiServiceName.isEmpty()) {
+                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_in_one'")) {
+                    DataTable APIs = ds.executeDataTable("SELECT * FROM qross_api_in_one WHERE service_name=?", Setting.OneApiServiceName);
+                    for (DataRow API : APIs.getRowList()) {
+                        OneApi api = new OneApi();
+                        api.path = API.getString("path");
+                        api.sentences = API.getString("pql");
+                        api.defaultValue = API.getString("default_value");
 
-                DataTable APIs = ds.executeDataTable("SELECT * FROM qross_api_in_one WHERE service_name=?", Setting.OneApiServiceName);
-                for (DataRow API : APIs.getRowList()) {
-                    OneApi api = new OneApi();
-                    api.path = API.getString("path");
-                    api.sentences = API.getString("pql");
-                    api.defaultValue = API.getString("default_value");
-
-                    if (!ALL.containsKey(api.path)) {
-                        ALL.put(api.path, new LinkedHashMap<>());
+                        if (!ALL.containsKey(api.path)) {
+                            ALL.put(api.path, new LinkedHashMap<>());
+                        }
+                        String[] methods = API.getString("method").toUpperCase().split(",");
+                        for (String method : methods) {
+                            ALL.get(api.path).put(method.trim(), api);
+                        }
                     }
-                    String[] methods = API.getString("method").toUpperCase().split(",");
-                    for (String method : methods) {
-                        ALL.get(api.path).put(method.trim(), api);
-                    }
+                    APIs.clear();
                 }
-                APIs.clear();
             }
 
-            DataTable tokens = ds.executeDataTable("SELECT name, token FROM qross_api_tokens");
-            for (DataRow token : tokens.getRowList()) {
-                TOKENS.put(token.getString("token"), token.getString("name"));
+            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_tokens'")) {
+                DataTable tokens = ds.executeDataTable("SELECT name, token FROM qross_api_tokens");
+                for (DataRow token : tokens.getRowList()) {
+                    TOKENS.put(token.getString("token"), token.getString("name"));
+                }
+                tokens.clear();
             }
-            tokens.clear();
             ds.close();
         }
     }
