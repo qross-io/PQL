@@ -17,25 +17,18 @@ class ConditionGroup(expression: String) {
 
     private val conditions = new ArrayBuffer[Condition]()
 
-    def evalAll(PQL: PQL): Boolean = {
+    //replaced 是否已经提取 inner sentence
+    def evalAll(PQL: PQL, replaced: Boolean = false): Boolean = {
 
         //解析表达式
-        var exp = expression.trim().$clean(PQL)
-
-        //replace SELECT to ~value[n]
-        breakable {
-            while (true) {
-                $SELECT$.findFirstMatchIn(exp) match {
-                    case Some(m) =>
-                        val select = findOutSelect(exp, m.group(0))
-                        exp = exp.replace(select, PQL.$stash(DataCell(
-                            PQL.dh.executeJavaList(select.$trim("(", ")").$restore(PQL)),
-                            DataType.ARRAY
-                        )))
-                    case _ => break
-                }
+        var exp = {
+            if (!replaced) {
+                expression.trim().replaceInnerSentence(PQL) //提取 inner sentence
             }
-        }
+            else {
+                expression.trim()
+            }
+        }.$clean(PQL).replaceInnerSentences(PQL)  //replace ~inner[n] to ~value[n]
 
         //处理IN (), 因为小括号会与条件分组冲突, 即去掉小括号
         IN$$.findAllIn(exp).foreach(in$$ => {
@@ -72,7 +65,7 @@ class ConditionGroup(expression: String) {
                                 PQL.findVariable(field)
                             }
                             else if (value.equalsIgnoreCase("DEFINED") || value.equalsIgnoreCase("UNDEFINED")) {
-                                field.$restore(PQL).toDataCell(DataType.TEXT)
+                                field.popStash(PQL).toDataCell(DataType.TEXT)
                             }
                             else {
                                 field.$sharp(PQL)
@@ -85,6 +78,9 @@ class ConditionGroup(expression: String) {
                             }
                             else if (value.equalsIgnoreCase("EMPTY")) {
                                 DataCell.EMPTY
+                            }
+                            else if (value.equalsIgnoreCase("UNDEFINED")) {
+                                DataCell.UNDEFINED
                             }
                             else if (value.equalsIgnoreCase("NULL") || value == "()") {
                                 DataCell.NULL
@@ -102,7 +98,7 @@ class ConditionGroup(expression: String) {
                             })
 
             if (PQL.dh.debugging) {
-                Output.writeDotLine(" ", if (field != null) field.$restore(PQL, "\"") else "", condition.operator, value.$restore(PQL, "\""), " => ", condition.result)
+                Output.writeDotLine(" ", if (field != null) field.popStash(PQL, "\"") else "", condition.operator, value.popStash(PQL, "\""), " => ", condition.result)
             }
         }
 
@@ -111,37 +107,6 @@ class ConditionGroup(expression: String) {
         conditions.clear()
 
         result
-    }
-
-    private def findOutSelect(expression: String, head: String): String = {
-        var start: Int = 0
-        val begin: Int = expression.indexOf(head, start) + 1
-        var end: Int = expression.indexOf(")", start)
-
-        val brackets = new mutable.ArrayStack[String]
-        brackets.push("(")
-        start = begin
-
-        while (brackets.nonEmpty && expression.indexOf(")", start) > - 1) {
-            val left: Int = expression.indexOf("(", start)
-            val right: Int = expression.indexOf(")", start)
-            if (left > -1 && left < right) {
-                brackets.push("(")
-                start = left + 1
-            }
-            else {
-                brackets.pop()
-                start = right + 1
-                if (right > end) end = right
-            }
-        }
-
-        if (brackets.nonEmpty) {
-            throw new SQLParseException("Can't find closed bracket for SELECT: " + expression)
-        }
-        else {
-            expression.substring(begin - 1, end + 1)
-        }
     }
 
     //解析无括号()的表达式

@@ -110,18 +110,8 @@ class Condition(val expression: String) {
                     v.toUpperCase match {
                         case "NULL" => field.valid && field.value != null
                         case "EMPTY" => field.nonEmpty
-                        case "DEFINED" =>
-                            if (field.undefined) {
-                                true
-                            }
-                            else if (field.asText.removeQuotes().containsArguments) {
-                                true
-                            }
-                            else {
-                                false
-                            }
                         case "UNDEFINED" =>
-                            if (field.undefined) {
+                            if (field.undefined || field.value == "UNDEFINED") {
                                 false
                             }
                             else if (field.asText.removeQuotes().containsArguments) {
@@ -154,7 +144,7 @@ class Condition(val expression: String) {
                         case "NULL" => field.invalid || field.value == null
                         case "EMPTY" => field.isEmpty
                         case "DEFINED" =>
-                            if (field.undefined) {
+                            if (field.undefined || field.value == "UNDEFINED") {
                                 false
                             }
                             else if (field.asText.removeQuotes().containsArguments) {
@@ -164,7 +154,7 @@ class Condition(val expression: String) {
                                 true
                             }
                         case "UNDEFINED" =>
-                            if (field.undefined) {
+                            if (field.undefined || field.value == "UNDEFINED") {
                                 true
                             }
                             else if (field.asText.removeQuotes().containsArguments) {

@@ -32,7 +32,7 @@ class LET(variable:String, expression: String) {
             }
         }
         else {
-            throw new SQLExecuteException("Only variable can be updated. " + variable)
+            throw new SQLExecuteException("Only user variable can be updated. " + variable)
         }
     }
 }

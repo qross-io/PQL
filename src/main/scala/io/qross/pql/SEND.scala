@@ -69,6 +69,8 @@ class SEND(val sentence: String) {
         }
 
         val result = email.send()
+        PQL.WORKING += result
+
         if (PQL.dh.debugging) {
             Output.writeDebugging(result)
         }

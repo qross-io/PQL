@@ -2,9 +2,9 @@ package io.qross.pql
 
 import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
-import io.qross.fs.Path._
-import io.qross.fs.TextFile._
 import io.qross.fs.Excel._
+import io.qross.fs.TextFile._
+import io.qross.net.Redis._
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 
@@ -181,6 +181,19 @@ class SAVE(val action: String, val sentence: String) {
                 PQL.dh.saveToDefault()
             case "QROSS" =>
                 PQL.dh.saveToQross()
+            case "REDIS" =>
+                if (plan.contains("SELECT")) {
+                    val db = plan.oneArgs("SELECT")
+                    if ("""^\d+$""".r.test(db)) {
+                        PQL.dh.saveToRedis(plan.headArgs, db.toInt)
+                    }
+                    else {
+                        throw new SQLParseException("Incorrect database index: " + db + ". + It's must be a integer.")
+                    }
+                }
+                else {
+                    PQL.dh.saveToRedis(plan.headArgs)
+                }
             case _ =>
                 val connectionName = plan.headArgs
                 if (plan.size == 1) {

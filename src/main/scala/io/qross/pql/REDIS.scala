@@ -2,79 +2,75 @@ package io.qross.pql
 
 import io.qross.core.{DataCell, DataTable, DataType}
 import io.qross.exception.SQLParseException
-import io.qross.fs.Directory
-import io.qross.pql.Patterns.{$BLANK, $FILE, ARROW}
 import io.qross.ext.TypeExt._
-import io.qross.fs.Path._
+import io.qross.net.Redis._
+import io.qross.pql.Patterns.{$REDIS, ARROW}
 import io.qross.pql.Solver._
+import scala.collection.JavaConverters._
 
 object REDIS {
     def parse(sentence: String, PQL: PQL): Unit = {
-        $FILE.findFirstIn(sentence) match {
-            case Some(_) => PQL.PARSING.head.addStatement(new Statement("FILE", sentence, new FILE(sentence)))
-            case None => throw new SQLParseException("Wrong FILE sentence: " + sentence)
+        $REDIS.findFirstIn(sentence) match {
+            case Some(_) => PQL.PARSING.head.addStatement(new Statement("REDIS", sentence, new REDIS(sentence)))
+            case None => throw new SQLParseException("Wrong REDIS sentence: " + sentence)
         }
     }
 }
 
 class REDIS(val sentence: String) {
 
-    def evaluate(PQL: PQL): DataCell = {
+    def evaluate(PQL: PQL, express: Int = Solver.FULL): DataCell = {
+        sentence.$process(PQL, express, redis => PQL.dh.command(redis))
+    }
 
-        val (file, links) = {
-            if (sentence.contains(ARROW)) {
-                (sentence.takeBefore(ARROW), sentence.takeAfter(ARROW))
+    //用于pass语句中
+    def evaluate(PQL: PQL, table: DataTable): DataCell = {
+
+        var body = sentence.$clean(PQL)
+        val links = {
+            if (body.contains(ARROW)) {
+                body.takeAfter(ARROW)
             }
             else {
-                (sentence, "")
+                ""
             }
-        }
-
-        val plan = Syntax("FILE").plan(file.takeAfter($BLANK).trim().$restore(PQL))
-
-        val path = plan .headArgs
-        val data = plan.head match {
-            case "LIST" =>
-                val table = new DataTable();
-                {
-                    if (path.isDir) {
-                        Directory.listFiles(path)
-                    }
-                    else {
-                        val dir = path.locate()
-                        Directory.listFiles(dir.takeBeforeLast("/"), dir.takeAfterLast("/"))
-                    }
-                }.foreach(file => {
-                    table.addRow(file.getAbsolutePath.fileInfo)
-                })
-                DataCell(table, DataType.TABLE)
-            case "DELETE" => DataCell(path.delete(), DataType.BOOLEAN)
-            case "MOVE" => DataCell.NULL
-            case "COPY" => DataCell.NULL
-            case "MAKE" => DataCell(path.makeFile(), DataType.BOOLEAN)
-            case "LENGTH" => DataCell(path.fileLength(), DataType.INTEGER)
-            case "SIZE" => DataCell(path.fileLength().toHumanized, DataType.TEXT)
-            case _ => path.fileInfo.toDataCell(DataType.ROW)
         }
 
         if (links != "") {
-            new Sharp(links, data).execute(PQL)
+            body = body.takeBefore(ARROW).trim()
+        }
+
+        val data = PQL.dh.pipelined(body.popStash(PQL), table)
+
+        if (links != "") {
+            new Sharp(links, {
+                //如果是list, 则强制回转, 以便能再计算
+                if (data.width == 1) {
+                    data.firstColumn match {
+                        case Some(list) => list.asJava.toDataCell(DataType.ARRAY)
+                        case _ => data.toDataCell(DataType.TABLE)
+                    }
+                }
+                else {
+                    data.toDataCell(DataType.TABLE)
+                }
+            }).execute(PQL)
         }
         else {
-            data
+            data.toDataCell(DataType.TABLE)
         }
     }
 
     def execute(PQL: PQL): Unit = {
         val data = this.evaluate(PQL)
 
-        data.dataType match {
-            case DataType.TABLE => PQL.RESULT += data.value
-                if (PQL.dh.debugging) {
-                    data.asTable.show()
-                }
-            case DataType.ROW => PQL.RESULT += data.value
-            case _ =>
+        PQL.WORKING += data.value
+
+        if (PQL.dh.debugging) {
+            data.dataType match {
+                case DataType.TABLE => data.asTable.show()
+                case _ => println(data.asText)
+            }
         }
     }
 }

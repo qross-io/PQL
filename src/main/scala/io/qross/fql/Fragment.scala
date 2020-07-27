@@ -17,7 +17,6 @@ object Fragment {
 
 class Fragment(val phrase: String) {
 
-
     def insertInto(table: DataTable): DataTable = {
         if (Fragment.$VALUES.test(phrase)) {
             val fields = phrase.takeBefore(Fragment.$VALUES).$trim("(", ")").split(",").map(_.trim())

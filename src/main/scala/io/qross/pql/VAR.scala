@@ -59,23 +59,8 @@ class VAR(val assignments: String) {
                 if (value == null) {
                     DataCell.NULL
                 }
-                else if ($SELECT.test(value)) {
-                    new SELECT(value).select(PQL)
-                }
-                else if ($PARSE.test(value)) {
-                    new PARSE(value).doParse(PQL)
-                }//
-                else if ($NON$QUERY.test(value)) {
-                    DataCell(PQL.dh.executeNonQuery(value.$restore(PQL)), DataType.INTEGER)
-                }
-                else if ($FILE.test(value)) {
-                    DataCell(new FILE(value).evaluate(PQL))
-                }
-                else if ($DIR.test(value)) {
-                    DataCell(new DIR(value).evaluate(PQL))
-                }
                 else {
-                    new Sharp(value.$clean(PQL)).execute(PQL)
+                    value.$compute(PQL)
                 }
             })
         })

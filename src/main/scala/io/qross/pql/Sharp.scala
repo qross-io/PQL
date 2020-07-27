@@ -3,8 +3,7 @@ package io.qross.pql
 import java.util
 
 import io.qross.core.{DataCell, DataRow, DataType}
-import io.qross.exception.{SQLExecuteException, SharpInapplicableLinkNameException, SharpLinkArgumentException}
-import io.qross.ext.NumberExt._
+import io.qross.exception.{SharpInapplicableLinkNameException, SharpLinkArgumentException}
 import io.qross.ext.TypeExt._
 import io.qross.fql.Fragment
 import io.qross.net.Json
@@ -1233,7 +1232,7 @@ object Sharp {
             data.asDecimal.pow(arg.asInteger.toInt).toDataCell(DataType.DECIMAL)
         }
         else {
-            data.asDecimal.pow(0).toDataCell(DataType.DECIMAL)
+            data.asDecimal.pow(2).toDataCell(DataType.DECIMAL)
         }
     }
 
@@ -1532,11 +1531,11 @@ object Sharp {
                 table.insert(arg.asText).toDataCell(DataType.TABLE)
             }
             else {
-                throw new SharpLinkArgumentException(s"Incorrect arguments format at INSERT. " + origin)
+                throw SharpLinkArgumentException.occur("INSERT", origin)
             }
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at INSERT. " + origin)
+            throw SharpLinkArgumentException.occur("INSERT", origin)
         }
     }
 
@@ -1551,16 +1550,33 @@ object Sharp {
             }
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at INSERT IF EMPTY. " + origin)
+            throw SharpLinkArgumentException.occur("INSERT IF EMPTY", origin)
         }
     }
 
     def VALUES(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            DataCell(data.asText + " VALUES " + arg.asText, DataType.TEXT)
+            if (data.isJavaList && arg.isJavaList) {
+
+                val fields = data.asJavaList
+                val values = arg.asJavaList
+                if (fields.size() == values.size()) {
+                    val row = new DataRow()
+                    for (i <- 0 until fields.size()) {
+                        row.set(fields.get(i).toString, values.get(i))
+                    }
+                    DataCell(row, DataType.ROW)
+                }
+                else {
+                    throw new SharpLinkArgumentException("Column count doesn't match value count: VALUES")
+                }
+            }
+            else {
+                DataCell(data.asText + " VALUES " + arg.asText, DataType.TEXT)
+            }
         }
         else {
-            throw new SharpLinkArgumentException(s"Empty or wrong argument at INSERT IF EMPTY. " + origin)
+            throw SharpLinkArgumentException.occur("VALUES", origin)
         }
     }
 
@@ -1696,9 +1712,11 @@ object Sharp {
         }
     }
 
-    //TURN TO COLUMN "a" AND "b"
-    //TURN TO COLUMN (a, b)
-    //TURN TO COLUMN ["a", "b"]
+    //TURN TO TABLE "a" AND "b"
+    //TURN TO TABLE (a, b)
+    //TURN TO TABLE ["a", "b"]
+    //TURN TO TABLE "a","b"
+    //TURN TO TABLE a, b
     def TO$TABLE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (data.isRow) {
             if (arg.valid) {
@@ -1710,22 +1728,22 @@ object Sharp {
                         arg.asText.$trim("(", ")").split(",").map(_.removeQuotes()).toList
                     }
                     else {
-                        throw SharpLinkArgumentException.occur("TO COLUMNS", origin)
+                        throw SharpLinkArgumentException.occur("TO TABLE", origin)
                     }
                 }
 
                 if (args.size >= 2) {
-                    data.asRow.turnToColumn(args.head, args(1)).toDataCell(DataType.TABLE)
+                    data.asRow.turnToTable(args.head, args(1)).toDataCell(DataType.TABLE)
                 }
                 else if (args.size == 1) {
-                    data.asRow.turnToColumn(args.head, "value").toDataCell(DataType.TABLE)
+                    data.asRow.turnToTable(args.head, "value").toDataCell(DataType.TABLE)
                 }
                 else {
-                    data.asRow.turnToColumn("key", "value").toDataCell(DataType.TABLE)
+                    data.asRow.turnToTable("key", "value").toDataCell(DataType.TABLE)
                 }
             }
             else {
-                data.asRow.turnToColumn("key", "value").toDataCell(DataType.TABLE)
+                data.asRow.turnToTable("key", "value").toDataCell(DataType.TABLE)
             }
         }
         else if (data.isJavaList) {
@@ -1741,15 +1759,6 @@ object Sharp {
         }
         else {
             throw SharpInapplicableLinkNameException.occur("TO TABLE", origin)
-        }
-    }
-
-    def TURN$TO$COLUMNS(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (data.isRow || data.isJavaList) {
-            TO$TABLE(data: DataCell, arg: DataCell, origin: String)
-        }
-        else {
-            throw SharpInapplicableLinkNameException.occur("TURN TO COLUMNS", origin)
         }
     }
 
@@ -2085,6 +2094,7 @@ object Sharp {
     }
 }
 
+//expression已cleaned
 class Sharp(private val expression: String, private var data: DataCell = DataCell.ERROR) {
 
     //LET @NOW EXPRESS "DAY=1#DAY-1" FORMAT "yyyyMMdd" TO DECIMAL # ROUND # POW 2
@@ -2100,6 +2110,7 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
     // VALUE LINK  v = l
     // VALUE LINK ARG  v > l
 
+    //无参访求用于不需要PQL的场景, Keeper中有用到
     def execute(): DataCell = {
 
         var sentence = " " + expression
@@ -2178,33 +2189,15 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
 
         var sentence = {
             if (data.invalid) {
-                expression.takeAfter($LET).trim()
+                if (expression.startsWith(ARROW)) {
+                    expression.substring(2).trim()
+                }
+                else {
+                    expression.takeAfter($LET).trim()
+                }
             }
             else {
                 " " + expression
-            }
-        }
-
-        //处理短表达式 IF 和 CASE
-        if (data.invalid) {
-            sentence.takeBefore($BLANK).toUpperCase() match {
-                case "IF" =>
-                    $END$.findFirstIn(sentence) match {
-                        case Some(end) => data = IF.express(sentence.substring(0, sentence.indexOf(end) + end.length).trim(), PQL)
-                        case None => throw new SQLExecuteException("Wrong IF expression, keyword END is needed. " + sentence)
-                    }
-                    sentence = sentence.takeAfter($END$)
-                case "CASE" =>
-                    $END$.findFirstIn(sentence) match {
-                        case Some(end) => data = CASE.express(sentence.substring(0, sentence.indexOf(end) + end.length).trim(), PQL)
-                        case None => throw new SQLExecuteException("Wrong CASE expression, keyword END is needed. " + sentence)
-                    }
-                    sentence = sentence.takeAfter($END$).trim()
-                case _ =>
-            }
-
-            if (sentence.startsWith("->")) {
-                sentence = sentence.substring(2)
             }
         }
 
@@ -2215,7 +2208,7 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
             sentence = sentence.replace(comma, comma.trim())
         })
 
-        //处理 AS
+        //处理 AS, Sharp LINK 中避免使用 AS 关键词
         $AS.findAllIn(sentence).foreach(as => {
             sentence = sentence.replace(as, "##AS##")
         })
@@ -2435,7 +2428,7 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
     def solve(PQL: PQL): DataCell = {
         if (argument != "") {
             if ("""(?i),|\sAS\s|^\*$""".r.test(argument)) {
-                //SET或SELECT
+                //SET或SELECT或VALUES
                 if (argument.contains("=")) {
                     val row = new DataRow()
                     //SET
@@ -2452,9 +2445,10 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
                     DataCell(row, DataType.ROW)
                 }
                 else {
-                    //SELECT/FIND
+                    //SELECT/FIND/VALUES
                     DataCell(
                         argument
+                            .$trim("(", ")")
                             .split(",")
                             .map(item =>
                                 if ("""(?i)\sAS\s""".r.test(item)) {
@@ -2467,7 +2461,7 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
                 }
             }
             else {
-                argument.$sharp(PQL)
+                argument.$trim("(", ")").$sharp(PQL)
             }
         }
         else {

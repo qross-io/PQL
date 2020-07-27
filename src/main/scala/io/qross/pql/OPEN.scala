@@ -6,6 +6,7 @@ import io.qross.fs.Excel._
 import io.qross.fs.TextFile._
 import io.qross.pql.Patterns.$OPEN
 import io.qross.pql.Solver._
+import io.qross.net.Redis._
 
 /*
 OPEN "connectionName";
@@ -47,6 +48,19 @@ class OPEN(val sentence: String) {
                 PQL.dh.openQross()
                 if (plan.contains("USE")) {
                     PQL.dh.use(plan.oneArgs("USE"))
+                }
+            case "REDIS" =>
+                if (plan.contains("SELECT")) {
+                    val db = plan.oneArgs("SELECT")
+                    if ("""^\d+$""".r.test(db)) {
+                        PQL.dh.openRedis(plan.headArgs, db.toInt)
+                    }
+                    else {
+                        throw new SQLParseException("Incorrect database index: " + db + ". + It's must be a integer.")
+                    }
+                }
+                else {
+                    PQL.dh.openRedis(plan.headArgs)
                 }
             case "EXCEL" => PQL.dh.openExcel(plan.oneArgs("EXCEL"))
             case "JSON FILE" =>

@@ -34,7 +34,8 @@ object Solver {
     val USER_DEFINED_FUNCTION: Regex = """$[a-zA-Z_]+\(\)""".r //用户函数, 未完成
     val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\s*\(([^\)]*)\)""".r //系统函数
     val SHARP_EXPRESSION: Regex = """(?i)\$\{([^\{\}]+?)\}""".r //Sharp表达式
-    val QUERY_EXPRESSION: Regex = """(?i)\$\{\{\s*((SELECT|DELETE|INSERT|UPDATE|PARSE)\s[\s\S]+?)\}\}""".r //查询表达式
+    val QUERY_EXPRESSION: Regex = """(?i)\$\{\{([\s\S]+?)\}\}""".r //查询表达式
+    val INNER_SENTENCE: Regex = """(?i)\(\s*(SELECT|PARSE|REDIS|FILE|DIR|INSERT|UPDATE|DELETE|REPLACE|IF|CASE)\s""".r  //(SELECT...)
 
     val RICH_CHAR: List[Regex] = List[Regex]("%rich-string%\"[\\s\\S]*?\"%rich-string%".r, "%rich-string%'[\\s\\S]*?'%rich-string%".r) //富字符串
     val CHAR$N: Regex = """~char\[(\d+)\]""".r  //字符串占位符
@@ -43,6 +44,12 @@ object Solver {
     val SHARP$N: Regex = """~sharp\[(\d+)\]""".r  //Sharp表达式
     val VALUE$N: Regex = """~value\[(\d+)\]""".r //中间结果占位符
     val STR$N: Regex = """~str\[(\d+)\]""".r //计算过程中的字符串占位符
+    val INNER$N: Regex = """~inner\[(\d+)\]""".r //IF和CASE短语句中的内部语句
+
+    //清理模式
+    val FULL: Int = 0 //完全模式, 默认
+    val EXPRESS: Int = 1 //快速模式, 适用于 Query 表达式内部
+    val NONE: Int = 2 //不清理, 适用于 Sharp表达式内部
 
     implicit class Sentence$Solver(var sentence: String) {
 
@@ -51,11 +58,7 @@ object Solver {
         //close examination  ( ) [ ] { } <% %>
         def cleanCommentsAndStashConstants(PQL: PQL): String = {
 
-            class Block$Range(val name: String, val start: Int, var end: Int = -1) { }
             class Closing(val char: Char, val index: Int) { }
-
-//            sentence = sentence.replace("'''", "%three-single-quotes%")
-//                               .replace("\"\"\"", "%three-double-quotes%")
 
             val blocks = new mutable.ArrayStack[Block$Range]()
             val closing = new mutable.ArrayStack[Closing]()
@@ -197,6 +200,7 @@ object Solver {
                 closing.pop()
             }
 
+            //处理字符串
             blocks.foreach(closed => {
                     val before = sentence.takeBefore(closed.start)
                     val after = sentence.takeAfter(closed.end - 1)
@@ -346,25 +350,7 @@ object Solver {
                 }
             }
 
-            //防止语句内嵌和外部表达式冲突
-            // SELECT id FROM table where title=${abc -> CONCAT '234' } -> FIRST CELL
-            SHARP_EXPRESSION.findAllIn(sentence)
-                    .foreach(sharp => {
-                        PQL.sharps += sharp
-                        sentence = sentence.replace(sharp, s"~sharp[${PQL.sharps.size - 1}]")
-                    })
-
-            sentence.trim
-        }
-
-        //优先恢复Sharp表达式
-        def restoreSharps(PQL: PQL): String = {
-            SHARP$N.findAllMatchIn(sentence)
-                .foreach(m => {
-                    sentence = sentence.replace(m.group(0), PQL.sharps(m.group(1).toInt))
-                })
-
-            sentence
+           sentence.trim
         }
 
         //恢复Json常量
@@ -373,7 +359,7 @@ object Solver {
                 while (true) {
                     JSON$N.findFirstMatchIn(sentence) match {
                         case Some(m) =>
-                            sentence = sentence.replace(m.group(0), PQL.jsons(m.group(1).toInt)) //.$clean(PQL).popStash(PQL, "\"")
+                            sentence = sentence.replace(m.group(0), PQL.jsons(m.group(1).toInt).$restore(PQL, "\""))
                         case None => break
                     }
                 }
@@ -562,7 +548,7 @@ object Solver {
         def replaceVariables(PQL: PQL): String = {
             USER_VARIABLE
                 .map(r => r.findAllMatchIn(sentence))
-                .flatMap(s => s.toList.sortBy(m => m.group(1)).reverse)  //反转很重要, $user  $username 先替换长的
+                .flatMap(s => s.toList.sortBy(m => m.group(1)).reverse)  //反转很重要, $user  $username 必须先替换长的
                 .foreach(m => {
                     val whole = m.group(0)
                     val name = m.group(1)
@@ -591,7 +577,7 @@ object Solver {
                                         }
                                         else {
                                             //不支持的数据类型
-                                            DataCell.ERROR
+                                            throw new SQLExecuteException(s"""The type of variable $$$name isn't DataRow or extension type.""")
                                         }
                                     )
                                 )
@@ -652,7 +638,7 @@ object Solver {
                                 .ifNotFound(() => {
                                     // @name 标记与MySQL和SQL Server冲突, 不做处理
                                     if (PQL.dh.debugging) {
-                                        Output.writeWarning(s"The global variable $name maybe has not been assigned.")
+                                        Output.writeWarning(s"The global variable @$name maybe has not been assigned.")
                                     }
                                 })
                         }
@@ -744,7 +730,7 @@ object Solver {
         //解析表达式中的函数
         def replaceFunctions(PQL: PQL, quote: String = "'"): String = {
 
-            //review时需要修改循环嵌套的逻辑，改成 while(true)
+            //函数review时需要修改循环嵌套的逻辑，改成 while(true)
             while (GLOBAL_FUNCTION.test(sentence)) { //循环防止嵌套
                 GLOBAL_FUNCTION
                     .findAllMatchIn(sentence)
@@ -772,31 +758,23 @@ object Solver {
                 .findAllMatchIn(sentence)
                 .foreach(m => {
                     //已在clean过程中, 不需要clean
-                    //m.group(1).replaceVariables(PQL)
-                    new Sharp(m.group(1)).execute(PQL).ifValid(data => {
-                        sentence = sentence.replace(m.group(0), PQL.$stash(data))
-                    })
+                    sentence = sentence.replace(m.group(0), PQL.$stash(m.group(1).trim().$compute(PQL, Solver.NONE)))
+                    //new Sharp(m.group(1)).execute(PQL).ifValid(data => {
+//                      sentence = sentence.replace(m.group(0), PQL.$stash(data))
+//                  })
                 })
 
             sentence
         }
 
         //解析嵌入式查询表达式
-        def replaceQueryExpressions(PQL: PQL, quote: String = "'"): String = {
+        def replaceQueryExpressions(PQL: PQL): String = {
             QUERY_EXPRESSION
                 .findAllMatchIn(sentence)
                 .foreach(m => {
-                    val query: String = m.group(1).trim() //查询语句
-                    val caption: String = m.group(2).trim().toUpperCase
-
-                    sentence = sentence.replace(m.group(0), PQL.$stash(
-                        caption match {
-                            case "SELECT" => new SELECT(query).select(PQL, express = true)
-                            case "PARSE" => new PARSE(query).doParse(PQL, express = true)
-//                            case "INSERT" => new INSERT(query).insert(PQL, express = true)
-//                            case "DELETE" => new DELETE(query).delete(PQL, express = true)
-                            case _ => DataCell(PQL.dh.executeNonQuery(query), DataType.INTEGER)
-                        }))
+                    //val query: String = m.group(1).trim() //查询语句
+                    //val caption: String = m.group(2).trim().toUpperCase
+                    sentence = sentence.replace(m.group(0), PQL.$stash(m.group(1).trim().$compute(PQL, Solver.EXPRESS)))
                 })
 
             sentence
@@ -836,24 +814,18 @@ object Solver {
 
         //计算表达式, 不包括查询表达式, 在计算查询表达式时使用
         def $express(PQL: PQL): String = {
-            sentence.restoreSharps(PQL)
-                    .replaceVariables(PQL)
+            sentence.replaceVariables(PQL)
                     .replaceFunctions(PQL)
                     .replaceSharpExpressions(PQL)
-                    //.replaceJsExpressions(PQL)
-                    //.replaceJsStatements(PQL)
         }
 
         //计算表达式, 但保留字符串和中间值
         //先计算查询表达式的原因是如果子表达式过早的被替换掉, 在解析SHARP表达式时会出现字符串解析冲突
         def $clean(PQL: PQL): String = {
-            sentence.restoreSharps(PQL)
-                    .replaceQueryExpressions(PQL)
+            sentence.replaceQueryExpressions(PQL)
                     .replaceVariables(PQL)
                     .replaceFunctions(PQL)
                     .replaceSharpExpressions(PQL)
-                    //.replaceJsExpressions(PQL)
-                    //.replaceJsStatements(PQL)
         }
 
         //按顺序计算嵌入式表达式、变量和函数
@@ -865,5 +837,138 @@ object Solver {
         def $eval(PQL: PQL): DataCell = {
             sentence.$clean(PQL).$sharp(PQL)
         }
+
+        //条件式中的内部语句
+        def replaceInnerSentence(PQL: PQL): String = {
+
+            var start: Int = 0
+            val groups = new mutable.ArrayStack[Block$Range]()
+
+            INNER_SENTENCE.findAllIn(sentence)
+                .foreach(head => {
+                    val begin: Int = sentence.indexOf(head, start) + 1
+                    if (begin > 0) {
+                        var end: Int = sentence.indexOf(")", start)
+
+                        val brackets = new mutable.ArrayStack[String]
+                        brackets.push("(")
+                        start = begin
+
+                        while (brackets.nonEmpty && sentence.indexOf(")", start) > -1) {
+                            val left: Int = sentence.indexOf("(", start)
+                            val right: Int = sentence.indexOf(")", start)
+                            if (left > -1 && left < right) {
+                                brackets.push("(")
+                                start = left + 1
+                            }
+                            else {
+                                brackets.pop()
+                                start = right + 1
+                                if (right > end) end = right
+                            }
+                        }
+
+                        if (brackets.nonEmpty) {
+                            throw new SQLParseException("Can't find closed bracket for SELECT: " + sentence)
+                        }
+                        else {
+                            groups += new Block$Range(head, begin - 1, end + 1)
+                        }
+                    }
+                })
+
+            groups.foreach(block => {
+                PQL.inners += sentence.substring(block.start, block.end)
+                sentence = sentence.replace(PQL.inners.last, "~inner[" + (PQL.inners.length - 1) + "]")
+            })
+
+            sentence
+        }
+
+        //恢复一条内部语句
+        def restoreInnerSentence(PQL: PQL): String = {
+            PQL.inners(sentence.$trim("~inner[", "]").toInt).$trim("(", ")").trim()
+        }
+
+        //仅在ConditionGroup中使用, 将 IN () 或 EXISTS () 中的查询语句换成 ~value[n]
+        def replaceInnerSentences(PQL: PQL): String = {
+            INNER$N.findFirstMatchIn(sentence)
+                .foreach(m => {
+                    sentence = sentence.replace(m.group(0), PQL.$stash(PQL.inners(m.group(1).toInt).$trim("(", ")").trim().$compute(PQL).toJavaList))
+                })
+
+            sentence
+        }
+
+        def $process(PQL: PQL, express: Int, handler: String => DataCell): DataCell = {
+            var body = {
+                express match {
+                    case 0 => sentence.$clean(PQL)
+                    case 1 => sentence.$express(PQL)
+                    case 2 => sentence
+                    case _ => sentence.$clean(PQL)
+                }
+            }
+
+            val links = {
+                if (body.contains(ARROW)) {
+                    body.takeAfter(ARROW)
+                }
+                else {
+                    ""
+                }
+            }
+
+            if (links != "") {
+                body = body.takeBefore(ARROW).trim()
+            }
+
+            val data = handler(body.popStash(PQL))
+
+            if (links != "") {
+                new Sharp(links, data).execute(PQL)
+            }
+            else {
+                data
+            }
+        }
+
+        def $compute(PQL: PQL, express: Int = FULL): DataCell = {
+            sentence.takeBefore($BLANK).toUpperCase() match {
+                case "SELECT" | "SHOW" => new SELECT(sentence).select(PQL, express)
+                case "PARSE" => new PARSE(sentence).doParse(PQL, express)
+                case "REDIS" => new REDIS(sentence).evaluate(PQL, express)
+                case "FILE" => new FILE(sentence).evaluate(PQL, express)
+                case "DIR" => new DIR(sentence).evaluate(PQL, express)
+                case "IF" => new IF(sentence).express(PQL, express)
+                case "CASE" => new CASE(sentence).express(PQL, express)
+                case o =>
+                    if (NON_QUERY_CAPTIONS.contains(o)) {
+                        new NON$QUERY(sentence).affect(PQL, express)
+                    }
+//                    else if (sentence.bracketsWith("[", "]") || sentence.bracketsWith("{", "}")) {
+//                        //对象或数组类型不能eval
+//                        Json.fromText(sentence.$restore(PQL, "\"")).findNode("/")
+//                    }
+//                    else if ("""^~json\[\d+\]$""".r.test(sentence)) {
+//                        Json.fromText(sentence.restoreJsons(PQL).$restore(PQL, "\"")).findNode("/")
+//                    }
+                    else {
+                        //在SHARP表达式内部再恢复字符串和中间值
+                        new Sharp({
+                            express match {
+                                case 0 => sentence.$clean(PQL)
+                                case 1 => sentence.$express(PQL)
+                                case 2 => sentence
+                                case _ => sentence.$clean(PQL)
+                            }
+                        }).execute(PQL)
+                    }
+            }
+        }
     }
+}
+
+class Block$Range(val name: String, val start: Int, var end: Int = -1) {
+
 }

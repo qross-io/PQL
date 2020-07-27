@@ -5,8 +5,10 @@ import java.lang.management.ManagementFactory
 import java.nio.charset.Charset
 import java.sql.DriverManager
 import java.time.{LocalDateTime, ZoneId}
+import java.util
 import java.util.regex.{Matcher, Pattern}
 import java.util.Date
+import java.util.concurrent.ConcurrentHashMap
 
 import io.qross.app.OneApi
 import io.qross.core._
@@ -15,7 +17,7 @@ import io.qross.ext.Output.writeLineWithSeal
 import io.qross.pql._
 import io.qross.fs._
 import io.qross.jdbc.DataSource
-import io.qross.net.{Email, Json, Session}
+import io.qross.net.{Email, Json, Redis, Session}
 import io.qross.ext.TypeExt._
 import io.qross.fs.Path._
 import io.qross.pql.Solver._
@@ -30,10 +32,11 @@ import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 import io.qross.time.TimeSpan._
 import javax.servlet.http.Cookie
-import scala.collection.JavaConverters._
 
+import scala.collection.JavaConverters._
 import scala.util.Random
 import io.qross.fs.TextFile._
+import redis.clients.jedis.Protocol.Command
 
 object Main {
 
@@ -104,8 +107,19 @@ object Main {
             "id" -> "1",
             "time" -> "2020-02-27 18:30:33",
             "filter" -> ""
-        ).run().print */
+        ).run().print
 
+        val list = List[java.util.HashMap[String, Int]](
+            new java.util.HashMap[String, Int]() {{
+                put("a", 1)
+                put("b", 2)
+            }}, new java.util.HashMap[String, Int]() {{
+                put("a", 3)
+                put("b", 4)
+            }})
+         */
+
+        //new String(redis.jedis.sendCommand(Command.GET, "hello").asInstanceOf[Array[Byte]]).print
 
         //PQL.openEmbeddedFile("/sql/manual.html").place("jobId=595").set("jobId=595").run().print
         PQL.openFile("/sql/date.sql").place("id=4&applies=ready,failed").run().print

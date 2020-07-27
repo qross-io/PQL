@@ -27,34 +27,61 @@ object IF {
             case None => throw new SQLParseException("Incorrect IF sentence: " + sentence)
         }
     }
+}
+
+class IF(conditions: String) {
 
     //IF短表达式   IF $a > 0 THEN 0 ELSIF $a < 0 THEN 1 ELSE 2 END;
-    def express(expression: String, PQL: PQL): DataCell = {
+    def express(PQL: PQL, mode: Int = Solver.FULL): DataCell = {
+        //先提取子语句
+        var sentence = conditions.replaceInnerSentence(PQL)
+        sentence = {
+            mode match {
+                case 0 => sentence.$clean(PQL)
+                case 1 => sentence.$express(PQL)
+                case 2 => sentence
+                case _ => sentence.$clean(PQL)
+            }
+        }
 
-        var sentence = expression
-        val words = """\b(IF|THEN|ELSIF|ELSE|END)\b""".r.findAllIn(sentence).toList
+        val links = {
+            $END$.findFirstMatchIn(sentence) match {
+                case Some(m) =>
+                    if (m.group(1).trim() == ARROW) {
+                        val sharp = sentence.takeAfter(m.group(0))
+                        sentence = sentence.takeBefore(sharp).dropRight(2).trim()
+                        sharp
+                    }
+                    else {
+                        ""
+                    }
+                case None => throw new SQLExecuteException("Wrong IF expression, keyword END is needed. " + sentence)
+            }
+        }
+
+        val words = $IFX.r.findAllIn(sentence).map(_.trim().toUpperCase()).toList
+        val sections = sentence.split($IFX, -1).map(_.trim())
         var met = false
         var result = ""
         var wrong = ""
 
         breakable {
             for (i <- words.indices) {
-                val prev = if (i > 0) words(i - 1).toUpperCase() else ""
-                words(i).toUpperCase() match {
-                    case "IF" => sentence = sentence.takeAfter(words(i))
+                val prev = if (i > 0) words(i - 1) else ""
+                words(i) match {
+                    case "IF" =>
                     case "THEN" =>
                         if (prev == "IF" || prev == "ELSIF") {
-                            met = new ConditionGroup(sentence.takeBefore(words(i))).evalAll(PQL)
+                            met = new ConditionGroup(sections(i)).evalAll(PQL, replaced = true)
                         }
                         else {
                             wrong = "miss IF or ELSIF"
                             break
                         }
-                        sentence = sentence.takeAfter(words(i))
                     case "ELSIF" | "ELSE" =>
                         if (prev == "THEN") {
                             if (met) {
-                                result = sentence.takeBefore(words(i))
+                                result = sections(i)
                                 break
                             }
                         }
@@ -62,11 +89,10 @@ object IF {
                             wrong = "miss THEN"
                             break
                         }
-                        sentence = sentence.takeAfter(words(i))
                     case "END" =>
                         if (prev == "ELSE") {
                             if (!met) {
-                                result = sentence.takeBefore(words(i))
+                                result = sections(i)
                             }
                         }
                         else {
@@ -77,34 +103,25 @@ object IF {
         }
 
         if (wrong != "") {
-            throw new SQLExecuteException(s"Wrong short expression IF format, $wrong: " + expression)
+            throw new SQLExecuteException(s"Incorrect short expression IF format, $wrong: " + conditions)
         }
 
-        result.$eval(PQL)
-        /*
-        if ($SELECT.test(result)) {
-            new SELECT(result).select(PQL)
+        val data = {
+            if (result.bracketsWith("~inner[", "]")) {
+                result.restoreInnerSentence(PQL).$compute(PQL, mode)
+            }
+            else {
+                result.$sharp(PQL)
+            }
         }
-        else if ($PARSE.test(result)) {
-            new PARSE(result).doParse(PQL)
-        }
-        else if ($INSERT$INTO.test(result)) {
-            new INSERT(result).insert(PQL)
-        }
-        else if ($DELETE.test(result)) {
-            new DELETE(result).delete(PQL)
-        }
-        else if ($NON$QUERY.test(result)) {
-            DataCell(PQL.dh.executeNonQuery(result.$restore(PQL)), DataType.INTEGER)
+
+        if (links != "") {
+            new Sharp(links, data).execute(PQL)
         }
         else {
-            result.$eval(PQL)
+            data
         }
-        */
     }
-}
-
-class IF(conditions: String) {
 
     def execute(PQL: PQL, statement: Statement): Unit = {
         if (new ConditionGroup(conditions).evalAll(PQL)) {

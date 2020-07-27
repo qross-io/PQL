@@ -515,7 +515,9 @@ object TypeExt {
                     val c = string.charAt(i)
                     if (c == left) {
                         s += 1
-                        l = i
+                        if (l == -1) {
+                            l = i
+                        }
                     }
                     else if (c == right) {
                         s -= 1
@@ -557,6 +559,46 @@ object TypeExt {
         def toDateTime: DateTime = {
             DateTime.ofTimestamp(long)
         }
+    }
+
+    implicit class FloatExt(float: Float) {
+        def floor(precision: Int = 0): Double = {
+            Math.floor(float * Math.pow(10, precision)) / Math.pow(10, precision)
+        }
+
+        def round(precision: Int = 0): Double = {
+            Math.round(float * Math.pow(10, precision)) / Math.pow(10, precision)
+        }
+
+        def percent: String = {
+            s"${float * 100}%"
+        }
+
+        def percent(precision: Int = 0): String = {
+            s"${Math.round(float * 100 * Math.pow(10, precision)) / Math.pow(10, precision)}%"
+        }
+
+        def pow(p: Double = 2): Double = Math.pow(float, p)
+    }
+
+    implicit class DoubleExt(double: Double) {
+        def floor(precision: Int = 0): Double = {
+            Math.floor(double * Math.pow(10, precision)) / Math.pow(10, precision)
+        }
+
+        def round(precision: Int = 0): Double = {
+            Math.round(double * Math.pow(10, precision)) / Math.pow(10, precision)
+        }
+
+        def percent: String = {
+            s"${double * 100}%"
+        }
+
+        def percent(precision: Int = 0): String = {
+            s"${Math.round(double * 100 * Math.pow(10, precision)) / Math.pow(10, precision)}%"
+        }
+
+        def pow(p: Double = 2): Double = Math.pow(double, p)
     }
 
     implicit class RegexExt(regex: Regex) {
@@ -747,7 +789,7 @@ object TypeExt {
                 case cell: DataCell => cell.asBoolean(false)
                 case dt: DataTable => dt.nonEmpty
                 case row: DataRow => row.nonEmpty
-                case JavaList(list) => !list.isEmpty
+                case list: java.util.List[Any@unchecked] => !list.isEmpty
                 case null => false
                 case _ => throw new ConvertFailureException("Can't recognize as or convert to Boolean: " + any)
             }
@@ -841,25 +883,8 @@ object TypeExt {
     }
 
     implicit class ListExt[A](list: List[A]) {
-        def toTable(fieldName: String = "item"): DataTable = {
-            val table = new DataTable()
-            for (item <- list) {
-                item match {
-                    case ScalaMap(map) => table.addRow(map.toRow)
-                    case JavaMap(map) => table.addRow(map.asScala.toMap.toRow)
-                    case array: List[Any] =>
-                        val row = new DataRow()
-                        for (i <- array.indices) {
-                            row.set(fieldName + i, array(i))
-                        }
-                        table.addRow(row)
-                    case _ => table.addRow(new DataRow(fieldName -> item))
-                }
-            }
-            table
-        }
 
-        def toJavaList: java.util.ArrayList[A] = {
+        def toJavaList: java.util.List[A] = {
             val column = new util.ArrayList[A]()
             list.foreach(column.add)
             column

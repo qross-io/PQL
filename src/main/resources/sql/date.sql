@@ -1,6 +1,7 @@
 DEBUG ON;
 
---OPEN QROSS;
+OPEN REDIS qross;
+REDIS KEYS *;
 
 --GET # SELECT id, project_id, title, job_type, owner FROM qross_jobs;
 --SAVE AS NEW EXCEL 'f:/jobs.xlsx';
@@ -10,14 +11,47 @@ DEBUG ON;
 --SELECT id, project_id, owner  FROM :jobs SEEK 0 LIMIT 5;
 --PRINT @POINTER;
 
-SET $applies := SELECT event_applies FROM qross_keeper_custom_events WHERE id=#{id};
-IF $applies != '#{applies}' THEN
-    FOR $apply IN ${ $applies SPLIT ',' } LOOP
-        IF NOT ('#{applies}' CONTAINS $apply) THEN
-            DELETE FROM qross_jobs_events WHERE event_name='''onTask${ $apply INIT CAP }''' AND event_function='CUSTOM_#{id}';
-        END IF;
-    END LOOP;
-END IF;
+
+
+OPEN QROSS;
+
+
+SET $table := "qross_jobs";
+SET $id := 1;
+
+VAR $row :=
+    CASE WHEN EXISTS (SELECT id, title FROM $table! WHERE id=$id) THEN
+        (SELECT id, title FROM qross_jobs LIMIT 0 -> INSERT { "id": 222, "title": "HELLO WORLD" })
+    ELSE
+        (SELECT id, title FROM qross_jobs LIMIT 1)
+    END -> FIRST ROW;
+
+--FOR $job OF (SELECT id, title FROM qross_jobs LIMIT 1 -> INSERT { "id": 222, "title": "HELLO WORLD" }) LOOP
+--    PRINT $job.id;
+--    PRINT $job.title;
+--END LOOP;
+
+OUTPUT # IF true THEN {
+    "count": $row.id,
+    "message": $row.title,
+    "if": 1,
+    "then": 2
+} ELSE {
+    "id": $row.id,
+    "message": $row.title,
+    "case": 3,
+    "when": 4
+} END;
+
+
+-- REDIS HGET site qross -> CONCAT " -> master -> keeper";
+--SAVE TO REDIS qross;
+--GET # SELECT status FROM td WHERE id IN (62, 63);
+--PASS # REDIS HGET site #status -> TO TABLE (status);
+--PUT # INSERT INTO td (status, info) VALUES ('pass', '#status');
+-- GET # REDIS HGETALL site -> TO TABLE (site,url);
+-- PUT # REDIS HSET site2 &site &url;
+
 
 -- REQUEST JSON API '''http://localhost:7700/task/instant?creator=1&info={"jobId":4,"dag":"","params":"","commands":"","delay":0,"ignoreDepends":"yes"}'''
 --    METHOD 'PUT';

@@ -1,22 +1,38 @@
 package io.qross.pql
 
-import java.util.regex.Matcher
-
+import io.qross.core.DataTable
 import io.qross.exception.SQLParseException
-import io.qross.pql.Patterns.$SHOW
+import io.qross.pql.Patterns.{$SHOW, $BLANK}
 import io.qross.pql.Solver._
+import io.qross.ext.TypeExt._
 
 object SHOW {
     def parse(sentence: String, PQL: PQL): Unit = {
-        $SHOW.findFirstMatchIn(sentence) match {
-            case Some(m) => PQL.PARSING.head.addStatement(new Statement("SHOW", sentence, new SHOW(m.group(1))))
+        $SHOW.findFirstIn(sentence) match {
+            case Some(_) => PQL.PARSING.head.addStatement(new Statement("SHOW", sentence, new SHOW(sentence)))
             case None => throw new SQLParseException("Incorrect SHOW sentence: " + sentence)
         }
     }
 }
 
-class SHOW(val rows: String) {
+class SHOW(val sentence: String) {
     def execute(PQL: PQL): Unit = {
-        PQL.dh.show(this.rows.$eval(PQL).asInteger(20).toInt)
+
+        if ("""(?i)SHOW\s+[a-z]+""".r.test(sentence)) {
+
+            PQL.WORKING += new SELECT(sentence).select(PQL).value
+
+            """(?i)SHOW\s+CREATE\s+TABLE\s""".r.findFirstIn(sentence) match {
+                case Some(_) =>
+                    PQL.WORKING.last.asInstanceOf[DataTable].firstRow match {
+                        case Some(row) => println(row.getString("Create Table"))
+                        case None =>
+                    }
+                case None =>
+            }
+        }
+        else {
+            PQL.dh.show(sentence.takeAfter($BLANK).$eval(PQL).asInteger(20).toInt)
+        }
     }
 }

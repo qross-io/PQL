@@ -23,6 +23,7 @@ object Syntax {
             OPEN  DEFAULT  AS [alias]  USE [database];
             OPEN  CACHE;
             OPEN  TEMP;
+            OPEN  REDIS [host]  SELECT [database];
             OPEN  EXCEL [fileName]  AS [alias];
             OPEN  JSON FILE [fileName]  AS TABLE? [tableName];
             OPEN  CSV FILE [fileName]  AS TABLE? [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  SKIP [amount];
@@ -36,6 +37,7 @@ object Syntax {
             SAVE AS  CACHE TABLE [tableName]  PRIMARY KEY [columnName];
             SAVE AS  TEMP  AS [alias];
             SAVE AS  TEMP TABLE [tableName]  PRIMARY KEY [columnName]  UNIQUE KEY (column1, column2, ...)  KEY (column1, column2, ...);
+            SAVE AS  REDIS [host]  SELECT [database];
             SAVE AS  NEW? CSV FILE [fileName]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
             SAVE AS  CSV STREAM FILE [fileName]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
             SAVE AS  NEW? TXT FILE [fileName]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
@@ -50,6 +52,7 @@ object Syntax {
             SAVE TO  QROSS  AS [alias];
             SAVE TO  CACHE  AS [alias];
             SAVE TO  TEMP  AS [alias];
+            SAVE TO  REDIS [host]  SELECT [database];
             SAVE TO  NEW? CSV FILE [fileName]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
             SAVE TO  CSV STREAM FILE [fileName]  WITHOUT HEADERS  WITH HEADERS (column1 AS header1, column2 AS header2, ...)*;
             SAVE TO  NEW? TXT FILE [fileName]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
@@ -192,7 +195,7 @@ case class Syntax(caption: String) {
         throw new SQLParseException("Wrong sentence caption: " + caption)
     }
 
-    val tree = Syntax.Tree(caption)
+    private val tree = Syntax.Tree(caption)
 
     //生成执行计划, 不考虑子语句
     //根据语句生成phrase列表，即执行计划。body语句不包括语句头关键词

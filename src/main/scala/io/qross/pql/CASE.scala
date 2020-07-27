@@ -34,13 +34,42 @@ object CASE {
             case None => throw new SQLParseException("Incorrect CASE sentence: " + sentence)
         }
     }
+}
+
+class CASE(equivalent: String) {
 
     //CASE短表达式   CASE WHEN $a > 0 THEN 0 ELSE 1 END 或  CASE value WHEN 1 THEN 'a' WHEN 2 THEN 'b' ELSE 'c' END
-    def express(expression: String, PQL: PQL): DataCell = {
+    def express(PQL: PQL, mode: Int = Solver.FULL): DataCell = {
 
-        var sentence = expression
-        val words = """\b(CASE|WHEN|THEN|ELSE|END)\b""".r.findAllIn(sentence).toList
-        var equivalent = DataCell.UNDEFINED
+        //先提取子语句
+        var sentence = equivalent.replaceInnerSentence(PQL)
+        sentence = {
+            mode match {
+                case 0 => sentence.$clean(PQL)
+                case 1 => sentence.$express(PQL)
+                case 2 => sentence
+                case _ => sentence.$clean(PQL)
+            }
+        }
+
+        val links = {
+            $END$.findFirstMatchIn(sentence) match {
+                case Some(m) =>
+                    if (m.group(1).trim() == ARROW) {
+                        val sharp = sentence.takeAfter(m.group(0))
+                        sentence = sentence.takeBefore(sharp).dropRight(2).trim()
+                        sharp
+                    }
+                    else {
+                        ""
+                    }
+                case None => throw new SQLExecuteException("Wrong CASE expression, keyword END is needed. " + sentence)
+            }
+        }
+
+        val words = $CASEX.r.findAllIn(sentence).map(_.trim().toUpperCase()).toList
+        val sections = sentence.split($CASEX, -1).map(_.trim())
+        var equals = DataCell.UNDEFINED
         var met = false
         var result = ""
         var wrong = ""
@@ -58,17 +87,16 @@ object CASE {
 
         breakable {
             for (i <- words.indices) {
-                val prev = if (i > 0) words(i - 1).toUpperCase() else ""
-                words(i).toUpperCase() match {
-                    case "CASE" => sentence = sentence.takeAfter(words(i))
+                val prev = if (i > 0) words(i - 1) else ""
+                words(i) match {
+                    case "CASE" =>
                     case "WHEN" =>
                         if (prev == "CASE") {
-                            val equiv = sentence.takeBefore(words(i)).trim()
-                            equivalent = if (equiv == "") DataCell(true, DataType.BOOLEAN) else if ($CONDITION.test(equiv)) new ConditionGroup(equiv).evalAll(PQL).toDataCell(DataType.BOOLEAN) else equiv.$eval(PQL)
+                            equals = if (sections(i) == "") DataCell(true, DataType.BOOLEAN) else if ($CONDITION.test(sections(i))) new ConditionGroup(sections(i)).evalAll(PQL, replaced = true).toDataCell(DataType.BOOLEAN) else sections(i).$eval(PQL)
                         }
                         else if (prev == "THEN") {
                             if (met) {
-                                result = sentence.takeBefore(words(i))
+                                result = sections(i)
                                 break
                             }
                         }
@@ -76,15 +104,14 @@ object CASE {
                             wrong = "miss THEN"
                             break
                         }
-                        sentence = sentence.takeAfter(words(i))
                     case "THEN" =>
                         if (prev == "WHEN") {
                             met = {
-                                if (equivalent.isBoolean) {
-                                    new ConditionGroup(sentence.takeBefore(words(i))).evalAll(PQL) == equivalent.value
+                                if (equals.isBoolean) {
+                                    new ConditionGroup(sections(i)).evalAll(PQL, replaced = true) == equals.value
                                 }
                                 else {
-                                    sentence.takeBefore(words(i)).$eval(PQL).value == equivalent.value
+                                    sections(i).$eval(PQL).value == equals.value
                                 }
                             }
                         }
@@ -92,15 +119,11 @@ object CASE {
                             wrong = "miss WHEN"
                             break
                         }
-                        sentence = sentence.takeAfter(words(i))
                     case "ELSE" =>
                         if (prev == "THEN") {
                             if (met) {
-                                result = sentence.takeBefore(words(i))
+                                result = sections(i)
                                 break
-                            }
-                            else {
-                                sentence = sentence.takeAfter(words(i))
                             }
                         }
                         else {
@@ -110,7 +133,7 @@ object CASE {
                     case "END" =>
                         if (prev == "ELSE") {
                             if (!met) {
-                                result = sentence.takeBefore(words(i))
+                                result = sections(i)
                             }
                         }
                         else {
@@ -121,14 +144,26 @@ object CASE {
         }
 
         if (wrong != "") {
-            throw new SQLExecuteException(s"Wrong short expression IF format, $wrong: " + expression)
+            throw new SQLExecuteException(s"Incorrect short expression CASE format, $wrong: " + equivalent)
         }
 
-        result.$eval(PQL)
-    }
-}
+        val data = {
+            if (result.bracketsWith("~inner[", "]")) {
+                result.restoreInnerSentence(PQL).$compute(PQL, mode)
+            }
+            else {
+                result.$sharp(PQL)
+            }
+        }
 
-class CASE(equivalent: String) {
+        if (links != "") {
+            new Sharp(links, data).execute(PQL)
+        }
+        else {
+            data
+        }
+    }
+
     def execute(PQL: PQL, statement: Statement): Unit = {
         PQL.EXECUTING.push(statement)
         PQL.CASE$WHEN.push(

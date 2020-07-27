@@ -1,19 +1,18 @@
 package io.qross.core
 
 import io.qross.core.Parameter._
-import io.qross.exception.{DefineAliasException, NoDataDestinationException, NoDataSourceException, OpenDataSourceException, WrongSourceNameException}
+import io.qross.exception.{DefineAliasException, ExtensionNotFoundException, NoDataDestinationException, NoDataSourceException, OpenDataSourceException}
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.fql.FQL
-import io.qross.fs.{Excel, FileReader, FileWriter, TextFile}
+import io.qross.fs.Excel
 import io.qross.fs.Path._
 import io.qross.jdbc.{DataSource, JDBC}
+import io.qross.net.Redis
 import io.qross.pql.Patterns
 import io.qross.setting.{Environment, Global, Properties}
 import io.qross.thread.Parallel
 import io.qross.time.{DateTime, Timer}
-import javax.xml.bind.annotation.XmlElementDecl.GLOBAL
-import redis.clients.jedis.Jedis
 
 import scala.collection.mutable
 import scala.collection.parallel.mutable.ParArray
@@ -399,10 +398,24 @@ class DataHub (val defaultConnectionName: String) {
 
     //execute SQL on target dataSource
     def set(nonQuerySQL: String, values: Any*): DataHub = {
-        getSource match {
-            case ds: DataSource => AFFECTED_ROWS_OF_LAST_SET = ds.executeNonQuery(nonQuerySQL, values: _*)
-            case excel: Excel => AFFECTED_ROWS_OF_LAST_SET = excel.executeNonQuery(nonQuerySQL)
-            case None =>
+        if ("""(?i)REDIS\s""".r.test(nonQuerySQL)) {
+            this.pick[Redis]("REDIS$R") match {
+                case Some(redis) =>
+                    val data = redis.command(nonQuerySQL)
+                    AFFECTED_ROWS_OF_LAST_SET = data.dataType match {
+                        case DataType.INTEGER => data.asInteger(0).toInt
+                        case DataType.TEXT => if (data.asText == "OK") 1 else 0
+                        case _ => 0
+                    }
+                case None => throw new ExtensionNotFoundException("Must open a Redis host first.")
+            }
+        }
+        else {
+            getSource match {
+                case ds: DataSource => AFFECTED_ROWS_OF_LAST_SET = ds.executeNonQuery(nonQuerySQL, values: _*)
+                case excel: Excel => AFFECTED_ROWS_OF_LAST_SET = excel.executeNonQuery(nonQuerySQL)
+                case None =>
+            }
         }
 
         this
@@ -451,7 +464,7 @@ class DataHub (val defaultConnectionName: String) {
         }
 
         getSource match {
-            case ds: DataSource => TABLE.cut(currentSource[DataSource].tableSelect(querySentence, TABLE))
+            case ds: DataSource => TABLE.cut(ds.tableSelect(querySentence, TABLE))
             case excel: Excel => TABLE.cut(excel.tableSelect(querySentence, TABLE))
             case _ =>
         }
@@ -464,10 +477,24 @@ class DataHub (val defaultConnectionName: String) {
 
     //execute SQL on target dataSource
     def prep(nonQuerySQL: String, values: Any*): DataHub = {
-        AFFECTED_ROWS_OF_LAST_PREP = getDestination match {
-            case ds: DataSource =>  ds.executeNonQuery(nonQuerySQL, values: _*)
-            case excel: Excel => excel.executeNonQuery(nonQuerySQL)
-            case _ => 0
+        if ("""(?i)REDIS\s""".r.test(nonQuerySQL)) {
+            this.pick[Redis]("REDIS$W") match {
+                case Some(redis) =>
+                    val data = redis.command(nonQuerySQL)
+                    AFFECTED_ROWS_OF_LAST_PREP = data.dataType match {
+                        case DataType.INTEGER => data.asInteger(0).toInt
+                        case DataType.TEXT => if (data.asText == "OK") 1 else 0
+                        case _ => 0
+                    }
+                case None => throw new ExtensionNotFoundException("Must save to a Redis server first.")
+            }
+        }
+        else {
+            AFFECTED_ROWS_OF_LAST_PREP = getDestination match {
+                case ds: DataSource => ds.executeNonQuery(nonQuerySQL, values: _*)
+                case excel: Excel => excel.executeNonQuery(nonQuerySQL)
+                case _ => 0
+            }
         }
 
         this
@@ -1212,18 +1239,26 @@ class DataHub (val defaultConnectionName: String) {
     def executeSingleValue(SQL: String, values: Any*): DataCell = currentSource[DataSource].executeSingleValue(SQL, values: _*)
     def executeExists(SQL: String, values: Any*): Boolean = currentSource[DataSource].executeExists(SQL, values: _*)
     def executeNonQuery(SQL: String, values: Any*): Int = currentSource[DataSource].executeNonQuery(SQL, values: _*)
+    def tableUpdate(SQL: String, table: DataTable): Int = currentSource[DataSource].tableUpdate(SQL, table)
+    def tableSelect(SQL: String, table: DataTable): DataTable = currentSource[DataSource].tableSelect(SQL, table)
 
     def close(): Unit = {
+
         SOURCES.values.foreach {
             case db: DataSource => db.close()
             case excel: Excel => excel.close()
             case _ =>
         }
 
-//        this.pick[Jedis]("REDIS") match {
-//            case Some(jedis) => jedis.close()
-//            case None =>
-//        }
+        this.pick[Redis]("REDIS$R") match {
+            case Some(redis) => redis.close()
+            case None =>
+        }
+
+        this.pick[Redis]("REDIS$W") match {
+            case Some(redis) => redis.close()
+            case None =>
+        }
 
         FQL.close()
 

@@ -30,31 +30,7 @@ class SET(val declare: String, val symbol: String, val expression: String) {
         //6. 数学表达式 - 其他 - 解析函数和变量然后求值，出错则抛出异常
 
         val variables: Array[String] = declare.split(",").map(_.trim)
-        val result = {
-            if ($SELECT.test(expression)) {
-                new SELECT(expression).select(PQL)
-            }
-            else if ($PARSE.test(expression)) {
-                new PARSE(expression).doParse(PQL)
-                //throw new SQLExecuteException("Columns amount in PARSE must equals variables number.")
-            }
-            else if ($NON$QUERY.test(expression)) {
-                //INSERT + UPDATE + DELETE + REPLACE
-                DataCell(PQL.dh.executeNonQuery(expression.$restore(PQL)), DataType.INTEGER)
-                //throw new SQLParseException("Only 1 variable name allowed when save affected rows of an INSERT/UPDATE/DELETE sentence. " + expression)
-            }
-            else if ($FILE.test(expression)) {
-                DataCell(new FILE(expression).evaluate(PQL))
-            }
-            else if ($DIR.test(expression)) {
-                DataCell(new DIR(expression).evaluate(PQL))
-            }
-            else {
-                //在SHARP表达式内部再恢复字符串和中间值
-                new Sharp(expression.$clean(PQL)).execute(PQL)
-                //throw new SQLParseException("Only 1 variable name allowed when declare a new variable. " + expression)
-            }
-        }
+        val result = expression.$compute(PQL)
 
         if (symbol == ":=") {
             if (result.isTable) {

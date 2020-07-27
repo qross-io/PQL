@@ -156,7 +156,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
                 value.toString.userQuotesIf(quote, dataType == DataType.TEXT || dataType == DataType.DATETIME)
             }
             else {
-                Json.serialize(value.asInstanceOf[java.util.ArrayList[Object]])
+                Json.serialize(value.asInstanceOf[java.util.List[Object]])
             }
         }
         else {
@@ -322,8 +322,17 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         if (valid) {
             this.dataType match {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable]
-                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].turnToColumn("key", "value")
-                case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]].asScala.toList.toTable()
+                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].asTable
+                    //this.value.asInstanceOf[DataRow].turnToTable("key", "value")
+                case DataType.ARRAY | DataType.LIST =>
+                    val table = new DataTable()
+                    val list = this.value.asInstanceOf[java.util.List[Any]]
+                    for (i <- 0 until list.size()) {
+                        val row = new DataRow()
+                        row.set("item", DataCell(list.get(i)))
+                        table += row
+                    }
+                    table
                 case _ => new DataTable(new DataRow("value" -> this.value))
             }
         }
@@ -335,8 +344,18 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         if (valid) {
             this.dataType match {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable]
-                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].turnToColumn(if (fields.nonEmpty) fields.head else "key", if (fields.length > 1) fields(1) else "value")
-                case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]].asScala.toList.toTable(if (fields.nonEmpty) fields.head else "item")
+                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].asTable
+                    //this.value.asInstanceOf[DataRow].turnToTable(if (fields.nonEmpty) fields.head else "key", if (fields.length > 1) fields(1) else "value")
+                case DataType.ARRAY | DataType.LIST =>
+                    val table = new DataTable()
+                    val list = this.value.asInstanceOf[java.util.List[Any]]
+                    val field = if (fields.nonEmpty) fields.head else "item"
+                    for (i <- 0 until list.size()) {
+                        val row = new DataRow()
+                        row.set(field, DataCell(list.get(i)))
+                        table += row
+                    }
+                    table
                 case _ => new DataTable(new DataRow((if (fields.nonEmpty) fields.head else "value") -> this.value))
             }
         }
@@ -411,7 +430,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
             }
         }
         else {
-            new util.ArrayList[Any]()
+            new java.util.ArrayList[Any]()
         }
     }
     def toJavaList: DataCell = {

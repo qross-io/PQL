@@ -153,12 +153,6 @@ object GlobalVariableDeclaration {
     def ROLE(PQL: PQL): DataCell = PQL.credential.getCell("role")
     def USER(PQL: PQL): DataCell = DataCell(PQL.credential, DataType.ROW)
 
-    def RESULT(PQL: PQL): DataCell = {
-        PQL.RESULT.lastOption match {
-            case Some(v) => DataCell(v)
-            case None => DataCell.UNDEFINED
-        }
-    }
     def BUFFER(PQL: PQL): DataCell = DataCell(PQL.dh.getData, DataType.TABLE)
     def CLEAN_PQL_BODY(PQL: PQL): DataCell = DataCell(PQL.SQL, DataType.TEXT)
 

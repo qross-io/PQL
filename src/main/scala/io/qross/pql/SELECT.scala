@@ -1,12 +1,11 @@
 package io.qross.pql
 
-import io.qross.core.{DataCell, DataType}
+import io.qross.core.{DataCell, DataTable, DataType}
 import io.qross.ext.TypeExt._
-import io.qross.pql.Patterns.{$SELECT$CUSTOM, ARROW}
+import io.qross.pql.Patterns.ARROW
 import io.qross.pql.Solver._
 
 object SELECT {
-
     def parse(sentence: String, PQL: PQL): Unit = {
         PQL.PARSING.head.addStatement(new Statement("SELECT", sentence, new SELECT(sentence)))
     }
@@ -14,42 +13,43 @@ object SELECT {
 
 class SELECT(val sentence: String) {
 
-    def select(PQL: PQL, express: Boolean = false): DataCell = {
+    def select(PQL: PQL, express: Int = Solver.FULL): DataCell = {
+        sentence.$process(PQL, express, body => {
+            val table = PQL.dh.executeDataTable(body)
+            PQL.COUNT_OF_LAST_SELECT = table.size
+            DataCell(table, DataType.TABLE)
+        })
+    }
 
-        val (_select, links) =
-            if (sentence.contains(ARROW)) {
-                (sentence.takeBefore(ARROW), sentence.takeAfter(ARROW))
+    //用于pass语句中
+    def select(PQL: PQL, table: DataTable): DataCell = {
+
+        var body = sentence.$clean(PQL)
+        val links = {
+            if (body.contains(ARROW)) {
+                body.takeAfter(ARROW)
             }
             else {
-                (sentence, "")
+                ""
             }
-
-        val data = {
-            PQL.dh.executeDataTable({
-                if (express) {
-                    _select.$express(PQL).popStash(PQL)
-                }
-                else {
-                    _select.$restore(PQL)
-                }
-            }).toDataCell(DataType.TABLE)
-        }
-
-        PQL.COUNT_OF_LAST_SELECT = data.dataType match {
-            case DataType.TABLE => data.asTable.size
-            case DataType.ARRAY | DataType.LIST => data.asList.size
-            case _ => 1
         }
 
         if (links != "") {
-            new Sharp(links, data).execute(PQL)
+            body = body.takeBefore(ARROW).trim()
+        }
+
+        val data = PQL.dh.tableSelect(body.popStash(PQL), table)
+        PQL.COUNT_OF_LAST_SELECT = data.size
+
+        if (links != "") {
+            new Sharp(links, DataCell(data, DataType.TABLE)).execute(PQL)
         }
         else {
-            data
+            DataCell(data, DataType.TABLE)
         }
     }
 
     def execute(PQL: PQL): Unit = {
-        PQL.RESULT += this.select(PQL).value
+        PQL.WORKING += this.select(PQL).value
     }
 }

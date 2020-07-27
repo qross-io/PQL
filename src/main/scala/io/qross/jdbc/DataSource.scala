@@ -770,14 +770,14 @@ class DataSource (val connectionName: String, val databaseName: String) {
         val result = new DataTable()
 
         if (SQL.hasQuestionMark) {
-            table.foreach(row => {
+            table.par.foreach(row => {
                 result.merge(this.executeDataTable(SQL, row.getValues: _*))
             })
         }
         else {
             val params = SQL.pickParameters()
             if (params.nonEmpty) {
-                table.foreach(row => {
+                table.par.foreach(row => {
                     result.merge(this.executeDataTable(SQL.replaceParameters(params, row).replace("~u0027", "'")))
                 })
             }

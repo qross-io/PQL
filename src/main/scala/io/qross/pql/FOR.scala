@@ -59,24 +59,7 @@ class FOR(val variable: String, val method: String, val collection: String) {
         val data: DataCell = {
             if (collection.bracketsWith("(", ")")) {
                 //集合查询语句
-                //(SELECT...)
-                //(PARSE...)
-                val query = collection.$trim("(", ")").trim()
-                if ($SELECT.test(query)) {
-                    new SELECT(query).select(PQL)
-                }
-                else if ($PARSE.test(query)) {
-                    new PARSE(query).doParse(PQL)
-                }
-                else if ($FILE.test(query)) {
-                    new FILE(query).evaluate(PQL)
-                }
-                else if ($DIR.test(query)) {
-                    new DIR(query).evaluate(PQL)
-                }
-                else {
-                    throw new SQLExecuteException("Unsupports sentence in FOR loop query mode:" + query)
-                }
+                collection.$trim("(", ")").trim().$compute(PQL)
             }
             else if ($VARIABLE.test(collection)) {
                 //集合变量
@@ -123,7 +106,7 @@ class FOR(val variable: String, val method: String, val collection: String) {
                 })
             case DataType.ROW | DataType.MAP | DataType.OBJECT =>
                 data.value.asInstanceOf[DataRow]
-                    .turnToColumn("key", "value")
+                    .turnToTable("key", "value")
                     .foreach(kv => {
                         val newRow = new DataRow()
                         if (method == "IN") {

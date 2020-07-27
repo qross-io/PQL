@@ -28,7 +28,7 @@ class SharpInapplicableLinkNameException(val s: String) extends RuntimeException
 
 object SharpLinkArgumentException {
     def occur(linkName: String, origin: String): SharpLinkArgumentException = {
-        new SharpLinkArgumentException(s"Empty or wrong argument at $linkName: $origin")
+        new SharpLinkArgumentException(s"Empty or incorrect argument(s) at $linkName: $origin")
     }
 }
 

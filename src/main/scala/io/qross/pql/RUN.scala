@@ -27,6 +27,6 @@ class RUN(val commandText: String) {
             println(command)
         }
 
-        PQL.RESULT += command.bash()
+        PQL.WORKING += command.bash()
     }
 }

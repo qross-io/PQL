@@ -1,9 +1,8 @@
 package io.qross.pql
 
-import io.qross.exception.SQLParseException
-import io.qross.pql.Patterns.$PASS
-import io.qross.pql.Solver._
+import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.ext.TypeExt._
+import io.qross.pql.Patterns.$PASS
 
 object PASS {
     def parse(sentence: String, PQL: PQL): Unit = {
@@ -16,8 +15,17 @@ object PASS {
     }
 }
 
-class PASS(val selectSQL: String) {
+class PASS(val sentence: String) {
     def execute(PQL: PQL): Unit = {
-        PQL.dh.pass(this.selectSQL.$restore(PQL))
+        val data =  {
+            sentence.takeBefore(Patterns.$BLANK).toUpperCase() match {
+                case "SELECT" => new SELECT(sentence).select(PQL, PQL.dh.getData) //PQL.dh.pass(sentence.$restore(PQL)
+                case "REDIS" => new REDIS(sentence).evaluate(PQL, PQL.dh.getData) //PQL.dh.transfer(sentence.$restore(PQL))
+                case "" => throw new SQLExecuteException("Incomplete or empty PASS sentence: " + sentence)
+                case _ => throw new SQLExecuteException("Unsupported PASS sentence: " + sentence)
+            }
+        }
+
+        PQL.dh.clear().buffer(data.asTable)
     }
 }

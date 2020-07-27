@@ -43,7 +43,7 @@ class DataTable() {
         }
     }
 
-    //所有field的集合, 有序有索引
+    //所有field的集合, 有序索引
     private val fields = new mutable.ListBuffer[String]()
     //所有field及dataType的集合
     private val columns = new mutable.LinkedHashMap[String, DataType]()

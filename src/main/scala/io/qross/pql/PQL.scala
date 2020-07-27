@@ -3,7 +3,6 @@ package io.qross.pql
 import io.qross.core._
 import io.qross.exception.{ExtensionNotFoundException, SQLParseException}
 import io.qross.ext.TypeExt._
-import io.qross.fql.FQL
 import io.qross.fs.SourceFile
 import io.qross.net.Json
 import io.qross.pql.Patterns._
@@ -175,6 +174,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private[pql] val values = new ArrayBuffer[DataCell]()
     //暂存的sharp表达式
     private[pql] val sharps = new ArrayBuffer[String]()
+    //暂存的inner语句
+    private[pql] val inners = new ArrayBuffer[String]()
 
     private[pql] var SQL: String = originalSQL
 
@@ -188,7 +189,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private[pql] val root: Statement = new Statement("ROOT", SQL)
 
     //结果集
-    private[pql] val RESULT: ArrayBuffer[Any] = new ArrayBuffer[Any]()
+    private[pql] val RESULT: ArrayBuffer[Any] = new ArrayBuffer[Any]() //显式输出结果
+    private[pql] val WORKING: ArrayBuffer[Any] = new ArrayBuffer[Any]() //隐式输出结果
     private[pql] var COUNT_OF_LAST_SELECT: Int = -1 //最后一个SELECT返回的结果数量
     private[pql] var AFFECTED_ROWS_OF_LAST_NON_QUERY: Int = -1  //最后一个非SELECT语句影响的数据表行数
 
@@ -242,7 +244,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                     .flatMap(block => {
                         if (block.contains(EM$LEFT)) {
                             val s = new ArrayBuffer[String]()
-                            var p1 = block.takeBefore(EM$LEFT)
+                            val p1 = block.takeBefore(EM$LEFT)
                             if (p1.nonEmpty) {
                                 s += "ECHO " + p1
                             }
@@ -273,7 +275,15 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         PARSING.pop()
 
         if (PARSING.nonEmpty || TO_BE_CLOSE.nonEmpty) {
-            throw new SQLParseException("Control statement hasn't closed: " + PARSING.head.sentence)
+            throw new SQLParseException("Control statement hasn't closed: \n" + {
+                val sentence = TO_BE_CLOSE.head.sentence
+                if (sentence.length > 120) {
+                    sentence.substring(0, 120) + " ..."
+                }
+                else {
+                    sentence
+                }
+            })
         }
     }
 
@@ -291,7 +301,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
             }
         }
         if (NON_QUERY_CAPTIONS.contains(caption)) {
-            PARSING.head.addStatement(new Statement(caption, sentence))
+            PARSING.head.addStatement(new Statement(caption, sentence, new NON$QUERY(sentence)))
         }
         else {
             try {
@@ -309,7 +319,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         breakable {
             for (statement <- statements) {
                 if (NON_QUERY_CAPTIONS.contains(statement.caption)) {
-                    AFFECTED_ROWS_OF_LAST_NON_QUERY = dh.set(statement.sentence.$restore(this)).AFFECTED_ROWS_OF_LAST_SET
+                    statement.instance.asInstanceOf[NON$QUERY].execute(this)
                 }
                 else if (statement.caption == "CONTINUE") {
                     if (CONTINUE.execute(this, statement)) {
@@ -613,6 +623,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     def $return: Any = {
         if (RESULT.nonEmpty) {
             if (embedded) {
+                //嵌入式输出全部
                 RESULT.map{
                     case table: DataTable => table.toString
                     case row: DataRow => row.toString
@@ -624,6 +635,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 }.mkString
             }
             else if (RESULT.size == 1) {
+                //一项
                 RESULT.head match {
                     case table: DataTable => table.toJavaMapList
                     case row: DataRow => row.toJavaMap
@@ -633,6 +645,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 }
             }
             else {
+                //多基输出为数组形式
                 RESULT.map {
                         case table: DataTable => table.toJavaMapList
                         case row: DataRow => row.toJavaMap
@@ -642,7 +655,18 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 }.asJava
             }
         }
+        else if (WORKING.nonEmpty) {
+            //显式输出为空时才使用隐式输出
+            WORKING.last match {
+                case table: DataTable => table.toJavaMapList
+                case row: DataRow => row.toJavaMap
+                case dt: DateTime => dt.toString.useQuotes("\"")
+                case str: String => str.useQuotes("\"")
+                case o => o
+            }
+        }
         else if (AFFECTED_ROWS_OF_LAST_NON_QUERY > -1) {
+            //都为空时输出最后一条非查询语句影响的行数
             AFFECTED_ROWS_OF_LAST_NON_QUERY
         }
         else {

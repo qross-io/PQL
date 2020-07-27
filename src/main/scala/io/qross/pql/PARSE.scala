@@ -1,6 +1,6 @@
 package io.qross.pql
 
-import io.qross.core.DataCell
+import io.qross.core.{DataCell, DataType}
 import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
@@ -25,60 +25,33 @@ class PARSE(val sentence: String) {
 
     //express 是否支持嵌入式查询语句, 即 ${{ }}
     //不能用parse名, 会与静态方法
-    def doParse(PQL: PQL, express: Boolean = false): DataCell = {
-
-        var body = sentence.takeAfter(Patterns.$BLANK).trim()
-        val links = {
-            if (body.contains(ARROW)) {
-                body = body.takeBefore(ARROW)
-                sentence.takeAfter(ARROW)
-            }
-            else {
-                ""
-            }
-        }
-
-        if (express) {
-            body = body.$express(PQL).popStash(PQL)
-        }
-        else {
-            body = body.$restore(PQL)
-        }
-
-        val plan = Syntax("PARSE").plan(body)
-
-        val path = plan.headArgs
-
-        val data = {
+    def doParse(PQL: PQL, express: Int = Solver.FULL): DataCell = {
+        sentence.$process(PQL, express, body => {
+            val plan = Syntax("PARSE").plan(body)
+            val path = plan.headArgs
             plan.head match {
                 case "" =>
                     if (plan.size > 1) {
                         plan.last match {
-                                case "AS TABLE" => PQL.dh.parseTable(path)
-                                case "AS ROW" | "AS MAP" | "AS OBJECT" => PQL.dh.parseRow(path)
-                                case "AS LIST" | "AS ARRAY" => PQL.dh.parseList(path)
-                                case "AS VALUE" | "AS SINGLE VALUE" => PQL.dh.parseValue(path)
-                                case _ => PQL.dh.parseTable(path)
-                            }
+                            case "AS TABLE" => PQL.dh.parseTable(path).toDataCell(DataType.TABLE)
+                            case "AS ROW" | "AS MAP" | "AS OBJECT" => PQL.dh.parseRow(path).toDataCell(DataType.ROW)
+                            case "AS LIST" | "AS ARRAY" => PQL.dh.parseList(path).toDataCell(DataType.ARRAY)
+                            case "AS VALUE" | "AS SINGLE VALUE" => PQL.dh.parseValue(path)
+                            case _ => PQL.dh.parseTable(path).toDataCell(DataType.TABLE)
+                        }
                     }
                     else {
-                        PQL.dh.parseTable(path)
+                        PQL.dh.parseTable(path).toDataCell(DataType.TABLE)
                     }
-                case _ => PQL.dh.parseTable(path)
+                case _ => PQL.dh.parseTable(path).toDataCell(DataType.TABLE)
             }
-        }.toDataCell
-
-        if (links != "") {
-            new Sharp(links, data).execute(PQL)
-        }
-        else {
-            data
-        }
+        })
     }
 
     def execute(PQL: PQL): Unit = {
         val data = this.doParse(PQL)
-        PQL.RESULT += data
+
+        PQL.WORKING += data.value
         PQL.COUNT_OF_LAST_SELECT = if (data.isTable) data.asTable.size else if (data.isJavaList) data.asJavaList.size() else 1
 
         if (PQL.dh.debugging) {

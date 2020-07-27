@@ -69,12 +69,13 @@ class DataRow() {
             if (value != null) {
                 dataType match {
                     case DataType.DATETIME => value.toDateTime.toString
-                    case DataType.JSON => value
+                    case DataType.BLOB => new String(value.asInstanceOf[Array[Byte]])
+                    //case DataType.JSON => value
                     case _ => value
                 }
             }
             else {
-                value
+                null
             }
         }
     }
@@ -390,19 +391,6 @@ class DataRow() {
         this
     }
 
-    def turnToColumn(fieldColumn: String, valueColumn: String): DataTable = {
-        val table = new DataTable()
-        this.values.foreach(field => {
-            table.addRow(
-                new DataRow(
-                    fieldColumn -> field._1,
-                    valueColumn -> field._2
-                )
-            )
-        })
-        table
-    }
-
     def mkString(delimiter: String): String = {
         val values = new mutable.StringBuilder()
         for (field <- fields) {
@@ -419,8 +407,21 @@ class DataRow() {
     def toJavaMap: java.util.Map[String, Any] = values.asJava
     def toJavaList: java.util.List[Any] = values.values.toList.asJava
 
-    def toTable: DataTable = {
+    def asTable: DataTable = {
         new DataTable(this)
+    }
+
+    def turnToTable(fieldColumn: String = "key", valueColumn: String = "value"): DataTable = {
+        val table = new DataTable()
+        this.values.foreach(field => {
+            table.addRow(
+                new DataRow(
+                    fieldColumn -> field._1,
+                    valueColumn -> field._2
+                )
+            )
+        })
+        table
     }
 
     override def toString: String = {

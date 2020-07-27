@@ -2,8 +2,12 @@ package io.qross.pql
 
 import java.util.regex.Pattern
 
+import io.qross.exception.SQLParseException
+
 import scala.util.matching.Regex
 import io.qross.ext.TypeExt._
+
+import scala.collection.mutable
 
 object Patterns {
 
@@ -25,7 +29,9 @@ object Patterns {
 
     val $CONDITION: Regex = """(?i)=|!=|>|<|IS""".r
 
-    val $END$: Regex = """(?i)\bEND\b""".r
+    val $IFX: String = """^IF\s|\bTHEN\s|\bELSIF\s|\bELSE\s|\bEND$"""
+    val $CASEX: String = """^CASE\s|\bWHEN\s|\bTHEN\s|\bELSE\s|\bEND$"""
+    val $END$: Regex = """(?i)\bEND(\s*->|$)""".r
 
     val $BLANK: Regex = """\s""".r
     val BLANKS: String = """\s+"""
@@ -78,7 +84,7 @@ object Patterns {
     val $OUTPUT: Regex = """(?i)^OUTPUT\s*#?""".r
     val $PRINT: Regex = """(?i)^PRINT\s""".r
     val $PRINT$SEAL: Regex = """(?i)^[a-z]+\s""".r
-    val $SHOW: Regex = """(?i)^SHOW\s+(\d+)$""".r
+    val $SHOW: Regex = """(?i)^SHOW\s""".r
     val $RUN: Regex = """(?i)^RUN\s+(COMMAND|SHELL)\s+""".r
     val $REQUEST: Regex = """(?i)^REQUEST\s+""".r
     val $SEND: Regex = """(?i)^SEND\s+""".r
@@ -87,8 +93,9 @@ object Patterns {
     
     val $FILE: Regex = """(?i)^FILE\s""".r
     val $DIR: Regex = """(?i)^DIR\s""".r
+    val $REDIS: Regex = """(?i)^REDIS\s""".r
 
-    val $LINK: Regex = """(?i)\s[A-Z][A-Z]+(\s+[A-Z][A-Z\d]+)*\b""".r
+    val $LINK: Regex = """(?i)\s[A-Z][A-Z]+(\s+[A-Z][A-Z\d]+)*(?=\s|$|\()""".r
     val $ARGS: Regex = """\s+[,=]\s+|\s+[,=\)]|[,=\(]\s+""".r
     val $AS: Regex = """(?i)\s+AS\s+""".r
 
