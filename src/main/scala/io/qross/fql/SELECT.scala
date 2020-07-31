@@ -7,6 +7,7 @@ import io.qross.ext.TypeExt._
 import scala.collection.mutable
 import scala.util.control.Breaks._
 import io.qross.fql.Patterns._
+import io.qross.script.Script
 
 
 object SELECT {
@@ -199,7 +200,7 @@ class SELECT(statement: String, processing: Boolean) {
                             row.getCell(field).value
                         }
                         else {
-                            field.evaluate()
+                            Script.evalJavascript(field)
                         },
                         condition.operator,
                         if ($CONDITION$N.test(value)) {
@@ -212,7 +213,7 @@ class SELECT(statement: String, processing: Boolean) {
                             row.getCell(value).value
                         }
                         else {
-                            value.evaluate()
+                            Script.evalJavascript(value)
                         })
             }
 

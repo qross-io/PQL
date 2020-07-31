@@ -15,3 +15,7 @@ class ExtensionNotFoundException(val s: String) extends RuntimeException(s) {
 class JsonParseException(val s: String) extends RuntimeException(s) {
 
 }
+
+class OneApiIncorrectServiceNameException(val s: String) extends RuntimeException(s) {
+
+}

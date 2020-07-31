@@ -21,7 +21,7 @@ class DIR(sentence: String) {
 
     def evaluate(PQL: PQL, express: Int = Solver.FULL): DataCell = {
         sentence.$process(PQL, express, command => {
-            val plan = Syntax("DIR").plan(command)
+            val plan = Syntax("DIR").plan(command.drop(3).trim())
             val path = plan.headArgs
             plan.head match {
                 case "LIST" =>

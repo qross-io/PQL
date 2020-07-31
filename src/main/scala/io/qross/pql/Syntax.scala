@@ -104,6 +104,8 @@ object Syntax {
             FILE  LENGTH [filePath];
             FILE  SIZE [filePath];
             FILE  LIST [path];
+            FILE  WRITE [filePath]  APPEND [content];
+            FILE  READ [filePath];
 
             DIR  [path];
             DIR  LIST [path];

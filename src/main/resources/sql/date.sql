@@ -1,7 +1,7 @@
 DEBUG ON;
 
-OPEN REDIS qross;
-REDIS KEYS *;
+--OPEN REDIS qross;
+--REDIS KEYS *;
 
 --GET # SELECT id, project_id, title, job_type, owner FROM qross_jobs;
 --SAVE AS NEW EXCEL 'f:/jobs.xlsx';
@@ -11,11 +11,10 @@ REDIS KEYS *;
 --SELECT id, project_id, owner  FROM :jobs SEEK 0 LIMIT 5;
 --PRINT @POINTER;
 
+PRINT '\'hello\n world\'';
 
 
-OPEN QROSS;
-
-
+/*
 SET $table := "qross_jobs";
 SET $id := 1;
 
@@ -43,6 +42,9 @@ OUTPUT # IF true THEN {
     "when": 4
 } END;
 
+REQUEST JSON API '''http://@KEEPER_HTTP_ADDRESS:@KEEPER_HTTP_PORT/global/set?name=QUIT_ON_NEXT_BEAT&value=yes''' METHOD 'PUT';
+PARSE '/' AS VALUE;
+*/
 
 -- REDIS HGET site qross -> CONCAT " -> master -> keeper";
 --SAVE TO REDIS qross;

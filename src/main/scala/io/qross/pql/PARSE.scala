@@ -27,7 +27,7 @@ class PARSE(val sentence: String) {
     //不能用parse名, 会与静态方法
     def doParse(PQL: PQL, express: Int = Solver.FULL): DataCell = {
         sentence.$process(PQL, express, body => {
-            val plan = Syntax("PARSE").plan(body)
+            val plan = Syntax("PARSE").plan(body.drop(5).trim())
             val path = plan.headArgs
             plan.head match {
                 case "" =>

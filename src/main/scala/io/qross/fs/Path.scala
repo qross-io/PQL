@@ -2,12 +2,19 @@ package io.qross.fs
 
 import java.io.File
 
-import io.qross.core.{DataRow, DataType}
+import io.qross.core.{DataHub, DataRow, DataType}
 import io.qross.ext.TypeExt._
 import io.qross.setting.Global
 import io.qross.time.DateTime
 
 object Path {
+
+    implicit class DataHub$Path(val dh: DataHub) {
+        def deleteFile(fileName: String): DataHub = {
+            fileName.delete()
+            dh
+        }
+    }
 
     implicit class PathExt(path: String) {
 

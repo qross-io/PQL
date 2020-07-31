@@ -71,8 +71,11 @@ class Plan {
         if (args.bracketsWith("{", "}")) {
             Json(args).parseMap("/")
         }
-        else {
+        else if (args != "") {
             args.removeQuotes().$split()
+        }
+        else {
+            Map[String, String]()
         }
     }
 

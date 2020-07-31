@@ -172,8 +172,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     private[pql] val jsons = new ArrayBuffer[String]()
     //计算过程中的中间结果~value[n]
     private[pql] val values = new ArrayBuffer[DataCell]()
-    //暂存的sharp表达式
-    private[pql] val sharps = new ArrayBuffer[String]()
     //暂存的inner语句
     private[pql] val inners = new ArrayBuffer[String]()
 

@@ -20,6 +20,6 @@ object OUTPUT {
 class OUTPUT(val content: String) {
 
     def execute(PQL: PQL): Unit = {
-        PQL.RESULT += content.$compute(PQL)
+        PQL.RESULT += content.$compute(PQL).value
     }
 }

@@ -7,14 +7,18 @@
 <body>
 <div class="space"></div>
 <div class="form-row">
-    <%
+    < %
     OPEN TXT FILE 'f:/18.log' AS TABLE 'logs' (line TEXT);
     FOR $line IN (SELECT line FROM :logs) LOOP
-    %>
+    % >
     <div>${line}</div>
-    <%
+    < %
     END LOOP
-    %>
+    % >
 </div>
+
+<%
+=@NOW
+%>
 </body>
 </html>

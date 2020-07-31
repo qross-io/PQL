@@ -137,7 +137,6 @@ object Solver {
                     case '"' =>
                         //双引号富字符串第三位，前两个字符都是双引号
                         if (i > 1 && sentence.charAt(i - 1) == '"' && sentence.charAt(i - 2) == '"') {
-                            println("rich string third")
                             if (closing.isEmpty) {
                                 if (i == 2 || i > 2 && sentence.charAt(i - 3) != '"') {
                                     closing += new Closing('&', i)

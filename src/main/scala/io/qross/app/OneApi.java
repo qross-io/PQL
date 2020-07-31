@@ -3,38 +3,26 @@ package io.qross.app;
 import io.qross.core.DataHub;
 import io.qross.core.DataRow;
 import io.qross.core.DataTable;
-import io.qross.ext.Console;
+import io.qross.ext.TypeExt;
 import io.qross.fs.*;
 import io.qross.jdbc.DataAccess;
-import io.qross.net.Json;
-import io.qross.pql.PQL;
-import io.qross.setting.Properties;
-import io.qross.time.DateTime;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.xml.crypto.Data;
-import java.io.BufferedReader;
-import io.qross.ext.Console;
-import scala.collection.immutable.Stream;
 
 import java.io.File;
-import java.io.InputStreamReader;
 import java.util.*;
 
 public class OneApi {
 
-    public String path = "";
     public String defaultValue = "";
     public String sentences = "";
-    public Set<String> allowed = new HashSet<>();
 
     // path -> METHOD -> OneApi
     public static Map<String, Map<String, OneApi>> ALL = new HashMap<>();
     // token -> allowed name
     public static Map<String, String> TOKENS = new HashMap<>();
+    // path
+    public static Set<String> OPEN = new HashSet<>();
+    // path - name
+    public static Map<String, Set<String>> PERMIT = new HashMap<>();
 
     //read all api settings from resources:/api/
     public static void readAll() {
@@ -62,38 +50,119 @@ public class OneApi {
             }
         }
 
-        //从数据表加载接口数据和TOKEN
+        //load tokens
+        if (!Setting.OneApiTokenList.isEmpty()) {
+            String[] pairs = Setting.OneApiTokenList.split(";");
+            for (String pair : pairs) {
+                if (pair.indexOf("=") > 0) {
+                    TOKENS.put(pair.substring(pair.indexOf("=") + 1), pair.substring(0, pair.indexOf("=")));
+                }
+            }
+        }
+
+        // *
+        if (!Setting.OneApiAccessOpen.isEmpty()) {
+            String[] paths = Setting.OneApiAccessOpen.split(";");
+            for (String path : paths) {
+                if (path.contains(":")) {
+                    String[] methods = path.substring(0, path.indexOf(":")).split(",");
+                    String base = path.substring(path.indexOf(":") + 1);
+                    for (String method : methods) {
+                        OPEN.add(method + ":" + base);
+                    }
+                }
+                else if (!path.equals("")) {
+                    OPEN.add(path);
+                }
+            }
+        }
+
+        // *=* means allow all
+        if (!Setting.OneApiAccessPermit.isEmpty()) {
+            String[] pairs = Setting.OneApiAccessPermit.split(";");
+            for (String pair : pairs) {
+                if (pair.indexOf("=") > 0) {
+                    String path = pair.substring(pair.indexOf("=") + 1);
+                    String[] names = pair.substring(0, pair.indexOf("=")).split(",");
+                    if (path.contains(":")) {
+                        String[] methods = path.substring(0, path.indexOf(":")).split(",");
+                        String base = path.substring(path.indexOf(":") + 1);
+                        for (String method : methods) {
+                            String req = method + ":" + base;
+                            if (!PERMIT.containsKey(req)) {
+                                PERMIT.put(req, new HashSet<>());
+                            }
+                            Collections.addAll(PERMIT.get(req), names);
+                        }
+                    }
+                    else {
+                        if (!PERMIT.containsKey(path)) {
+                            PERMIT.put(path, new HashSet<>());
+                        }
+                        Collections.addAll(PERMIT.get(path), names);
+                    }
+                }
+            }
+        }
+
+        // load all api and config from database
         if (!Setting.OneApiMySQLConnection.isEmpty()) {
             DataAccess ds = new DataAccess(Setting.OneApiMySQLConnection);
 
             if (!Setting.OneApiServiceName.isEmpty()) {
-                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_in_one'")) {
-                    DataTable APIs = ds.executeDataTable("SELECT * FROM qross_api_in_one WHERE service_name=?", Setting.OneApiServiceName);
-                    for (DataRow API : APIs.getRowList()) {
-                        OneApi api = new OneApi();
-                        api.path = API.getString("path");
-                        api.sentences = API.getString("pql");
-                        api.defaultValue = API.getString("default_value");
+                int serviceId = 0;
+                String security = "token";
 
-                        if (!ALL.containsKey(api.path)) {
-                            ALL.put(api.path, new LinkedHashMap<>());
-                        }
-                        String[] methods = API.getString("method").toUpperCase().split(",");
-                        for (String method : methods) {
-                            ALL.get(api.path).put(method.trim(), api);
-                        }
+                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_services'")) {
+                    DataRow service = ds.executeDataRow("SELECT id, security_control FROM qross_services WHERE service_name=?", Setting.OneApiServiceName);
+                    serviceId = service.getInt("id");
+                    security = service.getString("security_control");
+                }
+
+                if (security.equals("none")) {
+                    OPEN.add("*");
+                    PERMIT.put("*", new HashSet<String>() {{ add("*"); }});
+                }
+
+                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_requsters'")) {
+                    DataTable tokens = ds.executeDataTable("SELECT name, token FROM qross_api_requsters");
+                    for (DataRow token : tokens.getRowList()) {
+                        TOKENS.put(token.getString("token"), token.getString("name"));
                     }
-                    APIs.clear();
+                    tokens.clear();
+                }
+
+                if (serviceId > 0) {
+                    if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_in_one'")) {
+                        DataTable controls = ds.executeDataTable("SELECT A.control, A.requester_id, B.name FROM qross_api_requesters_allows A INNER JOIN qross_api_requesters B ON (A.service_id=?) AND A.requester_id=B.id", serviceId);
+                        for (DataRow control : controls.getRowList()) {
+                            String allow = control.getString("control");
+                            if (PERMIT.containsKey(allow)) {
+                                PERMIT.put(allow, new HashSet<>());
+                            }
+                            PERMIT.get(allow).add(control.getString("name"));
+                        }
+
+                        DataTable APIs = ds.executeDataTable("SELECT * FROM qross_api_in_one WHERE service_id=?", serviceId);
+                        for (DataRow API : APIs.getRowList()) {
+                            OneApi api = new OneApi();
+                            String path = API.getString("path");
+                            api.sentences = API.getString("pql");
+                            api.defaultValue = API.getString("default_value");
+
+                            if (!ALL.containsKey(path)) {
+                                ALL.put(path, new LinkedHashMap<>());
+                            }
+                            String[] methods = API.getString("method").toUpperCase().split(",");
+                            for (String method : methods) {
+                                ALL.get(path).put(method, api);
+                            }
+                        }
+                        APIs.clear();
+                    }
                 }
             }
 
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_tokens'")) {
-                DataTable tokens = ds.executeDataTable("SELECT name, token FROM qross_api_tokens");
-                for (DataRow token : tokens.getRowList()) {
-                    TOKENS.put(token.getString("token"), token.getString("name"));
-                }
-                tokens.clear();
-            }
             ds.close();
         }
     }
@@ -112,11 +181,12 @@ public class OneApi {
                 if (API.length >= 1) {
                     OneApi api = new OneApi();
                     api.sentences = APIs[i].substring(APIs[i].indexOf(TextFile.TERMINATOR())).trim();
-                    if (api.path.endsWith("/")) {
-                        api.path = path + API[0].trim();
+                    String url = "/" + path;
+                    if (path.endsWith("/")) {
+                        url += API[0].trim();
                     }
                     else {
-                        api.path = path + "/" + API[0].trim();
+                        url += "/" + API[0].trim();
                     }
 
                     String METHOD = "GET";
@@ -134,28 +204,37 @@ public class OneApi {
                             api.defaultValue = API[2].trim();
                         }
                         else {
-                            api.allowed.addAll(Arrays.asList(API[2].trim().split(",")));
+                            if (!PERMIT.containsKey(url)) {
+                                PERMIT.put(url, new HashSet<>());
+                            }
+                            PERMIT.get(url).addAll(Arrays.asList(API[2].trim().split(",")));
                         }
                     }
                     else if (API.length == 4) {
                         METHOD = API[1].trim().toUpperCase();
                         if (API[2].contains("=")) {
                             api.defaultValue = API[2].trim();
-                            api.allowed.addAll(Arrays.asList(API[3].trim().split(",")));
+                            if (!PERMIT.containsKey(url)) {
+                                PERMIT.put(url, new HashSet<>());
+                            }
+                            Collections.addAll(PERMIT.get(url), API[3].trim().split(","));
                         }
                         else {
-                            api.allowed.addAll(Arrays.asList(API[2].trim().split(",")));
+                            if (!PERMIT.containsKey(url)) {
+                                PERMIT.put(url, new HashSet<>());
+                            }
+                            Collections.addAll(PERMIT.get(url), API[3].trim().split(","));
                             api.defaultValue = API[3].trim();
                         }
                     }
 
-                    if (!ALL.containsKey(api.path)) {
-                        ALL.put(api.path, new LinkedHashMap<>());
+                    if (!ALL.containsKey(url)) {
+                        ALL.put(url, new LinkedHashMap<>());
                     }
 
                     String[] methods = METHOD.split(",");
                     for (String method : methods) {
-                        ALL.get(api.path).put(method.trim(), api);
+                        ALL.get(url).put(method.trim(), api);
                     }
                 }
             }
@@ -168,6 +247,99 @@ public class OneApi {
 
     public static boolean contains(String path, String method) {
         return ALL.containsKey(path) && ALL.get(path).containsKey(method.toUpperCase());
+    }
+
+    public static String getToken(int digit) {
+        return TypeExt.StringExt("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890").shuffle(digit);
+    }
+
+    //验证token访问
+    public static boolean authenticateToken(String method, String path, String token) {
+        if (TOKENS.containsKey(token)) {
+            String name = TOKENS.get(token);
+            if (PERMIT.containsKey("*")) {
+                if (PERMIT.get("*").contains("*") || PERMIT.get("*").contains(name)) {
+                    return true;
+                }
+            }
+            else if (PERMIT.containsKey(path)) {
+                if (PERMIT.get(path).contains("*") || PERMIT.get(path).contains(name)) {
+                    return true;
+                }
+            }
+            else if (PERMIT.containsKey(method + ":" + path)) {
+                if (PERMIT.get(method + ":" + path).contains("*") || PERMIT.get(method + ":" + path).contains(name)) {
+                    return true;
+                }
+            }
+            else {
+                String glob = path.substring(0, path.lastIndexOf("/"));
+                while (!glob.isEmpty()) {
+                    String all = glob + "/*";
+                    if (PERMIT.containsKey(all)) {
+                        if (PERMIT.get(glob + "*").contains("*") || PERMIT.get(glob + "*").contains(name)) {
+                            return true;
+                        }
+                    }
+                    glob = glob.substring(0, path.lastIndexOf("/"));
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public static boolean authenticateRole(String method, String path, String role) {
+        if (!role.isEmpty()) {
+            if (PERMIT.containsKey("*")) {
+                if (PERMIT.get("*").contains("*") || PERMIT.get("*").contains(role)) {
+                    return true;
+                }
+            } else if (PERMIT.containsKey(path)) {
+                if (PERMIT.get(path).contains("*") || PERMIT.get(path).contains(role)) {
+                    return true;
+                }
+            } else if (PERMIT.containsKey(method + ":" + path)) {
+                if (PERMIT.get(method + ":" + path).contains("*") || PERMIT.get(method + ":" + path).contains(role)) {
+                    return true;
+                }
+            } else {
+                String glob = path.substring(0, path.lastIndexOf("/"));
+                while (!glob.isEmpty()) {
+                    String all = glob + "/*";
+                    if (PERMIT.containsKey(all)) {
+                        if (PERMIT.get(glob + "*").contains("*") || PERMIT.get(glob + "*").contains(role)) {
+                            return true;
+                        }
+                    }
+                    glob = glob.substring(0, path.lastIndexOf("/"));
+                }
+            }
+        }
+
+        return false;
+    }
+
+    //验证匿名访问
+    public static boolean authenticateAnonymous(String method, String path) {
+        //OPEN 为空不可匿名访问
+        if (OPEN.isEmpty()) {
+            return false;
+        }
+        else if (OPEN.contains("*") || OPEN.contains(path) || OPEN.contains(method + ":" + path)) {
+            return true;
+        }
+        else {
+            String glob = path.substring(0, path.lastIndexOf("/"));
+            while (!glob.isEmpty()) {
+                String all = glob + "/*";
+                if (OPEN.contains(all) || OPEN.contains(method + ":" + all)) {
+                    return true;
+                }
+                glob = glob.substring(0, path.lastIndexOf("/"));
+            }
+            return false;
+        }
     }
 
     public static OneApi pick(String path, String method) {

@@ -6,21 +6,20 @@ import java.util.regex.Pattern
 import io.qross.core._
 import io.qross.exception.{ConvertFailureException, SQLExecuteException}
 import io.qross.net.Json
-import io.qross.setting.Global
-import io.qross.time.{DateTime, Timer}
 import io.qross.pql.Solver._
+import io.qross.setting.Global
+import io.qross.time.DateTime
 import javax.script.{ScriptEngine, ScriptEngineManager, ScriptException}
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.sys.process._
 import scala.util.control.Breaks._
 import scala.util.matching.Regex
 import scala.util.{Failure, Random, Success, Try}
 
 object TypeExt {
 
+    //将最后一次匹配的结果保存到全局变量$m
     var $m: Regex.Match = _
 
     implicit class StringExt(var string: String) {
@@ -85,19 +84,6 @@ object TypeExt {
             queries.toMap
         }
 
-        def evaluate(): Any = {
-            val jse: ScriptEngine = new ScriptEngineManager().getEngineByName("JavaScript")
-            try {
-                jse.eval(string)
-            }
-            catch {
-                case e: ScriptException =>
-                    e.printStackTrace()
-                    throw new SQLExecuteException("Can't calculate expression: " + string)
-                    DataCell.ERROR
-            }
-        }
-
         //执行javascript
         def eval(): DataCell = {
             if (string.bracketsWith("{", "}")) {
@@ -136,20 +122,6 @@ object TypeExt {
             //interpreter.bind("date", "java.util.Date", new java.util.Date());
             //interpreter.eval[String]("""new sdf("yyyy-MM-dd").format(date)""") get
             //    interpreter.close()
-        }
-
-        //执行javascript并返回值, 最后一条语句需以return结尾
-        def call(): DataCell = {
-            val jse: ScriptEngine = new ScriptEngineManager().getEngineByName("JavaScript")
-            try {
-                DataCell(jse.eval(s"""(function(){ $string })()"""))
-            }
-            catch {
-                case e: ScriptException =>
-                    e.printStackTrace()
-                    throw new SQLExecuteException("Can't caculate expression: " + string)
-                //DataCell(null)
-            }
         }
 
         //去掉变量修饰符
@@ -397,58 +369,6 @@ object TypeExt {
             else {
                 string
             }
-        }
-
-        def bash(): Int = {
-
-            if (string.contains("|")) {
-                val cmd = string.split("\\|")
-                var sh = cmd(0).trim() #| cmd(1).trim()
-                for (i <- 2 until cmd.length) {
-                    sh = sh #| cmd(i).trim()
-                }
-
-                sh.!(
-                    ProcessLogger(out => {
-                        println(out)
-                    }, err => {
-                        System.err.println(err)
-                    })
-                )
-            }
-            else {
-                string.!(
-                    ProcessLogger(out => {
-                        println(out)
-                    }, err => {
-                        System.err.println(err)
-                    })
-                )
-            }
-        }
-
-        def go(): Int = {
-
-            val process = string.run(ProcessLogger(out => {
-                println(out)
-            }, err => {
-                System.err.println(err)
-            }))
-
-            var i = 0
-            while(process.isAlive()) {
-                println("s#" + i)
-                i += 1
-                //            if (i > 10) {
-                //                process.destroy()
-                //            }
-                Timer.sleep(1000)
-            }
-
-            //println("exitValue: " + process.exitValue())
-            //process.destroy()
-
-            process.exitValue()
         }
 
         def pickChars(): String = {

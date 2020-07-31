@@ -4,6 +4,7 @@ import io.qross.exception.SQLParseException
 import io.qross.pql.Solver._
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.$RUN
+import io.qross.script.Shell._
 
 object RUN {
     def parse(sentence: String, PQL: PQL): Unit = {
@@ -16,17 +17,16 @@ object RUN {
     }
 }
 
-//SHELL命令中 引号会出现问题，复杂的shell建议生成sh文件
-
 class RUN(val commandText: String) {
     def execute(PQL: PQL): Unit = {
         val command = this.commandText.$restore(PQL).removeQuotes()
 
+        PQL.WORKING += command.run()
+
         if (PQL.dh.debugging) {
             print("RUN SHELL: ")
             println(command)
+            println(" EXIT CODE: " + PQL.WORKING.last)
         }
-
-        PQL.WORKING += command.bash()
     }
 }

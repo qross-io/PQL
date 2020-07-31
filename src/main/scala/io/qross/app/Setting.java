@@ -2,13 +2,20 @@ package io.qross.app;
 
 import io.qross.setting.Global;
 import io.qross.setting.Properties;
+import scala.sys.Prop;
 
 public class Setting {
 
-    public static String OneApiServiceName = Properties.get("oneapi.service.name", "OneApiService");
+    public static String OneApiManagementKey = Properties.get("oneapi.management.key", "");
+    public static String OneApiServiceName = Properties.get("oneapi.service.name", "");
+    public static String OneApiSecurityMode = Properties.get("oneapi.security.mode", "none");
     public static String OneApiResourceDirs = Properties.get("oneapi.internal.dirs", "");
     public static String OneApiExternalDirs = Properties.get("oneapi.external.dirs", "");
     public static String OneApiMySQLConnection = Properties.get("oneapi.mysql.connection", "");
+    public static String OneApiTokenList = Properties.get("oneapi.token.list", "");
+    //public static String OneApiRoleList = Properties.get("oneapi.role.list", "");
+    public static String OneApiAccessOpen = Properties.get("oneapi.access.open", "");
+    public static String OneApiAccessPermit = Properties.get("oneapi.access.permit", "");
 
     public static String VoyagerDirectory = Properties.get("voyager.directory", "/templates/");
     public static String VoyagerExtension = Properties.get("voyager.extension", "html");
@@ -24,6 +31,16 @@ public class Setting {
                         Properties.loadLocalFile(args[i+1]);
                     }
                     break;
+                case "--oneapi.service.name":
+                    if (i + 1 < args.length) {
+                        OneApiServiceName = args[i+1];
+                    }
+                    break;
+                case "--oneapi.security.mode":
+                    if (i + 1 < args.length) {
+                        OneApiSecurityMode = args[i+1];
+                    }
+                    break;
                 case "--oneapi.internal.dir":
                     if (i + 1 < args.length) {
                         OneApiResourceDirs = args[i=1];
@@ -37,11 +54,6 @@ public class Setting {
                 case "--oneapi.service.connection":
                     if (i + 1 < args.length) {
                         OneApiMySQLConnection = args[i+1];
-                    }
-                    break;
-                case "--oneapi.service.name":
-                    if (i + 1 < args.length) {
-                        OneApiServiceName = args[i+1];
                     }
                     break;
                 case "--voyager.directory":

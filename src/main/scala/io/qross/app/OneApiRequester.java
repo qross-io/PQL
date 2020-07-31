@@ -1,11 +1,9 @@
 package io.qross.app;
 
 import io.qross.core.DataHub;
-import io.qross.core.DataRow;
 import io.qross.jdbc.DataAccess;
 import io.qross.net.Json;
 import io.qross.pql.PQL;
-import io.qross.setting.Properties;
 import io.qross.time.DateTime;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -23,11 +21,11 @@ public class OneApiRequester {
 
     private String path = "";
     private DataHub dh = DataHub.DEFAULT();
-    private Map<String, String> params = new HashMap<>();
+    private final Map<String, String> params = new HashMap<>();
     private int userId = 0;
     private String userName = "anonymous";
-    private String role = "worker";
-    private Map<String, Object> info = new HashMap<>();
+    private String role = "";
+    private final Map<String, Object> info = new HashMap<>();
 
     public OneApiRequester() {
 
@@ -138,15 +136,14 @@ public class OneApiRequester {
             if (OneApi.contains(path, method)) {
                 OneApi api = OneApi.pick(path, method);
 
-                String security = Properties.get("oneapi.security.enabled", "0");
-                if (security.equalsIgnoreCase("true") || security.equalsIgnoreCase("yes")) {
-                    security = "1";
-                }
-
                 boolean allowed = false;
-                if (security.equals("1")) {
+                if (Setting.OneApiSecurityMode.equals("none")) {
+                    allowed = true;
+                }
+                else if (Setting.OneApiSecurityMode.equals("token")) {
                     String token = request.getParameter("token");
                     if (token == null || token.isEmpty()) {
+                        // read token from cookie
                         for (Cookie cookie : request.getCookies()) {
                             if (cookie.getName().equalsIgnoreCase("token")) {
                                 token = cookie.getValue();
@@ -155,23 +152,38 @@ public class OneApiRequester {
                         }
                     }
 
-                    if (OneApi.TOKENS.containsKey(token) && (api.allowed.isEmpty() || api.allowed.contains(OneApi.TOKENS.get(token)))) {
+                    //token
+                    if (token != null && !token.isEmpty()) {
+                        if (OneApi.authenticateToken(method, path, token)) {
+                            allowed = true;
+                        }
+                    }
+                    //anonymous
+                    else if (OneApi.authenticateAnonymous(method, path)) {
                         allowed = true;
                     }
-                } else {
-                    allowed = true;
+                }
+                else {
+                    //user
+                    if (OneApi.authenticateRole(method, path, role)) {
+                        allowed = true;
+                    }
+                    //anonymous
+                    else if (OneApi.authenticateAnonymous(method, path)) {
+                        allowed = true;
+                    }
                 }
 
                 if (allowed) {
                     //count(api.path);
 
                     return  new PQL(api.sentences, dh)
-                            .place(params)
-                            .signIn(userId, userName, role, info)
-                            .placeParameters(request.getParameterMap())
-                            .setHttpRequest(request)
-                            .place(api.defaultValue)
-                            .run();
+                                .place(params)
+                                .signIn(userId, userName, role, info)
+                                .placeParameters(request.getParameterMap())
+                                .setHttpRequest(request)
+                                .place(api.defaultValue)
+                                .run();
                 } else {
                     return "{\"error\": \"Access denied\"}";
                 }
@@ -241,6 +253,8 @@ public class OneApiRequester {
                 }
                 ds.executeBatchUpdate();
                 ds.close();
+
+                LastSaveTime = DateTime.now();
             }
         }
     }
