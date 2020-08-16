@@ -12,7 +12,6 @@ object CodeCounter {
     def main(args: Array[String]): Unit = {
 
         val path = "c:/io.qross/"
-        //val path = "f:/"
 
         Map[String, Int](
             "PQL" -> count(path + "PQL/src/main/scala/"),

@@ -7,7 +7,7 @@ import org.springframework.web.context.request.{RequestContextHolder, ServletReq
 object Session {
 
     def get(name: String): Any = {
-        val request = Servlet.httpRequest
+        val request = HttpServlet.request
         if (request != null) {
             request.getSession.getAttribute(name)
         }
@@ -17,7 +17,7 @@ object Session {
     }
 
     def set(name: String, value: Any): Unit = {
-        val request = Servlet.httpRequest
+        val request = HttpServlet.request
         if (request != null) {
             request.getSession.setAttribute(name, value)
         }

@@ -13,6 +13,7 @@ DEBUG ON;
 
 PRINT '\'hello\n world\'';
 
+FILE DELETE 'c:/Space/test.log';
 
 /*
 SET $table := "qross_jobs";

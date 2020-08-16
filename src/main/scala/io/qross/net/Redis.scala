@@ -9,7 +9,6 @@ import redis.clients.jedis.Protocol.Command
 import redis.clients.jedis.exceptions.JedisConnectionException
 import redis.clients.jedis.{Jedis, Pipeline}
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 object Redis {
@@ -341,6 +340,13 @@ class Redis(val serverName: String, val defaultDatabase: Int) {
         val value = jedis.sendCommand(rco.command, rco.args: _*)
 
         eval(value, rco)
+    }
+
+    def run(command: String): Any = {
+        val rco = new RedisCommand(command)
+        val value = jedis.sendCommand(rco.command, rco.args: _*)
+
+        eval(value, rco).value
     }
 
     def pipelined(sentence: String): Redis = {

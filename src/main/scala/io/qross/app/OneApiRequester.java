@@ -2,16 +2,14 @@ package io.qross.app;
 
 import io.qross.core.DataHub;
 import io.qross.jdbc.DataAccess;
-import io.qross.net.Json;
+import io.qross.jdbc.JDBC;
+import io.qross.net.HttpRequest;
 import io.qross.pql.PQL;
 import io.qross.time.DateTime;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,11 +17,8 @@ import java.util.Map;
 
 public class OneApiRequester {
 
-    private String path = "";
-    private DataHub dh = DataHub.DEFAULT();
-    private final Map<String, String> params = new HashMap<>();
     private int userId = 0;
-    private String userName = "anonymous";
+    private String username = "anonymous";
     private String role = "";
     private final Map<String, Object> info = new HashMap<>();
 
@@ -31,99 +26,71 @@ public class OneApiRequester {
 
     }
 
-    public OneApiRequester(String path) {
-        this.path = path;
-    }
-
-    public OneApiRequester(String path, Map<String, String> params) {
-        this.path = path;
-        this.params.putAll(params);
-    }
-
-    public OneApiRequester(String path, String connectionName) {
-        this.path = path;
-        this.dh = new DataHub(connectionName);
-    }
-
-    public OneApiRequester(String path, Map<String, String> params, String connectionName) {
-        this.path = path;
-        this.params.putAll(params);
-        this.dh = new DataHub(connectionName);
-    }
-
-    public OneApiRequester(String path, DataHub dh) {
-        this.path = path;
-        this.dh = dh;
-    }
-
-    public OneApiRequester(String path, Map<String, String> params, DataHub dh) {
-        this.path = path;
-        this.params.putAll(params);
-        this.dh = dh;
-    }
-
     public OneApiRequester signIn(Map<String, Object> info) {
         this.info.putAll(info);
+
+        if (!this.info.containsKey("userid") || this.info.containsKey("username") || !this.info.containsKey("role")) {
+            for (String key : this.info.keySet()) {
+                switch(key.toLowerCase()) {
+                    case "userid":
+                    case "uid":
+                    case "id":
+                        if (!this.info.containsKey("userid")) {
+                            this.info.put("userid", this.info.get(key));
+                        }
+                        break;
+                    case "username":
+                    case "name":
+                        if (!this.info.containsKey("username")) {
+                            this.info.put("username", this.info.get(key));
+                        }
+                        break;
+                    case "role":
+                        if (!this.info.containsKey("role")) {
+                            this.info.put("role", this.info.get(key));
+                        }
+                        break;
+                }
+            }
+        }
+
+        if (this.info.containsKey("userid")) {
+            this.userId = Integer.parseInt(this.info.get("userid").toString());
+        }
+        if (this.info.containsKey("username")) {
+            this.username = this.info.get("username").toString();
+        }
+        if (this.info.containsKey("role")) {
+            this.role = this.info.get("role").toString();
+        }
+
         return this;
     }
 
     public OneApiRequester signIn(int userId, String userName, String role) {
         this.userId = userId;
-        this.userName = userName;
+        this.username = userName;
         this.role = role;
         return this;
     }
 
     public OneApiRequester signIn(int userId, String userName, String role, Map<String, Object> info) {
         this.userId = userId;
-        this.userName = userName;
+        this.username = userName;
         this.role = role;
         this.info.putAll(info);
         return this;
     }
 
-    public Object request(String path) {
-        this.path = path;
-        return this.request();
-    }
-
     public Object request(String path, String connectionName) {
-        this.path = path;
-        this.dh = new DataHub(connectionName);
-
-        return this.request();
+        return this.request(path, new DataHub(connectionName));
     }
 
-    public Object request(String path, DataHub dh){
-        this.path = path;
-        this.dh = dh;
-
-        return this.request();
+    public Object request(String path){
+        return this.request(path, DataHub.DEFAULT());
     }
 
-    public Object request(String path, Map<String, String> params) {
-        this.path = path;
-        this.params.putAll(params);
-
-        return this.request();
-    }
-
-    public Object request(String path, Map<String, String> params, String connectionName) {
-        this.path = path;
-        this.params.putAll(params);
-        this.dh = new DataHub(connectionName);
-
-        return this.request();
-    }
-
-    public Object request(String path, Map<String, String> params, DataHub dh) {
-        this.path = path;
-        this.params.putAll(params);
-
-        return this.request();
-    }
-
-    public Object request() {
+    public Object request(String path, DataHub dh) {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
@@ -142,16 +109,6 @@ public class OneApiRequester {
                 }
                 else if (Setting.OneApiSecurityMode.equals("token")) {
                     String token = request.getParameter("token");
-                    if (token == null || token.isEmpty()) {
-                        // read token from cookie
-                        for (Cookie cookie : request.getCookies()) {
-                            if (cookie.getName().equalsIgnoreCase("token")) {
-                                token = cookie.getValue();
-                                break;
-                            }
-                        }
-                    }
-
                     //token
                     if (token != null && !token.isEmpty()) {
                         if (OneApi.authenticateToken(method, path, token)) {
@@ -163,9 +120,22 @@ public class OneApiRequester {
                         allowed = true;
                     }
                 }
-                else {
+                else if (Setting.OneApiSecurityMode.equals("secret")) {
+                    String key = request.getParameter("secret");
+                    //secret key
+                    if (key != null && !key.isEmpty()) {
+                        if (OneApi.authenticateSecretKey(method, path, key)) {
+                            allowed = true;
+                        }
+                    }
+                    //anonymous
+                    else if (OneApi.authenticateAnonymous(method, path)) {
+                        allowed = true;
+                    }
+                }
+                else if (Setting.OneApiSecurityMode.equals("user")) {
                     //user
-                    if (OneApi.authenticateRole(method, path, role)) {
+                    if (OneApi.authenticateUser(method, path, username, role)) {
                         allowed = true;
                     }
                     //anonymous
@@ -176,16 +146,16 @@ public class OneApiRequester {
 
                 if (allowed) {
                     //count(api.path);
-
+                    HttpRequest http = new HttpRequest(request);
                     return  new PQL(api.sentences, dh)
-                                .place(params)
-                                .signIn(userId, userName, role, info)
-                                .placeParameters(request.getParameterMap())
-                                .setHttpRequest(request)
+                                .signIn(userId, username, role, info)
+                                .place(http.getParameters())
                                 .place(api.defaultValue)
+                                .set(" request", http.getRequestInfo())
                                 .run();
-                } else {
-                    return "{\"error\": \"Access denied\"}";
+                }
+                else {
+                    return "{\"error\": \"Access denied.\"}";
                 }
             }
             else {
@@ -195,29 +165,6 @@ public class OneApiRequester {
         else {
             return "{\"error\": \"Need spring boot environment.\"}";
         }
-    }
-
-    public OneApiRequester withJsonParameters() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        StringBuilder sb = new StringBuilder();
-        if (attributes != null) {
-            try {
-                // body stream
-                BufferedReader br = new BufferedReader(new InputStreamReader(attributes.getRequest().getInputStream()));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    sb.append(line);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (sb.length() > 0) {
-            this.params.putAll(new Json(sb.toString()).parseJavaMap("/"));
-        }
-
-        return  this;
     }
 
     //to be review
@@ -233,10 +180,10 @@ public class OneApiRequester {
 
     //traffic count
     private static void count(String path) {
-        if (!Setting.OneApiMySQLConnection.isEmpty()) {
+        if (!Setting.OneApiServiceName.isEmpty()) {
             TRAFFIC.add(path + DateTime.now().getString(",yyyy-MM-dd,HH"));
             if (TRAFFIC.size() >= 1000 || LastSaveTime.earlier(DateTime.now()) >= 60000) {
-                DataAccess ds = new DataAccess(Setting.OneApiMySQLConnection);
+                DataAccess ds = new DataAccess(JDBC.QROSS());
                 Map<String, Integer> traffic = new HashMap<>();
                 for (String pv : TRAFFIC) {
                     if (traffic.containsKey(pv)) {

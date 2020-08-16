@@ -122,7 +122,7 @@ object Main {
         //new String(redis.jedis.sendCommand(Command.GET, "hello").asInstanceOf[Array[Byte]]).print
 
         //PQL.openEmbeddedFile("/sql/manual.html").place("jobId=595").set("jobId=595").run().print
-        PQL.openFile("/sql/date.sql").place("id=4&applies=ready,failed").run().print
+        PQL.openFile("/sql/str.sql").place("id=4&applies=ready,failed").run().print
         //PQL.openFile("/sql/str.sql").place(("jobId=4&taskId=2869&recordTime=2020-07-09 22:25:07&position=0&action=0&mode=all")).set("jobId=4&taskId=2869&recordTime=2020-07-09 22:25:07&position=0&action=0&mode=all").run().print
 
         //PQL.openFile("""C:\io.Qross\Keeper\src\main\resources\pql/keeper_clean.sql""").place("date=2020-06-23&hour=15").run()
@@ -203,11 +203,5 @@ object Main {
         //val row = new DataRow()
         //println(DataType.ofClassName(row.getClass.getName))
 
-    }
-}
-
-class NoteLogLine(val logType: String = "INFO", var logText: String = "", val logTime: String = DateTime.now.getString("yyyy-MM-dd HH:mm:ss")) {
-    if (logType != "INFO" && logType != "ERROR") {
-        logText = s"$logTime [$logType] $logText"
     }
 }

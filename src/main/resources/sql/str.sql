@@ -1,6 +1,10 @@
 DEBUG ON;
 
-REQUEST JSON API '''http://@KEEPER_HTTP_ADDRESS:@KEEPER_HTTP_PORT/test/json?id=1&name=Tom'''
-    METHOD 'PUT'
-    SEND DATA { "id": 2, "name": "Ted" };
-PARSE "/";
+FOR $path IN (FILE LIST 'c:/io.Qross/Folder/oneapi') LOOP
+    SET $content := FILE READ $path;
+    PRINT $content;
+    FOR $m IN /\(\/doc\/(\/[a-z]+)+\)/ MATCHES $content LOOP
+
+    END LOOP;
+    EXIT;
+END LOOP;

@@ -337,8 +337,6 @@ object TypeExt {
             found
         }
 
-        def initCap: String = string.take(1).toUpperCase + string.substring(1)
-
         def preventInjection: String = string.replace("'", "~u0027~u0027").replace("\\", "\\\\")
         def preventInjectionOfDoubleQuote: String = string.replace("\"", "~u0022~u0022").replace("\\", "\\\\")
 

@@ -3,8 +3,8 @@ package io.qross.net
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.springframework.web.context.request.{RequestContextHolder, ServletRequestAttributes}
 
-object Servlet {
-    def httpRequest: HttpServletRequest = {
+object HttpServlet {
+    def request: HttpServletRequest = {
         val attributes: ServletRequestAttributes = RequestContextHolder.getRequestAttributes.asInstanceOf[ServletRequestAttributes]
         if (attributes != null) {
             attributes.getRequest
@@ -14,7 +14,7 @@ object Servlet {
         }
     }
 
-    def httpResponse: HttpServletResponse = {
+    def response: HttpServletResponse = {
         val attributes: ServletRequestAttributes = RequestContextHolder.getRequestAttributes.asInstanceOf[ServletRequestAttributes]
         if (attributes != null) {
             attributes.getResponse

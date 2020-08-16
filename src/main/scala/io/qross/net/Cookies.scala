@@ -8,7 +8,7 @@ import scala.util.control.Breaks._
 object Cookies {
 
     def get(name: String): String = {
-        val request = Servlet.httpRequest
+        val request = HttpServlet.request
         if (request != null) {
             val cookies = request.getCookies
             var value: String = null
@@ -40,7 +40,7 @@ object Cookies {
     }
 
     def set(name: String, value: String): Unit = {
-        val response = Servlet.httpResponse
+        val response = HttpServlet.response
         if (response != null) {
             val cookie = new Cookie(name, value)
             cookie.setPath("/")
@@ -83,8 +83,8 @@ class Cookies {
     //-1 直到浏览器关闭  0 expire >0 seconds
     def setMaxAge(seconds: Int): Cookies = {
         if (editing.nonEmpty) {
-            val request = Servlet.httpRequest
-            val response = Servlet.httpResponse
+            val request = HttpServlet.request
+            val response = HttpServlet.response
             if (request != null && response != null) {
                 val cookies = request.getCookies
                 for (cookie <- cookies) {
@@ -100,8 +100,8 @@ class Cookies {
 
     def setDomain(domain: String): Cookies = {
         if (editing.nonEmpty) {
-            val request = Servlet.httpRequest
-            val response = Servlet.httpResponse
+            val request = HttpServlet.request
+            val response = HttpServlet.response
             if (request != null && response != null) {
                 val cookies = request.getCookies
                 for (cookie <- cookies) {
@@ -117,8 +117,8 @@ class Cookies {
 
     def setPath(path: String): Cookies = {
         if (editing.nonEmpty) {
-            val request = Servlet.httpRequest
-            val response = Servlet.httpResponse
+            val request = HttpServlet.request
+            val response = HttpServlet.response
             if (request != null && response != null) {
                 val cookies = request.getCookies
                 for (cookie <- cookies) {
@@ -134,8 +134,8 @@ class Cookies {
 
     def setHttpOnly(httpOnly: Boolean): Cookies = {
         if (editing.nonEmpty) {
-            val request = Servlet.httpRequest
-            val response = Servlet.httpResponse
+            val request = HttpServlet.request
+            val response = HttpServlet.response
             if (request != null && response != null) {
                 val cookies = request.getCookies
                 for (cookie <- cookies) {
@@ -151,8 +151,8 @@ class Cookies {
 
     def setSecure(secure: Boolean): Cookies = {
         if (editing.nonEmpty) {
-            val request = Servlet.httpRequest
-            val response = Servlet.httpResponse
+            val request = HttpServlet.request
+            val response = HttpServlet.response
             if (request != null && response != null) {
                 val cookies = request.getCookies
                 for (cookie <- cookies) {
@@ -168,8 +168,8 @@ class Cookies {
 
     def setVersion(version: Int): Cookies = {
         if (editing.nonEmpty) {
-            val request = Servlet.httpRequest
-            val response = Servlet.httpResponse
+            val request = HttpServlet.request
+            val response = HttpServlet.response
             if (request != null && response != null) {
                 val cookies = request.getCookies
                 for (cookie <- cookies) {
@@ -185,8 +185,8 @@ class Cookies {
 
     def setComment(comment: String): Cookies = {
         if (editing.nonEmpty) {
-            val request = Servlet.httpRequest
-            val response = Servlet.httpResponse
+            val request = HttpServlet.request
+            val response = HttpServlet.response
             if (request != null && response != null) {
                 val cookies = request.getCookies
                 for (cookie <- cookies) {
@@ -205,8 +205,8 @@ class Cookies {
     //删除
     def remove(name: String*): Cookies = {
         val list = name.toSet
-        val request = Servlet.httpRequest
-        val response = Servlet.httpResponse
+        val request = HttpServlet.request
+        val response = HttpServlet.response
         if (request != null && response != null) {
             val cookies = request.getCookies
             for (cookie <- cookies) {

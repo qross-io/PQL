@@ -27,10 +27,10 @@ object Properties {
 
     private val props = new java.util.Properties()
 
-    //load default config
-    loadResourcesFile("/conf.properties")
     //load qross config
     loadSiblingFile("qross.properties")
+    //load default config
+    loadResourcesFile("/conf.properties")
     //load mybatis config
     loadMyBatisConfigEnvironments()
 
@@ -98,7 +98,7 @@ object Properties {
                             Properties.set(s"$id.$name", value.toString())
 
                             if (default.nonEmpty && default.toString() == id.toString()) {
-                                Properties.set(s"$default.$name", value.toString())
+                                Properties.set(s"jdbc.default.$name", value.toString())
                             }
                         }
                     })

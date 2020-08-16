@@ -74,7 +74,7 @@ class FILE(val sentence: String) {
         if (PQL.dh.debugging) {
             data.dataType match {
                 case DataType.TABLE => data.asTable.show()
-                case _ => println(data.asText)
+                case _ => println(sentence + ": " + data.asText)
             }
         }
     }

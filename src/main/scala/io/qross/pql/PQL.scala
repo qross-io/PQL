@@ -9,7 +9,6 @@ import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 import io.qross.setting.Language
 import io.qross.time.DateTime
-import javax.servlet.http.HttpServletRequest
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -107,11 +106,6 @@ object PQL {
 
         def setArgs(args: (String, String)*): DataHub = {
             PQL.place(args: _*)
-            dh
-        }
-
-        def setArgs(queries: java.util.Map[String, Array[String]]): DataHub = {
-            PQL.placeParameters(queries)
             dh
         }
 
@@ -446,19 +440,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         this
     }
 
-    def placeParameters(queries: java.util.Map[String, Array[String]]): PQL = {
-        this.SQL = this.SQL.replaceArguments(
-                queries.asScala
-                        .map(kv => (kv._1, kv._2.headOption.getOrElse(""))).toMap[String, String])
-
-        queries.keySet().forEach(key => {
-            root.setVariable(key, queries.get(key).headOption.getOrElse(""))
-        })
-        this
-    }
-
-    def place(map: java.util.Map[String, String]): PQL = {
-        this.SQL = this.SQL.replaceArguments(map.asScala.toMap)
+    def place(map: java.util.Map[String, Object]): PQL = {
+        this.SQL = this.SQL.replaceArguments(map.asScala.map(kv => (kv._1, kv._2.toString)).toMap)
 
         map.keySet().forEach(key => {
             root.setVariable(key, map.get(key))
@@ -526,19 +509,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         this
     }
 
-    def setHttpRequest(request: HttpServletRequest): PQL = {
-        root.setVariable("request", new DataRow(
-            "method" -> request.getMethod,
-            "queryString" -> request.getQueryString,
-            "domain" -> request.getServerName,
-            "protocol" -> request.getRequestURL.toString.takeBefore(":"),
-            "path" -> request.getRequestURI,
-            "host" -> request.getRequestURL.toString.takeBefore(request.getRequestURI)
-        ))
-
-        this
-    }
-
     def signIn(userId: Int, userName: String, role: String): PQL = {
         credential.set("userid", userId)
         credential.set("username", userName)
@@ -576,9 +546,22 @@ class PQL(val originalSQL: String, val dh: DataHub) {
             credential.set(kv._1, kv._2)
         }
 
-        val userId = credential.getInt("userid", 0)
-        if (userId > 0) {
-            GlobalVariable.loadUserVariables(userId)
+        if (!credential.contains("userid")) {
+            if (credential.contains("uid")) {
+                credential.set("userid", credential.getCell("uid"))
+            }
+            else if (credential.contains("id")) {
+                credential.set("userid", credential.getCell("id"))
+            }
+        }
+        if (!credential.contains("username")) {
+            if (credential.contains("name")) {
+                credential.set("username", credential.getCell("name"))
+            }
+        }
+
+        if (credential.contains("userid")) {
+            GlobalVariable.loadUserVariables(credential.getInt("userid"))
         }
 
         this

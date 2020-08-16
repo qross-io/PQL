@@ -29,9 +29,11 @@ class DataHub (val defaultConnectionName: String) {
     private[qross] val ALIASES = new mutable.HashMap[String, String]()
 
     if (defaultConnectionName != "") {
-        SOURCES += "DEFAULT" -> new DataSource(defaultConnectionName)
+        if (Properties.contains(defaultConnectionName) || Properties.contains(defaultConnectionName + ".url")) {
+            SOURCES += "DEFAULT" -> new DataSource(defaultConnectionName)
+        }
     }
-    else if (Properties.contains(JDBC.DEFAULT)) {
+    else if (Properties.contains(JDBC.DEFAULT) || Properties.contains(JDBC.DEFAULT + ".url")) {
         SOURCES += "DEFAULT" ->  new DataSource(JDBC.DEFAULT)
     }
 

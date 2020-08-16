@@ -70,24 +70,19 @@ class INVOKE(sentence: String) {
                                 else if (arg.quotesWith("'")) {
                                     (arg.removeQuotes(), Class.forName("java.lang.Char"))
                                 }
-                                else if (
-                                    """^\d+$""".r.test(arg)) {
+                                else if ("""^\d+$""".r.test(arg)) {
                                     (arg.toInt, Class.forName("java.lang.Integer"))
                                 }
-                                else if (
-                                    """(?i)^\d+l$""".r.test(arg)) {
+                                else if ("""(?i)^\d+l$""".r.test(arg)) {
                                     (arg.toLong, Class.forName("java.lang.Long"))
                                 }
-                                else if (
-                                    """(?i)^\d+f$""".r.test(arg)) {
+                                else if ("""(?i)^\d+f$""".r.test(arg)) {
                                     (arg.toFloat, Class.forName("java.lang.Float"))
                                 }
-                                else if (
-                                    """(?i)^\d+d$""".r.test(arg)) {
+                                else if ("""(?i)^\d+d$""".r.test(arg)) {
                                     (arg.toDouble, Class.forName("java.lang.Double"))
                                 }
-                                else if (
-                                    """(?i)true|false""".r.test(arg)) {
+                                else if ("""(?i)true|false""".r.test(arg)) {
                                     (if (arg.toLowerCase() == "true") true else false, Class.forName("java.lang.Boolean"))
                                 }
                                 else {

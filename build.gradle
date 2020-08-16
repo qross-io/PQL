@@ -3,23 +3,13 @@ apply plugin: 'scala'
 apply plugin: 'idea'
 apply plugin: 'java'
 apply plugin: 'maven'
-apply plugin: "com.github.johnrengelman.shadow"
 apply plugin: "maven-publish"
 
 group = 'io.qross'
-version = '0.6.3-SNAPSHOT'
+version = '0.6.3'
 
 sourceCompatibility = 1.8
 archivesBaseName = "qross-pql"
-
-buildscript {
-    repositories {
-        maven { url "https://plugins.gradle.org/m2/" }
-    }
-    dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:1.2.3"
-    }
-}
 
 //打包时同时打包源码
 task sourcesJar(type: Jar) {
@@ -78,15 +68,15 @@ publishing {
         maven(MavenPublication) {
             groupId = 'io.qross'
             artifactId = 'pql'
-            version = '0.6.3-68-SNAPSHOT'
+            version = '0.6.3-2-RELEASE'
             from components.java
             artifact sourcesJar
         }
     }
 
     repositories {
-        //maven { url "https://packages.aliyun.com/maven/repository/2011186-release-Aa5YmC/"
-        maven { url "https://packages.aliyun.com/maven/repository/2011186-snapshot-FSoDsK/"
+        maven { url "https://packages.aliyun.com/maven/repository/2011186-release-Aa5YmC/"
+            //maven { url "https://packages.aliyun.com/maven/repository/2011186-snapshot-FSoDsK/"
             credentials {
                 username 'PtbpNI'
                 password 'kwCz3C0wHx'
@@ -109,20 +99,8 @@ uploadArchives {
             pom.project {
                 name = project.name
                 packaging = 'jar'
-                description = 'Qross PQL and development toolkit v0.6.3'
+                description = 'Qross PQL language and DataHub development toolkit v0.6.3'
             }
         }
     }
 }
-
-shadowJar {
-    zip64 true
-    //mergeServiceFiles('META-INF/spring.*')
-    archiveName = "qross-pql-0.6.3.jar"
-}
-
-artifacts {
-    shadowJar
-}
-
-build.dependsOn(shadowJar)

@@ -4,6 +4,7 @@ import io.qross.core.DataHub;
 import io.qross.ext.Console;
 import io.qross.fs.ResourceFile;
 import io.qross.net.Cookies;
+import io.qross.net.HttpRequest;
 import io.qross.pql.PQL;
 import io.qross.setting.Configurations;
 import io.qross.setting.Language;
@@ -17,7 +18,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Voyager extends AbstractTemplateView {
+public class  Voyager extends AbstractTemplateView {
 
     @Override
     protected void renderMergedTemplateModel(Map<String, Object> model, HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -55,10 +56,12 @@ public class Voyager extends AbstractTemplateView {
             //Map<String, Object> attributes = getAttributesMap();
             response.setCharacterEncoding(Setting.VoyagerCharset);
 
+            HttpRequest http = new HttpRequest(request);
+
             Object result =
                     new PQL("EMBEDDED:" + content, new DataHub(Properties.contains(Setting.VoyagerConnection) ? Setting.VoyagerConnection : ""))
-                        .placeParameters(request.getParameterMap())
-                        .setHttpRequest(request)
+                        .place(http.getParameters())
+                        .set("request", http.getRequestInfo())
                         .set(model)
                         .run();
             response

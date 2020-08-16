@@ -20,13 +20,12 @@ object RUN {
 class RUN(val commandText: String) {
     def execute(PQL: PQL): Unit = {
         val command = this.commandText.$restore(PQL).removeQuotes()
-
-        PQL.WORKING += command.run()
+        val exitCode = command.run()
 
         if (PQL.dh.debugging) {
             print("RUN SHELL: ")
             println(command)
-            println(" EXIT CODE: " + PQL.WORKING.last)
+            println("EXIT CODE: " + exitCode)
         }
     }
 }

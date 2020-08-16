@@ -5,14 +5,13 @@ import io.qross.core.DataRow;
 import io.qross.core.DataTable;
 import io.qross.ext.Console;
 import io.qross.jdbc.DataAccess;
+import io.qross.net.Redis;
 
 public class Test {
-
     public static void main(String[] args) {
-        Console.writeLine(DataAccess.QROSS().executeDataTable("SELECT id, status FROM qross_tasks LIMIT 10"));
-    }
+        String x = "/BOOT-INF/classes/api/note.sql";
+        String y = "/api/";
 
-    public void call(String message) {
-        Console.writeLine(message);
+        Console.writeLine(x.substring(x.indexOf(y)));
     }
 }

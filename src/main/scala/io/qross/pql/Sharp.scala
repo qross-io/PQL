@@ -1024,9 +1024,11 @@ object Sharp {
         data.asText.toLowerCase().toDataCell(DataType.TEXT)
     }
 
-    def INIT$CAP(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        data.asText.initCap.toDataCell(DataType.TEXT)
+    def CAPITALIZE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        data.asText.capitalize.toDataCell(DataType.TEXT)
     }
+
+    //capitalize
 
     def TRIM(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
@@ -1182,12 +1184,45 @@ object Sharp {
             }
         }
         else {
-            throw SharpLinkArgumentException.occur("TEST", origin)
+            throw SharpLinkArgumentException.occur("FIND FIRST IN", origin)
         }
     }
 
-    //def FIND$LAST$IN
-    //def FIND$ALL$IN
+    def FIND$FIRST$MATCH$IN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asRegex.findFirstIn(arg.asText) match {
+                case Some(value) => DataCell(value, DataType.TEXT)
+                case None => DataCell.UNDEFINED
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("FIND FIRST IN", origin)
+        }
+    }
+
+    def FIND$ALL$IN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asRegex.findFirstIn(arg.asText) match {
+                case Some(value) => DataCell(value, DataType.TEXT)
+                case None => DataCell.UNDEFINED
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("FIND ALL IN", origin)
+        }
+    }
+
+    def FIND$ALL$MATCH$IN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asRegex.findFirstIn(arg.asText) match {
+                case Some(value) => DataCell(value, DataType.TEXT)
+                case None => DataCell.UNDEFINED
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("FIND ALL IN", origin)
+        }
+    }
 
     /* ---------- 数字 ---------- */
 
