@@ -52,7 +52,7 @@ CALL $test("Tom", $c := "hello");
 --SLEEP TO NEXT MINUTE;
 --SLEEP TO NEXT SECOND;
 --SLEEP 2 SECONDS;
---SLEEP 3 MILLISECONDS;
+--SLEEP 3 MILLIS;
 
 -- OPEN "mysql.qross";
 --SEND MAIL "test" CONTENT "hello world" TO "wuzheng";

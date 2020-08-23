@@ -1,19 +1,16 @@
 package io.qross.pql
 
 import io.qross.core.{DataCell, DataTable, DataType}
-import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
 import io.qross.net.Redis._
-import io.qross.pql.Patterns.{$REDIS, ARROW}
+import io.qross.pql.Patterns.ARROW
 import io.qross.pql.Solver._
+
 import scala.collection.JavaConverters._
 
 object REDIS {
     def parse(sentence: String, PQL: PQL): Unit = {
-        $REDIS.findFirstIn(sentence) match {
-            case Some(_) => PQL.PARSING.head.addStatement(new Statement("REDIS", sentence, new REDIS(sentence)))
-            case None => throw new SQLParseException("Wrong REDIS sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("REDIS", sentence, new REDIS(sentence)))
     }
 }
 

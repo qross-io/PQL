@@ -6,7 +6,7 @@ apply plugin: 'maven'
 apply plugin: "maven-publish"
 
 group = 'io.qross'
-version = '0.6.3'
+version = '0.6.4'
 
 sourceCompatibility = 1.8
 archivesBaseName = "qross-pql"
@@ -68,15 +68,15 @@ publishing {
         maven(MavenPublication) {
             groupId = 'io.qross'
             artifactId = 'pql'
-            version = '0.6.3-2-RELEASE'
+            version = '0.6.4-22-SNAPSHOT'
             from components.java
             artifact sourcesJar
         }
     }
 
     repositories {
-        maven { url "https://packages.aliyun.com/maven/repository/2011186-release-Aa5YmC/"
-            //maven { url "https://packages.aliyun.com/maven/repository/2011186-snapshot-FSoDsK/"
+            //maven { url "https://packages.aliyun.com/maven/repository/2011186-release-Aa5YmC/"
+            maven { url "https://packages.aliyun.com/maven/repository/2011186-snapshot-FSoDsK/"
             credentials {
                 username 'PtbpNI'
                 password 'kwCz3C0wHx'

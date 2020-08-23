@@ -164,7 +164,14 @@ class SAVE(val action: String, val sentence: String) {
                     }
                     else {
                         PQL.dh.saveToExcel(file)
-                    }.useTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
+                    }
+
+                    if (plan.contains("USE DEFAULT TEMPLATE", "DEFAULT TEMPLATE")) {
+                        PQL.dh.useDefaultExcelTemplate()
+                    }
+                    else if (plan.contains("USE TEMPLATE", "TEMPLATE")) {
+                        PQL.dh.useExcelTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
+                    }
                 }
                 else {
                     throw new SQLParseException("Empty Excel file name at SAVE sentence.")
@@ -172,7 +179,14 @@ class SAVE(val action: String, val sentence: String) {
             case "EXCEL STREAM FILE" =>
                 val file = plan.headArgs
                 if (file != "") {
-                    PQL.dh.saveAsStreamExcel(file).useTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
+                    PQL.dh.saveAsStreamExcel(file)
+
+                    if (plan.contains("USE DEFAULT TEMPLATE", "DEFAULT TEMPLATE")) {
+                        PQL.dh.useDefaultExcelTemplate()
+                    }
+                    else if (plan.contains("USE TEMPLATE", "TEMPLATE")) {
+                        PQL.dh.useExcelTemplate(plan.oneArgs("USE TEMPLATE", "TEMPLATE"))
+                    }
                 }
                 else {
                     throw new SQLParseException("Empty Excel stream file name at SAVE sentence.")

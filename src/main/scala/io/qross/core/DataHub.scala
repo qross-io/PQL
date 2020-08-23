@@ -796,8 +796,8 @@ class DataHub (val defaultConnectionName: String) {
                 while(Pager.DATA.size() > 0 || parallel.running) {
                     val table = Pager.DATA.poll()
                     if (table != null) {
-                        TOTAL_COUNT_OF_RECENT_GET += table.count()
-                        COUNT_OF_LAST_GET = table.count()
+                        //TOTAL_COUNT_OF_RECENT_GET += table.count()
+                        //COUNT_OF_LAST_GET += table.count()
                         handler(table)
                         Output.writeMessage(s"$pageSize SAVED")
                     }
@@ -815,8 +815,8 @@ class DataHub (val defaultConnectionName: String) {
                 var continue = true
                 do {
                     val table = currentSource[DataSource].executeDataTable(selectSQL.replace(param, String.valueOf(id)))
-                    TOTAL_COUNT_OF_RECENT_GET += table.count()
-                    COUNT_OF_LAST_GET = table.count()
+                    //TOTAL_COUNT_OF_RECENT_GET += table.count()
+                    //COUNT_OF_LAST_GET += table.count()
                     if (table.nonEmpty) {
                         if (table.contains(field)) {
                             id = table.max(field).firstCellLongValue
@@ -864,8 +864,8 @@ class DataHub (val defaultConnectionName: String) {
                 if (Blocker.DATA.size() > 0) {
                     val table = Blocker.DATA.poll()
                     if (table != null) {
-                        TOTAL_COUNT_OF_RECENT_GET += table.count()
-                        COUNT_OF_LAST_GET = table.count()
+                        //TOTAL_COUNT_OF_RECENT_GET += table.count()
+                        //COUNT_OF_LAST_GET += table.count()
                         handler(table)
                         Output.writeMessage(s"${config._4} SAVED.")
                     }

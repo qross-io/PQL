@@ -12,10 +12,7 @@ import io.qross.pql.Patterns.$BLANK
 
 object INVOKE {
     def parse(sentence: String, PQL: PQL): Unit = {
-        $INVOKE.findFirstIn(sentence) match {
-            case Some(invoke) => PQL.PARSING.head.addStatement(new Statement("INVOKE", sentence, new INVOKE(sentence.takeAfter(invoke).trim())))
-            case None => throw new SQLParseException("Incorrect INVOKE sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("INVOKE", sentence, new INVOKE(sentence.takeAfterX($INVOKE).trim())))
     }
 }
 

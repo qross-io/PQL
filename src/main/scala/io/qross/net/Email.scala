@@ -74,7 +74,12 @@ object Email {
             dh
         }
 
-        def fromTemplate(template: String): DataHub = {
+        def useDefaultEmailTemplate(): DataHub = {
+            EMAIL.useDefaultTemplate()
+            dh
+        }
+
+        def useEmailTemplate(template: String): DataHub = {
             EMAIL.useTemplate(template)
             dh
         }
@@ -287,8 +292,13 @@ class Email(private var title: String) {
             if (template.trim().bracketsWith("<", ">") || (template.contains("<%") && template.contains("%>"))) {
                 template
             }
-            else if (template.contains(".") && "(?i)^htm|html|txt$".r.test(template)) {
-                SourceFile.read(template)
+            else if (template.contains(".") && """(?i)^htm|html|txt$""".r.test(template.takeAfterLast("."))) {
+                if (template.contains("/") || template.contains("\\")) {
+                    SourceFile.read(template)
+                }
+                else {
+                    SourceFile.read(Global.QROSS_HOME + "templates/email/" +  template)
+                }
             }
             else {
                 DataSource.QROSS
@@ -301,12 +311,12 @@ class Email(private var title: String) {
     }
 
     def useDefaultTemplate(): Email = {
-        useTemplate(Global.EMAIL_DEFAULT_TEMPLATE.toPath)
+        useTemplate(Global.QROSS_HOME + "templates/email/default.html")
         this
     }
 
     def withDefaultSignature(): Email = {
-        withSignature(Global.EMAIL_DEFAULT_SIGNATURE.toPath)
+        withSignature(Global.QROSS_HOME + "templates/email/signature.html")
     }
 
     def withSignature(signature: String): Email = {
@@ -314,12 +324,17 @@ class Email(private var title: String) {
             if (signature.bracketsWith("<", ">") || (signature.contains("<%") && signature.contains("%>"))) {
                 signature
             }
-            else if (signature.contains(".") && "(?i)^htm|html|txt$".r.test(signature.takeAfter("."))) {
-                SourceFile.read(signature)
+            else if (signature.contains(".") && "(?i)^htm|html|txt$".r.test(signature.takeAfterLast("."))) {
+                if (signature.contains("/") || signature.contains("\\")) {
+                    SourceFile.read(signature)
+                }
+                else {
+                    SourceFile.read(Global.QROSS_HOME + "templates/email/" +  signature)
+                }
             }
             else {
                 DataSource.QROSS
-                        .querySingleValue("SELECT signature_content FROM qross_email_signatures WHERE signature_name=?", signature)
+                        .querySingleValue("SELECT template_content FROM qross_email_templates WHERE template_name=?", signature)
                         .orElse(signature, DataType.TEXT)
                         .asText
             }

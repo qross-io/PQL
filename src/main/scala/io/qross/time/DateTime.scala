@@ -444,7 +444,7 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
             //=
             (field.toUpperCase(), Try(value.toInt)) match {
                 case ("DAY", Success(v)) => if (v > 0) this.setDayOfMonth(v) else this.setDayOfMonth(1)
-                case ("DAY", Failure(_)) =>  if (value == "L") this.plusMonths(1).setDayOfMonth(1).plusDays(-1) else this.setDayOfWeek(value)  // L = last_day & WeekName = Mon,Tus...Sun
+                case ("DAY", Failure(_)) =>  if (value.equalsIgnoreCase("L")) this.plusMonths(1).setDayOfMonth(1).plusDays(-1) else this.setDayOfWeek(value)  // L = last_day & WeekName = Mon,Tus...Sun
                 case ("WEEK", Success(v)) => if (v < 0) this.setDayOfWeek(1) else if (v > 7) this.setDayOfWeek(7) else this.setDayOfWeek(v)
                 case ("WEEK", Failure(_)) => this.setDayOfWeek(value)
                 case ("MONTH", Success(v)) => this.setMonth(v)

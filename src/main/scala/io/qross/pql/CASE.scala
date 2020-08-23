@@ -15,7 +15,7 @@ object CASE {
                 val $when = $WHEN$.findFirstIn(sentence).getOrElse("")
                 val equivalent = {
                     if ($when != "") {
-                        sentence.takeAfter($BLANK).takeBefore($when).trim()
+                        sentence.takeAfterX($BLANK).takeBefore($when).trim()
                     }
                     else {
                         sentence.takeAfter(m).trim()

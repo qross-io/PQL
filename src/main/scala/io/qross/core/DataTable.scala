@@ -653,7 +653,7 @@ class DataTable() {
     // 修改列名 A AS A1, B AS B2
     def alter(fragment: String): DataTable = {
         fragment.split(",")
-            .map(f => (f.takeBefore("(?i)\\sAS\\s".r).trim(), f.takeAfter("(?i)\\sAS\\s".r).trim()))
+            .map(f => (f.takeBeforeX("(?i)\\sAS\\s".r).trim(), f.takeAfterX("(?i)\\sAS\\s".r).trim()))
             .filter(f => f._1 != "" && f._2 != "")
             .foreach(f => {
                 alter(f._1, f._2)

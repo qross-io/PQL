@@ -2,7 +2,7 @@ package io.qross.core
 
 import java.util
 
-import io.qross.exception.ConvertFailureException
+import io.qross.exception._
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.time.DateTime
@@ -38,7 +38,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         dataType match {
             case DataType.TEXT => asText == ""
             case DataType.ARRAY | DataType.LIST => asJavaList.size() == 0
-            case DataType.ROW | DataType.MAP | DataType.OBJECT => asRow.isEmpty
+            case DataType.ROW => asRow.isEmpty
             case DataType.TABLE => asTable.isEmpty
             case DataType.NULL | DataType.EXCEPTION => true
             case _ => value == null
@@ -198,7 +198,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
             case DataType.BOOLEAN => this.toBoolean
             case DataType.DATETIME => this.toDateTime
             case DataType.TABLE => this.toTable
-            case DataType.ROW | DataType.OBJECT | DataType.MAP => this.toRow
+            case DataType.ROW => this.toRow
             case DataType.ARRAY | DataType.LIST => this.toJavaList
             case DataType.JSON => this.toJson
             case _ => throw new ConvertFailureException("Unsupported conversion format: " + dataType)
@@ -322,7 +322,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         if (valid) {
             this.dataType match {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable]
-                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].asTable
+                case DataType.ROW => this.value.asInstanceOf[DataRow].asTable
                     //this.value.asInstanceOf[DataRow].turnToTable("key", "value")
                 case DataType.ARRAY | DataType.LIST =>
                     val table = new DataTable()
@@ -344,7 +344,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         if (valid) {
             this.dataType match {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable]
-                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].asTable
+                case DataType.ROW => this.value.asInstanceOf[DataRow].asTable
                     //this.value.asInstanceOf[DataRow].turnToTable(if (fields.nonEmpty) fields.head else "key", if (fields.length > 1) fields(1) else "value")
                 case DataType.ARRAY | DataType.LIST =>
                     val table = new DataTable()
@@ -377,7 +377,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         if (valid) {
             this.dataType match {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable].firstRow.getOrElse(new DataRow())
-                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow]
+                case DataType.ROW => this.value.asInstanceOf[DataRow]
                 case DataType.ARRAY | DataType.LIST =>
                     val list = this.value.asInstanceOf[java.util.List[Any]]
                     val row = new DataRow()
@@ -406,7 +406,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         if (valid) {
             this.dataType match {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable].toList[T]
-                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].getValues[T]
+                case DataType.ROW => this.value.asInstanceOf[DataRow].getValues[T]
                 case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[T]].asScala.toList
                 case DataType.TEXT => this.value.asInstanceOf[String].split("").asInstanceOf[List[T]]
                 case _ => List[T](this.value.asInstanceOf[T])
@@ -420,7 +420,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         if (valid) {
             this.dataType match {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable].toJavaList
-                case DataType.ROW | DataType.MAP | DataType.OBJECT => this.value.asInstanceOf[DataRow].toJavaList
+                case DataType.ROW => this.value.asInstanceOf[DataRow].toJavaList
                 case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]]
                 case DataType.TEXT =>
                     val list = new util.ArrayList[Any]()
@@ -450,9 +450,216 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         this.dataType.typeName.contains(".")
     }
 
-    def asClass: Unit = {
-        Class.forName(this.dataType.typeName).getClass.getDeclaredMethod("getCell")
-        //this.value
+//    def asClass: Unit = {
+//        Class.forName(this.dataType.typeName).getClass.getDeclaredMethod("getCell")
+//        //this.value
+//    }
+
+
+    def getDataByProperty(attr: String): DataCell = {
+
+        this.dataType match {
+            case DataType.ROW => this.asRow.getCell(attr)
+            case DataType.TABLE =>
+                val table = this.asTable
+                if (table.contains(attr)) {
+                    this.asTable.getColumn(attr).toJavaList.toDataCell(DataType.ARRAY)
+                }
+                else if (attr.equalsIgnoreCase("first")) {
+                    table.firstRow match {
+                        case Some(row) => DataCell(row, DataType.ROW)
+                        case None => throw new OutOfIndexBoundaryException("Table doesn't contains any rows.")
+                    }
+                }
+                else if (attr.equalsIgnoreCase("last")) {
+                    table.lastRow match {
+                        case Some(row) => DataCell(row, DataType.ROW)
+                        case None => throw new OutOfIndexBoundaryException("Table doesn't contains any rows.")
+                    }
+                }
+                else {
+                    throw new TableColumnNotFoundException(s"Table doesn't contains column '$attr'.")
+                }
+            case DataType.ARRAY =>
+                val list = this.asJavaList
+                if (!list.isEmpty) {
+                    if (attr.equalsIgnoreCase("first")) {
+                        DataCell(list.get(0))
+                    }
+                    else if (attr.equalsIgnoreCase("last")) {
+                        DataCell(list.get(list.size() - 1))
+                    }
+                    else {
+                        throw new IncorrectPropertyNameException(s"List doesn't contains property $attr.")
+                    }
+                }
+                else {
+                    throw new OutOfIndexBoundaryException("Array is empty.")
+                }
+            case _ =>
+                if (this.isExtensionType) {
+                    try {
+                        Class.forName(this.dataType.typeName)
+                            .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
+                            .invoke(this.value, attr)
+                            .asInstanceOf[DataCell]
+                    }
+                    catch {
+                        case _: Exception => throw new ClassMethodNotFoundException("Class " + this.dataType.typeName + " must contains method getCell(String).")
+                    }
+                }
+                else {
+                    throw new UnsupportedDataTypeException("Only collection data type supports method 'getDataByProperty'.")
+                }
+        }
+    }
+
+    def getDataByIndex(expression: String): DataCell = {
+
+        val value = expression.eval()
+
+        this.dataType match {
+            case DataType.ARRAY =>
+                val list = this.asJavaList
+                if (!list.isEmpty) {
+                    if (value.isInteger || value.isDecimal) {
+                        val index = value.asInteger.toInt - 1 //索引从1开始
+                        if (index < 0) {
+                            throw new OutOfIndexBoundaryException(s"Index starts from 1.")
+                        }
+                        else if (index < list.size()) {
+                            DataCell(list.get(index))
+                        }
+                        else {
+                            throw new OutOfIndexBoundaryException(s"Index ${index + 1} is greater than list size.")
+                        }
+                    }
+                    else if (value.isText) {
+                        val attr = value.asText
+                        if (attr.equalsIgnoreCase("first")) {
+                            DataCell(list.get(0))
+                        }
+                        else if (attr.equalsIgnoreCase("last")) {
+                            DataCell(list.get(list.size() - 1))
+                        }
+                        else {
+                            throw new IncorrectPropertyNameException(s"List doesn't contains property $attr.")
+                        }
+                    }
+                    else {
+                        throw new IncorrectIndexDataTypeException("Only supports integer index in Array.")
+                    }
+                }
+                else {
+                    throw new OutOfIndexBoundaryException("Array is empty.")
+                }
+            case DataType.ROW =>
+                val row = this.asRow
+                if (value.isInteger) {
+                    val index = value.asInteger.toInt - 1
+                    if (index < 0) {
+                        throw new OutOfIndexBoundaryException(s"Index starts from 1.")
+                    }
+                    else if (index < row.size) {
+                        row.getCell(index)
+                    }
+                    else {
+                        throw new OutOfIndexBoundaryException(s"Index ${index + 1} is greater than row size.")
+                    }
+                }
+                else if (value.isText) {
+                    val attr = value.asText
+                    if (row.contains(attr)) {
+                        row.getCell(attr)
+                    }
+                    else {
+                        throw new IncorrectPropertyNameException(s"Row doesn't contains property $attr.")
+                    }
+                }
+                else {
+                    throw new IncorrectIndexDataTypeException("Only supports string and integer index in Row.")
+                }
+            case DataType.TABLE =>
+                val table = this.asTable
+                if (value.isInteger) {
+                    val index = value.asInteger.toInt - 1 //索引从1开始
+                    if (index < 0) {
+                        throw new OutOfIndexBoundaryException(s"Index starts from 1.")
+                    }
+                    else if (table.nonEmpty) {
+                        table.getRow(index) match {
+                            case Some(row) => DataCell(row, DataType.ROW)
+                            case None => throw new OutOfIndexBoundaryException(s"Index ${index + 1} is greater than table size.")
+                        }
+                    }
+                    else {
+                        throw new OutOfIndexBoundaryException("Table is empty.")
+                    }
+                }
+                else if (value.isText) {
+                    val attr = value.asText
+                    if (table.contains(attr)) {
+                        DataCell(table.getColumn(attr).toJavaList, DataType.ARRAY)
+                    }
+                    else if (attr.equalsIgnoreCase("first")) {
+                        table.firstRow match {
+                            case Some(row) => DataCell(row, DataType.ROW)
+                            case None => throw new OutOfIndexBoundaryException("Table is empty.")
+                        }
+                    }
+                    else if (attr.equalsIgnoreCase("last")) {
+                        table.lastRow match {
+                            case Some(row) => DataCell(row, DataType.ROW)
+                            case None => throw new OutOfIndexBoundaryException("Table is empty.")
+                        }
+                    }
+                    else {
+                        throw new IncorrectPropertyNameException(s"Row doesn't contains column $attr.")
+                    }
+                }
+                else {
+                    throw new IncorrectIndexDataTypeException("Only supports string and integer index in Table.")
+                }
+            case _ =>
+                if (this.isExtensionType) {
+                    if (value.isInteger) {
+                        val index = value.asInteger.toInt - 1 //索引从1开始
+                        if (index < 0) {
+                            throw new OutOfIndexBoundaryException(s"Index starts from 1.")
+                        }
+                        else {
+                            try {
+                                Class.forName(this.dataType.typeName)
+                                    .getDeclaredMethod("getCell", Class.forName("java.lang.Integer"))
+                                    .invoke(this.value, Integer.valueOf(index))
+                                    .asInstanceOf[DataCell]
+                            }
+                            catch {
+                                case _: Exception => throw new ClassMethodNotFoundException("Class " + this.dataType.typeName + " must contains method getCell(Integer).")
+                            }
+                        }
+                    }
+                    else if (value.isText) {
+                        val attr = value.asText
+                        try {
+                            Class.forName(this.dataType.typeName)
+                                .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
+                                .invoke(this.value, attr)
+                                .asInstanceOf[DataCell]
+                        }
+                        catch {
+                            case _: Exception => throw new ClassMethodNotFoundException("Class " + this.dataType.typeName + " must contains method getCell(String).")
+                        }
+                    }
+                    else {
+                        throw new IncorrectIndexDataTypeException("Only supports string and integer index in extension Class.")
+                    }
+
+                }
+                else {
+                    throw new UnsupportedDataTypeException("Only collection data type supports method 'getDataByIndex'.")
+                }
+        }
     }
 
     def toOption[T]: Option[T] = {

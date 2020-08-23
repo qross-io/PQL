@@ -398,9 +398,9 @@ class ExcelX(val fileName: String) {
             this.templatePath += ".xlsx"
         }
 
-        if (!this.templatePath.startsWith("/") && !this.templatePath.contains(":/")) {
-            this.templatePath = Global.EXCEL_TEMPLATES_PATH + this.templatePath
-        }
+//        if (!this.templatePath.startsWith("/") && !this.templatePath.contains(":/")) {
+//            this.templatePath = Global.EXCEL_TEMPLATES_PATH + this.templatePath
+//        }
 
         if (!new File(templatePath).exists()) {
             throw new Exception(s"Excel template '$templateName' does not exists.")

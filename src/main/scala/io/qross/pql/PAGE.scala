@@ -7,7 +7,7 @@ import io.qross.pql.Solver._
 
 object PAGE {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($PAGE.matches(sentence)) {
+        if ($PAGE.test(sentence)) {
             val $page = new Statement("PAGE", sentence.takeBefore("#"), new PAGE(sentence.takeAfter("#").trim))
             PQL.PARSING.head.addStatement($page)
         }

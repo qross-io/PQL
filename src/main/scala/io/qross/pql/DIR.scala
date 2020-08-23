@@ -1,19 +1,14 @@
 package io.qross.pql
 
 import io.qross.core.{DataCell, DataTable, DataType}
-import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
 import io.qross.fs.Directory
 import io.qross.fs.Path._
-import io.qross.pql.Patterns.{$DIR, ARROW, $BLANK}
 import io.qross.pql.Solver._
 
 object DIR {
     def parse(sentence: String, PQL: PQL): Unit = {
-        $DIR.findFirstIn(sentence) match {
-            case Some(_) => PQL.PARSING.head.addStatement(new Statement("DIR", sentence, new DIR(sentence)))
-            case None => throw new SQLParseException("Wrong DIR sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("DIR", sentence, new DIR(sentence)))
     }
 }
 
@@ -55,7 +50,7 @@ class DIR(sentence: String) {
         if (PQL.dh.debugging) {
             data.dataType match {
                 case DataType.TABLE => data.asTable.show()
-                case _ => println(data.asText)
+                case _ => println(sentence.$restore(PQL).take(100) + ": " + data.asText)
             }
         }
     }

@@ -7,7 +7,7 @@ import io.qross.pql.Solver._
 
 object BATCH {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($BATCH.matches(sentence)) {
+        if ($BATCH.test(sentence)) {
             val $batch = new Statement("BATCH", sentence.takeBefore("#"), new BATCH(sentence.takeAfter("#").trim))
             PQL.PARSING.head.addStatement($batch)
         }

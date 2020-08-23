@@ -10,7 +10,7 @@ object EXIT {
 
     def parse(sentence: String, PQL: PQL): Unit = {
         if ($EXIT$CODE.test(sentence)) {
-            val $exit$code = new Statement("EXIT$CODE", sentence, new EXIT$CODE(sentence.takeAfter($EXIT$CODE).trim()))
+            val $exit$code = new Statement("EXIT$CODE", sentence, new EXIT$CODE(sentence.takeAfterX($EXIT$CODE).trim()))
             PQL.PARSING.head.addStatement($exit$code)
         }
         else {

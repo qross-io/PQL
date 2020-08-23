@@ -12,7 +12,7 @@ object LET {
                 val exp = sentence.takeAfter(m.group(0)).trim()
                 if (exp.startsWith("$")) {
                     PQL.PARSING.head.addStatement(
-                        new Statement("LET", sentence, new LET(exp.takeBefore("\\s".r), exp.takeAfter("\\s".r)))
+                        new Statement("LET", sentence, new LET(exp.takeBeforeX("\\s".r), exp.takeAfterX("\\s".r)))
                     )
                 }
                 else {

@@ -23,7 +23,7 @@ object GlobalFunction {
             val $in = """\sIN\s""".r
             val string = args.head.asText
             if ($in.test(string)) {
-                DataCell(string.takeBefore($in).trim().indexOf(string.takeAfter($in)) + 1, DataType.INTEGER)
+                DataCell(string.takeBeforeX($in).trim().indexOf(string.takeAfterX($in)) + 1, DataType.INTEGER)
             }
             else {
                 throw new SQLParseException(s"Wrong or empty arguments, correct format is POSITION(strA IN strB) , actual POSITION(${args.map(s => s.asText).mkString("")})")

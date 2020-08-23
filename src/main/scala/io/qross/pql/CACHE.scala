@@ -7,12 +7,11 @@ import io.qross.ext.TypeExt._
 
 object CACHE {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($CACHE.matches(sentence)) {
-            val $cache = new Statement("CACHE", sentence.takeBefore("#"), new CACHE($m.group(1).trim, sentence.takeAfter("#").trim))
-            PQL.PARSING.head.addStatement($cache)
-        }
-        else {
-            throw new SQLParseException("Incorrect CACHE sentence: " + sentence)
+        $CACHE.findFirstMatchIn(sentence) match {
+            case Some(m) =>
+                val $cache = new Statement("CACHE", sentence.takeBefore("#"), new CACHE(m.group(1).trim, sentence.takeAfter("#").trim))
+                PQL.PARSING.head.addStatement($cache)
+            case None => throw new SQLParseException("Incorrect CACHE sentence: " + sentence)
         }
     }
 }

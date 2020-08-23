@@ -11,6 +11,7 @@ import io.qross.setting.Language
 import scala.collection.mutable
 import scala.util.matching.Regex
 import scala.util.control.Breaks._
+import scala.util.matching.Regex.Match
 
 object Solver {
 
@@ -19,20 +20,22 @@ object Solver {
     //val GLOBAL_VARIABLE: Regex = """@\(?([a-zA-Z0-9_]+)\)?""".r //全局变量 @name 或 @(name)
     //val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
     val USER_VARIABLE: List[Regex] = List[Regex](
-        """\$\(([a-zA-Z0-9_]+)\.(\S+?)\)""".r,
-        """\$\(([a-zA-Z0-9_]+)\)""".r,
-        """\$([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)""".r,
-        """\$([a-zA-Z0-9_]+)""".r
+        """\$\(([a-zA-Z0-9_]+)\)""".r,  //防冲突增加小括号时不考虑函数，因为函数没有防冲突的必要，全局变量同理。属性和索引规则符号前面也没有防冲突的必要
+        """\$([a-zA-Z0-9_]+)([\s\S]|$)""".r
     )
     val GLOBAL_VARIABLE: List[Regex] = List[Regex](
-        """@\(([a-zA-Z0-9_]+)\.(\S+?)\)\(?""".r,
-        """@\(([a-zA-Z0-9_]+)\)\(?""".r,
-        """@([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\(?""".r,
-        """@([a-zA-Z0-9_]+)\(?""".r
+        """@\(([a-zA-Z0-9_]+)\)""".r,
+        """@([a-zA-Z0-9_]+)([\s\S]|$)""".r
     )
+
+    val USER_COMPLEX_VARIABLE: Regex = """(?i)\$([a-z0-9_]+)([.\[])""".r
+    val GLOBAL_COMPLEX_VARIABLE: Regex = """(?i)@([a-z0-9_]+)([.\[])""".r
+    //val USE_COMPLEX_VARIABLE: Regex = """(?i)\$([a-z0-9_]+)(\.[a-z0-9_]+|\[[^]]+\])+""".r
+    //val GLOBAL_COMPLEX_VARIABLE: Regex = """(?i)@([a-z0-9_]+)(\.[a-z0-9_]+|\[[^]]+\])+""".r
+
     val EMBEDDED_VARIABLE: Regex = """([$@])\{\s*([a-zA-Z0-9_]+)(.[a-zA-Z0-9_]+)?\s*\}""".r
-    val USER_DEFINED_FUNCTION: Regex = """$[a-zA-Z_]+\(\)""".r //用户函数, 未完成
-    val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\s*\(([^\)]*)\)""".r //系统函数
+    val FUNCTION: Regex = """([$@])([a-zA-Z0-9_]+)\(""".r //用户函数, 未完成
+    val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\s*\(([^)]*)\)""".r //系统函数
     val SHARP_EXPRESSION: Regex = """(?i)\$\{([^\{\}]+?)\}""".r //Sharp表达式
     val QUERY_EXPRESSION: Regex = """(?i)\$\{\{([\s\S]+?)\}\}""".r //查询表达式
     val INNER_SENTENCE: Regex = """(?i)\(\s*(SELECT|PARSE|REDIS|FILE|DIR|INSERT|UPDATE|DELETE|REPLACE|IF|CASE)\s""".r  //(SELECT...)
@@ -188,7 +191,8 @@ object Solver {
 
             //如果最后一行是注释
             if (closing.nonEmpty) {
-                val clip = sentence.takeAfter(closing.head.index - 1).take(20)
+                                //val clip = sentence.takeAfter(closing.head.index - 1).take(20)
+                val clip = sentence.substring(closing.head.index).take(20)
                 closing.head.char match {
                     case '-' => blocks.head.end = sentence.length
                     case '*' => throw new SQLParseException("Multi-lines comment isn't closed. " + clip)
@@ -201,8 +205,9 @@ object Solver {
 
             //处理字符串
             blocks.foreach(closed => {
-                    val before = sentence.takeBefore(closed.start)
-                    val after = sentence.takeAfter(closed.end - 1)
+                    val before = sentence.take(closed.start)
+                    val after = sentence.substring(closed.end)
+                    //val after = sentence.takeAfter(closed.end - 1)
                     val replacement = {
                         closed.name match {
                             case "SINGLE-QUOTE-STRING" | "DOUBLE-QUOTE-STRING" =>
@@ -250,8 +255,8 @@ object Solver {
                         }
                     //左中括号, JSON数组, 闭合检查
                     case '[' =>
-                        if (i > 0 && sentence.charAt(i - 1).isLower) {
-                            //占位符
+                        if (i > 0 && (sentence.charAt(i - 1).isLower || sentence.charAt(i - 1) == ']')) {
+                            //占位符或第一或二索引项
                             closing += new Closing('~', i)
                         }
                         else {
@@ -325,7 +330,8 @@ object Solver {
             }
 
             if (closing.nonEmpty) {
-                val clip = sentence.takeAfter(closing.head.index - 1).take(20)
+                //val clip = sentence.takeAfter(closing.head.index - 1).take(20)
+                val clip = sentence.substring(closing.head.index).take(20)
                 closing.head.char match {
                     case '(' => throw new SQLParseException("Round bracket isn't closed. " + clip)
                     case '[' => throw new SQLParseException("Square bracket isn't closed. " + clip)
@@ -529,7 +535,7 @@ object Solver {
             sentence.replace("~u003b", ";")
                     .replace("~u0024", "$")
                     .replace("~u0040", "@")
-                    //.replace("~u007e", "~")
+                    //.replace("~u007e", "~") //已去掉javascript嵌入
                     .replace("~u0021", "!")
                     //.replace("~u0023", "#") //已在Parameter中替换
                     //.replace("~u0026", "&")//已在Parameter中替换
@@ -543,6 +549,57 @@ object Solver {
                     .replace("~u0027", "'")
         }
 
+        def creep(data: DataCell, m: Match, PQL: PQL): String = {
+            val whole = m.group(0)
+            var tail = m.group(2)
+
+            val left = sentence.takeBefore(whole)
+            var right = sentence.takeAfter(whole)
+            var creep = data
+
+            breakable {
+                while ((tail == "." || tail == "[") && (creep.isJavaList || creep.isRow || creep.isTable || creep.isExtensionType)) {
+                    if (tail == ".") {
+                        "^[a-zA-Z0-9_]+".r.findFirstIn(right) match {
+                            case Some(attr) =>
+                                right = right.substring(attr.length)
+                                if (right != "") {
+                                    tail = right.take(1)
+                                    right = right.drop(1)
+                                }
+                                else {
+                                    tail = ""
+                                }
+
+                                creep = creep.getDataByProperty(attr)
+                            case None => break
+                        }
+                    }
+                    else if (tail == "[") { // "["
+                        val half = right.indexHalfOf('[', ']')
+                        if (half > -1) {
+                            val index = right.take(half)
+                            right = right.substring(index.length + 1)
+                            if (right != "") {
+                                tail = right.take(1)
+                                right = right.drop(1)
+                            }
+                            else {
+                                tail = ""
+                            }
+                            //仅支持变量和简单运算，不支持嵌套
+                            creep = creep.getDataByIndex(index.popStash(PQL))
+                        }
+                        else {
+                            break
+                        }
+                    }
+                }
+            }
+
+            left + PQL.$stash(creep) + tail + right
+        }
+
         //解析表达式中的变量
         def replaceVariables(PQL: PQL): String = {
             USER_VARIABLE
@@ -551,97 +608,83 @@ object Solver {
                 .foreach(m => {
                     val whole = m.group(0)
                     val name = m.group(1)
+                    val tail = if (m.groupCount == 1) "" else m.group(2)
 
-                    PQL.findVariable("$" + name)
-                        .ifFound(data => {
-                            if (m.groupCount == 1) {
-                                sentence = sentence.replace(whole, PQL.$stash(data))
-                            }
-                            else {
-                                sentence = sentence.replace(whole,
-                                    PQL.$stash(
-                                        if (data.isRow) {
-                                            data.asRow.getCell(m.group(2))
-                                        }
-                                        else if(data.isExtensionType) {
-                                            try {
-                                                Class.forName(data.dataType.typeName)
-                                                                .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
-                                                                .invoke(data.value, m.group(2))
-                                                                .asInstanceOf[DataCell]
-                                            }
-                                            catch {
-                                                case _: Exception => throw new SQLExecuteException("Class " + data.dataType.typeName + " must contains method getCell(String).")
-                                            }
-                                        }
-                                        else {
-                                            //不支持的数据类型
-                                            throw new SQLExecuteException(s"""The type of variable $$$name isn't DataRow or extension type.""")
-                                        }
-                                    )
-                                )
-                            }
-                        }).ifNotFound(() => {
-                            if (m.groupCount == 1) {
-                                if (PQL.dh.debugging) {
-                                    Output.writeWarning(s"The variable $name has not been assigned.")
-                                }
-                            }
-                            else {
-                                if (PQL.dh.debugging) {
-                                    Output.writeWarning(s"The variable $name hasn't property ${m.group(2)}.")
-                                }
-                            }
-                            //变量未定义
-                            sentence = sentence.replace(whole, "UNDEFINED")
-                        })
+                    if (tail != "(" && tail != "." && tail != "[") {
+                        val right = sentence.takeAfter(whole)
+                        //赋值表达式左侧的变量不替换
+                        if (!(tail == ":" && right.startsWith("=")) && !right.trim().startsWith(":=")) {
+                            val left = sentence.takeBefore(whole)
+                            PQL.findVariable("$" + name)
+                                .ifFound(data => {
+                                    sentence = left + PQL.$stash(data) + tail + right
+                                }).ifNotFound(() => {
+                                    if (PQL.dh.debugging) {
+                                        Output.writeWarning(s"The variable $$$name has not been assigned.")
+                                    }
+                                    //变量未定义
+                                    sentence = left + "UNDEFINED" + tail + right
+                                })
+                        }
+                    }
                 })
 
             GLOBAL_VARIABLE
-                    .map(r => r.findAllMatchIn(sentence))
-                    .flatMap(s => s.toList.sortBy(m => m.group(1)).reverse)
-                    .foreach(m => {
-                        val whole = m.group(0)
-                        if (!whole.endsWith("(")) {
-                            val name = m.group(1)
-                            PQL.findVariable("@" + name)
-                                .ifFound(data => {
-                                    if (m.groupCount == 1) {
-                                        sentence = sentence.replace(whole, PQL.$stash(data))
-                                    }
-                                    else {
-                                        sentence = sentence.replace(whole,
-                                            PQL.$stash(
-                                                if (data.isRow) {
-                                                    data.asRow.getCell(m.group(2))
-                                                }
-                                                else if(data.isExtensionType) {
-                                                    try {
-                                                        Class.forName(data.dataType.typeName)
-                                                            .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
-                                                            .invoke(data.value, m.group(2))
-                                                            .asInstanceOf[DataCell]
-                                                    }
-                                                    catch {
-                                                        case _: Exception => throw new SQLExecuteException("Class " + data.dataType.typeName + " must contains method getCell(String).")
-                                                    }
-                                                }
-                                                else {
-                                                    DataCell.ERROR
-                                                }
-                                            )
-                                        )
-                                        //sentence = sentence.replace(whole, PQL.$stash(data.asRow.getCell(m.group(2))))
-                                    }
-                                })
-                                .ifNotFound(() => {
-                                    // @name 标记与MySQL和SQL Server冲突, 不做处理
-                                    if (PQL.dh.debugging) {
-                                        Output.writeWarning(s"The global variable @$name maybe has not been assigned.")
-                                    }
-                                })
-                        }
-                    })
+                .map(r => r.findAllMatchIn(sentence))
+                .flatMap(s => s.toList.sortBy(m => m.group(1)).reverse)
+                .foreach(m => {
+                    val whole = m.group(0)
+                    val name = m.group(1)
+                    val tail = if (m.groupCount == 1) "" else m.group(2)
+
+                    if (tail != "(" && tail != "." && tail != "[") {
+                        PQL.findVariable("@" + name)
+                            .ifFound(data => {
+                                sentence = sentence.replaceFirstOne(whole, PQL.$stash(data) + tail)
+                            })
+                            .ifNotFound(() => {
+                                // @name 标记与MySQL和SQL Server冲突, 不做处理
+                                if (PQL.dh.debugging) {
+                                    Output.writeWarning(s"The global variable @$name maybe has not been assigned.")
+                                }
+                            })
+                    }
+                })
+
+            USER_COMPLEX_VARIABLE
+                .findAllMatchIn(sentence)
+                .foreach(m => {
+                    val name = m.group(1)
+
+                    PQL.findVariable("$" + name)
+                        .ifFound(data => {
+                            sentence = sentence.creep(data, m, PQL)
+                        })
+                        .ifNotFound(() => {
+                            if (PQL.dh.debugging) {
+                                Output.writeWarning(s"The variable $$$name has not been assigned.")
+                            }
+                            //变量未定义
+                            sentence = sentence.replaceFirstOne(m.group(0), "UNDEFINED" + m.group(2))
+                        })
+                })
+
+            GLOBAL_COMPLEX_VARIABLE
+                .findAllMatchIn(sentence)
+                .foreach(m => {
+                    val name = m.group(1)
+
+                    PQL.findVariable("@" + name)
+                        .ifFound(data => {
+                            sentence = sentence.creep(data, m, PQL)
+                        })
+                        .ifNotFound(() => {
+                            // @name 标记与MySQL和SQL Server冲突, 不做处理
+                            if (PQL.dh.debugging) {
+                                Output.writeWarning(s"The global variable @$name maybe has not been assigned.")
+                            }
+                        })
+                })
 
             sentence
         }
@@ -726,8 +769,35 @@ object Solver {
             }
         }
 
+        def callFunctions(PQL: PQL, quote: String, head: String, symbol: String, name: String): String = {
+            val left = sentence.takeBefore(head)
+            var right = sentence.takeAfter(head)
+            val half = right.indexHalfOf('(', ')')
+            var args = right.take(half) //函数参数
+            right = right.drop(half + 1)
+
+            //检查嵌套
+            FUNCTION.findFirstMatchIn(args) match {
+                case Some(m) => args = args.callFunctions(PQL, quote, m.group(0), m.group(1), m.group(2))
+                case None =>
+            }
+
+            //执行
+            left + PQL.$stash(CALL.call(PQL, symbol, name.toUpperCase(), args)) + right
+        }
+
         //解析表达式中的函数
         def replaceFunctions(PQL: PQL, quote: String = "'"): String = {
+
+            breakable {
+                while (true) {
+                    FUNCTION.findFirstMatchIn(sentence) match {
+                        case Some(m) => sentence = sentence.callFunctions(PQL, quote, m.group(0), m.group(1), m.group(2))
+                        case None => break
+                    }
+                }
+            }
+
 
             //函数review时需要修改循环嵌套的逻辑，改成 while(true)
             while (GLOBAL_FUNCTION.test(sentence)) { //循环防止嵌套
@@ -740,6 +810,8 @@ object Solver {
                         if (FUNCTION_NAMES.contains(funName)) {
                             new GlobalFunction(funName).call(funArgs).ifValid(data => {
                                 sentence = sentence.replace(m.group(0), PQL.$stash(data))
+                            }).ifInvalid(() => {
+                                sentence = sentence.replace(m.group(0), "NULL")
                             })
                         }
                         else {
@@ -933,7 +1005,7 @@ object Solver {
         }
 
         def $compute(PQL: PQL, express: Int = FULL): DataCell = {
-            sentence.takeBefore($BLANK).toUpperCase() match {
+            sentence.takeBeforeX($BLANK).toUpperCase() match {
                 case "SELECT" | "SHOW" => new SELECT(sentence).select(PQL, express)
                 case "PARSE" => new PARSE(sentence).doParse(PQL, express)
                 case "REDIS" => new REDIS(sentence).evaluate(PQL, express)

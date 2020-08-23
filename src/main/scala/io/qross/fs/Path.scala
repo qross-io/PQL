@@ -20,8 +20,6 @@ object Path {
 
         def toPath: String = {
             path.replace("%QROSS_HOME", Global.QROSS_HOME)
-                .replace("%EMAIL_TEMPLATES_PATH", Global.EMAIL_TEMPLATES_PATH)
-                .replace("%EXCEL_TEMPLATES_PATH", Global.EXCEL_TEMPLATES_PATH)
                 .replace("\\", "/")
                 .replace("//", "/")
         }

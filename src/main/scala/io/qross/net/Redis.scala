@@ -168,7 +168,7 @@ class RedisCommand(sentence: String) {
     private val hasChars = sentence.contains("'") || sentence.contains("\"")
     private val chars = new mutable.ListBuffer[String]()
 
-    private val parts = sentence.trim().takeAfter("""(?i)REDIS\s""".r).pickChars(chars).trim().split("""\s+""")
+    private val parts = sentence.trim().takeAfterX("""(?i)REDIS\s""".r).pickChars(chars).trim().split("""\s+""")
 
     val name: String = parts(0).toUpperCase()
     val command: Command = {

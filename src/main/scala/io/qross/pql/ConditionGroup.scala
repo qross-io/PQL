@@ -3,19 +3,17 @@ package io.qross.pql
 import java.util.regex.Matcher
 
 import io.qross.core.{DataCell, DataType}
-import io.qross.exception.SQLParseException
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.Breaks._
 
 class ConditionGroup(expression: String) {
 
-    private val conditions = new ArrayBuffer[Condition]()
+    private[pql] val conditions = new ArrayBuffer[Condition]()
 
     //replaced 是否已经提取 inner sentence
     def evalAll(PQL: PQL, replaced: Boolean = false): Boolean = {
@@ -52,53 +50,10 @@ class ConditionGroup(expression: String) {
 
         //最终执行
         for (condition <- this.conditions) {
-            val field = condition.field
-            val value = condition.value
-
-            condition.eval( if (field == null) {
-                                DataCell.NULL
-                            }
-                            else if ($CONDITION$N.test(field)) {
-                                conditions(field.$trim("~condition[", "]").toInt).result.toDataCell(DataType.BOOLEAN)
-                            }
-                            else if ($VARIABLE.test(field)) {
-                                PQL.findVariable(field)
-                            }
-                            else if (value.equalsIgnoreCase("DEFINED") || value.equalsIgnoreCase("UNDEFINED")) {
-                                field.popStash(PQL).toDataCell(DataType.TEXT)
-                            }
-                            else {
-                                field.$sharp(PQL)
-                            },
-                            if ($CONDITION$N.test(value)) {
-                                DataCell(conditions(value.$trim("~condition[", "]").toInt).result, DataType.BOOLEAN)
-                            }
-                            else if ($VARIABLE.test(value)) {
-                                PQL.findVariable(value)
-                            }
-                            else if (value.equalsIgnoreCase("EMPTY")) {
-                                DataCell.EMPTY
-                            }
-                            else if (value.equalsIgnoreCase("UNDEFINED")) {
-                                DataCell.UNDEFINED
-                            }
-                            else if (value.equalsIgnoreCase("NULL") || value == "()") {
-                                DataCell.NULL
-                            }
-                            else if (condition.operator == "NOT") {
-                                value.replace("==", "DOUBLE$EQUALITY$SIGN")
-                                    .replace("!=", "INEQUALITY$SIGN")
-                                    .replace("=", "==")
-                                    .replace("DOUBLE$EQUALITY$SIGN", "==")
-                                    .replace("INEQUALITY$SIGN", "!=")
-                                    .replace("<>", "!=").$sharp(PQL, "\"")
-                            }
-                            else {
-                                value.$sharp(PQL, "\"")
-                            })
+            condition.eval(PQL, this)
 
             if (PQL.dh.debugging) {
-                Output.writeDotLine(" ", if (field != null) field.popStash(PQL, "\"") else "", condition.operator, value.popStash(PQL, "\""), " => ", condition.result)
+                Output.writeDotLine(" ", if (condition.field != null) condition.field.popStash(PQL, "\"") else "", condition.operator, condition.value.popStash(PQL, "\""), " => ", condition.result)
             }
         }
 
@@ -140,18 +95,18 @@ class ConditionGroup(expression: String) {
             }
 
             if (!$CONDITION$N.test(left)) {
-                exp = exp.replace(left, stash)
-                clause = clause.replace(left, stash)
+                exp = exp.replaceFirstOne(left, stash)
+                clause = clause.replaceFirstOne(left, stash)
                 conditions += new Condition(left.trim)
             }
 
             if (!$CONDITION$N.test(right)) {
-                exp = exp.replace(right, stash)
-                clause = clause.replace(right, stash)
+                exp = exp.replaceFirstOne(right, stash)
+                clause = clause.replaceFirstOne(right, stash)
                 conditions += new Condition(right.trim)
             }
 
-            exp = exp.replace(clause, stash)
+            exp = exp.replaceFirstOne(clause, stash)
             conditions += new Condition(clause.trim) // left AND right
 
         }
@@ -162,18 +117,18 @@ class ConditionGroup(expression: String) {
             right = m.group(4)
 
             if (!$CONDITION$N.test(left)) {
-                exp = exp.replace(left, stash)
-                clause = clause.replace(left, stash)
+                exp = exp.replaceFirstOne(left, stash)
+                clause = clause.replaceFirstOne(left, stash)
                 conditions += new Condition(left.trim)
             }
 
             if (!$CONDITION$N.test(right)) {
-                exp = exp.replace(right, stash)
-                clause = clause.replace(right, stash)
+                exp = exp.replaceFirstOne(right, stash)
+                clause = clause.replaceFirstOne(right, stash)
                 conditions += new Condition(right.trim)
             }
 
-            exp = exp.replace(clause, stash)
+            exp = exp.replaceFirstOne(clause, stash)
             this.conditions += new Condition(clause.trim) // left OR right
 
         }

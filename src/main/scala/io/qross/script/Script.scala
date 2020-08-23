@@ -57,7 +57,7 @@ object Script {
         catch {
             case e: ScriptException =>
                 e.printStackTrace()
-                throw new SQLExecuteException("Can't caculate expression: " + script)
+                throw new SQLExecuteException("Can't calculate expression: " + script)
         }
     }
 }

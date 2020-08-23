@@ -105,7 +105,7 @@ class FileWriter(val file: File, val format: Int, val outputType: String, delete
             }
         }
 
-        if (file.getName.toLowerCase().endsWith(".csv")) {
+        if (!append && file.getName.toLowerCase().endsWith(".csv")) {
             fos.write(Array[Byte](0xEF.toByte, 0xBB.toByte, 0xBF.toByte))
         }
 

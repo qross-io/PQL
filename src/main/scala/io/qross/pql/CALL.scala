@@ -1,5 +1,6 @@
 package io.qross.pql
 
+import io.qross.core.DataCell
 import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.$CALL
@@ -9,71 +10,64 @@ import io.qross.pql.Solver._
 
 object CALL {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if($CALL.test(sentence)) {
-            val $func = sentence.takeAfter($CALL).trim()
-            if ($func.startsWith("$") || $func.startsWith("@")) {
-                if ($func.contains("(") && $func.contains(")")) {
-                    val funcName = $func.takeBefore("(").trim().toUpperCase()
-                    val funcArgs = $func.takeBetween("(", ")")
-                    PQL.PARSING.head.addStatement(new Statement("CALL", sentence, new CALL(funcName, funcArgs)))
+
+        PQL.PARSING.head.addStatement(new Statement("CALL", sentence, new CALL(sentence.takeAfterX($CALL))))
+    }
+
+    def call(PQL: PQL, symbol: String, funcName: String, args: String): DataCell = {
+        //statement用来保存函数中的局部变量
+        val statement = new Statement("CALL", "")
+
+        if (symbol == "$") {
+            //用户函数
+            if (PQL.USER$FUNCTIONS.contains(funcName)) {
+                val $func = PQL.USER$FUNCTIONS(funcName)
+                val $args = args.split(",").map(_.trim())
+
+                //初始化变量
+                statement.variables.combine($func.variables)
+
+                //根据传入值赋值变量
+                for (i <- $args.indices) {
+                    val arg = $args(i)
+                    if (arg.contains(":=")) {
+                        val name = arg.takeBefore(":=").trim()
+                        val value = arg.takeAfter(":=").trim()
+                        if (name.startsWith("$")) {
+                            statement.setVariable(name.takeAfter("$"), value.popStash(PQL))
+                        }
+                        else {
+                            throw new SQLExecuteException("Wrong function argument name: " + name + " when call function " + name + ", variable name must starts with symbol '$'")
+                        }
+                    }
+                    else {
+                        $func.variables.getFieldName(i) match {
+                            case Some(fieldName) => statement.setVariable(fieldName, arg.$eval(PQL))
+                            case None => throw new SQLExecuteException("Out of function arguments index bound when call function: $" + funcName)
+                        }
+                    }
                 }
-                else {
-                    throw new SQLParseException("Wrong function format at CALL. " + $func)
-                }
+
+                //执行 - 在END或RETURN语句中退出
+                PQL.EXECUTING.push(statement)
+                PQL.executeStatements($func.statements)
+
+                PQL.FUNCTION$RETURNS.pop()
             }
             else {
-                throw new SQLParseException("Only user or global function can be called. " + $func)
+                throw new SQLExecuteException("Incorrect function name: " + funcName)
             }
         }
         else {
-            throw new SQLParseException("Incorrect CALL sentence: " + sentence)
+            //系统函数
+            //全局函数
+            DataCell.NULL
         }
     }
 }
 
-class CALL(funcName: String, funcArgs: String) {
-
-    def execute(PQL: PQL, statement: Statement): Unit = {
-        val symbol = funcName.take(1)
-        val name = funcName.substring(1)
-
-        if (symbol == "$" && PQL.USER$FUNCTIONS.contains(name)) {
-            val $func = PQL.USER$FUNCTIONS(name)
-            val $args = funcArgs.split(",").map(_.trim())
-
-            //初始化变量
-            statement.variables.combine($func.variables)
-
-            //根据传入值赋值变量
-            for (i <- $args.indices) {
-                val arg = $args(i)
-                if (arg.contains(":=")) {
-                    val name = arg.takeBefore(":=").trim()
-                    val value = arg.takeAfter(":=").trim()
-                    if (name.startsWith("$")) {
-                        statement.setVariable(name.takeAfter("$"), value.$eval(PQL))
-                    }
-                    else {
-                        throw new SQLExecuteException("Wrong function argument name: " + name + " when call function " + funcName + ", variable name must starts with symbol '$'")
-                    }
-                }
-                else {
-                    $func.variables.getFieldName(i) match {
-                        case Some(fieldName) => statement.setVariable(fieldName, arg.$eval(PQL))
-                        case None => throw new SQLExecuteException("Out of function arguments index bound when call function. " + funcName)
-                    }
-                }
-            }
-
-            //执行
-            PQL.EXECUTING.push(statement)
-            PQL.executeStatements($func.statements)
-        }
-        else if (symbol == "@") {
-            //system function
-        }
-        else {
-            throw new SQLExecuteException("Wrong function name: " + funcName)
-        }
+class CALL(sentence: String) {
+    def execute(PQL: PQL): Unit = {
+        PQL.WORKING += sentence.$eval(PQL).value
     }
 }

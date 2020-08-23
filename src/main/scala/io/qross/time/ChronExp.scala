@@ -42,7 +42,7 @@ case class ChronExp(expression: String) {
     private val group: List[CronExp] = {
         if (classic) {
             //经典cron表达式, 支持分号分开的多个
-            expression.split(";").map(e => CronExp(e.trim())).toList
+            expression.split("[;；]").map(e => CronExp(e.trim())).toList
         }
         else {
             PeriodExp(expression.trim()).toCron

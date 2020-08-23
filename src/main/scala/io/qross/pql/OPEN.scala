@@ -20,10 +20,7 @@ OPEN abbrName USE "databaseName";
 
 object OPEN {
     def parse(sentence: String, PQL: PQL): Unit = {
-        $OPEN.findFirstIn(sentence) match {
-            case Some(open) => PQL.PARSING.head.addStatement(new Statement("OPEN", sentence, new OPEN(sentence.takeAfter(open))))
-            case None => throw new SQLParseException("Incorrect OPEN sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("OPEN", sentence, new OPEN(sentence.takeAfterX($OPEN))))
     }
 }
 

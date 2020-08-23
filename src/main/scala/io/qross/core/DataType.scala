@@ -15,10 +15,8 @@ object DataType extends Enumeration {
     val BOOLEAN: DataType = new DataType("BOOLEAN")
     val TABLE: DataType = new DataType("TABLE")
     val ROW: DataType = new DataType("ROW")
-    val MAP: DataType = new DataType("MAP")
     val LIST: DataType = new DataType("LIST")
     val ARRAY: DataType = new DataType("ARRAY")
-    val OBJECT: DataType = new DataType("OBJECT")
     val JSON: DataType = new DataType("JSON")
     val EXCEPTION: DataType = new DataType("EXCEPTION")
     val REGEX: DataType = new DataType("REGEX")
@@ -67,7 +65,7 @@ object DataType extends Enumeration {
                     case "boolean" => "BOOLEAN"
                     case "datetime" | "date" | "time" | "timestamp" => "DATETIME"
                     case "list" | "array" | "arraylist" => "ARRAY"
-                    case "map" => "MAP"
+                    case "map" => "ROW"
                     case "datarow" => "ROW"
                     case "datatable" => "TABLE"
                     case "regex" | "pattern" => "REGEX"

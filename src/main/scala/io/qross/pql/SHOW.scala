@@ -8,16 +8,12 @@ import io.qross.ext.TypeExt._
 
 object SHOW {
     def parse(sentence: String, PQL: PQL): Unit = {
-        $SHOW.findFirstIn(sentence) match {
-            case Some(_) => PQL.PARSING.head.addStatement(new Statement("SHOW", sentence, new SHOW(sentence)))
-            case None => throw new SQLParseException("Incorrect SHOW sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("SHOW", sentence, new SHOW(sentence)))
     }
 }
 
 class SHOW(val sentence: String) {
     def execute(PQL: PQL): Unit = {
-
         if ("""(?i)SHOW\s+[a-z]+""".r.test(sentence)) {
 
             PQL.WORKING += new SELECT(sentence).select(PQL).value
@@ -32,7 +28,7 @@ class SHOW(val sentence: String) {
             }
         }
         else {
-            PQL.dh.show(sentence.takeAfter($BLANK).$eval(PQL).asInteger(20).toInt)
+            PQL.dh.show(sentence.takeAfterX($BLANK).$eval(PQL).asInteger(20).toInt)
         }
     }
 }

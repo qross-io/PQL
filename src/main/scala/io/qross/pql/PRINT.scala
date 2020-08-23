@@ -15,7 +15,7 @@ object PRINT {
     val NONE: String = "NONE"
 
     def parse(sentence: String, PQL: PQL): Unit = {
-        PQL.PARSING.head.addStatement(new Statement("PRINT", sentence, new PRINT(sentence.takeAfter($PRINT))))
+        PQL.PARSING.head.addStatement(new Statement("PRINT", sentence, new PRINT(sentence.takeAfterX($PRINT))))
     }
 }
 

@@ -19,9 +19,6 @@ import scala.util.{Failure, Random, Success, Try}
 
 object TypeExt {
 
-    //将最后一次匹配的结果保存到全局变量$m
-    var $m: Regex.Match = _
-
     implicit class StringExt(var string: String) {
 
         def toBoolean(defaultValue: Boolean): Boolean = {
@@ -94,9 +91,6 @@ object TypeExt {
             }
             else if (string.bracketsWith("[", "]")) {
                 DataCell(Json(string).parseJavaList("/"), DataType.ARRAY)
-            }
-            else if (string.isJsRegex) {
-                DataCell(string.toRegex, DataType.REGEX)
             }
             else {
                 val jse: ScriptEngine = new ScriptEngineManager().getEngineByName("JavaScript")
@@ -212,103 +206,130 @@ object TypeExt {
             string
         }
 
-        def takeBefore(value: Any): String = {
-            value match {
-                case char: String => string.take(string.indexOf(char))
-                case index: Integer => string.take(index)
-                case rex: Regex => string.take(string.indexOf(rex.findFirstIn(string).getOrElse("")))
-                case _ => ""
-            }
-        }
-
-        def takeAfter(value: Any): String = {
-            value match {
-                case char: String =>
-                    if (char == "" || !string.contains(char)) {
-                        string
-                    }
-                    else {
-                        string.substring(string.indexOf(char) + char.length)
-                    }
-                case index: Integer => string.substring(index + 1)
-                case rex: Regex =>
-                    rex.findFirstIn(string) match {
-                        case Some(v) => string.substring(string.indexOf(v) + v.length)
-                        case None => string
-                    }
-                case _ => string
-            }
-        }
-
-        def takeBeforeLast(value: Any): String = {
-            value match {
-                case char: String =>
-                    if (char == "" || !string.contains(char)) {
-                        ""
-                    }
-                    else {
-                        string.substring(0, string.lastIndexOf(char))
-                    }
-                case index: Integer => string.substring(0, index)
-                case rex: Regex =>
-                    rex.findAllIn(string).toList.lastOption match {
-                        case Some(v) => string.substring(0, string.lastIndexOf(v))
-                        case None => ""
-                    }
-                case _ => ""
-            }
-        }
-
-        def takeAfterLast(value: Any): String = {
-            value match {
-                case char: String =>
-                    if (char == "" || !string.contains(char)) {
-                        string
-                    }
-                    else {
-                        string.substring(string.lastIndexOf(char) + char.length)
-                    }
-                case index: Integer => string.substring(index + 1)
-                case rex: Regex =>
-                    rex.findAllIn(string).toList.lastOption match {
-                        case Some(v) => string.substring(string.lastIndexOf(v) + v.length)
-                        case None => ""
-                    }
-                case _ => string
-            }
-        }
-
-        def takeBetween(left: Any, right: Any): String = {
-            val li: Int = left match {
-                case char: String => string.indexOf(char) + char.length
-                case index: Int => index
-                case rex: Regex =>
-                    rex.findFirstIn(string) match {
-                        case Some(v) => string.indexOf(v) + v.length
-                        case None => 0
-                    }
-                case _ => 0
-            }
-
-            val ri: Int = right match {
-                case char: String => string.lastIndexOf(char)
-                case index: Int => index
-                case rex: Regex =>
-                    rex.findAllIn(string).toList.lastOption match {
-                        case Some(v) => string.lastIndexOf(v)
-                        case None => string.length - 1
-                    }
-                case _ => string.length - 1
-            }
-
-            if (ri > li) {
-                string.substring(li, ri)
-            }
-            else if (ri == li) {
-                string.substring(li)
+        def takeBefore(value: String): String = {
+            val index = string.indexOf(value)
+            if (index > -1) {
+                string.slice(0, index)
             }
             else {
-                string.substring(ri, li)
+                ""
+            }
+        }
+
+        def takeBeforeX(r: Regex): String = {
+            r.findFirstIn(string) match {
+                case Some(char) => string.takeBefore(char)
+                case None => ""
+            }
+        }
+
+        def takeBeforeIfContains(value: String): String = {
+            if (string.contains(value)) {
+                string.take(string.indexOf(value))
+            }
+            else {
+                string
+            }
+        }
+
+        def takeAfter(value: String): String = {
+            if (value == "" || !string.contains(value)) {
+                string
+            }
+            else {
+                string.substring(string.indexOf(value) + value.length)
+            }
+        }
+
+        def takeAfterX(r: Regex): String = {
+            r.findFirstIn(string) match {
+                case Some(v) => string.substring(string.indexOf(v) + v.length)
+                case None => string
+            }
+        }
+
+        def takeAfterIfContains(value: String): String = {
+            if (string.contains(value)) {
+                string.substring(string.indexOf(value) + value.length)
+            }
+            else {
+                string
+            }
+        }
+
+        def takeBeforeLast(value: String): String = {
+            if (value == "" || !string.contains(value)) {
+                ""
+            }
+            else {
+                string.substring(0, string.lastIndexOf(value))
+            }
+        }
+
+        def takeBeforeLastX(r: Regex): String = {
+            r.findAllIn(string).toList.lastOption match {
+                case Some(v) => string.substring(0, string.lastIndexOf(v))
+                case None => ""
+            }
+        }
+
+        def takeAfterLast(value: String): String = {
+            if (value == "" || !string.contains(value)) {
+                string
+            }
+            else {
+                string.substring(string.lastIndexOf(value) + value.length)
+            }
+        }
+
+        def takeAfterLastX(r: Regex): String = {
+            r.findAllIn(string).toList.lastOption match {
+                case Some(v) => string.substring(string.lastIndexOf(v) + v.length)
+                case None => string
+            }
+        }
+
+        //不包含 left 和 right
+        def takeBetween(left: String, right: String): String = {
+            val li: Int = string.indexOf(left)
+            val ri: Int = string.lastIndexOf(right)
+
+            if (li == -1 && ri == -1) {
+                string
+            }
+            else if (li == -1 && ri > 0) {
+                string.substring(0, ri)
+            }
+            else if (li > 0 && ri == -1) {
+                string.substring(li + left.length)
+            }
+            else {
+                if (ri > li) {
+                    string.substring(li + left.length, ri)
+                }
+                else if (li == ri) {
+                    ""
+                }
+                else {
+                    string.substring(ri + right.length, li)
+                }
+            }
+        }
+
+        def replaceFirstOne(instr: String, replacement: String): String = {
+            if (string.contains(instr)) {
+                string.takeBefore(instr) + replacement + string.takeAfter(instr)
+            }
+            else {
+                string
+            }
+        }
+        def replaceLastOne(instr: String, replacement: String): String = {
+            if (string.contains(instr)) {
+                string.takeBeforeLast(instr) + replacement + string.takeAfterLast(instr)
+            }
+            else {
+                string
             }
         }
 
@@ -339,8 +360,6 @@ object TypeExt {
 
         def preventInjection: String = string.replace("'", "~u0027~u0027").replace("\\", "\\\\")
         def preventInjectionOfDoubleQuote: String = string.replace("\"", "~u0022~u0022").replace("\\", "\\\\")
-
-        def isJsRegex: Boolean = string.startsWith("/") && string.indexOf("/") < string.lastIndexOf("/") && "/[ig]*$".r.test(string)
 
         def ifEmpty(defaultValue: String): String = {
             if (string == "") {
@@ -450,6 +469,29 @@ object TypeExt {
             (l, r)
         }
 
+        //查找字符left的另一半匹配right
+        def indexHalfOf(left: Char, right: Char): Int = {
+            var s = 1
+            var r = -1
+            breakable {
+                for (i <- string.indices) {
+                    val c = string.charAt(i)
+                    if (c == left) {
+                        s += 1
+                    }
+                    else if (c == right) {
+                        s -= 1
+                        if (s == 0) {
+                            r = i
+                            break
+                        }
+                    }
+                }
+            }
+
+            r
+        }
+
         def shuffle(digit: Int = 1): String = {
             val length = string.length
             val sb = new mutable.StringBuilder()
@@ -524,14 +566,6 @@ object TypeExt {
             regex.findFirstIn(str).nonEmpty
         }
 
-        def matches(str: String): Boolean = {
-            //将最后一次匹配的结果保存到全局变量$m
-            regex.findFirstMatchIn(str) match {
-                case Some(m) => $m = m; true
-                case None => $m = null; false
-            }
-        }
-
         def exec(str: String): Array[String] = {
             regex.findFirstMatchIn(str) match {
                 case Some(m) =>
@@ -587,21 +621,7 @@ object TypeExt {
                             ""
                         } + pattern.pattern()
                     }.r
-                case str: String => {
-                    if (str.isJsRegex) {
-                        if (str.takeAfterLast("/")
-                            .toLowerCase()
-                            .contains("i")) {
-                            "(?i)" + str.takeBetween("/", "/")
-                        }
-                        else {
-                            str.takeBetween("/", "/")
-                        }
-                    }
-                    else {
-                        str
-                    }
-                }.r
+                case str: String => str.r
                 case x => x.toString.r
             }
         }

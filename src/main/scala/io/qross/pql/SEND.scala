@@ -12,10 +12,7 @@ import scala.collection.mutable
 object SEND {
 
     def parse(sentence: String, PQL: PQL): Unit = {
-        $SEND.findFirstIn(sentence) match {
-            case Some(caption) => PQL.PARSING.head.addStatement(new Statement("SEND", sentence, new SEND(sentence.takeAfter(caption))))
-            case None => throw new SQLParseException("Incorrect SEND sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("SEND", sentence, new SEND(sentence.takeAfterX($SEND))))
     }
 }
 

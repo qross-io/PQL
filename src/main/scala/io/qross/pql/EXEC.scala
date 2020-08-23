@@ -9,10 +9,7 @@ import io.qross.pql.Solver._
 
 object EXEC {
     def parse(sentence: String, PQL: PQL): Unit = {
-        $EXEC.findFirstIn(sentence) match {
-            case Some(caption) => PQL.PARSING.head.addStatement(new Statement("EXEC", sentence, new EXEC(sentence.takeAfter(caption).trim())))
-            case None => throw new SQLParseException("Incorrect EXEC sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("EXEC", sentence, new EXEC(sentence.takeAfterX($EXEC).trim())))
     }
 }
 

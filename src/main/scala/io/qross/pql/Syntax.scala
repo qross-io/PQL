@@ -44,8 +44,8 @@ object Syntax {
             SAVE AS  TXT? STREAM FILE [fileName]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
             SAVE AS  NEW? JSON FILE [fileName];
             SAVE AS  JSON STREAM FILE [fileName];
-            SAVE AS  NEW? EXCEL [fileName]  AS [alias]  USE? TEMPLATE [templateName];
-            SAVE AS  EXCEL STREAM FILE [fileName]  AS [alias]  USE? TEMPLATE [templateName];
+            SAVE AS  NEW? EXCEL [fileName]  AS [alias]  USE? DEFAULT TEMPLATE  USE? TEMPLATE [templateName];
+            SAVE AS  EXCEL STREAM FILE [fileName]  AS [alias]  USE? DEFAULT TEMPLATE  USE? TEMPLATE [templateName];
 
             SAVE TO  [JDBC-DataSource]  AS [alias]  USE [databaseName];
             SAVE TO  DEFAULT  AS [alias];
@@ -59,16 +59,17 @@ object Syntax {
             SAVE TO  TXT? STREAM FILE [fileName]  DELIMITED BY 'delimiter'  WITHOUT HEADERS  WITH HEADERS (header1, column2 AS header2, ...)*;
             SAVE TO  NEW? JSON FILE [fileName];
             SAVE TO  JSON STREAM FILE [fileName];
-            SAVE TO  NEW? EXCEL [fileName]  AS [alias]  USE? TEMPLATE [templateName];
-            SAVE TO  EXCEL STREAM FILE [fileName]  AS [alias]  USE? TEMPLATE [templateName];
+            SAVE TO  NEW? EXCEL [fileName]  AS [alias]  USE? DEFAULT TEMPLATE  USE? TEMPLATE [templateName];
+            SAVE TO  EXCEL STREAM FILE [fileName]  AS [alias]  USE? DEFAULT TEMPLATE  USE? TEMPLATE [templateName];
 
             BLOCK  FROM [startId]  TO [endId]  PER [blockSize];
 
             SEND  E?MAIL [title]
                 SET? SMTP HOST [host]  SET? PORT [25]
-                FROM [personal/sender@domain.com/personal<sedner@domain.com>] PASSWORD [password]
+                FROM [personal/sender@domain.com/personal<sedner@domain.com>]
                 SET? PERSONAL [name]
                 SET? PASSWORD [password]
+                ENABLE? SSL [yes/no]
                 SET? LANGUAGE [chinese/english]
                 USE? DEFAULT TEMPLATE
                 USE? TEMPLATE [name/template.html]
@@ -85,12 +86,9 @@ object Syntax {
             REQUEST  JSON API [url]  USE? METHOD [GET/POST/PUT/DELETE]  SEND? DATA {"data": "value"}  SET? HEADER {"name": "value"};
             PARSE  [path]  AS TABLE;
             PARSE  [path]  AS ROW;
-            PARSE  [path]  AS MAP;
-            PARSE  [path]  AS OBJECT;
             PARSE  [path]  AS LIST;
             PARSE  [path]  AS ARRAY;
             PARSE  [path]  AS VALUE;
-            PARSE  [path]  AS SINGLE VALUE;
 
             INSERT  INTO [sheetName]  ROW [startRow]  (A, B, C, ...)  VALUES (value1, value2, ...), (value1, value2, ...);
             DROP  SHEET [sheetName];
@@ -154,20 +152,31 @@ object Syntax {
 
     private def analysePhrase(phrase: String): List[(String, Int)] = {
 
-        val (mark, arg) = phrase.takeRight(1) match {
+        val (mark: String, arg: Int) = phrase.takeRight(1) match {
             case "]" => ("[", Args.One)
             case ")" => ("(", if (phrase.contains("), (")) Args.More else Args.Multi)
             case "}" => ("{", Args.Map)
             case "'" => ("'", Args.Char)
             case "\"" => ("\"", Args.Char)
             case "|" => ("|", Args.Condition)
-            case "*" => ("""(\S+)?\*|\([^)]+\)\*""".r, Args.Select)
-            case "." => ("(?i)[a-z0-9]+=".r, Args.Set)
+            case "*" => ("""(\S+)?\*|\([^)]+\)\*""", Args.Select)
+            case "." => ("(?i)[a-z0-9]+=", Args.Set)
             case "n" => ("m", Args.Limit)
             case _ => ("", Args.None)
         }
 
-        val name = if (arg != Args.None) phrase.takeBefore(mark).trim() else phrase.trim()
+        val name = {
+            if (arg != Args.None) {
+                if (arg == Args.Select || arg == Args.Set) {
+                    phrase.takeBeforeX(mark.r).trim()
+                }
+                else {
+                    phrase.takeBefore(mark).trim()
+                }
+            } else {
+                phrase.trim()
+            }
+        }
         if (!name.contains("?")) {
             List[(String, Int)]((name, arg))
         }
@@ -239,7 +248,7 @@ case class Syntax(caption: String) {
             while (!tree.contains(group + Syntax.HASH + phrase) && phrase != "") {
                 if (phrase.contains(" ")) {
                     phrase = phrase.takeBeforeLast(" ")
-                    origin = origin.takeBeforeLast($BLANK).trim()
+                    origin = origin.takeBeforeLastX($BLANK).trim()
                 }
                 else {
                     phrase = ""

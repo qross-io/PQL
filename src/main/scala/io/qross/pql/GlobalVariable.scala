@@ -128,6 +128,10 @@ object GlobalVariable {
             DataCell.UNDEFINED
         }
     }
+
+    def contains(name: String, PQL: PQL): Boolean = {
+        Patterns.GLOBAL_VARIABLES.contains(name) || USER.contains(name) || SYSTEM.contains(name) || PQL.credential.contains(name) || Configurations.contains(name)
+    }
 }
 
 object GlobalVariableDeclaration {

@@ -32,6 +32,9 @@ class SET(val declare: String, val symbol: String, val expression: String) {
         val variables: Array[String] = declare.split(",").map(_.trim)
         val result = expression.$compute(PQL)
 
+//        if (variables.length == 1 && PQL.containsVariable(variables(0))) {
+//            PQL.updateVariable(variables.head, result)
+//        }
         if (symbol == ":=") {
             if (result.isTable) {
                 result.asTable.firstRow match {

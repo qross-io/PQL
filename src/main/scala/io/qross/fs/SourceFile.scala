@@ -32,13 +32,6 @@ class SourceFile(val path: String) {
             if (resource.exists) {
                 resource.output
             }
-            else if (path.toLowerCase.endsWith(".html") || path.toLowerCase.endsWith(".htm")) {
-                //可能是邮件模板
-                val source = Source.fromFile(s"%EMAIL_TEMPLATES_PATH$path".toPath, Global.CHARSET)
-                val content = source.mkString
-                source.close()
-                content
-            }
             else {
                 throw new FileNotFoundException(s"File or Resource file $path doesn't exists.")
             }

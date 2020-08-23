@@ -4,6 +4,7 @@ import io.qross.fql.SELECT
 import io.qross.script.Shell._
 import io.qross.script.Shell
 import io.qross.ext.TypeExt._
+import io.qross.pql.Patterns
 
 import scala.sys.process._
 
@@ -18,6 +19,12 @@ object FQL {
         //destroy
         //end
 
+        println(Patterns.$RETURN.test("ReTURN # hello"))
+
+        val str = "hello)world"
+        val half = str.indexHalfOf('(', ')')
+        println(str.takeAfter(")"))
+
         if (args.nonEmpty) {
             args(0) match {
                 case "ps" =>
@@ -31,7 +38,7 @@ object FQL {
             }
         }
         else {
-            println("LACK ARGS.")
+            println("LACK OF ARGS.")
         }
     }
 }

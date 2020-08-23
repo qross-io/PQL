@@ -5,7 +5,6 @@ import io.qross.pql.Patterns.$ELSIF
 
 object ELSIF {
     def parse(sentence: String, PQL: PQL): Unit = {
-
         $ELSIF.findFirstMatchIn(sentence) match {
             case Some(m) =>
                 val $elsif: Statement = new Statement("ELSIF", sentence, new ELSIF(m.group(1)))

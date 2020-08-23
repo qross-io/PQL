@@ -23,7 +23,7 @@ object VAR {
         $VAR.findFirstIn(sentence) match {
             case Some(_) =>
                 PQL.PARSING.head.addStatement(
-                    new Statement("VAR", sentence, new VAR(sentence.trim().takeAfter($BLANK).trim()))
+                    new Statement("VAR", sentence, new VAR(sentence.trim().takeAfterX($BLANK).trim()))
                 )
             case None => throw new SQLParseException("Incorrect VAR sentence: " + sentence)
         }

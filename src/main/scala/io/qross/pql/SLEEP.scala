@@ -9,12 +9,7 @@ import io.qross.pql.Solver._
 
 object SLEEP {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($SLEEP.test(sentence)) {
-            PQL.PARSING.head.addStatement(new Statement("SLEEP", sentence, new SLEEP(sentence.takeAfter($SLEEP).trim())))
-        }
-        else {
-            throw new SQLParseException("Incorrect DEBUG sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("SLEEP", sentence, new SLEEP(sentence.takeAfterX($SLEEP).trim())))
     }
 }
 
@@ -28,9 +23,9 @@ class SLEEP(timeSpan: String) {
             Timer.sleepToNextMinute()
         }
         else if ($BLANK.test(timeSpan)) {
-            val m = timeSpan.takeBefore($BLANK).$eval(PQL).asDecimal
-            timeSpan.takeAfterLast($BLANK).trim().toUpperCase match {
-                case "MILLIS" | "MILLISECONDS" | "MILLISECOND" => Timer.sleep(m millis)
+            val m = timeSpan.takeBeforeX($BLANK).$eval(PQL).asDecimal
+            timeSpan.takeAfterLastX($BLANK).trim().toUpperCase match {
+                case "MILLIS" | "MILLI" => Timer.sleep(m millis)
                 case "SECONDS" | "SECOND" => Timer.sleep(m seconds)
                 case "MINUTES" | "MINUTE" => Timer.sleep(m minutes)
                 case "HOURS" | "DAYS" | "HOUR" | "DAY" => throw new SQLExecuteException("The unit of time is too large. Please use MILLIS, SECONDS or MINUTES")
@@ -38,7 +33,7 @@ class SLEEP(timeSpan: String) {
             }
         }
         else {
-            val millis = timeSpan.takeBefore($BLANK).$eval(PQL).asInteger
+            val millis = timeSpan.takeBeforeX($BLANK).$eval(PQL).asInteger
             Timer.sleep(millis)
         }
     }

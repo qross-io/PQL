@@ -7,12 +7,11 @@ import io.qross.pql.Solver._
 
 object BLOCK {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($BLOCK.matches(sentence)) {
-            val $block = new Statement("BLOCK", sentence.takeBefore("#"), new BLOCK(sentence.takeBefore("#").trim(), $m.group(1).toUpperCase(), sentence.takeAfter("#").trim))
-            PQL.PARSING.head.addStatement($block)
-        }
-        else {
-            throw new SQLParseException("Incorrect BLOCK sentence: " + sentence)
+        $BLOCK.findFirstMatchIn(sentence) match {
+            case Some(m) =>
+                val $block = new Statement("BLOCK", sentence.takeBefore("#"), new BLOCK(sentence.takeBefore("#").trim(), m.group(1).toUpperCase(), sentence.takeAfter("#").trim))
+                PQL.PARSING.head.addStatement($block)
+            case None => throw new SQLParseException("Incorrect BLOCK sentence: " + sentence)
         }
     }
 }

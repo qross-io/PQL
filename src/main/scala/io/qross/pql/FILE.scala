@@ -3,17 +3,13 @@ package io.qross.pql
 import io.qross.core.{DataCell, DataTable, DataType}
 import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
-import io.qross.fs.{Directory, FileReader, FileWriter}
 import io.qross.fs.Path._
-import io.qross.pql.Patterns.{$BLANK, $FILE, ARROW}
+import io.qross.fs.{Directory, FileReader, FileWriter}
 import io.qross.pql.Solver._
 
 object FILE {
     def parse(sentence: String, PQL: PQL): Unit = {
-        $FILE.findFirstIn(sentence) match {
-            case Some(_) => PQL.PARSING.head.addStatement(new Statement("FILE", sentence, new FILE(sentence)))
-            case None => throw new SQLParseException("Wrong FILE sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("FILE", sentence, new FILE(sentence)))
     }
 }
 
@@ -74,7 +70,7 @@ class FILE(val sentence: String) {
         if (PQL.dh.debugging) {
             data.dataType match {
                 case DataType.TABLE => data.asTable.show()
-                case _ => println(sentence + ": " + data.asText)
+                case _ => println(sentence.$restore(PQL).take(100) + ": " + data.asText)
             }
         }
     }

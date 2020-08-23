@@ -18,7 +18,7 @@ object PASS {
 class PASS(val sentence: String) {
     def execute(PQL: PQL): Unit = {
         val data =  {
-            sentence.takeBefore(Patterns.$BLANK).toUpperCase() match {
+            sentence.takeBeforeX(Patterns.$BLANK).toUpperCase() match {
                 case "SELECT" => new SELECT(sentence).select(PQL, PQL.dh.getData) //PQL.dh.pass(sentence.$restore(PQL)
                 case "REDIS" => new REDIS(sentence).evaluate(PQL, PQL.dh.getData) //PQL.dh.transfer(sentence.$restore(PQL))
                 case "" => throw new SQLExecuteException("Incomplete or empty PASS sentence: " + sentence)

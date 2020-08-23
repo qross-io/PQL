@@ -199,7 +199,10 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     //FOR语句循环项变量值
     private[pql] lazy val FOR$VARIABLES = new mutable.ArrayStack[ForVariables]()
 
+    //用户定义的函数
     private[pql] lazy val USER$FUNCTIONS = new mutable.LinkedHashMap[String, UserFunction]()
+    //函数的返回值
+    private[pql] lazy val FUNCTION$RETURNS = new mutable.ArrayStack[DataCell]()
 
     private[pql] var breakCurrentLoop = false
 
@@ -286,7 +289,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 sentence.takeBefore("#")
             }
             else if ($BLANK.test(sentence)) {
-                sentence.takeBefore($BLANK).toUpperCase
+                sentence.takeBeforeX($BLANK).toUpperCase
             }
             else {
                 sentence.toUpperCase
@@ -323,6 +326,10 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                         break
                     }
                 }
+                else if (statement.caption == "RETURN") {
+                    statement.instance.asInstanceOf[RETURN].execute(this)
+                    break
+                }
                 else if (STATEMENTS.contains(statement.caption)) {
                     Class.forName(s"io.qross.pql.${statement.caption}")
                             .getDeclaredMethod("execute",
@@ -345,7 +352,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     //其他局部变量在子块中
     def updateVariable(field: String, value: DataCell): Unit = {
         val symbol = field.take(1)
-        val name = field.takeAfter(0).$trim("(", ")").toUpperCase()
+        val name = field.drop(1).$trim("(", ")").toUpperCase()
 
         if (symbol == "$") {
             //局部变量
@@ -377,7 +384,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
             }
         }
         else if (symbol == "@") {
-            //全局变量
             GlobalVariable.set(name, value.value, credential.getInt("userid"), credential.getString("role"))
         }
     }
@@ -391,16 +397,18 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         var cell = DataCell.UNDEFINED
 
         if (symbol == "$") {
+            var found = false
             breakable {
                 for (i <- FOR$VARIABLES.indices) {
                     if (FOR$VARIABLES(i).contains(name)) {
                         cell = FOR$VARIABLES(i).get(name)
+                        found = true
                         break
                     }
                 }
             }
 
-            if (EXECUTING.nonEmpty) {
+            if (!found) {
                 breakable {
                     for (i <- EXECUTING.indices) {
                         if (EXECUTING(i).containsVariable(name)) {
@@ -410,33 +418,64 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                     }
                 }
             }
-            else {
-                if (root.containsVariable(name)) {
-                    cell = root.getVariable(name)
-                }
-            }
         }
         else if (symbol == "@") {
-            //全局变量
             cell = GlobalVariable.get(name, this)
-
-            //未找到即忽略, 因为MySQL的局部变量也是以 @ 开头
-//            if (cell.invalid) {
-//                throw new SQLExecuteException(s"Global variable $field is not found.")
-//            }
         }
 
         cell
     }
 
+    //变量名称存储时均为大写, 即在执行过程中不区分大小写
+    def containsVariable(field: String): Boolean = {
+
+        val symbol = field.take(1)
+        val name = field.drop(1).toUpperCase()
+
+        var found = false
+
+        if (symbol == "$") {
+            breakable {
+                for (i <- FOR$VARIABLES.indices) {
+                    if (FOR$VARIABLES(i).contains(name)) {
+                        found = true
+                        break
+                    }
+                }
+            }
+
+            if (!found) {
+                breakable {
+                    for (i <- EXECUTING.indices) {
+                        if (EXECUTING(i).containsVariable(name)) {
+                            found = true
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        else if (symbol == "@") {
+            GlobalVariable.contains(name, this)
+        }
+
+        found
+    }
+
     //传递参数和数据, Spring Boot的httpRequest参数
     def place(name: String, value: String): PQL = {
         this.SQL = this.SQL.replaceArguments(Map[String, String](name -> value))
+
+        root.setVariable(name, value)
         this
     }
 
     def place(args: (String, String)*): PQL = {
         this.SQL = this.SQL.replaceArguments(args.toMap[String, String])
+
+        args.foreach(pair => {
+            root.setVariable(pair._1, pair._2)
+        })
         this
     }
 
@@ -451,12 +490,22 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     def place(args: Map[String, String]): PQL = {
         this.SQL = this.SQL.replaceArguments(args)
+
+        args.foreach(pair => {
+            root.setVariable(pair._1, pair._2)
+        })
+
         this
     }
 
     def place(queryString: String): PQL = {
         if (queryString != "") {
-            this.SQL = this.SQL.replaceArguments(queryString.$restore(this, "").$split())
+            val map = queryString.$split()
+            this.SQL = this.SQL.replaceArguments(map)
+
+            map.foreach(pair => {
+                root.setVariable(pair._1, pair._2)
+            })
         }
         this
     }
@@ -483,7 +532,9 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     def set(queryString: String): PQL = {
         if (queryString != "") {
-            set(queryString.$split().toRow)
+            queryString.$split().foreach(pair => {
+                root.setVariable(pair._1, pair._2)
+            })
         }
         this
     }

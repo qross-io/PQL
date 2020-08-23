@@ -8,6 +8,30 @@ class SQLExecuteException(val s: String) extends RuntimeException(s) {
 
 }
 
+class ClassMethodNotFoundException(val s: String) extends RuntimeException(s) {
+
+}
+
+class TableColumnNotFoundException(val s: String) extends RuntimeException(s) {
+
+}
+
+class OutOfIndexBoundaryException(val s: String) extends RuntimeException(s) {
+
+}
+
+class IncorrectPropertyNameException(val s: String) extends RuntimeException(s) {
+
+}
+
+class IncorrectIndexDataTypeException(val s: String) extends RuntimeException(s) {
+
+}
+
+class UnsupportedDataTypeException(val s: String) extends RuntimeException(s) {
+
+}
+
 class EmailInvalidSenderException(val s: String) extends RuntimeException(s) {
 
 }

@@ -77,7 +77,15 @@ object Excel {
             dh.saveToDestination(fileName, new Excel(fileName).debug(dh.debugging).setAutoCommit(false).saveAsStream())
         }
 
-        def useTemplate(templateName: String): DataHub = {
+        def useDefaultExcelTemplate(): DataHub = {
+            dh.getDestination match {
+                case excel: Excel => excel.useDefaultTemplate()
+                case _ => throw new IncorrectDataSourceException("Must save an excel file first.")
+            }
+            dh
+        }
+
+        def useExcelTemplate(templateName: String): DataHub = {
             if (templateName != "") {
                 dh.getDestination match {
                     case excel: Excel => excel.useTemplate(templateName)
@@ -145,7 +153,7 @@ class Excel(val fileName: String) {
 
         templatePath = fileNameOrFullPathOrTemplateName
 
-        if (!templatePath.endsWith(".xlsx")) {
+        if (!templatePath.endsWith(".xlsx") && !templatePath.endsWith(".xls")) {
             if (JDBC.hasQrossSystem) {
                 DataSource.QROSS.querySingleValue("SELECT template_path FROM qross_excel_templates WHERE template_name=?", this.templatePath).data match {
                     case Some(tplPath) => templatePath = tplPath.toString
@@ -154,10 +162,8 @@ class Excel(val fileName: String) {
             }
         }
 
-        templatePath = templatePath.toPath
-
-        if (!this.templatePath.startsWith("/") && !this.templatePath.contains(":/")) {
-            this.templatePath = Global.EXCEL_TEMPLATES_PATH + this.templatePath
+        if (!templatePath.startsWith("/") && !templatePath.contains(":/")) {
+            templatePath = Global.QROSS_HOME + "templates/excel/" + templatePath
         }
 
         if (!new File(templatePath).exists()) {
@@ -168,7 +174,7 @@ class Excel(val fileName: String) {
     }
 
     def useDefaultTemplate(): Excel = {
-        useTemplate(Global.EXCEL_DEFAULT_TEMPLATE)
+        useTemplate(Global.QROSS_HOME + "templates/excel/default.xlsx")
         this
     }
 
@@ -464,7 +470,7 @@ class Excel(val fileName: String) {
     }
 
     def executeNonQuery(nonQuerySQL: String): Int = {
-        nonQuerySQL.trim().takeBefore("\\s".r).toUpperCase() match {
+        nonQuerySQL.trim().takeBeforeX("\\s".r).toUpperCase() match {
             case "INSERT" => insert(nonQuerySQL)
             case "UPDATE" => update(nonQuerySQL)
             case "DELETE" => delete(nonQuerySQL)
@@ -479,7 +485,7 @@ class Excel(val fileName: String) {
     }
 
     def tableUpdate(nonQuerySQL: String, table: DataTable): Int = {
-        nonQuerySQL.trim().takeBefore("\\s".r).toUpperCase() match {
+        nonQuerySQL.trim().takeBeforeX("\\s".r).toUpperCase() match {
             case "INSERT" => insert(nonQuerySQL, table)
             case "UPDATE" => update(nonQuerySQL, table)
             case "DELETE" => delete(nonQuerySQL, table)

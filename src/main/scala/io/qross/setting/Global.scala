@@ -44,19 +44,7 @@ object Global {
 
     def EMAIL_SENDER_PASSWORD: String = Configurations.getOrProperty("EMAIL_SENDER_PASSWORD", "email.sender.password")
 
-    def EMAIL_SSL_AUTH_ENABLED: Boolean = Configurations.getOrProperty("EMAIL_SSL_AUTH_ENABLED", "email.ssl.auth.enabled").toBoolean(false)
-
     def EMAIL_SENDER_ACCOUNT_AVAILABLED: Boolean = EMAIL_SMTP_HOST != "" && EMAIL_SMTP_HOST != "smtp.domain.com" && EMAIL_SENDER_ACCOUNT != "" && EMAIL_SENDER_ACCOUNT != "user@domain.com"
-
-    def EMAIL_TEMPLATES_PATH: String = Configurations.getOrProperty("EMAIL_TEMPLATES_PATH", "email.templates.path")
-
-    def EMAIL_DEFAULT_TEMPLATE: String = Configurations.getOrProperty("EMAIL_DEFAULT_TEMPLATE", "email.default.template")
-
-    def EMAIL_DEFAULT_SIGNATURE: String = Configurations.getOrProperty("EMAIL_DEFAULT_SIGNATURE", "email.default.signature")
-
-    def EXCEL_TEMPLATES_PATH: String = Configurations.getOrProperty("EXCEL_TEMPLATES_PATH", "excel.templates.path")
-
-    def EXCEL_DEFAULT_TEMPLATE: String = Configurations.getOrProperty("EXCEL_DEFAULT_TEMPLATE", "excel.default.template")
 
     //for Keeper & Master
     def KEEPER_HTTP_ADDRESS: String = {

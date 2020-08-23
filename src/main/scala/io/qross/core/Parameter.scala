@@ -7,17 +7,15 @@ import scala.util.matching.Regex
 import scala.util.matching.Regex.Match
 
 object Parameter {
-    //DataHub传递参数, #name 或 #(name) 或 #[name] 或 &name 或 &(name) 或 &[name]
+    //DataHub传递参数, #name 或 #(name) 或 &name 或 &(name)
     val $PARAMETER: List[Regex] = List[Regex](
-        """(?<!#)(#)\(([^\(\)]+)\)""".r,
-        """(?<!#)(#)\[([^\[\]]+)\]""".r,
-        """(?<!#)(#)([a-zA-Z0-9_]+)""".r,
-        """(?<!&)(&)\(([^\(\)]+)\)""".r,
-        """(?<!&)(&)\[([^\[\]]+)\]""".r,
-        """(?<!&)(&)([a-zA-Z0-9_]+)""".r
+        """(#)\(([^()]+)\)""".r,
+        """(#)([a-zA-Z0-9_]+)""".r,
+        """(&)\(([^()]+)\)""".r,
+        """(&)([a-zA-Z0-9_]+)""".r
     )
     val $QUESTION$MARK: Regex = """\?""".r
-    val $BATCH$MARK: Regex = """@\{[^\{\}]+\}""".r
+    val $BATCH$MARK: Regex = """@\{[^{}]+\}""".r
 
     //符号类型
     val NONE: Int = 0
@@ -81,7 +79,6 @@ object Parameter {
                                 })
                             case _ =>
                         }
-
                     }
                 }
             }

@@ -11,12 +11,8 @@ import io.qross.pql.Solver._
 object PARSE {
     //用于PQL表达式解析
     def parse(sentence: String, PQL: PQL): Unit = {
-        $PARSE.findFirstMatchIn(sentence) match {
-            case Some(_) => PQL.PARSING.head.addStatement(new Statement("PARSE", sentence, new PARSE(sentence)))
-            case None => throw new SQLParseException("Incorrect PARSE sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("PARSE", sentence, new PARSE(sentence)))
     }
-
 }
 
 class PARSE(val sentence: String) {
@@ -34,9 +30,9 @@ class PARSE(val sentence: String) {
                     if (plan.size > 1) {
                         plan.last match {
                             case "AS TABLE" => PQL.dh.parseTable(path).toDataCell(DataType.TABLE)
-                            case "AS ROW" | "AS MAP" | "AS OBJECT" => PQL.dh.parseRow(path).toDataCell(DataType.ROW)
+                            case "AS ROW" => PQL.dh.parseRow(path).toDataCell(DataType.ROW)
                             case "AS LIST" | "AS ARRAY" => PQL.dh.parseList(path).toDataCell(DataType.ARRAY)
-                            case "AS VALUE" | "AS SINGLE VALUE" => PQL.dh.parseValue(path)
+                            case "AS VALUE" => PQL.dh.parseValue(path)
                             case _ => PQL.dh.parseTable(path).toDataCell(DataType.TABLE)
                         }
                     }

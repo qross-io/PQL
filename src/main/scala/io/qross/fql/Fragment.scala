@@ -19,8 +19,8 @@ class Fragment(val phrase: String) {
 
     def insertInto(table: DataTable): DataTable = {
         if (Fragment.$VALUES.test(phrase)) {
-            val fields = phrase.takeBefore(Fragment.$VALUES).$trim("(", ")").split(",").map(_.trim())
-            phrase.takeAfter(Fragment.$VALUES).$trim("(", ")")
+            val fields = phrase.takeBeforeX(Fragment.$VALUES).$trim("(", ")").split(",").map(_.trim())
+            phrase.takeAfterX(Fragment.$VALUES).$trim("(", ")")
                     .split(Fragment.$MULTI$VALUES)
                     .map(vs => {
                         val list = new ListBuffer[String]()

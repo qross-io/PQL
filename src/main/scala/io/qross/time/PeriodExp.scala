@@ -161,7 +161,7 @@ case class PeriodExp(expression: String) {
         }
     }
 
-    private val group: Array[String] = trimmed.takeAfter(ChronExp.PERIOD).split(";")
+    private val group: Array[String] = trimmed.takeAfterX(ChronExp.PERIOD).split(";")
 //    val matchable = new mutable.ArrayBuffer[Any]()
 //    val statements = exp.split(";")
 //    for (i <- statements.indices) {

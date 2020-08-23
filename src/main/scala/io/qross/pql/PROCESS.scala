@@ -7,7 +7,7 @@ import io.qross.pql.Solver._
 
 object PROCESS {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($PROCESS.matches(sentence)) {
+        if ($PROCESS.test(sentence)) {
             val $process = new Statement("PROCESS", sentence.takeBefore("#"), new PROCESS(sentence.takeAfter("#").trim))
             PQL.PARSING.head.addStatement($process)
         }

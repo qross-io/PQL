@@ -7,18 +7,7 @@ import io.qross.pql.Solver._
 
 object ECHO {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if($ECHO.test(sentence)) {
-            PQL.PARSING.head.addStatement(new Statement("ECHO", sentence,
-                new ECHO({
-                    $BLANK.findFirstIn(sentence) match {
-                        case Some(blank) => sentence.takeAfter(blank)
-                        case None => ""
-                    }
-                })))
-        }
-        else {
-            throw new SQLParseException("Incorrect ECHO sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("ECHO", sentence, new ECHO(sentence.takeAfterX($ECHO).trim)))
     }
 }
 

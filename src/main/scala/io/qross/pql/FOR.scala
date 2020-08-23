@@ -66,7 +66,7 @@ class FOR(val variable: String, val method: String, val collection: String) {
                 //@a, $b
                 PQL.findVariable(collection)
             }
-            else if (JSON$N.test(collection)) {
+            else if (collection.bracketsWith("~json[", "]")) {
                 val json = collection.$restore(PQL, "\"")
                 if (json.bracketsWith("[", "]")) {
                     if (json.$trim("[", "]").trim().bracketsWith("{", "}")) {
@@ -104,7 +104,7 @@ class FOR(val variable: String, val method: String, val collection: String) {
                     }
                     forVars.addRow(newRow)
                 })
-            case DataType.ROW | DataType.MAP | DataType.OBJECT =>
+            case DataType.ROW =>
                 data.value.asInstanceOf[DataRow]
                     .turnToTable("key", "value")
                     .foreach(kv => {

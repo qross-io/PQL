@@ -7,12 +7,11 @@ import io.qross.ext.TypeExt._
 
 object TEMP {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($TEMP.matches(sentence)) {
-            val $temp = new Statement("TEMP", sentence.takeBefore("#"), new TEMP($m.group(1).trim, sentence.takeAfter("#").trim))
-            PQL.PARSING.head.addStatement($temp)
-        }
-        else {
-            throw new SQLParseException("Incorrect TEMP sentence: " + sentence)
+        $TEMP.findFirstMatchIn(sentence) match {
+            case Some(m) =>
+                val $temp = new Statement("TEMP", sentence.takeBefore("#"), new TEMP(m.group(1).trim, sentence.takeAfter("#").trim))
+                PQL.PARSING.head.addStatement($temp)
+            case None => throw new SQLParseException("Incorrect TEMP sentence: " + sentence)
         }
     }
 }

@@ -18,7 +18,7 @@ object PUT {
 class PUT(val nonQuerySQL: String) {
     def execute(PQL: PQL): Unit = {
         val sentence = this.nonQuerySQL.$restore(PQL)
-        sentence.takeBefore(Patterns.$BLANK).toUpperCase() match {
+        sentence.takeBeforeX(Patterns.$BLANK).toUpperCase() match {
             case "" => throw new SQLExecuteException("Incomplete or empty PUT sentence: " + sentence)
             case "REDIS" => PQL.dh.pipelined(sentence)
             case _ => PQL.dh.put(sentence)

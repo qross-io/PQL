@@ -8,18 +8,14 @@ import io.qross.pql.Solver._
 
 object OUTPUT {
     def parse(sentence: String, PQL: PQL): Unit = {
-        if ($OUTPUT.test(sentence)) {
-            PQL.PARSING.head.addStatement(new Statement("OUTPUT", sentence, new OUTPUT(sentence.takeAfter($OUTPUT).trim)))
-        }
-        else {
-            throw new SQLParseException("Incorrect OUTPUT sentence: " + sentence)
-        }
+        PQL.PARSING.head.addStatement(new Statement("OUTPUT", sentence, new OUTPUT(sentence.takeAfterX($OUTPUT).trim())))
     }
 }
 
 class OUTPUT(val content: String) {
-
     def execute(PQL: PQL): Unit = {
-        PQL.RESULT += content.$compute(PQL).value
+        if (content != "") {
+            PQL.RESULT += content.$compute(PQL).value
+        }
     }
 }

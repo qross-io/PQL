@@ -31,7 +31,7 @@ object FUNCTION {
                             }
                         }
 
-                        $function.setVariable(name, defaultValue)
+                        $function.setVariable(name, if (defaultValue == null) null else defaultValue.eval())
                     })
 
                 //只进栈
