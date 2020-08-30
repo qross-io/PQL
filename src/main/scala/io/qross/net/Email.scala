@@ -453,7 +453,7 @@ class Email(private var title: String) {
         this
     }
 
-    def send(): String = {
+    def send(): DataRow = {
         if (Global.EMAIL_SENDER_ACCOUNT_AVAILABLED) {
             if (toRecipients.nonEmpty || ccRecipients.nonEmpty || bccRecipients.nonEmpty) {
                 if (this.content != "") {
@@ -462,17 +462,20 @@ class Email(private var title: String) {
                 transfer()
             }
             else {
-                "No recipients."
+                new DataRow("message" -> "No recipients.")
             }
         }
         else {
-            "Email sender account is not set."
+            new DataRow("message" -> "Email sender account is not set.")
         }
     }
 
-    def transfer(): String = {
+    def transfer(): DataRow = {
 
-        val result = new mutable.ArrayBuffer[String]()
+        val result = new DataRow("message" -> "Sent.")
+        val logs = new java.util.ArrayList[String]()
+        val sent = new java.util.ArrayList[String]()
+        val invalid = new java.util.ArrayList[String]()
 
         val session = javax.mail.Session.getInstance(smtp)
         session.setDebug(false)
@@ -533,31 +536,36 @@ class Email(private var title: String) {
         }
 
         if (!connected) {
-            result += "Connect mail server failed! Please retry or check your username and password."
+            logs.add("Connect mail server failed! Please retry or check your username and password.")
         }
 
         try {
             val allRecipients = message.getAllRecipients
             transport.sendMessage(message, allRecipients)
-            result += "Sent to " + allRecipients.mkString(", ")
+            allRecipients.foreach(address => sent.add(address.toString))
+            logs.add("Sent to " + allRecipients.mkString(", ") + ".")
         }
         catch {
             case se: SendFailedException =>
                 val invalidAddresses = se.getInvalidAddresses
                 if (invalidAddresses != null && invalidAddresses.nonEmpty) {
-                    result += "Invalid address(es) " + invalidAddresses.mkString(", ")
+                    invalidAddresses.foreach(address => invalid.add(address.toString))
+                    logs.add("Invalid address(es) " + invalidAddresses.mkString(", ") + ".")
                 }
                 val sentAddresses = se.getValidSentAddresses
                 if (sentAddresses != null && sentAddresses.nonEmpty) {
-                    result += "Send to valid address(es) " + sentAddresses.mkString(", ")
+                    sentAddresses.foreach(address => sent.add(address.toString))
+                    logs.add("Sent to valid address(es) " + sentAddresses.mkString(", ") + ".")
                 }
                 val validAddresses = se.getValidUnsentAddresses
                 if (validAddresses != null && validAddresses.nonEmpty) {
                     transport.sendMessage(message, validAddresses)
-                    result += "Resend to valid address(es) " + validAddresses.mkString(", ")
+                    validAddresses.foreach(address => sent.add(address.toString))
+                    logs.add("Resend to valid address(es) " + validAddresses.mkString(", ") + ".")
                 }
             case e: Exception =>
-                result += e.getMessage
+                logs.add(e.getMessage)
+                result.set("message", e.getMessage)
                 e.printStackTrace()
         }
         transport.close()
@@ -570,12 +578,15 @@ class Email(private var title: String) {
         bccRecipients.clear()
         attachments.clear()
 
-        if (result.nonEmpty) {
-            result.mkString("; ")
+        if (logs.isEmpty) {
+            result.set("message", "Sent but maybe something wrong.")
         }
-        else {
-            "Sent but maybe something wrong."
-        }
+
+        result.set("logs", logs, DataType.ARRAY)
+        result.set("sent", sent, DataType.ARRAY)
+        result.set("invalid", invalid, DataType.ARRAY)
+
+        result
     }
 }
 

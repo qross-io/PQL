@@ -500,7 +500,7 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
                 if (this.isExtensionType) {
                     try {
                         Class.forName(this.dataType.typeName)
-                            .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
+                            .getDeclaredMethod("getCell", classOf[String]) // Class.forName("java.lang.String")
                             .invoke(this.value, attr)
                             .asInstanceOf[DataCell]
                     }
@@ -523,15 +523,12 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
                 val list = this.asJavaList
                 if (!list.isEmpty) {
                     if (value.isInteger || value.isDecimal) {
-                        val index = value.asInteger.toInt - 1 //索引从1开始
-                        if (index < 0) {
-                            throw new OutOfIndexBoundaryException(s"Index starts from 1.")
-                        }
-                        else if (index < list.size()) {
+                        val index = value.asInteger.toInt //索引从0开始
+                        if (index < list.size()) {
                             DataCell(list.get(index))
                         }
                         else {
-                            throw new OutOfIndexBoundaryException(s"Index ${index + 1} is greater than list size.")
+                            throw new OutOfIndexBoundaryException(s"Index $index is greater than list size.")
                         }
                     }
                     else if (value.isText) {
@@ -556,11 +553,8 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
             case DataType.ROW =>
                 val row = this.asRow
                 if (value.isInteger) {
-                    val index = value.asInteger.toInt - 1
-                    if (index < 0) {
-                        throw new OutOfIndexBoundaryException(s"Index starts from 1.")
-                    }
-                    else if (index < row.size) {
+                    val index = value.asInteger.toInt
+                    if (index < row.size) {
                         row.getCell(index)
                     }
                     else {
@@ -582,14 +576,11 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
             case DataType.TABLE =>
                 val table = this.asTable
                 if (value.isInteger) {
-                    val index = value.asInteger.toInt - 1 //索引从1开始
-                    if (index < 0) {
-                        throw new OutOfIndexBoundaryException(s"Index starts from 1.")
-                    }
-                    else if (table.nonEmpty) {
+                    val index = value.asInteger.toInt //索引从1开始
+                    if (table.nonEmpty) {
                         table.getRow(index) match {
                             case Some(row) => DataCell(row, DataType.ROW)
-                            case None => throw new OutOfIndexBoundaryException(s"Index ${index + 1} is greater than table size.")
+                            case None => throw new OutOfIndexBoundaryException(s"Index $index is greater than table size.")
                         }
                     }
                     else {
@@ -623,27 +614,22 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
             case _ =>
                 if (this.isExtensionType) {
                     if (value.isInteger) {
-                        val index = value.asInteger.toInt - 1 //索引从1开始
-                        if (index < 0) {
-                            throw new OutOfIndexBoundaryException(s"Index starts from 1.")
+                        val index = value.asInteger.toInt //索引从1开始
+                        try {
+                            Class.forName(this.dataType.typeName)
+                                .getDeclaredMethod("getCell", classOf[Int])  //Class.forName("java.lang.Integer")
+                                .invoke(this.value, Integer.valueOf(index))
+                                .asInstanceOf[DataCell]
                         }
-                        else {
-                            try {
-                                Class.forName(this.dataType.typeName)
-                                    .getDeclaredMethod("getCell", Class.forName("java.lang.Integer"))
-                                    .invoke(this.value, Integer.valueOf(index))
-                                    .asInstanceOf[DataCell]
-                            }
-                            catch {
-                                case _: Exception => throw new ClassMethodNotFoundException("Class " + this.dataType.typeName + " must contains method getCell(Integer).")
-                            }
+                        catch {
+                            case _: Exception => throw new ClassMethodNotFoundException("Class " + this.dataType.typeName + " must contains method getCell(Integer).")
                         }
                     }
                     else if (value.isText) {
                         val attr = value.asText
                         try {
                             Class.forName(this.dataType.typeName)
-                                .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
+                                .getDeclaredMethod("getCell", classOf[String]) //Class.forName("java.lang.String")
                                 .invoke(this.value, attr)
                                 .asInstanceOf[DataCell]
                         }

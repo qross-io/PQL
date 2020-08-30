@@ -16,7 +16,7 @@ class SHOW(val sentence: String) {
     def execute(PQL: PQL): Unit = {
         if ("""(?i)SHOW\s+[a-z]+""".r.test(sentence)) {
 
-            PQL.WORKING += new SELECT(sentence).select(PQL).value
+            PQL.WORKING += new SELECT(sentence).evaluate(PQL).value
 
             """(?i)SHOW\s+CREATE\s+TABLE\s""".r.findFirstIn(sentence) match {
                 case Some(_) =>

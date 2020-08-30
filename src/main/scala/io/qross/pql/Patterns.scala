@@ -40,19 +40,16 @@ object Patterns {
     val $OR: Pattern = Pattern.compile("\\sOR\\s", Pattern.CASE_INSENSITIVE)
     val $OR$: Pattern = Pattern.compile("""(^)(([\s\S]+?)\s+OR\s+([\s\S]+?))(\sOR|$)""", Pattern.CASE_INSENSITIVE)
     val A$AND$Z: Regex = """(?i)[A-Z]{3}\s+AND\s+[A-Z]{3}""".r
-    val A$OR$Z: Regex = """(?i)[A-Z]{3}\s+OR\s+[A-Z]{3}""".r
+    val A$OR$Z: Regex = """(?i)[A-Z]{3}\s+OR\s+EQUALS\b""".r  // BEFORE OR EQUALS 和 AFTER OR EQUALS
 
     val $SELECT$: Regex = """(?i)\(\s*SELECT\s""".r  //(SELECT...)
     val $CONDITION$N: Regex = """(?i)^~condition\[(\d+)\]$""".r
     val IN$$: Regex = """(?i)\sIN\s*\([^\(\)]*\)""".r  // IN (...)
 
-    val STATEMENTS: Set[String] = Set[String]("IF", "ELSIF", "ELSE", "FOR", "WHILE", "CASE", "WHEN")
+    val STATEMENTS: Set[String] = Set[String]("IF", "ELSIF", "ELSE", "FOR", "WHILE", "CASE", "WHEN", "EXEC")
     val NON_QUERY_CAPTIONS: Set[String] = Set[String]("INSERT", "UPDATE", "DELETE", "REPLACE", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT", "USE")
-    val $INSERT$INTO: Regex = """(?i)^INSERT\s+INTO\s""".r
-    //val $DELETE: Regex = """(?i)^DELETE\s""".r
-    //val $VALUES: Regex = """(?i)\bVALUES\b""".r
-    val $SELECT: Regex = """(?i)^SELECT\s""".r
-    val $NON$QUERY: Regex = s"(?i)^(${NON_QUERY_CAPTIONS.mkString("|")})\\s".r
+    //可求值语句必须有返回值，且类中包含evaluate方法
+    val EVALUATIONS: Set[String] = Set[String]("SELECT", "SHOW", "PARSE", "IF", "CASE", "FILE", "DIR", "REDIS", "INVOKE", "RUN", "SEND", "EXEC", "NEW")
 
     //自定义SQL语句
     val $NONE$QUERY$CUSTOM: Regex = """(?i)^(INSERT\s+INTO|UPDATE|DELETE|DELETE\s+FROM)\s+(\S+?:|:|\$|@)\S+\s""".r

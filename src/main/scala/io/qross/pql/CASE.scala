@@ -39,7 +39,7 @@ object CASE {
 class CASE(equivalent: String) {
 
     //CASE短表达式   CASE WHEN $a > 0 THEN 0 ELSE 1 END 或  CASE value WHEN 1 THEN 'a' WHEN 2 THEN 'b' ELSE 'c' END
-    def express(PQL: PQL, mode: Int = Solver.FULL): DataCell = {
+    def evaluate(PQL: PQL, mode: Int = Solver.FULL): DataCell = {
 
         //先提取子语句
         var sentence = equivalent.replaceInnerSentence(PQL)

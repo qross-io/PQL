@@ -49,15 +49,11 @@ class ConditionGroup(expression: String) {
         parseBasicExpression(exp)
 
         //最终执行
-        for (condition <- this.conditions) {
-            condition.eval(PQL, this)
+        val result = conditions.last.eval(PQL, this)
 
-            if (PQL.dh.debugging) {
-                Output.writeDotLine(" ", if (condition.field != null) condition.field.popStash(PQL, "\"") else "", condition.operator, condition.value.popStash(PQL, "\""), " => ", condition.result)
-            }
+        if (PQL.dh.debugging) {
+            Output.writeLine(s"Condition expression { $expression } is $result")
         }
-
-        val result = conditions.last.result
 
         conditions.clear()
 

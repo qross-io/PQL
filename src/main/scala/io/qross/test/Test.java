@@ -7,11 +7,19 @@ import io.qross.ext.Console;
 import io.qross.jdbc.DataAccess;
 import io.qross.net.Redis;
 
-public class Test {
-    public static void main(String[] args) {
-        String x = "/BOOT-INF/classes/api/note.sql";
-        String y = "/api/";
+import java.lang.reflect.Field;
 
-        Console.writeLine(x.substring(x.indexOf(y)));
+public class Test {
+
+    public static int INTEGER = 10;
+    public static String STRING = "HELLO";
+
+    public static void hello() {
+
+    }
+
+    public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException {
+        Console.writeLine(Test.class.getDeclaredField("INTEGER").get(null));
+        Console.writeLine(Test.class.getDeclaredField("STRING").get(null));
     }
 }

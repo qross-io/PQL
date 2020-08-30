@@ -228,6 +228,8 @@ object TextFile {
                     if (dh.slots("ZIP")) {
                         dh.pick[Zip]("ZIP").orNull.addFile(writer.file.getAbsolutePath)
                     }
+
+                    dh.TO_BE_CLEAR = true
                 case _ => throw new IncorrectDataSourceException("Must use SAVE sentence to save file first.")
             }
             dh

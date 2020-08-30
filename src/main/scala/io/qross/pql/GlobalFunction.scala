@@ -89,7 +89,8 @@ object GlobalFunction {
 
 case class GlobalFunction(functionName: String) {
     def call(args: List[DataCell]): DataCell = {
-        Class.forName("io.qross.pql.Function")
+        //Class.forName("io.qross.pql.GlobalFunction")
+        classOf[GlobalFunction]
             .getDeclaredMethod(functionName, Class.forName("scala.collection.immutable.List"))
             .invoke(null, args).asInstanceOf[DataCell]
     }

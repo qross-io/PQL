@@ -13,7 +13,7 @@ object SELECT {
 
 class SELECT(val sentence: String) {
 
-    def select(PQL: PQL, express: Int = Solver.FULL): DataCell = {
+    def evaluate(PQL: PQL, express: Int = Solver.FULL): DataCell = {
         sentence.$process(PQL, express, body => {
             val table = PQL.dh.executeDataTable(body)
             PQL.COUNT_OF_LAST_SELECT = table.size
@@ -50,6 +50,6 @@ class SELECT(val sentence: String) {
     }
 
     def execute(PQL: PQL): Unit = {
-        PQL.WORKING += this.select(PQL).value
+        PQL.WORKING += evaluate(PQL).value
     }
 }

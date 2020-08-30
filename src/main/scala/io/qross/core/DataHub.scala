@@ -50,7 +50,7 @@ class DataHub (val defaultConnectionName: String) {
     private val TABLE = new DataTable()  //current buffer
     private val BUFFER = new mutable.HashMap[String, DataTable]() //all buffer
 
-    private var TO_BE_CLEAR: Boolean = false
+    private[qross] var TO_BE_CLEAR: Boolean = false
 
     //扩展插槽
     private val SLOTS: mutable.HashMap[String, Any] = new mutable.HashMap[String, Any]()

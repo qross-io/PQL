@@ -61,8 +61,6 @@ object Solver {
         //close examination  ( ) [ ] { } <% %>
         def cleanCommentsAndStashConstants(PQL: PQL): String = {
 
-            class Closing(val char: Char, val index: Int) { }
-
             val blocks = new mutable.ArrayStack[Block$Range]()
             val closing = new mutable.ArrayStack[Closing]()
             val length = sentence.length
@@ -142,11 +140,11 @@ object Solver {
                         if (i > 1 && sentence.charAt(i - 1) == '"' && sentence.charAt(i - 2) == '"') {
                             if (closing.isEmpty) {
                                 if (i == 2 || i > 2 && sentence.charAt(i - 3) != '"') {
-                                    closing += new Closing('&', i)
+                                    closing += new Closing('%', i)
                                     blocks += new Block$Range("DOUBLE-RICH-STRING-", i - 2, i + 1)
                                 }
                             }
-                            else if (closing.head.char == '&' && i >= closing.head.index + 3) {
+                            else if (closing.head.char == '%' && i >= closing.head.index + 3) {
                                 //双引号富字符串结束 - 必须前两个字符是双引号, 但后面的字符不是双引号, 且索引位置大于开始位置至少3个位置
                                 if (i < length - 1 && sentence.charAt(i + 1) != '"' || i == length - 1) {
                                     blocks += new Block$Range("-DOUBLE-RICH-STRING", i - 2, i + 1)
@@ -191,7 +189,7 @@ object Solver {
 
             //如果最后一行是注释
             if (closing.nonEmpty) {
-                                //val clip = sentence.takeAfter(closing.head.index - 1).take(20)
+                //val clip = sentence.takeAfter(closing.head.index - 1).take(20)
                 val clip = sentence.substring(closing.head.index).take(20)
                 closing.head.char match {
                     case '-' => blocks.head.end = sentence.length
@@ -724,7 +722,7 @@ object Solver {
                                 else if (data.isExtensionType) {
                                     try {
                                         Class.forName(data.dataType.typeName)
-                                            .getDeclaredMethod("getCell", Class.forName("java.lang.String"))
+                                            .getDeclaredMethod("getCell", classOf[String])
                                             .invoke(data.value, name)
                                             .asInstanceOf[DataCell]
                                     }
@@ -971,7 +969,7 @@ object Solver {
             sentence
         }
 
-        def $process(PQL: PQL, express: Int, handler: String => DataCell): DataCell = {
+        def $process(PQL: PQL, express: Int, handler: String => DataCell, quote: String = "'"): DataCell = {
             var body = {
                 express match {
                     case 0 => sentence.$clean(PQL)
@@ -994,7 +992,7 @@ object Solver {
                 body = body.takeBefore(ARROW).trim()
             }
 
-            val data = handler(body.popStash(PQL))
+            val data = handler(body.popStash(PQL, quote))
 
             if (links != "") {
                 new Sharp(links, data).execute(PQL)
@@ -1005,41 +1003,59 @@ object Solver {
         }
 
         def $compute(PQL: PQL, express: Int = FULL): DataCell = {
-            sentence.takeBeforeX($BLANK).toUpperCase() match {
-                case "SELECT" | "SHOW" => new SELECT(sentence).select(PQL, express)
-                case "PARSE" => new PARSE(sentence).doParse(PQL, express)
-                case "REDIS" => new REDIS(sentence).evaluate(PQL, express)
-                case "FILE" => new FILE(sentence).evaluate(PQL, express)
-                case "DIR" => new DIR(sentence).evaluate(PQL, express)
-                case "IF" => new IF(sentence).express(PQL, express)
-                case "CASE" => new CASE(sentence).express(PQL, express)
-                case o =>
-                    if (NON_QUERY_CAPTIONS.contains(o)) {
-                        new NON$QUERY(sentence).affect(PQL, express)
-                    }
-//                    else if (sentence.bracketsWith("[", "]") || sentence.bracketsWith("{", "}")) {
-//                        //对象或数组类型不能eval
-//                        Json.fromText(sentence.$restore(PQL, "\"")).findNode("/")
-//                    }
-//                    else if ("""^~json\[\d+\]$""".r.test(sentence)) {
-//                        Json.fromText(sentence.restoreJsons(PQL).$restore(PQL, "\"")).findNode("/")
-//                    }
-                    else {
-                        //在SHARP表达式内部再恢复字符串和中间值
-                        new Sharp({
-                            express match {
-                                case 0 => sentence.$clean(PQL)
-                                case 1 => sentence.$express(PQL)
-                                case 2 => sentence
-                                case _ => sentence.$clean(PQL)
-                            }
-                        }).execute(PQL)
-                    }
+            val caption = sentence.takeBeforeX($BLANK).toUpperCase()
+            if (EVALUATIONS.contains(caption)) {
+                Class.forName(s"io.qross.pql.$caption")
+                    .getDeclaredMethod("evaluate", classOf[PQL], classOf[Int])
+                    .invoke(Class.forName(s"io.qross.pql.$caption").getConstructor(classOf[String]).newInstance(sentence), PQL, express.asInstanceOf[java.lang.Integer])
+                    .asInstanceOf[DataCell]
             }
+            else if (NON_QUERY_CAPTIONS.contains(caption)) {
+                new NON$QUERY(sentence).evaluate(PQL, express)
+            }
+            else {
+                //在SHARP表达式内部再恢复字符串和中间值
+                new Sharp({
+                    express match {
+                        case 0 => sentence.$clean(PQL)
+                        case 1 => sentence.$express(PQL)
+                        case 2 => sentence
+                        case _ => sentence.$clean(PQL)
+                    }
+                }).execute(PQL)
+            }
+//            caption match {
+//                case "SELECT" | "SHOW" => new SELECT(sentence).evaluate(PQL, express)
+//                case "PARSE" => new PARSE(sentence).evaluate(PQL, express)
+//                case "REDIS" => new REDIS(sentence).evaluate(PQL, express)
+//                case "FILE" => new FILE(sentence).evaluate(PQL, express)
+//                case "DIR" => new DIR(sentence).evaluate(PQL, express)
+//                case "IF" => new IF(sentence).evaluate(PQL, express)
+//                case "CASE" => new CASE(sentence).evaluate(PQL, express)
+//                case o =>
+//                    if (NON_QUERY_CAPTIONS.contains(o)) {
+//                        new NON$QUERY(sentence).evaluate(PQL, express)
+//                    }
+//                    else {
+//                        //在SHARP表达式内部再恢复字符串和中间值
+//                        new Sharp({
+//                            express match {
+//                                case 0 => sentence.$clean(PQL)
+//                                case 1 => sentence.$express(PQL)
+//                                case 2 => sentence
+//                                case _ => sentence.$clean(PQL)
+//                            }
+//                        }).execute(PQL)
+//                    }
+//            }
         }
     }
 }
 
 class Block$Range(val name: String, val start: Int, var end: Int = -1) {
+
+}
+
+class Closing(val char: Char, val index: Int) {
 
 }

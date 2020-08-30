@@ -1,10 +1,12 @@
 package io.qross.test
 
+import io.qross.app.Marker
 import io.qross.fql.SELECT
 import io.qross.script.Shell._
 import io.qross.script.Shell
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns
+import io.qross.setting.Global
 
 import scala.sys.process._
 
@@ -19,11 +21,16 @@ object FQL {
         //destroy
         //end
 
-        println(Patterns.$RETURN.test("ReTURN # hello"))
+        Marker.openFile("c:/io.Qross/Folder/pql/overview.md")
+            .replaceInMarkdown("](/", "[(/doc/")
+            .replaceInMarkdown(".md)", ")")
+            .transform()
+            .removeHeader()
+            .colorCodes(false)
+            .getContent
+            .print
 
-        val str = "hello)world"
-        val half = str.indexHalfOf('(', ')')
-        println(str.takeAfter(")"))
+
 
         if (args.nonEmpty) {
             args(0) match {

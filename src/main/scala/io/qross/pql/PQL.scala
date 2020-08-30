@@ -301,7 +301,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         else {
             try {
                 Class.forName(s"io.qross.pql.$caption")
-                        .getDeclaredMethod("parse", "".getClass, Class.forName("io.qross.pql.PQL"))
+                        .getDeclaredMethod("parse", classOf[String], classOf[PQL]) //Class.forName("io.qross.pql.PQL")
                         .invoke(null, sentence, this)
             }
             catch {
@@ -332,15 +332,12 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 }
                 else if (STATEMENTS.contains(statement.caption)) {
                     Class.forName(s"io.qross.pql.${statement.caption}")
-                            .getDeclaredMethod("execute",
-                                Class.forName(s"io.qross.pql.PQL"),
-                                Class.forName(s"io.qross.pql.Statement"))
+                            .getDeclaredMethod("execute", classOf[PQL], classOf[Statement])
                             .invoke(statement.instance, this, statement)
                 }
                 else {
                     Class.forName(s"io.qross.pql.${statement.caption}")
-                            .getDeclaredMethod("execute",
-                                Class.forName(s"io.qross.pql.PQL"))
+                            .getDeclaredMethod("execute", classOf[PQL])
                             .invoke(statement.instance, this)
                 }
             }

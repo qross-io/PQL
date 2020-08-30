@@ -60,6 +60,7 @@ dependencies {
     implementation group: 'org.springframework', name: 'spring-webmvc', version: '5.1.5.RELEASE'
 
     compile group: 'redis.clients', name: 'jedis', version: '3.3.0'
+    compile group: 'com.vladsch.flexmark', name: 'flexmark-all', version: '0.62.2'
 }
 
 //发布到仓库
@@ -68,7 +69,7 @@ publishing {
         maven(MavenPublication) {
             groupId = 'io.qross'
             artifactId = 'pql'
-            version = '0.6.4-22-SNAPSHOT'
+            version = '0.6.4-40-SNAPSHOT'
             from components.java
             artifact sourcesJar
         }
@@ -80,26 +81,6 @@ publishing {
             credentials {
                 username 'PtbpNI'
                 password 'kwCz3C0wHx'
-            }
-        }
-    }
-}
-
-//打包上传-不如publish快, 而且不包含源码
-uploadArchives {
-    repositories {
-        mavenDeployer {
-             repository(url: "https://packages.aliyun.com/maven/repository/2011186-snapshot-FSoDsK/") {
-                authentication(userName: 'PtbpNI', password: 'kwCz3C0wHx')
-            }
-//            repository(url: "https://packages.aliyun.com/maven/repository/2011186-release-Aa5YmC/") {
-//                authentication(userName: 'PtbpNI', password: 'kwCz3C0wHx')
-//            }
-            //构造项目的Pom文件
-            pom.project {
-                name = project.name
-                packaging = 'jar'
-                description = 'Qross PQL language and DataHub development toolkit v0.6.3'
             }
         }
     }

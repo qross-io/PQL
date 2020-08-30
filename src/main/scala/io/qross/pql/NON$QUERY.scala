@@ -5,7 +5,7 @@ import io.qross.pql.Solver._
 
 class NON$QUERY(sentence: String) {
 
-    def affect(PQL: PQL, express: Int = Solver.FULL): DataCell = {
+    def evaluate(PQL: PQL, express: Int = Solver.FULL): DataCell = {
         sentence.$process(PQL, express, nonQuery => {
             PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY = PQL.dh.executeNonQuery(nonQuery)
             DataCell(PQL.AFFECTED_ROWS_OF_LAST_NON_QUERY, DataType.INTEGER)
@@ -13,6 +13,6 @@ class NON$QUERY(sentence: String) {
     }
 
     def execute(PQL: PQL): Unit = {
-        PQL.WORKING += this.affect(PQL).value
+        PQL.WORKING += this.evaluate(PQL).value
     }
 }

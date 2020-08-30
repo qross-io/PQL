@@ -1,6 +1,8 @@
 package io.qross.script
 
-import io.qross.core.DataHub
+import java.util
+
+import io.qross.core.{DataHub, DataRow, DataType}
 import io.qross.time.Timer
 import io.qross.ext.TypeExt._
 
@@ -192,18 +194,28 @@ object Shell {
         }
 
         //命令执行模板+仅打印日志
-        def run(): Int = {
+        def run(): DataRow = {
+            val logs = new util.ArrayList[String]()
+            val errors = new util.ArrayList[String]()
             val process = command.shell.run(ProcessLogger(out => {
                 println(out)
+                logs.add(out)
             }, err => {
                 System.err.println(err)
+                logs.add(err)
+                errors.add(err)
             }))
 
             while (process.isAlive()) {
                 Timer.sleep(100)
             }
 
-            process.exitValue()
+            val exit = new DataRow()
+            exit.set("code", process.exitValue(), DataType.INTEGER)
+            exit.set("logs", logs, DataType.ARRAY)
+            exit.set("errors", errors, DataType.ARRAY)
+
+            exit
         }
 
         //命令执行+日志和心跳处理

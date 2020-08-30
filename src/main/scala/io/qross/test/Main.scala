@@ -40,6 +40,10 @@ import redis.clients.jedis.Protocol.Command
 
 object Main {
 
+    def test(str: String, int: scala.Int): String = {
+        str + int
+    }
+
     def main(args: Array[String]): Unit = {
 
 

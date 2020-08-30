@@ -21,7 +21,7 @@ class PARSE(val sentence: String) {
 
     //express 是否支持嵌入式查询语句, 即 ${{ }}
     //不能用parse名, 会与静态方法
-    def doParse(PQL: PQL, express: Int = Solver.FULL): DataCell = {
+    def evaluate(PQL: PQL, express: Int = Solver.FULL): DataCell = {
         sentence.$process(PQL, express, body => {
             val plan = Syntax("PARSE").plan(body.drop(5).trim())
             val path = plan.headArgs
@@ -45,7 +45,7 @@ class PARSE(val sentence: String) {
     }
 
     def execute(PQL: PQL): Unit = {
-        val data = this.doParse(PQL)
+        val data = this.evaluate(PQL)
 
         PQL.WORKING += data.value
         PQL.COUNT_OF_LAST_SELECT = if (data.isTable) data.asTable.size else if (data.isJavaList) data.asJavaList.size() else 1

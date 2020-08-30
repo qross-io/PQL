@@ -2322,35 +2322,29 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
         for (i <- links.indices) {
             if (SharpLink.all.contains(links(i).linkName)) {
                 //必须是等号, 不能用replace方法, 否则变量内容会保存
-                data = Class.forName("io.qross.pql.Sharp")
-                    .getDeclaredMethod(links(i).linkName,
-                        Class.forName("io.qross.core.DataCell"),
-                        Class.forName("io.qross.core.DataCell"),
-                        Class.forName("java.lang.String"))
-                    .invoke(null,
-                        data,
-                        if (i + 1 < links.length &&
-                            (SharpLink.priorities.contains(links(i).linkName) &&
-                                SharpLink.priorities(links(i).linkName).contains(links(i+1).linkName)) //prioritization of execution
-                        ) {
-                            val name = links(i+1).linkName
-                            links(i+1).linkName = "" //mark as executed
-                            Class.forName("io.qross.pql.Sharp")
-                                .getDeclaredMethod(name,
-                                    Class.forName("io.qross.core.DataCell"),
-                                    Class.forName("io.qross.core.DataCell"),
-                                    Class.forName("java.lang.String"))
-                                .invoke(null,
-                                    links(i).solve(),
-                                    links(i+1).solve(),
-                                    links(i+1).originate()
-                                )
-                        }
-                        else {
-                            links(i).solve()
-                        },
-                        links(i).originate()
-                    ).asInstanceOf[DataCell]
+                data = classOf[Sharp]
+                        .getDeclaredMethod(links(i).linkName, classOf[DataCell], classOf[DataCell], classOf[String])
+                        .invoke(null,
+                            data,
+                            if (i + 1 < links.length &&
+                                (SharpLink.priorities.contains(links(i).linkName) &&
+                                    SharpLink.priorities(links(i).linkName).contains(links(i+1).linkName)) //prioritization of execution
+                            ) {
+                                val name = links(i+1).linkName
+                                links(i+1).linkName = "" //mark as executed
+                                classOf[Sharp]
+                                    .getDeclaredMethod(name, classOf[DataCell], classOf[DataCell], classOf[String])
+                                    .invoke(null,
+                                        links(i).solve(),
+                                        links(i+1).solve(),
+                                        links(i+1).originate()
+                                    )
+                            }
+                            else {
+                                links(i).solve()
+                            },
+                            links(i).originate()
+                        ).asInstanceOf[DataCell]
             }
             else if (links(i).linkName != "") {
                 throw new SharpLinkArgumentException("Wrong link name: " + links(i).originalLinkName)
@@ -2420,11 +2414,9 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
         for (i <- links.indices) {
             if (SharpLink.all.contains(links(i).linkName)) {
                 //必须是等号, 不能用replace方法, 否则变量内容会保存
-                data = Class.forName("io.qross.pql.Sharp")
-                            .getDeclaredMethod(links(i).linkName,
-                                Class.forName("io.qross.core.DataCell"),
-                                Class.forName("io.qross.core.DataCell"),
-                                Class.forName("java.lang.String"))
+                //这里不能使用 Sharp.getClass
+                data = classOf[Sharp]
+                            .getDeclaredMethod(links(i).linkName, classOf[DataCell], classOf[DataCell], classOf[String]) //classOf[DataCell], classOf[DataCell], classOf[String]  Class.forName("io.qross.core.DataCell"), Class.forName("io.qross.core.DataCell"), Class.forName("java.lang.String")
                                 .invoke(null,
                                     data,
                                     if (i + 1 < links.length &&
@@ -2433,11 +2425,8 @@ class Sharp(private val expression: String, private var data: DataCell = DataCel
                                     ) {
                                         val name = links(i+1).linkName
                                         links(i+1).linkName = "" //mark as executed
-                                        Class.forName("io.qross.pql.Sharp")
-                                            .getDeclaredMethod(name,
-                                                Class.forName("io.qross.core.DataCell"),
-                                                Class.forName("io.qross.core.DataCell"),
-                                                Class.forName("java.lang.String"))
+                                        classOf[Sharp]
+                                            .getDeclaredMethod(name, classOf[DataCell], classOf[DataCell], classOf[String])
                                                 .invoke(null,
                                                     links(i).solve(PQL),
                                                     links(i+1).solve(PQL),

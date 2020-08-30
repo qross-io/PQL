@@ -32,7 +32,7 @@ object IF {
 class IF(conditions: String) {
 
     //IF短表达式   IF $a > 0 THEN 0 ELSIF $a < 0 THEN 1 ELSE 2 END;
-    def express(PQL: PQL, mode: Int = Solver.FULL): DataCell = {
+    def evaluate(PQL: PQL, mode: Int = Solver.FULL): DataCell = {
         //先提取子语句
         var sentence = conditions.replaceInnerSentence(PQL)
         sentence = {

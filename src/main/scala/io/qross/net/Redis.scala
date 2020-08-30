@@ -138,10 +138,11 @@ object Redis {
             else {
                 REDIS$W.command(sentence)
             }
+            dh.TO_BE_CLEAR = true
             dh
         }
 
-        //可以  buffer -> put 或 get -> pipelined 交叉使用
+        //可以  stock -> put 或 get -> pipelined 交叉使用
 
         //运行单条语句并返回值
         def command(sentence: String): DataCell = {
