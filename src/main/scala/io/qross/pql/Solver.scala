@@ -21,11 +21,11 @@ object Solver {
     //val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
     val USER_VARIABLE: List[Regex] = List[Regex](
         """\$\(([a-zA-Z0-9_]+)\)""".r,  //防冲突增加小括号时不考虑函数，因为函数没有防冲突的必要，全局变量同理。属性和索引规则符号前面也没有防冲突的必要
-        """\$([a-zA-Z0-9_]+)([\s\S]|$)""".r
+        """\$([a-zA-Z0-9_]+)\b(?![(.\[])""".r
     )
     val GLOBAL_VARIABLE: List[Regex] = List[Regex](
         """@\(([a-zA-Z0-9_]+)\)""".r,
-        """@([a-zA-Z0-9_]+)([\s\S]|$)""".r
+        """@([a-zA-Z0-9_]+)\b(?![(.\[])""".r
     )
 
     val USER_COMPLEX_VARIABLE: Regex = """(?i)\$([a-z0-9_]+)([.\[])""".r
@@ -602,51 +602,40 @@ object Solver {
         def replaceVariables(PQL: PQL): String = {
             USER_VARIABLE
                 .map(r => r.findAllMatchIn(sentence))
-                .flatMap(s => s.toList.sortBy(m => m.group(1)).reverse)  //反转很重要, $user  $username 必须先替换长的
+                .flatMap(s => s.toList.sortBy(m => m.group(0)).reverse)  //反转很重要, $user  $username 必须先替换长的
                 .foreach(m => {
                     val whole = m.group(0)
                     val name = m.group(1)
-                    val tail = if (m.groupCount == 1) "" else m.group(2)
 
-                    if (tail != "(" && tail != "." && tail != "[") {
-                        val right = sentence.takeAfter(whole)
-                        //赋值表达式左侧的变量不替换
-                        if (!(tail == ":" && right.startsWith("=")) && !right.trim().startsWith(":=")) {
-                            val left = sentence.takeBefore(whole)
-                            PQL.findVariable("$" + name)
-                                .ifFound(data => {
-                                    sentence = left + PQL.$stash(data) + tail + right
-                                }).ifNotFound(() => {
-                                    if (PQL.dh.debugging) {
-                                        Output.writeWarning(s"The variable $$$name has not been assigned.")
-                                    }
-                                    //变量未定义
-                                    sentence = left + "UNDEFINED" + tail + right
-                                })
-                        }
-                    }
+                    PQL.findVariable("$" + name)
+                        .ifFound(data => {
+                            sentence = sentence.replaceFirstOne(whole, PQL.$stash(data))
+                        }).ifNotFound(() => {
+                            if (PQL.dh.debugging) {
+                                Output.writeWarning(s"The variable $$$name has not been assigned.")
+                            }
+                            //变量未定义
+                            sentence = sentence.replaceFirstOne(whole, "UNDEFINED")
+                        })
                 })
 
             GLOBAL_VARIABLE
                 .map(r => r.findAllMatchIn(sentence))
-                .flatMap(s => s.toList.sortBy(m => m.group(1)).reverse)
+                .flatMap(s => s.toList.sortBy(m => m.group(0)).reverse)
                 .foreach(m => {
                     val whole = m.group(0)
                     val name = m.group(1)
-                    val tail = if (m.groupCount == 1) "" else m.group(2)
 
-                    if (tail != "(" && tail != "." && tail != "[") {
-                        PQL.findVariable("@" + name)
-                            .ifFound(data => {
-                                sentence = sentence.replaceFirstOne(whole, PQL.$stash(data) + tail)
-                            })
-                            .ifNotFound(() => {
-                                // @name 标记与MySQL和SQL Server冲突, 不做处理
-                                if (PQL.dh.debugging) {
-                                    Output.writeWarning(s"The global variable @$name maybe has not been assigned.")
-                                }
-                            })
-                    }
+                    PQL.findVariable("@" + name)
+                        .ifFound(data => {
+                            sentence = sentence.replaceFirstOne(whole, PQL.$stash(data))
+                        })
+                        .ifNotFound(() => {
+                            // @name 标记与MySQL和SQL Server冲突, 不做处理
+                            if (PQL.dh.debugging) {
+                                Output.writeWarning(s"The global variable @$name maybe has not been assigned.")
+                            }
+                        })
                 })
 
             USER_COMPLEX_VARIABLE
@@ -970,6 +959,7 @@ object Solver {
         }
 
         def $process(PQL: PQL, express: Int, handler: String => DataCell, quote: String = "'"): DataCell = {
+
             var body = {
                 express match {
                     case 0 => sentence.$clean(PQL)

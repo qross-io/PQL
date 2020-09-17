@@ -9,8 +9,7 @@ import scala.util.matching.Regex
 object ChronExp {
 
     //val LUNAR: Regex = """(?i)\sLUNAR\s""".r
-    val PERIOD: Regex = """(?i)^(MINUTELY|HOURLY|DAILY|WEEKLY|MONTHLY|ANNUAL|YEARLY)\s""".r
-
+    val PERIOD: Regex = """(?i)^(MINUTELY|HOURLY|DAILY|WEEKLY|MONTHLY|ANNUAL|YEARLY|[12]\d{3})\s""".r
     val CLASSIC: String = "CLASSIC"
 
     def getTicks(chronExp: String, begin: String, end: String): List[String] = {

@@ -12,8 +12,8 @@ object PeriodExp {
     val DAILY: String = "DAILY"
     val WEEKLY: String = "WEEKLY"
     val MONTHLY: String = "MONTHLY"
-    val YEARLY: String = "*"
-    val ANNUAL: String = "*"
+    val YEARLY: String = "YEARLY"
+    val ANNUAL: String = "ANNUAL"
 
     val BLANKS: mutable.LinkedHashMap[Regex, String] = mutable.LinkedHashMap[Regex, String](
         """\s\s""".r -> " ",
@@ -37,33 +37,6 @@ object PeriodExp {
         "FRIDAY" -> "FRI",
         "SATURDAY" -> "SAT",
         "SUNDAY" -> "SUN",
-        "FIRST-WORK-DAY" -> "W1",
-        "SECOND-WORK-DAY" -> "W2",
-        "THIRD-WORK-DAY" -> "W3",
-        "FOURTH-WORK-DAY" -> "W4",
-        "FIFTH-WORK-DAY" -> "W5",
-        "LAST-WORK-DAY" -> "LW",
-        "FIRST-REST-DAY" -> "R1",
-        "SECOND-REST-DAY" -> "R2",
-        "LAST-REST-DAY" -> "LR",
-        "LAST-DAY" -> "L",
-        "WORK-DAY" -> "W",
-        "REST-DAY" -> "R",
-        //monthly
-        "FIRST-WEEK-" -> "E1",
-        "SECOND-WEEK-" -> "E2",
-        "THIRD-WEEK-" -> "E3",
-        "FOURTH-WEEK-" -> "E4",
-        "FIFTH-WEEK-" -> "E5",
-        "SIXTH-WEEK-" -> "E6",
-        "LAST-WEEK-" -> "LE",
-        "FIRST-" -> "E1",
-        "SECOND-" -> "E2",
-        "THIRD-" -> "E3",
-        "FOURTH-" -> "E4",
-        "FIFTH-" -> "E5",
-        "SIXTH-" -> "E6",
-        "LAST-" -> "LE",
         "JANUARY" -> "JAN",
         "FEBRUARY" -> "FEB",
         "MARCH" -> "MAR",
@@ -74,7 +47,44 @@ object PeriodExp {
         "SEPTEMBER" -> "SEP",
         "OCTOBER" -> "OCT",
         "NOVEMBER" -> "NOV",
-        "DECEMBER" -> "DEC"
+        "DECEMBER" -> "DEC",
+        "FIRST-WORKDAY" -> "FW",
+//        "SECOND-WORKDAY" -> "W2",
+//        "THIRD-WORKDAY" -> "W3",
+//        "FOURTH-WORKDAY" -> "W4",
+//        "FIFTH-WORKDAY" -> "W5",
+        "LAST-WORKDAY" -> "LW",
+        "FIRST-HOLIDAY" -> "FR",
+        //"SECOND-HOLIDAY" -> "R2",
+        "LAST-HOLIDAY" -> "LR",
+        "FIRST-DAY" -> "F",
+        "LAST-DAY" -> "L",
+        "WORKDAY" -> "W",
+        "HOLIDAY" -> "R",
+        //monthly
+        "-OF-FIRST-WEEK" -> "#1",
+        "-OF-SECOND-WEEK" -> "#2",
+        "-OF-THIRD-WEEK" -> "#3",
+        "-OF-FOURTH-WEEK" -> "#4",
+        "-OF-FIFTH-WEEK" -> "#5",
+        "-OF-SIXTH-WEEK" -> "#6",
+        "-OF-LAST-WEEK" -> "#L",
+        "FIRST-WEEK" -> "#1",
+        "SECOND-WEEK" -> "#2",
+        "THIRD-WEEK" -> "#3",
+        "FOURTH-WEEK" -> "#4",
+        "FIFTH-WEEK" -> "#5",
+        "SIXTH-WEEK" -> "#6",
+        "LAST-WEEK" -> "#L",
+        //第几个周几，不支持
+        "FIRST-" -> "F",
+        "SECOND-" -> "2",
+        "THIRD-" -> "3",
+        "FOURTH-" -> "4",
+        "FIFTH-" -> "5",
+        "LAST-" -> "L",
+        "-TO-" -> "-",
+        "-AND-" -> "+"
     )
 }
 
@@ -90,6 +100,8 @@ case class PeriodExp(expression: String) {
 
     //DAILY 0-3,13:00
     //DAILY 7,20:0/5
+    //DAILY 7-20:0/5
+    //DAILY 0/2:00
 
     //WEEKLY MON 12:35; FRI 12:30
     //WEEKLY MON,FRI 12:35; 8:30
@@ -97,30 +109,28 @@ case class PeriodExp(expression: String) {
 
     //MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY
     //MON,TUE,WED,THU,FRI,SAT,SUN
-    //WORK-DAY,REST-DAY
-    //FIRST-WORK-DAY,SECOND-WORK-DAY,THIRD-WORK-DAY,FOURTH-WORK-DAY,FIFTH-WORK-DAY,LAST-WORK-DAY
-    //FIRST-REST-DAY,SECOND-REST-DAY,LAST-REST-DAY
+    //WORKDAY,HOLIDAY
+    //FIRST-WORKDAY,SECOND-WORKDAY,THIRD-WORKDAY,FOURTH-WORKDAY,FIFTH-WORKDAY,LAST-WORKDAY
+    //FIRST-HOLIDAY,SECOND-HOLIDAY,LAST-HOLIDAY
     //LW,LR,W1,W2,W3,W4,W5,R1,R2
 
-
-    //MONTHLY 01 12:30; 20 16:30; LAST-DAY 18:10; LAST-WORK-DAY 17:00; REST-DAY 12:00
+    //MONTHLY 01 12:30; 20 16:30; LAST-DAY 18:10; LAST-WORKDAY 17:00; HOLIDAY 12:00
     //MONTHLY MONDAY 12:45; FRIDAY 16:30
     //MONTHLY FIRST-MONDAY 12:45; FRIDAY 16:30
-    //MONTHLY WORK-DAY 12:45;REST-DAY 16:30
-    //MONTHLY WORK-DAY,REST-DAY 12:45; 16:30
-    //MONTHLY WORK-DAY,SUNDAY 12,16:0/5
-    //MONTHLY FIRST-WEEK WORK-DAY 12:45,30
+    //MONTHLY WORKDAY 12:45;HOLIDAY 16:30
+    //MONTHLY WORKDAY,HOLIDAY 12:45; 16:30
+    //MONTHLY WORKDAY,SUNDAY 12,16:0/5
+    //MONTHLY FIRST-WEEK WORKDAY 12:45,30
 
-    //FIRST-WEEK-WORK-DAY = E1W, LAST-WEEK-WORK-DAY = LEW
-    //FIRST-WEEK-REST-DAY = E1R, LAST-WEEK-REST-DAY = LER
-    //EnWEEK: E1MON = FIRST-MONDAY,E2w,E3w,E4w,E5,E6,LE
+    //WORKDAY-OF-FIRST-WEEK, WORKDAY-OF-LAST-WEEK = W#F, W#L
+    //HOLIDAY-OF-FIRST-WEEK, HOLIDAY-OF-LAST-WEEK = R#F, R#L
 
     //YEARLY JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC
 
     //FIRST-WEEK,SECOND-WEEK,THIRD-WEEK,FOURTH-WEEK,FIFTH-WEEK,LAST-WEEK
     //MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY
     //FIRST-MONDAY,SECOND-MONDAY,THIRD-MONDAY,FOURTH-MONDAY,FIFTH-MONDAY,SIXTH-MONDAY,LAST-MONDAY
-    //WORK-DAY,REST-DAY,LAST-DAY,LAST-WORK-DAY,LAST-REST-DAY
+    //WORKDAY,HOLIDAY,LAST-DAY,LAST-WORKDAY,LAST-HOLIDAY
 
     //FIRST-MON,SECOND-MON,THIRD-MON,FOURTH-MON,FIFTH-MON,SIXTH-MON,LAST-MON
 
@@ -144,7 +154,15 @@ case class PeriodExp(expression: String) {
         for ((tar, rep) <- PeriodExp.RESERVED) {
             exp = exp.replace(tar, rep)
         }
-
+        //第几周
+//        """E(\d)-(MON|TUE|WED|THU|FRI|SAT|SUN|W|R)""".r.findAllMatchIn(exp)
+//            .foreach(m => {
+//                exp = exp.replace(m.group(0), m.group(2) + "#" + (if (m.group(1) == "7") "L" else m.group(1)))
+//            })
+//        """E(\d)""".r.findAllMatchIn(exp)
+//            .foreach(m => {
+//                exp = exp.replace(m.group(0), "#" + (if (m.group(1) == "7") "L" else m.group(1)))
+//            })
         exp
     }
 
@@ -152,22 +170,16 @@ case class PeriodExp(expression: String) {
         ChronExp.PERIOD.findFirstMatchIn(trimmed) match {
             case Some(m) => m.group(1)
             case None =>
-                if ("""^\d""".r.test(trimmed) && trimmed.contains(" ")) {
+                if ("""^\d{4}""".r.test(trimmed) && trimmed.contains(" ")) {
                     trimmed.takeBefore(" ")
                 }
                 else {
-                    throw new IllegalArgumentException("Empty or incorrect period type: " + expression + ", it must be MINUTELY/HOURLY/DAILY/WEEKLY/MONTHLY/YEARLY/ANNUAL or specific year.")
+                    throw new IllegalArgumentException("Empty or incorrect period type: " + expression + ", it must be MINUTELY/HOURLY/DAILY/WEEKLY/MONTHLY/YEARLY/ANNUAL or a specified year.")
                 }
         }
     }
 
-    private val group: Array[String] = trimmed.takeAfterX(ChronExp.PERIOD).split(";")
-//    val matchable = new mutable.ArrayBuffer[Any]()
-//    val statements = exp.split(";")
-//    for (i <- statements.indices) {
-//        matchable += statements(i)
-//    }
-//    matchable
+    private val group: Array[String] = trimmed.takeAfter(period).split("[;；]").map(_.trim())
 
     def toCron: List[CronExp] = {
         period match {
@@ -178,33 +190,22 @@ case class PeriodExp(expression: String) {
                 }).toList
             case PeriodExp.DAILY =>
                 if (!group.head.contains(":")) {
-                    throw new IllegalArgumentException("Illegal time format, must be HH:mm, like 09:10")
+
                 }
                 val list = new ListBuffer[CronExp]()
                 for (i <- group.indices) {
                     val time = group(i)
-                    val hour = {
-                        if (time.contains(":")) {
-                            time.takeBefore(":")
-                        }
-                        else {
-                            list(i-1).hour
-                        }
+                    if (time.contains(":")) {
+                        list += CronExp(s"0 ${time.takeAfter(":")} ${time.takeBefore(":")} * * ? *")
                     }
-                    val minute = {
-                        if (time.contains(":")) {
-                            time.takeAfter(":")
-                        }
-                        else {
-                            time
-                        }
+                    else {
+                        throw new IllegalArgumentException("Illegal time format, must be 'HH:mm', like '09:10'. " + time)
                     }
-                    list += CronExp(s"0 $minute $hour * * ? *")
                 }
                 list.toList
             case PeriodExp.WEEKLY =>
                 if (!group.head.contains(" ")) {
-                    throw new IllegalArgumentException("Illegal date time format, must be DAY HH:mm, like MON 09:10")
+                    throw new IllegalArgumentException("Illegal date time format, must be 'DAY HH:mm', like 'MON 09:10'. " + group.head)
                 }
                 val list = new ListBuffer[CronExp]()
                 for (i <- group.indices) {
@@ -217,28 +218,18 @@ case class PeriodExp(expression: String) {
                             (list(i-1).dayOfWeek, formula)
                         }
                     }
-                    val hour = {
-                        if (time.contains(":")) {
-                            time.takeBefore(":")
-                        }
-                        else {
-                            list(i-1).hour
-                        }
+
+                    if (time.contains(":")) {
+                        list += CronExp(s"0 ${time.takeAfter(":")} ${time.takeBefore(":")} ? * $week *")
                     }
-                    val minute = {
-                        if (time.contains(":")) {
-                            time.takeAfter(":")
-                        }
-                        else {
-                            time
-                        }
+                    else {
+                        throw new IllegalArgumentException("Illegal time format, must be 'HH:mm', like '09:10'. " + time)
                     }
-                    list += CronExp(s"0 $minute $hour ? * $week *")
                 }
                 list.toList
             case PeriodExp.MONTHLY =>
                 if (!group.head.contains(" ")) {
-                    throw new IllegalArgumentException("Illegal date time format, must be DAY/WEEK HH:mm, like WORK-DAY 09:10")
+                    throw new IllegalArgumentException("Illegal date time format, must be 'DAY/WEEK HH:mm', like 'WORKDAY 09:10'. " + group.head)
                 }
                 val list = new ListBuffer[CronExp]()
                 for (i <- group.indices) {
@@ -251,38 +242,34 @@ case class PeriodExp(expression: String) {
                             (list(i-1).dayOfWeek, list(i-1).dayOfMonth, formula)
                         }
                     }
-                    val hour = {
-                        if (time.contains(":")) {
-                            time.takeBefore(":")
-                        }
-                        else {
-                            list(i-1).hour
-                        }
-                    }
-                    val minute = {
-                        if (time.contains(":")) {
-                            time.takeAfter(":")
-                        }
-                        else {
-                            time
-                        }
-                    }
 
-                    if ("""(MON|TUE|WED|THU|FRI|SAT|SUN|E)""".r.test(day)) {
-                        list += CronExp(s"0 $minute $hour ? * $week *")
+                    if (time.contains(":")) {
+                        val hour = time.takeBefore(":")
+                        val minute = time.takeAfter(":")
+
+                        if ("""(MON|TUE|WED|THU|FRI|SAT|SUN|#)""".r.test(formula)) {
+                            list += CronExp(s"0 $minute $hour ? * $week *")
+                        }
+                        else {
+                            list += CronExp(s"0 $minute $hour $day * ? *")
+                        }
                     }
                     else {
-                        list += CronExp(s"0 $minute $hour $day * ? *")
+                        throw new IllegalArgumentException("Illegal time format, must be 'HH:mm', like '09:10'. " + time)
                     }
                 }
                 list.toList
             case _ =>
+                //YEARLY或指定年
                 if (!group.head.contains(" ") || group.head.split(" ").length != 3) {
-                    throw new IllegalArgumentException("Illegal date time format, must be MONTH DAY/WEEK HH:mm, like JUN 01 09:10")
+                    throw new IllegalArgumentException("Illegal date time format, must be 'MONTH DAY/WEEK HH:mm', such as 'JUN 01 09:10'. " + group.head)
                 }
                 val list = new ListBuffer[CronExp]()
                 for (i <- group.indices) {
                     val fields = group(i).split(" ")
+
+                    val year = if (period == PeriodExp.YEARLY || period == PeriodExp.ANNUAL) "*" else period
+
                     val month = {
                         if (fields.length == 3) {
                             fields(0)
@@ -303,28 +290,20 @@ case class PeriodExp(expression: String) {
                             (list(i-1).dayOfWeek, list(i-1).dayOfMonth, fields(0))
                         }
                     }
-                    val hour = {
-                        if (time.contains(":")) {
-                            time.takeBefore(":")
-                        }
-                        else {
-                            list(i-1).hour
-                        }
-                    }
-                    val minute = {
-                        if (time.contains(":")) {
-                            time.takeAfter(":")
-                        }
-                        else {
-                            time
-                        }
-                    }
 
-                    if ("""(MON|TUE|WED|THU|FRI|SAT|SUN|E)""".r.test(day)) {
-                        list += CronExp(s"0 $minute $hour ? $month $day $period")
+                    if (time.contains(":")) {
+                        val hour = time.takeBefore(":")
+                        val minute = time.takeAfter(":")
+
+                        if ("""(MON|TUE|WED|THU|FRI|SAT|SUN)""".r.test(group(i))) {
+                            list += CronExp(s"0 $minute $hour ? $month $week $year")
+                        }
+                        else {
+                            list += CronExp(s"0 $minute $hour $day $month ? $year")
+                        }
                     }
                     else {
-                        list += CronExp(s"0 $minute $hour $day $month ? $period")
+                        throw new IllegalArgumentException("Illegal time format, must be 'HH:mm', like '09:10'. " + time)
                     }
                 }
                 list.toList

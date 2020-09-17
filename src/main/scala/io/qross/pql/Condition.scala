@@ -113,21 +113,21 @@ class Condition(val expression: String) {
                     !evalValue(PQL, group).asBoolean(false)
                 case "EXISTS" =>
                     if (field == "") {
-                        value.$trim("(", ")").$trim("[", "]").trim() != ""
+                        evalValue(PQL, group).asText.$trim("(", ")").$trim("[", "]").trim() != ""
                     }
                     else {
                         field.toUpperCase() match {
-                            case "FILE" | "DIR" => value.fileExists
+                            case "FILE" | "DIR" => evalValue(PQL, group).asText.fileExists
                             case _ => false
                         }
                     }
                 case "NOT$EXISTS" =>
                     if (field == "") {
-                        value.$trim("(", ")").$trim("[", "]").trim() == ""
+                        evalValue(PQL, group).asText.$trim("(", ")").$trim("[", "]").trim() == ""
                     }
                     else {
                         field.toUpperCase() match {
-                            case "FILE" | "DIR" => !value.fileExists
+                            case "FILE" | "DIR" => !evalValue(PQL, group).asText.fileExists
                             case _ => true
                         }
                     }

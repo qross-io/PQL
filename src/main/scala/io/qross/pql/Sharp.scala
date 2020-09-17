@@ -535,6 +535,42 @@ object Sharp {
         }
     }
 
+    def LESS$THAN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(data < arg, DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("LESS THAN", origin)
+        }
+    }
+
+    def LESS$THAN$OR$EQUALS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(data <= arg, DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("LESS THAN OR EQUALS", origin)
+        }
+    }
+
+    def GREATER$THAN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(data > arg, DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("GREATER THAN", origin)
+        }
+    }
+
+    def GREATER$THAN$OR$EQUALS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(data >= arg, DataType.BOOLEAN)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("GREATER THAN OR EQUALS", origin)
+        }
+    }
+
     // 1 to 10
     def TO(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
@@ -2455,6 +2491,7 @@ object SharpLink {
             "SUBSTR" -> Set[String]("TO"),
             "SPLIT" -> Set[String]("AND"),
             "BRACKETS$WITH" -> Set[String]("AND"),
+            "TAKE$BETWEEN" -> Set[String]("AND"),
             "BRACKET" -> Set[String]("AND"),
             "REPLACE" -> Set[String]("TO"),
             "REPLACE$FIRST" -> Set[String]("TO"),

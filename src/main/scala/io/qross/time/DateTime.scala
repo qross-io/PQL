@@ -220,7 +220,7 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
     def year: Int = this.localDateTime.getYear
     def month: Int = this.localDateTime.getMonthValue
     def weekName: String = this.getString("EEE")
-    def dayOfWeek: Int = this.localDateTime.getDayOfWeek.getValue
+    def dayOfWeek: Int = this.localDateTime.getDayOfWeek.getValue  //周一到周日分别为 1~7
     def dayOfMonth: Int = this.localDateTime.getDayOfMonth
     def hour: Int = this.localDateTime.getHour
     def minute: Int = this.localDateTime.getMinute

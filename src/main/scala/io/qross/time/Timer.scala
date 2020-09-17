@@ -41,7 +41,7 @@ object Timer {
     }
 
     def sleepToNextMinute(): Unit = {
-        val calendar = Calendar.getInstance
+        val calendar =Calendar.getInstance
         sleep(60000 - calendar.get(Calendar.SECOND) * 1000 - calendar.get(Calendar.MILLISECOND))
     }
 }
