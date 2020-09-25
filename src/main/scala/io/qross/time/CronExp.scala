@@ -244,9 +244,18 @@ case class CronExp(expression: String = "0 * * * * ? *") {
 
         result
     }
+    def matches(dateTime: String): Boolean = {
+        matches(new DateTime(dateTime))
+    }
 
     //find next tick
     def getNextTickOrNone(dateTime: DateTime): String = {
+        getNextTick(dateTime) match {
+            case Some(tick) => tick.getTickValue
+            case None => "N/A"
+        }
+    }
+    def getNextTickOrNone(dateTime: String): String = {
         getNextTick(dateTime) match {
             case Some(tick) => tick.getTickValue
             case None => "N/A"
@@ -699,6 +708,7 @@ case class CronExp(expression: String = "0 * * * * ? *") {
 
         }
     }
+
     private def resetMatchFrom(chronoName: String): Unit = {
         chronoName match  {
             case YEAR => //不可能有这种情况

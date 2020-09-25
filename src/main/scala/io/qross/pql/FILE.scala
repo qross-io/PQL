@@ -35,8 +35,9 @@ class FILE(val sentence: String) {
                     })
                     DataCell(table, DataType.TABLE)
                 case "DELETE" => DataCell(path.delete(), DataType.BOOLEAN)
-                case "MOVE" => DataCell.NULL
-                case "COPY" => DataCell.NULL
+                case "RENAME" => DataCell(path.renameTo(plan.oneArgs("TO")), DataType.BOOLEAN)
+                case "MOVE" => DataCell(path.moveTo(plan.oneArgs("TO"), plan.contains("REPLACE EXISTING")))
+                case "COPY" => DataCell(path.copyTo(plan.oneArgs("TO"), plan.contains("REPLACE EXISTING")))
                 case "MAKE" => DataCell(path.makeFile(), DataType.BOOLEAN)
                 case "LENGTH" => DataCell(path.fileLength(), DataType.INTEGER)
                 case "SIZE" => DataCell(path.fileLength().toHumanized, DataType.TEXT)
@@ -58,6 +59,7 @@ class FILE(val sentence: String) {
                     else {
                         throw new SQLParseException("Miss phrase: APPEND 'filePath'. " + sentence)
                     }
+                case "DOWNLOAD" => DataCell(path.download()) //, DataType.BOOLEAN
                 case _ => path.fileInfo.toDataCell(DataType.ROW)
             }
         })

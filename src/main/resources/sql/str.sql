@@ -5,7 +5,7 @@ DEBUG ON;
 
 DEBUG ON;
 
-OPEN CSV FILE '/data/calendar.csv' AS TABLE 'calendar' (
+OPEN CSV FILE '''@QROSS_HOME/data/calendar.csv''' AS TABLE 'calendar' (
     solar_year INT,
     solar_month INT,
     solar_day INT,
@@ -15,8 +15,8 @@ OPEN CSV FILE '/data/calendar.csv' AS TABLE 'calendar' (
     week_number INT,
     workday INT
 );
-GET # SELECT * FROM :calendar LIMIT 1, -1;
-PUT # INSERT INTO qross_calendar1 (solar_year, solar_month, solar_day, lunar_day, solar_term, festival, week_number, workday) VALUES (#solar_year, #solar_month, #solar_day, '#lunar_day', '#solar_term', '#festival', #week_number, #workday);
+GET # SELECT * FROM :calendar;
+--PUT # INSERT INTO qross_calendar1 (solar_year, solar_month, solar_day, lunar_day, solar_term, festival, week_number, workday) VALUES (#solar_year, #solar_month, #solar_day, '#lunar_day', '#solar_term', '#festival', #week_number, #workday);
 
 --GET # SELECT solar_year,solar_month,solar_day,lunar_day,solar_term,festival_name,week_number,workday FROM qross_calendar;
 --SAVE AS CSV FILE 'calendar.csv' WITHOUT HEADERS;

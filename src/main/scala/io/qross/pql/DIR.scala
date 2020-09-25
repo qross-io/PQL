@@ -27,8 +27,9 @@ class DIR(sentence: String) {
                     })
                     DataCell(table, DataType.TABLE)
                 case "DELETE" => DataCell(Directory.delete(path), DataType.BOOLEAN)
-                case "MOVE" => DataCell.NULL
-                case "COPY" => DataCell.NULL
+                case "RENAME" => DataCell(path.renameTo(plan.oneArgs("TO")), DataType.BOOLEAN)
+                case "MOVE" => DataCell(path.moveTo(plan.oneArgs("TO"), plan.contains("REPLACE EXISTING")))
+                case "COPY" => DataCell(path.copyTo(plan.oneArgs("TO"), plan.contains("REPLACE EXISTING")))
                 case "MAKE" => DataCell(Directory.create(path), DataType.BOOLEAN)
                 case "SPACE" | "LENGTH" => DataCell(Directory.spaceUsage(path), DataType.INTEGER)
                 case "SIZE" | "CAPACITY" => DataCell(Directory.spaceUsage(path).toHumanized, DataType.TEXT)

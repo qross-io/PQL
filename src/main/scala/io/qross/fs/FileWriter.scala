@@ -81,7 +81,7 @@ class FileWriter(val file: File, val format: Int, val outputType: String, delete
             if (attributes != null) {
                 val response = attributes.getResponse
                 response.setHeader("Content-type", "application/octet-stream")
-                response.setCharacterEncoding("UTF-8")
+                response.setCharacterEncoding(Global.CHARSET)
                 response.setHeader("Content-disposition", "attachment;filename=\"" + new String(file.getName.getBytes("UTF-8"), "ISO-8859-1") + "\"")
                 response.flushBuffer()
                 response.getOutputStream

@@ -95,22 +95,23 @@ object Syntax {
             
             FILE  [filePath];
             FILE  DELETE [filePath];
-            FILE  MOVE [filePath]  TO [newPath];
             FILE  RENAME [filePath]  TO [newPath];
-            FILE  COPY [filePath]  TO [newPath];
+            FILE  MOVE [filePath]  TO [newPath]  REPLACE EXISTING;
+            FILE  COPY [filePath]  TO [newPath]  REPLACE EXISTING;
             FILE  MAKE [filePath];
             FILE  LENGTH [filePath];
             FILE  SIZE [filePath];
             FILE  LIST [path];
             FILE  WRITE [filePath]  APPEND [content];
             FILE  READ [filePath];
+            FILE  DOWNLOAD [filePath];
 
             DIR  [path];
             DIR  LIST [path];
             DIR  DELETE [path];
-            DIR  MOVE [path]  TO [path];
             DIR  RENAME [filePath]  TO [newPath];
-            DIR  COPY [path]  TO [path];
+            DIR  MOVE [path]  TO [path]  REPLACE EXISTING;
+            DIR  COPY [path]  TO [path]  REPLACE EXISTING;
             DIR  MAKE [path];
             DIR  LENGTH [path];
             DIR  SPACE [path];

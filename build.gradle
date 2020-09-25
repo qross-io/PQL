@@ -69,7 +69,7 @@ publishing {
         maven(MavenPublication) {
             groupId = 'io.qross'
             artifactId = 'pql'
-            version = '0.6.4-46-SNAPSHOT'
+            version = '0.6.5-7-SNAPSHOT'
             from components.java
             artifact sourcesJar
         }

@@ -36,36 +36,49 @@ object ChronExp {
 
 case class ChronExp(expression: String) {
 
-    val classic: Boolean = !PERIOD.test(expression)
-
-    private val group: List[CronExp] = {
-        if (classic) {
+    private val exps = {
+        if (PERIOD.test(expression)) {
+            PeriodExp(expression.trim()).toCron
+        }
+        else {
             //经典cron表达式, 支持分号分开的多个
             expression.split("[;；]").map(e => CronExp(e.trim())).toList
         }
-        else {
-            PeriodExp(expression.trim()).toCron
-        }
+    }
+
+    def getNextTick(dateTime: String): Option[DateTime] = {
+        getNextTick(new DateTime(dateTime))
     }
 
     def getNextTick(dateTime: DateTime): Option[DateTime] = {
-        group
-            .map(cron => cron.getNextTick(dateTime))
-            .reduce((r1, r2) => {
-                (r1, r2) match {
-                    case (Some(t1), Some(t2)) => {
-                        if (t1.beforeOrEquals(t2)) {
-                            Some(t1)
-                        }
-                        else {
-                            Some(t2)
-                        }
+        exps.map(cron => cron.getNextTick(dateTime))
+        .reduce((r1, r2) => {
+            (r1, r2) match {
+                case (Some(t1), Some(t2)) => {
+                    if (t1.beforeOrEquals(t2)) {
+                        Some(t1)
                     }
-                    case (Some(t1), None) => Some(t1)
-                    case (None, Some(t2)) => Some(t2)
-                    case (None, None) => None
+                    else {
+                        Some(t2)
+                    }
                 }
-            }).headOption
+                case (Some(t1), None) => Some(t1)
+                case (None, Some(t2)) => Some(t2)
+                case (None, None) => None
+            }
+        })
+    }
+
+    def matches(dateTime: DateTime): Boolean = {
+        exps.exists(cron => cron.matches(dateTime))
+    }
+
+    def matches(dateTime: String): Boolean = {
+        matches(new DateTime(dateTime))
+    }
+
+    def getNextTickOrNone(dateTime: String): String = {
+        getNextTickOrNone(new DateTime(dateTime))
     }
 
     def getNextTickOrNone(dateTime: DateTime): String = {

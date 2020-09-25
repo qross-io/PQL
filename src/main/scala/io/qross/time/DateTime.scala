@@ -18,6 +18,7 @@ import scala.collection.JavaConverters._
 object DateTime {
     
     def now: DateTime = new DateTime()
+    def today: DateTime = DateTime.now.setZeroOfDay()
     def from(dateTime: DateTime): DateTime = new DateTime(dateTime.localDateTime)
     def ofTimestamp(epochSecond: Long): DateTime = new DateTime(epochSecond)
     def of(year: Int, month: Int, dayOfMonth: Int, hourOfDay: Int = 0, minute: Int = 0, second: Int = 0): DateTime = {
@@ -35,7 +36,7 @@ object DateTime {
     val TIMESTAMP = 3 //TIME STAMP
 }
 
-class  DateTime(private val dateTime: Any, private val formatStyle: String, private var mode: Int) {
+class DateTime(private val dateTime: Any, private val formatStyle: String, private var mode: Int) {
     
     //E,EE,EEE = Sun
     //EEEE = Sunday
@@ -243,18 +244,19 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
     }
     def setDayOfMonth(value: Int): DateTime = {
         new DateTime(this.localDateTime.withDayOfMonth(value))
-        /*
-        LocalDateTime	with(TemporalField field, long newValue)
-        LocalDateTime	withDayOfMonth(int dayOfMonth)
-        LocalDateTime	withDayOfYear(int dayOfYear)
-        LocalDateTime	withHour(int hour)
-        LocalDateTime	withMinute(int minute)
-        LocalDateTime	withMonth(int month)
-        LocalDateTime	withNano(int nanoOfSecond)
-        LocalDateTime	withSecond(int second)
-        LocalDateTime	withYear(int year)
-        */
     }
+
+    /*
+LocalDateTime	with(TemporalField field, long newValue)
+LocalDateTime	withDayOfMonth(int dayOfMonth)
+LocalDateTime	withDayOfYear(int dayOfYear)
+LocalDateTime	withHour(int hour)
+LocalDateTime	withMinute(int minute)
+LocalDateTime	withMonth(int month)
+LocalDateTime	withNano(int nanoOfSecond)
+LocalDateTime	withSecond(int second)
+LocalDateTime	withYear(int year)
+*/
 
     def setDayOfWeek(value: String): DateTime = {
         //MON, TUE, WED, THU, FRI, SAT, SUN
@@ -489,7 +491,7 @@ class  DateTime(private val dateTime: Any, private val formatStyle: String, priv
         dateTime
     }
     
-    def matches(cronExp: String): Boolean = CronExp(cronExp).matches(this)
+    def matches(chronExp: String): Boolean = ChronExp(chronExp).matches(this)
     
     //YEAR=1970-2099,m/n
     //MONTH=1-12,FEB-DEC,m/n

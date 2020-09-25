@@ -94,9 +94,9 @@ public class Marker {
     public Marker colorCodes(boolean lineNumbers) {
         content = content.replace("<pre><code", "<textarea coder=\"yes\" read-only=\"true\"" + (lineNumbers ? "" : " line-numbers=\"false\""))
                 .replaceAll("\\s+</code></pre>", "</textarea>")
-                .replace("class=\"language-sql\"", "mode=\"text/x-pql\"")
-                .replace("class=\"language-xml\"", "mode=\"text/xml\"")
-                .replace("class=\"language-", "mode=\"text/x-");
+//                .replace("class=\"language-sql\"", "mode=\"text/x-pql\"")
+//                .replace("class=\"language-xml\"", "mode=\"text/xml\"")
+                .replace("class=\"language-", "mode=\"");
 
         return this;
     }

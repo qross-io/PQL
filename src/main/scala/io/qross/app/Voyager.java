@@ -36,37 +36,38 @@ public class  Voyager extends AbstractTemplateView {
                 dir = url.substring(0, url.indexOf(name));
             }
 
-            String content = ResourceFile.open(url).content();
+            ResourceFile file = ResourceFile.open(url);
+            if (file.exists()) {
+                String content = file.content();
+                //替换server includes
+                Pattern p = Pattern.compile("<#\\s*include\\s+file=[\"'](.+?)[\"']\\s*/>", Pattern.CASE_INSENSITIVE);
+                Matcher m;
+                //include file - can nest
+                while ((m = p.matcher(content)).find()) {
+                    String path = dir + m.group(1);
+                    path = path.replace("//", "/");
+                    if (path.endsWith(".sql")) {
+                        content = content.replace(m.group(0), "<%" + ResourceFile.open(path).content() + "%>");
+                    } else {
+                        content = content.replace(m.group(0), ResourceFile.open(path).content());
+                    }
+                }
 
-            //替换server includes
-            Pattern p = Pattern.compile("<#\\s*include\\s+file=[\"'](.+?)[\"']\\s*/>", Pattern.CASE_INSENSITIVE);
-            Matcher m;
-            //include file - can nest
-            while ((m = p.matcher(content)).find()) {
-                String path = dir + m.group(1);
-                path = path.replace("//", "/");
-                if (path.endsWith(".sql")) {
-                    content = content.replace(m.group(0), "<%" + ResourceFile.open(path).content() + "%>");
-                }
-                else {
-                    content = content.replace(m.group(0), ResourceFile.open(path).content());
-                }
+                //Map<String, Object> attributes = getAttributesMap();
+                response.setCharacterEncoding(Setting.VoyagerCharset);
+
+                HttpRequest http = new HttpRequest(request);
+
+                Object result =
+                        new PQL("EMBEDDED:" + content, new DataHub(Properties.contains(Setting.VoyagerConnection) ? Setting.VoyagerConnection : ""))
+                                .place(http.getParameters())
+                                .set("request", http.getRequestInfo())
+                                .set(model)
+                                .run();
+                response
+                        .getWriter()
+                        .write(result == null ? "" : result.toString());
             }
-
-            //Map<String, Object> attributes = getAttributesMap();
-            response.setCharacterEncoding(Setting.VoyagerCharset);
-
-            HttpRequest http = new HttpRequest(request);
-
-            Object result =
-                    new PQL("EMBEDDED:" + content, new DataHub(Properties.contains(Setting.VoyagerConnection) ? Setting.VoyagerConnection : ""))
-                        .place(http.getParameters())
-                        .set("request", http.getRequestInfo())
-                        .set(model)
-                        .run();
-            response
-                    .getWriter()
-                    .write(result == null ? "" : result.toString());
         }
     }
 }

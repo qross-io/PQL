@@ -46,24 +46,3 @@ object WorkCalendar {
         }
     }
 }
-
-//val lunarMonth: String, val lunarDay: String, val solarTerm: String, val festival: String,
-//class CalendarCell(val week: Int, val workday: Int) {
-//    def isWorkday: Boolean = {
-//        if (workday == -1) {
-//            week < 6
-//        }
-//        else {
-//            workday == 1
-//        }
-//    }
-//
-//    def isHoliday: Boolean = {
-//        if (workday == -1) {
-//            week < 6
-//        }
-//        else {
-//            workday == 1
-//        }
-//    }
-//}
