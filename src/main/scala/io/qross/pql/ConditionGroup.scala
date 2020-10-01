@@ -52,7 +52,7 @@ class ConditionGroup(expression: String) {
         val result = conditions.last.eval(PQL, this)
 
         if (PQL.dh.debugging) {
-            Output.writeLine(s"Condition expression { $expression } is $result")
+            Output.writeLine(s"Condition expression < ${expression.$restore(PQL)} > is $result")
         }
 
         conditions.clear()

@@ -498,10 +498,25 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     def place(queryString: String): PQL = {
         if (queryString != "") {
             val map = queryString.$split()
-            this.SQL = this.SQL.replaceArguments(map)
 
+            this.SQL = this.SQL.replaceArguments(map)
             map.foreach(pair => {
                 root.setVariable(pair._1, pair._2)
+            })
+        }
+        this
+    }
+
+    //设置默认值, 变量没有时才赋值
+    def placeDefault(queryString: String): PQL = {
+        if (queryString != "") {
+            val map = queryString.$split()
+
+            this.SQL = this.SQL.replaceArguments(map)
+            map.foreach(pair => {
+                if (!root.containsVariable(pair._1)) {
+                    root.setVariable(pair._1, pair._2)
+                }
             })
         }
         this
@@ -710,10 +725,9 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         this.$return
     }
 
-    def output: ArrayBuffer[Any] = {
-        this.$run()
-        this.dh.close()
-        this.RESULT
+    //运行并输出，不关闭DataHub
+    def output: Any = {
+        this.$run().$return
     }
 
     def close(): Unit = {

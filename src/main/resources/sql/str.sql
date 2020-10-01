@@ -5,17 +5,24 @@ DEBUG ON;
 
 DEBUG ON;
 
-OPEN CSV FILE '''@QROSS_HOME/data/calendar.csv''' AS TABLE 'calendar' (
-    solar_year INT,
-    solar_month INT,
-    solar_day INT,
-    lunar_day TEXT,
-    solar_term TEXT,
-    festival TEXT,
-    week_number INT,
-    workday INT
-);
-GET # SELECT * FROM :calendar;
+OPEN JSON FILE '3358_204014.log' AS TABLE 'logs';
+
+OUTPUT {
+     "logs": ${{ SELECT * FROM :logs LIMIT 0,10 }},
+     "cursor": @POINTER
+};
+
+--OPEN CSV FILE '''@QROSS_HOME/data/calendar.csv''' AS TABLE 'calendar' (
+--    solar_year INT,
+--    solar_month INT,
+--    solar_day INT,
+--    lunar_day TEXT,
+--    solar_term TEXT,
+--    festival TEXT,
+--    week_number INT,
+--    workday INT
+--);
+--GET # SELECT * FROM :calendar;
 --PUT # INSERT INTO qross_calendar1 (solar_year, solar_month, solar_day, lunar_day, solar_term, festival, week_number, workday) VALUES (#solar_year, #solar_month, #solar_day, '#lunar_day', '#solar_term', '#festival', #week_number, #workday);
 
 --GET # SELECT solar_year,solar_month,solar_day,lunar_day,solar_term,festival_name,week_number,workday FROM qross_calendar;

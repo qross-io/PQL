@@ -5,6 +5,7 @@ import java.net.InetAddress
 
 import com.sun.management.OperatingSystemMXBean
 import io.qross.time.Timer
+import io.qross.ext.TypeExt._
 
 object Environment {
 
@@ -57,4 +58,20 @@ object Environment {
     }
 
     def localHostAddress: String = InetAddress.getLocalHost.getHostAddress
+
+    def runningDirectory: String = {
+        val sameDir = BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath
+        //spring boot - Master
+        if (sameDir.contains(".jar!")) {
+            sameDir.takeAfter("file:").takeBefore(".jar!").takeBeforeLast("/") + "/"
+        }
+        //一般jar包 - Keeper
+        else if (sameDir.endsWith(".jar")) {
+            sameDir.takeBeforeLast("/") + "/"
+        }
+        else {
+            sameDir.takeBefore("/classes") + "/"
+            //new File(sameDir).getParentFile.getAbsolutePath.replace("\\", "/") + "/" + fileName
+        }
+    }
 }

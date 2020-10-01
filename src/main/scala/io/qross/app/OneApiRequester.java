@@ -150,8 +150,8 @@ public class OneApiRequester {
                     return  new PQL(api.sentences, dh)
                                 .signIn(userId, username, role, info)
                                 .place(http.getParameters())
-                                .place(api.defaultValue)
-                                .set(" request", http.getRequestInfo())
+                                .placeDefault(api.defaultValue)
+                                .set("request", http.getRequestInfo())
                                 .run();
                 }
                 else {

@@ -21,18 +21,20 @@ object BaseClass {
                     className = stack.getClassName
                     if (!stack.getClassName.$startsWith(
                         "io.qross.app",
-                                 "io.qross.setting",
-                                 "io.qross.fs",
-                                 "io.qross.jdbc",
-                                 "io.qross.core",
-                                 "io.qross.ext",
-                                 "io.qross.net",
-                                 "io.qross.pql",
-                                 "io.qross.security",
-                                 "io.qross.time",
-                                 "io.qross.thread",
-                                 "io.qross.test",
-                                 "io.qross.fql")) {
+                                "io.qross.core",
+                                "io.qross.ext",
+                                "io.qross.fql",
+                                "io.qross.fs",
+                                "io.qross.jdbc",
+                                "io.qross.net",
+                                "io.qross.pql",
+                                "io.qross.script",
+                                "io.qross.security",
+                                "io.qross.setting",
+                                "io.qross.test",
+                                "io.qross.thread",
+                                "io.qross.time"
+                             )) {
                         break
                     }
                 }
