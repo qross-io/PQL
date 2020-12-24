@@ -113,27 +113,28 @@ public class OneApi {
             if (JDBC.hasQrossSystem()) {
                 DataAccess ds = new DataAccess(JDBC.QROSS());
                 int serviceId = 0;
-                String security = "token";
 
                 if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_services'")) {
-                    DataRow service = ds.executeDataRow("SELECT id, security_control FROM qross_services WHERE service_name=?", Setting.OneApiServiceName);
+                    DataRow service = ds.executeDataRow("SELECT id, security_control FROM qross_api_services WHERE service_name=?", Setting.OneApiServiceName);
                     serviceId = service.getInt("id");
-                    security = service.getString("security_control");
+                    Setting.OneApiSecurityMode = service.getString("security_control");
                 }
 
-                if (security.equals("none")) {
+                if (Setting.OneApiSecurityMode.equals("none")) {
                     OPEN.add("*");
                     PERMIT.put("*", new HashSet<String>() {{ add("*"); }});
                 }
 
-                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_requsters'")) {
-                    DataTable tokens = ds.executeDataTable("SELECT name, token FROM qross_api_requsters");
+                //load requester and token
+                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_requesters'")) {
+                    DataTable tokens = ds.executeDataTable("SELECT name, token FROM qross_api_requesters");
                     for (DataRow token : tokens.getRowList()) {
                         TOKENS.put(token.getString("token"), token.getString("name"));
                     }
                     tokens.clear();
                 }
 
+                //load permit and api
                 if (serviceId > 0) {
                     if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_in_one'")) {
                         DataTable controls = ds.executeDataTable("SELECT A.control, A.requester_id, B.name FROM qross_api_requesters_allows A INNER JOIN qross_api_requesters B ON (A.service_id=?) AND A.requester_id=B.id", serviceId);

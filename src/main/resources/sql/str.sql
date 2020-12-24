@@ -5,12 +5,8 @@ DEBUG ON;
 
 DEBUG ON;
 
-OPEN JSON FILE '3358_204014.log' AS TABLE 'logs';
 
-OUTPUT {
-     "logs": ${{ SELECT * FROM :logs LIMIT 0,10 }},
-     "cursor": @POINTER
-};
+PRINT @T;
 
 --OPEN CSV FILE '''@QROSS_HOME/data/calendar.csv''' AS TABLE 'calendar' (
 --    solar_year INT,

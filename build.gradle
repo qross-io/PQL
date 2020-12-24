@@ -69,15 +69,15 @@ publishing {
         maven(MavenPublication) {
             groupId = 'io.qross'
             artifactId = 'pql'
-            version = '0.6.5-10-SNAPSHOT'
+            version = '0.6.5-RELEASE'
             from components.java
             artifact sourcesJar
         }
     }
 
     repositories {
-            //maven { url "https://packages.aliyun.com/maven/repository/2011186-release-Aa5YmC/"
-            maven { url "https://packages.aliyun.com/maven/repository/2011186-snapshot-FSoDsK/"
+            maven { url "https://packages.aliyun.com/maven/repository/2011186-release-Aa5YmC/"
+            //maven { url "https://packages.aliyun.com/maven/repository/2011186-snapshot-FSoDsK/"
             credentials {
                 username 'PtbpNI'
                 password 'kwCz3C0wHx'

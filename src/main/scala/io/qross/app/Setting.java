@@ -35,11 +35,6 @@ public class Setting {
                         OneApiServiceName = args[i+1];
                     }
                     break;
-                case "--oneapi.security.mode":
-                    if (i + 1 < args.length) {
-                        OneApiSecurityMode = args[i+1];
-                    }
-                    break;
                 case "--oneapi.resources.dirs":
                     if (i + 1 < args.length) {
                         OneApiResourceDirs = args[i=1];

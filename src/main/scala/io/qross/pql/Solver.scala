@@ -615,7 +615,9 @@ object Solver {
                                 Output.writeWarning(s"The variable $$$name has not been assigned.")
                             }
                             //变量未定义
-                            sentence = sentence.replaceFirstOne(whole, "UNDEFINED")
+                            if (!PQL.intact) {
+                                sentence = sentence.replaceFirstOne(whole, "UNDEFINED")
+                            }
                         })
                 })
 

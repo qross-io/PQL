@@ -208,6 +208,9 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private[pql] val credential = new DataRow("userid" -> 0, "username" -> "anonymous", "role" -> "worker")
 
+    //当变量未赋值时是替换成UNDEFINED还是保持原样
+    private[pql] var intact = false
+
     //开始解析
     private def parseAll(): Unit = {
 
@@ -415,6 +418,12 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                     }
                 }
             }
+
+            if (!found) {
+                if (root.containsVariable(name)) {
+                    cell = root.getVariable(name)
+                }
+            }
         }
         else if (symbol == "@") {
             cell = GlobalVariable.get(name, this)
@@ -569,6 +578,11 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 root.setVariable(key, model.get(key))
             }
         })
+        this
+    }
+
+    def keepIntact(): PQL = {
+        intact = true
         this
     }
 

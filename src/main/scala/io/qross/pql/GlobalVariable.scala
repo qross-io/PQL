@@ -77,7 +77,7 @@ object GlobalVariable {
         else if (Configurations.contains(name)) {
             Configurations.set(name, value)
         }
-        else if (SYSTEM.contains(name)) {
+        else if (SYSTEM.contains(name) || userid == 0) {
             SYSTEM.set(name, value)
             if (JDBC.hasQrossSystem) {
                 DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_user, var_name, var_value) VALUES ('SYSTEM', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""",
