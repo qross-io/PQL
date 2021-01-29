@@ -21,6 +21,7 @@ object Syntax {
             OPEN  [JDBC-DataSource]  AS [alias]  USE [database];
             OPEN  QROSS  USE [database];
             OPEN  DEFAULT  AS [alias]  USE [database];
+            OPEN  DATABASE [connectionString]  USERNAME [username]  PASSWORD [password]  DRIVER [driver]  AS [connectionName]  USE [database];
             OPEN  CACHE;
             OPEN  TEMP;
             OPEN  REDIS [host]  SELECT [database];
@@ -33,6 +34,7 @@ object Syntax {
             SAVE AS  [JDBC-DataSource]  AS [alias]  USE [databaseName];
             SAVE AS  DEFAULT  AS [alias];
             SAVE AS  QROSS  AS [alias];
+            SAVE AS  DATABASE [connectionString]  USERNAME [username]  PASSWORD [password]  DRIVER [driver]  AS [connectionName]  USE [database];
             SAVE AS  CACHE  AS [alias];
             SAVE AS  CACHE TABLE [tableName]  PRIMARY KEY [columnName];
             SAVE AS  TEMP  AS [alias];
@@ -50,6 +52,7 @@ object Syntax {
             SAVE TO  [JDBC-DataSource]  AS [alias]  USE [databaseName];
             SAVE TO  DEFAULT  AS [alias];
             SAVE TO  QROSS  AS [alias];
+            SAVE TO  DATABASE [connectionString]  USERNAME [username]  PASSWORD [password]  DRIVER [driver]  AS [connectionName]  USE [database];
             SAVE TO  CACHE  AS [alias];
             SAVE TO  TEMP  AS [alias];
             SAVE TO  REDIS [host]  SELECT [database];
@@ -92,6 +95,19 @@ object Syntax {
 
             INSERT  INTO [sheetName]  ROW [startRow]  (A, B, C, ...)  VALUES (value1, value2, ...), (value1, value2, ...);
             DROP  SHEET [sheetName];
+
+            LOAD  PROPERTIES [/conf.properties];
+            LOAD  YAML [/conf.yml];
+            LOAD  YML [/conf.yml];
+            LOAD  JSON CONFIG [/conf.json];
+            LOAD  PROPERTIES FROM NACOS [host:port:group:data-id];
+            LOAD  YAML FROM NACOS [host:port:group:data-id];
+            LOAD  YML FROM NACOS [host:port:group:data-id];
+            LOAD  JSON CONFIG FROM NACOS [host:port:group:data-id];
+            LOAD  PROPERTIES FROM URL [url];
+            LOAD  YAML FROM URL [url];
+            LOAD  YML FROM URL [url];
+            LOAD  JSON CONFIG FROM URL [url];
             
             FILE  [filePath];
             FILE  DELETE [filePath];

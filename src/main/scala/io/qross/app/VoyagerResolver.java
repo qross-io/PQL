@@ -13,7 +13,7 @@ public class VoyagerResolver extends AbstractTemplateViewResolver {
         setViewClass(requiredViewClass());
 
         setPrefix(Setting.VoyagerDirectory);
-        setSuffix("." + Setting.VoyagerExtension);
+        setSuffix(".html");
 
 //        Map<String, Object> attributes = new HashMap<>();
 //        attributes.put("connection", Setting.VoyagerConnection);

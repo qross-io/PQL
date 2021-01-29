@@ -17,7 +17,7 @@ import io.qross.ext.Output.writeLineWithSeal
 import io.qross.pql._
 import io.qross.fs._
 import io.qross.jdbc.DataSource
-import io.qross.net.{Email, Json, Redis, Session}
+import io.qross.net.{Email, Http, Json, Redis, Session}
 import io.qross.ext.TypeExt._
 import io.qross.fs.Path._
 import io.qross.pql.Solver._
@@ -129,7 +129,12 @@ object Main {
 
         //PQL.openEmbeddedFile("/sql/manual.html").place("jobId=595").set("jobId=595").run().print
         //PQL.openFile("/sql/str.sql").place("id=4&applies=ready,failed").run().print
-        PQL.openFile("/sql/str.sql").place(("jobId=4&taskId=2869&recordTime=2020-07-09 22:25:07&position=0&action=0&mode=all")).set("jobId=4&taskId=2869&recordTime=2020-07-09 22:25:07&position=0&action=0&mode=all").run().print
+
+        //Http.GET("http://127.0.0.1:8848/nacos/v1/cs/configs?dataId=io.qross.config&group=connections").request().print
+        //PQL.run("LOAD JSON CONFIG FROM URL 'http://localhost:8848/nacos/v1/cs/configs?dataId=json&group=io.qross.config'")
+        //http://localhost:8848/nacos/v1/cs/configs?dataId=test&group=io.qross.config
+        //localhost:8848:io.qross.config:test
+        PQL.openFile("/sql/test.sql").place(("jobId=4&taskId=2869&recordTime=2020-07-09 22:25:07&position=0&action=0&mode=all")).set("jobId=4&taskId=2869&recordTime=2020-07-09 22:25:07&position=0&action=0&mode=all").run().print
 
 
         //PQL.openFile("""C:\io.Qross\Keeper\src\main\resources\pql/keeper_clean.sql""").place("date=2020-06-23&hour=15").run()

@@ -5,7 +5,7 @@ import io.qross.ext.TypeExt._
 import io.qross.setting.Properties
 
 import scala.collection.{immutable, mutable}
-import scala.util.control.Breaks.breakable
+import scala.util.control.Breaks._
 
 object DBType {
     val MySQL = "mysql"
@@ -31,6 +31,7 @@ object JDBC {
 
     private val drivers: immutable.HashMap[String, String] = immutable.HashMap[String, String](
                 DBType.MySQL -> "com.mysql.cj.jdbc.Driver,com.mysql.jdbc.Driver", //com.mysql.cj.jdbc.Driver,com.mysql.jdbc.Driver",
+                DBType.PostgreSQL -> "org.postgresql.Driver",
                 DBType.SQLite -> "org.sqlite.JDBC",
                 DBType.Presto -> "com.facebook.presto.jdbc.PrestoDriver",
                 DBType.Hive -> "org.apache.hive.jdbc.HiveDriver",
@@ -38,7 +39,7 @@ object JDBC {
                 DBType.Impala -> "org.apache.hive.jdbc.HiveDriver,com.cloudera.impala.jdbc4.Driver",
                 DBType.SQLServer -> "com.microsoft.sqlserver.jdbc.SQLServerDriver",
                 DBType.Memory -> "org.sqlite.JDBC")
-                DBType.AnalyticDB -> ""
+                DBType.AnalyticDB -> "com.mysql.cj.jdbc.Driver,com.mysql.jdbc.Driver"
 
     //已保存的数据库连接信息
     val connections = new mutable.HashMap[String, JDBC]()
@@ -105,8 +106,9 @@ object JDBC {
         if (dbType == "") {
             breakable {
                 for (name <- JDBC.drivers.keySet) {
-                    if (connectionName.contains(name) || connectionString.contains(name)) {
+                    if (connectionName.contains(name) || connectionString.contains(name) || driver.contains(name)) {
                         dbType = name
+                        break
                     }
                 }
             }
@@ -122,6 +124,7 @@ object JDBC {
                     for (name <- JDBC.drivers.keySet) {
                         if (connectionName.contains(name) || connectionString.contains(name)) {
                             driver = JDBC.drivers(name)
+                            break
                         }
                     }
                 }
@@ -151,6 +154,39 @@ object JDBC {
         new JDBC(dbType, connectionString, driver, username, password, overtime, retry)
     }
 
+    def add(connectionName: String, connectionString: String): Unit = {
+        add(connectionName, "", connectionString, "", "")
+    }
+
+    def add(connectionName: String, driver: String, connectionString: String): Unit = {
+        add(connectionName, connectionString, driver, "", "")
+    }
+
+    def add(connectionName: String, driver: String, connectionString: String, username: String, password: String): Unit = {
+        var dbType = ""
+        var alterDriver = driver
+
+        breakable {
+            for (name <- JDBC.drivers.keySet) {
+                if (connectionName.contains(name) || connectionString.contains(name) || driver.contains(name)) {
+                    dbType = name
+                }
+            }
+        }
+
+        if (alterDriver == "") {
+            breakable {
+                for (name <- JDBC.drivers.keySet) {
+                    if (connectionName.contains(name) || connectionString.contains(name)) {
+                        alterDriver = JDBC.drivers(name)
+                        break
+                    }
+                }
+            }
+        }
+
+        connections += connectionName -> new JDBC(dbType, connectionString, alterDriver, username, password, 0, 3)
+    }
 
     def get(connectionName: String): JDBC = {
         if (!connections.contains(connectionName)) {
@@ -180,9 +216,29 @@ object JDBC {
         connections.remove(connectionName)
     }
 
-    //加载保存在数据库中的连接
-    def loadConnections(): Unit = {
+    //加载保存在数据库中的连接 - 已整合进 properties
+    def loadSystemPropertiesAndConnections(): Unit = {
         val ds = DataSource.QROSS
+
+        ds.executeDataTable("select * FROM qross_properties WHERE enabled='yes'")
+            .foreach(row => {
+                val path = row.getString("property_path")
+                val format = {
+                    row.getString("property_format") match {
+                        case "properties" => 0
+                        case "yaml" | "yml" => 1
+                        case "json" => 2
+                        case _ => 0
+                    }
+                }
+                row.getString("property_source") match {
+                    case "local" => Properties.loadLocalFile(path)
+                    case "resource" => Properties.loadResourcesFile(path)
+                    case "nacos" => Properties.loadNacosConfig(path, format)
+                    case "url" => Properties.loadUrlConfig(path, format)
+                }
+            }).clear()
+
         ds.executeDataTable("SELECT * FROM qross_connections WHERE db_class='system' AND enabled='yes'")
             .foreach(row => {
                 //从数据行新建
@@ -201,40 +257,55 @@ object JDBC {
     }
 }
 
-class JDBC(var dbType: String,
-           var connectionString: String = "",
-           var driver: String = "",
-           var username: String = "",
-           var password: String = "",
-           var overtime: Int = 0, //超时时间, 0 不限制
-           var retryLimit: Int = 0 //重试次数, 0 不重试
+class JDBC(val dbType: String,
+           $connectionString: String = "",
+           $driver: String = "",
+           val username: String = "",
+           val password: String = "",
+           $overtime: Int = 0, //超时时间, 0 不限制
+           $retryLimit: Int = 0 //重试次数, 0 不重试
           ) {
 
-    var alternativeDriver: String = ""
-
-    if (driver.contains(",")) {
-        alternativeDriver = driver.takeAfter(",")
-        driver = driver.takeBefore(",")
-    }
-
-    if (dbType == DBType.SQLite && !connectionString.startsWith("jdbc:sqlite:")) {
-        connectionString = "jdbc:sqlite:" + connectionString
-    }
-
-    if (overtime == 0) {
-        dbType match {
-            case DBType.MySQL | DBType.SQLServer | DBType.PostgreSQL | DBType.Oracle =>
-                overtime = 10000
-            case _ =>
+    val (driver: String, alternativeDriver: String) = {
+        if ($driver.contains(",")) {
+            ($driver.takeBefore(","), $driver.takeAfter(","))
+        }
+        else {
+            ($driver, "")
         }
     }
-    if (retryLimit == 0) {
-        dbType match {
-            case DBType.MySQL | DBType.SQLServer | DBType.PostgreSQL | DBType.Oracle =>
-                retryLimit = 100
-            case DBType.Hive | DBType.Spark | DBType.Impala | DBType.Presto =>
-                retryLimit = 3
-            case _ =>
+
+    val connectionString: String = {
+        if (dbType == DBType.SQLite && !$connectionString.startsWith("jdbc:sqlite:")) {
+            "jdbc:sqlite:" + $connectionString
+        }
+        else {
+            $connectionString
+        }
+    }
+
+    val overtime: Int = {
+        if ($overtime == 0) {
+            dbType match {
+                case DBType.MySQL | DBType.SQLServer | DBType.PostgreSQL | DBType.Oracle => 10000
+                case _ => 0
+            }
+        }
+        else {
+            $overtime
+        }
+    }
+
+    val retryLimit: Int = {
+        if ($retryLimit == 0) {
+            dbType match {
+                case DBType.MySQL | DBType.SQLServer | DBType.PostgreSQL | DBType.Oracle => 100
+                case DBType.Hive | DBType.Spark | DBType.Impala | DBType.Presto => 3
+                case _ => 0
+            }
+        }
+        else {
+            $retryLimit
         }
     }
 }

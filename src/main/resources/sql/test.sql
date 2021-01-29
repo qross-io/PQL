@@ -6,15 +6,20 @@
 
 DEBUG ON;
 
+--OPEN DATABASE 'jdbc:postgresql://47.92.224.122:30432/postgres' USERNAME 'postgres' PASSWORD 'pgsql@123' AS 'pg.temp';
+--OPEN DATABASE 'jdbc:oracle:thin:@47.92.224.122:31521/EE.oracle.docker' DRIVER 'oracle.jdbc.driver.OracleDriver' USERNAME 'system' PASSWORD 'oracle' AS 'oracle.test';
 
+PRINT ${ @RIGHT("ehllo world", 3) };
+
+EXIT CODE 1;
 
 FUNCTION $func_name ($a DEFAULT 0, $b DEFAULT 'hello')
     BEGIN
         VAR $row := SELECT id, status, info FROM tc WHERE id>$a LIMIT $c -> FIRST ROW;
         PRINT 'hello' + $b;
-        PRINT $row % id;
-        PRINT $row % status;
-        PRINT $row % info;
+        PRINT $row.id;
+        PRINT $row.status;
+        PRINT $row.info;
         RETURN $a;
     END;
 

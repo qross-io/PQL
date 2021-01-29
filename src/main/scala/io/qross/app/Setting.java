@@ -2,7 +2,6 @@ package io.qross.app;
 
 import io.qross.setting.Global;
 import io.qross.setting.Properties;
-import scala.sys.Prop;
 
 public class Setting {
 
@@ -17,10 +16,11 @@ public class Setting {
     public static String OneApiAccessPermit = Properties.get("oneapi.access.permit", "");
 
     public static String VoyagerDirectory = Properties.get("voyager.directory", "/templates/");
-    public static String VoyagerExtension = Properties.get("voyager.extension", "html");
     public static String VoyagerConnection = Properties.get("voyager.connection", "jdbc.default");
     public static String VoyagerCharset = Properties.get("voyager.charset", Global.CHARSET());
     public static String VoyagerLanguage = Properties.get("voyager.language", Global.VOYAGER_LANGUAGE());
+    public static String VoyagerStaticSite = Properties.get("voyager.static.site", "");
+    public static String VoyagerGallerySite = Properties.get("voyager.gallery.site", "");
 
     public static void handleArguments(String[] args) {
         for (int i = 0; i < args.length; i++) {
@@ -43,11 +43,6 @@ public class Setting {
                 case "--voyager.directory":
                     if (i + 1 < args.length) {
                         VoyagerDirectory = args[i+1];
-                    }
-                    break;
-                case "--voyager.extension":
-                    if (i + 1 < args.length) {
-                        VoyagerExtension = args[i+1];
                     }
                     break;
                 case "--voyager.connection":

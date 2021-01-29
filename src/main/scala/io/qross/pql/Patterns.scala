@@ -11,7 +11,7 @@ import scala.collection.mutable
 
 object Patterns {
 
-    val $USER$FUNCTION: Regex = """^FUNCTION\s+\$([a-z0-9_]+)\s*\(([^\)]*)\)\s*BEGIN\s""".r
+    val $USER$FUNCTION: Regex = """(?i)^FUNCTION\s+\$([a-z0-9_]+)\s*\(([^\)]*)\)\s*BEGIN\b""".r
     val $FUNCTION$ARGUMENT: Regex = """(?i)^\$[a-z0-9]+(\s+[a-z]+)?(\s+DEFAULT\s+.+)?$""".r
 
     val $IF: Regex = """(?i)^IF\s+([\s\S]+?)\s+THEN\b""".r
@@ -78,11 +78,12 @@ object Patterns {
     val $PRINT: Regex = """(?i)^PRINT\s""".r
     val $PRINT$SEAL: Regex = """(?i)^[a-z]+\s""".r
     val $SHOW: Regex = """(?i)^SHOW\s""".r
-    val $RUN: Regex = """(?i)^RUN\s+(COMMAND|SHELL)\s+""".r
+    val $RUN: Regex = """(?i)^RUN\s+(COMMAND|SHELL|PQL)\s+""".r
     val $REQUEST: Regex = """(?i)^REQUEST\s+""".r
     val $SEND: Regex = """(?i)^SEND\s+""".r
     val $PARSE: Regex = """(?i)^PARSE\s""".r
     val $INVOKE: Regex = """(?i)^INVOKE\s""".r
+    val $PAR: Regex = """(?i)^PAR\s*#""".r
     
     val $LINK: Regex = """(?i)\s[A-Z][A-Z]+((\s+|\$)[A-Z][A-Z\d]+)*(?=\s|$|\()""".r
     val $ARGS: Regex = """\s+[,=]\s+|\s+[,=\)]|[,=\(]\s+""".r

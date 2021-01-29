@@ -6,7 +6,7 @@ import scala.collection.mutable.ArrayBuffer
 
 class ForVariables {
     //循环列表项及值
-    private val variables = new ArrayBuffer[DataRow]
+    private[pql] val variables = new ArrayBuffer[DataRow]
     private var cursor = -1
 
     def addRow(row: DataRow): Unit = {

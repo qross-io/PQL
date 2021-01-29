@@ -1,6 +1,6 @@
 package io.qross.test
 
-import io.qross.app.Marker
+import io.qross.app.{Cogo, Marker}
 import io.qross.core.DataHub
 import io.qross.fql.SELECT
 import io.qross.script.Shell._
@@ -12,6 +12,7 @@ import io.qross.pql.Solver.USER_VARIABLE
 import io.qross.setting.{Environment, Global}
 import io.qross.time.{ChronExp, CronExp, DateTime}
 import io.qross.fs.Path._
+import io.qross.fs.ResourceFile
 import io.qross.net.Json
 
 import scala.sys.process._
@@ -19,6 +20,8 @@ import scala.util.matching.Regex
 
 object FQL {
     def main(args: Array[String]): Unit = {
+
+
         //new SELECT("select * from :hello where name='Tom' and age>18 order by age desc limit 10")
 
 //        Marker.openFile("c:/io.Qross/Folder/pql/overview.md")
@@ -30,7 +33,8 @@ object FQL {
 //            .getContent
 //            .print
 
-        DateTime.now.getTickValue.print
+        new Marker(ResourceFile.open("/templates/markdown.md").content).transform().getContent.print
+
 
         System.exit(0)
 

@@ -21,7 +21,7 @@ object Solver {
     //val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
     val USER_VARIABLE: List[Regex] = List[Regex](
         """\$\(([a-zA-Z0-9_]+)\)""".r,  //防冲突增加小括号时不考虑函数，因为函数没有防冲突的必要，全局变量同理。属性和索引规则符号前面也没有防冲突的必要
-        """\$([a-zA-Z0-9_]+)\b(?![(.\[])""".r
+        """\$([a-zA-Z0-9_]+)\b(?![(.\[:=])""".r // := 前的变量忽略，函数名忽略
     )
     val GLOBAL_VARIABLE: List[Regex] = List[Regex](
         """@\(([a-zA-Z0-9_]+)\)""".r,
@@ -600,6 +600,7 @@ object Solver {
 
         //解析表达式中的变量
         def replaceVariables(PQL: PQL): String = {
+
             USER_VARIABLE
                 .map(r => r.findAllMatchIn(sentence))
                 .flatMap(s => s.toList.sortBy(m => m.group(0)).reverse)  //反转很重要, $user  $username 必须先替换长的
@@ -615,9 +616,7 @@ object Solver {
                                 Output.writeWarning(s"The variable $$$name has not been assigned.")
                             }
                             //变量未定义
-                            if (!PQL.intact) {
-                                sentence = sentence.replaceFirstOne(whole, "UNDEFINED")
-                            }
+                            //sentence = sentence.replaceFirstOne(whole, "UNDEFINED")
                         })
                 })
 
@@ -785,28 +784,6 @@ object Solver {
                         case None => break
                     }
                 }
-            }
-
-
-            //函数review时需要修改循环嵌套的逻辑，改成 while(true)
-            while (GLOBAL_FUNCTION.test(sentence)) { //循环防止嵌套
-                GLOBAL_FUNCTION
-                    .findAllMatchIn(sentence)
-                    .foreach(m => {
-                        val funName = m.group(1).trim().toUpperCase()
-                        val funArgs = m.group(2).trim().toArgs(PQL)
-
-                        if (FUNCTION_NAMES.contains(funName)) {
-                            new GlobalFunction(funName).call(funArgs).ifValid(data => {
-                                sentence = sentence.replace(m.group(0), PQL.$stash(data))
-                            }).ifInvalid(() => {
-                                sentence = sentence.replace(m.group(0), "NULL")
-                            })
-                        }
-                        else {
-                            throw new SQLExecuteException(s"Wrong function name $funName")
-                        }
-                    })
             }
 
             sentence
@@ -1016,30 +993,6 @@ object Solver {
                     }
                 }).execute(PQL)
             }
-//            caption match {
-//                case "SELECT" | "SHOW" => new SELECT(sentence).evaluate(PQL, express)
-//                case "PARSE" => new PARSE(sentence).evaluate(PQL, express)
-//                case "REDIS" => new REDIS(sentence).evaluate(PQL, express)
-//                case "FILE" => new FILE(sentence).evaluate(PQL, express)
-//                case "DIR" => new DIR(sentence).evaluate(PQL, express)
-//                case "IF" => new IF(sentence).evaluate(PQL, express)
-//                case "CASE" => new CASE(sentence).evaluate(PQL, express)
-//                case o =>
-//                    if (NON_QUERY_CAPTIONS.contains(o)) {
-//                        new NON$QUERY(sentence).evaluate(PQL, express)
-//                    }
-//                    else {
-//                        //在SHARP表达式内部再恢复字符串和中间值
-//                        new Sharp({
-//                            express match {
-//                                case 0 => sentence.$clean(PQL)
-//                                case 1 => sentence.$express(PQL)
-//                                case 2 => sentence
-//                                case _ => sentence.$clean(PQL)
-//                            }
-//                        }).execute(PQL)
-//                    }
-//            }
         }
     }
 }

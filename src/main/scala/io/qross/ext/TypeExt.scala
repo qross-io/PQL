@@ -627,7 +627,7 @@ object TypeExt {
         def toInteger: Long = {
             any match {
                 case str: String =>
-                    Try(str.toLong) match {
+                    Try(str.trim().toLong) match {
                         case Success(l) => l
                         case Failure(_) => throw new ConvertFailureException("Can't recognize as or convert to Integer: " + any)
                     }
@@ -654,8 +654,7 @@ object TypeExt {
         def toDecimal: Double = {
             any match {
                 case str: String =>
-
-                    Try(str.toDouble) match {
+                    Try(str.trim().toDouble) match {
                         case Success(d) => d
                         case Failure(_) => throw new ConvertFailureException("Can't recognize as or convert to Decimal: " + any)
                     }

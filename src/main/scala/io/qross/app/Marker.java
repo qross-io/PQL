@@ -7,7 +7,11 @@ import com.vladsch.flexmark.parser.ParserEmulationProfile;
 import com.vladsch.flexmark.util.ast.Node;
 import com.vladsch.flexmark.util.data.MutableDataSet;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Marker {
 
@@ -91,17 +95,85 @@ public class Marker {
         return this;
     }
 
+    public Marker colorCodes() {
+        return colorCodes(true);
+    }
+
     public Marker colorCodes(boolean lineNumbers) {
         content = content.replace("<pre><code", "<textarea coder=\"yes\" read-only=\"true\"" + (lineNumbers ? "" : " line-numbers=\"false\""))
                 .replaceAll("\\s+</code></pre>", "</textarea>")
-//                .replace("class=\"language-sql\"", "mode=\"text/x-pql\"")
-//                .replace("class=\"language-xml\"", "mode=\"text/xml\"")
                 .replace("class=\"language-", "mode=\"");
 
         return this;
     }
 
+    public Marker referSite() {
+        //static site  @ or %
+        Pattern p = Pattern.compile("\\s(src|href)=\"([@|%])", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(0), " " + m.group(1) + "=\"" + (m.group(2).equals("@") ? Setting.VoyagerStaticSite : Setting.VoyagerGallerySite));
+        }
+
+        return this;
+    }
+
     public Marker transform() {
+
+        // /green:我是绿色/
+        // /16:abc/
+        // //b,i,u,s
+        // /green,b:绿色粗体/
+        // primary, darker, lighter
+
+        Pattern p = Pattern.compile("/([#a-z0-9,\\s]+):([^/]+)(:[#a-z0-9]+)?/", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(content);
+        while(m.find()) {
+            StringBuilder sb = new StringBuilder();
+            for (String value : m.group(1).toLowerCase().split(",")) {
+                String s = value.trim();
+                if (s.matches("^\\d+$")) {
+                    s = "font-size: " + (Float.parseFloat(s) / 16f) + "em";
+                }
+                else if (s.length() == 1) {
+                    switch (s) {
+                        case "b":
+                            s = "font-weight: bold";
+                            break;
+                        case "i":
+                            s = "font-style: italic";
+                            break;
+                        case "u":
+                            s = "text-decoration: underline";
+                            break;
+                        case "s":
+                            s = "text-decoration: line-through";
+                            break;
+                    }
+                }
+                else {
+                    if (s.matches("^(primary|darker|lighter)$")) {
+                        s = "var(--" + s + ")";
+                    }
+                    s = "color: " + s;
+                }
+                sb.append(s).append("; ");
+            }
+            if (m.groupCount() == 3) {
+                sb.append("background-color: ").append(m.group(3)).append("; ")
+                    .append("border-radius: 0.2rem; ")
+                    .append("margin-inline-start: 0.1rem; ")
+                    .append("margin-inline-end: 0.1rem;");
+            }
+            content = content.replace(m.group(0), "<span style=\"" + sb.toString() + "\">" + m.group(2) + "</span>");
+        }
+
+        p = Pattern.compile("--\\s*(\\d+)\\s*--");
+        m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(0), "<div style=\"height: " + m.group(1) + "px\"></div>");
+        }
+
         content = Marker.markdownToHtml(content);
         format = Marker.HTML;
         //external links
@@ -110,7 +182,20 @@ public class Marker {
         return this;
     }
 
+    public String getTitle() {
+        String title = "";
+        if (content.contains("<h1>")) {
+            title = content.substring(content.indexOf("<h1>") + 4, content.indexOf("</h1>"));
+        }
+
+        return title;
+    }
+
     public String getContent() {
         return content;
+    }
+
+    public String getCogoContent() {
+        return Cogo.template().replace("#{title}", this.getTitle()).replace("#{scripts}", Cogo.getScripts(content)).replace("#{content}", content);
     }
 }

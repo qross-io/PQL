@@ -56,5 +56,4 @@ object Global {
         address
     }
     def KEEPER_HTTP_PORT: Int = Configurations.getOrProperty("KEEPER_HTTP_PORT", "keeper.http.port", "7700").toInt
-
 }

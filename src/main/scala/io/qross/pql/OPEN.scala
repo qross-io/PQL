@@ -46,6 +46,48 @@ class OPEN(val sentence: String) {
                 if (plan.contains("USE")) {
                     PQL.dh.use(plan.oneArgs("USE"))
                 }
+            case "DATABASE" =>
+                val connectionName = {
+                    if (plan.contains("AS")) {
+                        plan.oneArgs("AS")
+                    }
+                    else {
+                        "$TEMP$CONNECTION"
+                    }
+                }
+                val username = {
+                    if (plan.contains("USERNAME")) {
+                        plan.oneArgs("USERNAME")
+                    }
+                    else {
+                        ""
+                    }
+                }
+                val password = {
+                    if (plan.contains("PASSWORD")) {
+                        plan.oneArgs("PASSWORD")
+                    }
+                    else {
+                        ""
+                    }
+                }
+                val driver = {
+                    if (plan.contains("DRIVER")) {
+                        plan.oneArgs("DRIVER")
+                    }
+                    else {
+                        ""
+                    }
+                }
+                val use = {
+                    if (plan.contains("USE")) {
+                        plan.oneArgs("USE")
+                    }
+                    else {
+                        ""
+                    }
+                }
+                PQL.dh.open(connectionName, driver, plan.headArgs, username, password, use)
             case "REDIS" =>
                 if (plan.contains("SELECT")) {
                     val db = plan.oneArgs("SELECT")

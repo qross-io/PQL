@@ -5,6 +5,8 @@ import io.qross.exception.SQLParseException
 import io.qross.pql.Solver._
 import io.qross.ext.TypeExt._
 
+import scala.util.Random
+
 //全局函数
 
 object GlobalFunction {
@@ -85,9 +87,23 @@ object GlobalFunction {
             throw new SQLParseException(s"Incorrect arguments at REPLACE, expect 2, actual ${args.size}")
         }
     }
+
+    //取 m 到 n随机数
+    def RANDOM(args: List[DataCell]): DataCell = {
+        if (args.size == 1) {
+            DataCell(Random.nextInt(args.head.asInteger(10).toInt), DataType.INTEGER)
+        }
+        else if (args.size > 1) {
+            val seed = args.head.asInteger(0).toInt
+            DataCell(seed + Random.nextInt(args.last.asInteger(10).toInt - seed), DataType.INTEGER)
+        }
+        else {
+            DataCell(Random.nextInt(10), DataType.INTEGER)
+        }
+    }
 }
 
-case class GlobalFunction(functionName: String) {
+class GlobalFunction(functionName: String) {
     def call(args: List[DataCell]): DataCell = {
         //Class.forName("io.qross.pql.GlobalFunction")
         classOf[GlobalFunction]

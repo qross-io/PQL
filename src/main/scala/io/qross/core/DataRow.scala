@@ -173,6 +173,8 @@ class DataRow() {
         }
     }
 
+    def string(fieldName: String): String = getString(fieldName, "")
+    def string(index: Int): String = getString(index, "")
     def getString(fieldName: String): String = getString(fieldName, "")
     def getString(index: Int): String = getString(index, "")
     def getString(fieldName: String, defaultValue: String): String = getStringOption(fieldName).getOrElse(defaultValue)
@@ -192,6 +194,8 @@ class DataRow() {
         }
     }
 
+    def int(fieldName: String): Int = getInt(fieldName, 0)
+    def int(index: Int): Int = getInt(index, 0)
     def getInt(fieldName: String): Int = getInt(fieldName, 0)
     def getInt(index: Int): Int = getInt(index, 0)
     def getInt(fieldName: String, defaultValue: Int): Int = getIntOption(fieldName).getOrElse(defaultValue)
@@ -217,6 +221,8 @@ class DataRow() {
         }
     }
 
+    def long(fieldName: String): Long = getLong(fieldName, 0L)
+    def long(index: Int): Long = getLong(index, 0L)
     def getLong(fieldName: String): Long = getLong(fieldName, 0L)
     def getLong(index: Int): Long = getLong(index, 0L)
     def getLong(fieldName: String, defaultValue: Long): Long = getLongOption(fieldName).getOrElse(defaultValue)
@@ -243,6 +249,8 @@ class DataRow() {
         }
     }
 
+    def float(fieldName: String): Float = getFloat(fieldName, 0F)
+    def float(index: Int): Float = getFloat(index, 0F)
     def getFloat(fieldName: String): Float = getFloat(fieldName, 0F)
     def getFloat(index: Int): Float = getFloat(index, 0F)
     def getFloat(fieldName: String, defaultValue: Float): Float = getFloatOption(fieldName).getOrElse(defaultValue)
@@ -269,6 +277,8 @@ class DataRow() {
         }
     }
 
+    def double(fieldName: String): Double = getDouble(fieldName, 0D)
+    def double(index: Int): Double = getDouble(index, 0D)
     def getDouble(fieldName: String): Double = getDouble(fieldName, 0D)
     def getDouble(index: Int): Double = getDouble(index, 0D)
     def getDouble(fieldName: String, defaultValue: Double): Double = getDoubleOption(fieldName).getOrElse(defaultValue)
@@ -297,6 +307,8 @@ class DataRow() {
         }
     }
 
+    def bool(fieldName: String): Boolean = getBoolean(fieldName, false)
+    def bool(index: Int): Boolean = getBoolean(index, false)
     def getBoolean(fieldName: String): Boolean = getBoolean(fieldName, false)
     def getBoolean(fieldName: String, defaultValue: Boolean): Boolean = {
         get(fieldName) match {
@@ -320,6 +332,8 @@ class DataRow() {
         }
     }
 
+    def dateTime(fieldName: String): DateTime = getDateTime(fieldName, DateTime.of(1970, 1, 1))
+    def dateTime(index: Int): DateTime = getDateTime(index, DateTime.of(1970, 1, 1))
     def getDateTime(fieldName: String): DateTime = getDateTime(fieldName, DateTime.of(1970, 1, 1))
     def getDateTime(index: Int): DateTime = getDateTime(index, DateTime.of(1970, 1, 1))
     def getDateTime(fieldName: String, defaultValue: DateTime): DateTime = getDateTimeOption(fieldName).getOrElse(defaultValue)
@@ -364,7 +378,7 @@ class DataRow() {
             if (name != "") Some(name) else None
         }
     }
-    def getFieldName(index: Int): Option[String] = if (index < fields.length) Some(fields(index)) else None
+    def getFieldName(index: Int): Option[String] = fields.lift(index) //if (index < fields.length) Some(fields(index)) else None
     def getDataType(index: Int): Option[DataType] = if (index < fields.length) Some(columns(fields(index))) else None
     def getDataType(fieldName: String): Option[DataType] = {
         val name = this.getFieldName(fieldName).getOrElse("")
@@ -391,12 +405,25 @@ class DataRow() {
         this
     }
 
-    def mkString(delimiter: String): String = {
+    def mkString(delimiter: String = ","): String = {
         val values = new mutable.StringBuilder()
         for (field <- fields) {
             if (values.nonEmpty) {
-                values.append(", ")
+                values.append(delimiter)
             }
+            values.append(this.getString(field, "null"))
+        }
+        values.toString()
+    }
+
+    def join(delimiter: String = "&", terminator: String = "="): String = {
+        val values = new mutable.StringBuilder()
+        for (field <- fields) {
+            if (values.nonEmpty) {
+                values.append(delimiter)
+            }
+            values.append(field)
+            values.append(terminator)
             values.append(this.getString(field, "null"))
         }
         values.toString()

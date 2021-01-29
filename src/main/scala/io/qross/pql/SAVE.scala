@@ -195,6 +195,48 @@ class SAVE(val action: String, val sentence: String) {
                 PQL.dh.saveToDefault()
             case "QROSS" =>
                 PQL.dh.saveToQross()
+            case "DATABASE" =>
+                val connectionName = {
+                    if (plan.contains("AS")) {
+                        plan.oneArgs("AS")
+                    }
+                    else {
+                        "$TEMP$CONNECTION"
+                    }
+                }
+                val username = {
+                    if (plan.contains("USERNAME")) {
+                        plan.oneArgs("USERNAME")
+                    }
+                    else {
+                        ""
+                    }
+                }
+                val password = {
+                    if (plan.contains("PASSWORD")) {
+                        plan.oneArgs("PASSWORD")
+                    }
+                    else {
+                        ""
+                    }
+                }
+                val driver = {
+                    if (plan.contains("DRIVER")) {
+                        plan.oneArgs("DRIVER")
+                    }
+                    else {
+                        ""
+                    }
+                }
+                val use = {
+                    if (plan.contains("USE")) {
+                        plan.oneArgs("USE")
+                    }
+                    else {
+                        ""
+                    }
+                }
+                PQL.dh.saveTo(connectionName, driver, plan.headArgs, username, password, use)
             case "REDIS" =>
                 if (plan.contains("SELECT")) {
                     val db = plan.oneArgs("SELECT")

@@ -3,14 +3,13 @@ package io.qross.pql
 import io.qross.core.DataCell
 import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.ext.TypeExt._
-import io.qross.pql.Patterns.$CALL
+import io.qross.pql.Patterns.{$CALL, FUNCTION_NAMES}
 import io.qross.pql.Solver._
 
 //CALL $FUNC_NAME(2, $b := 1);
 
 object CALL {
     def parse(sentence: String, PQL: PQL): Unit = {
-
         PQL.PARSING.head.addStatement(new Statement("CALL", sentence, new CALL(sentence.takeAfterX($CALL))))
     }
 
@@ -34,7 +33,7 @@ object CALL {
                         val name = arg.takeBefore(":=").trim()
                         val value = arg.takeAfter(":=").trim()
                         if (name.startsWith("$")) {
-                            statement.setVariable(name.takeAfter("$"), value.popStash(PQL))
+                            statement.setVariable(name.takeAfter("$"), value.$sharp(PQL))
                         }
                         else {
                             throw new SQLExecuteException("Wrong function argument name: " + name + " when call function " + name + ", variable name must starts with symbol '$'")
@@ -61,7 +60,12 @@ object CALL {
         else {
             //系统函数
             //全局函数
-            DataCell.NULL
+            if (FUNCTION_NAMES.contains(funcName)) {
+                new GlobalFunction(funcName).call(args.split(",").map(_.trim().$sharp(PQL)).toList)
+            }
+            else {
+                DataCell.NULL
+            }
         }
     }
 }

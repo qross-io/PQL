@@ -144,6 +144,7 @@ class Http(var method: String, var url: String, var data: String = "") {
         var line: String = ""
         while ({ line = reader.readLine(); line } != null) {
             buffer.append(line)
+            buffer.append(TextFile.TERMINATOR)
         }
         reader.close()
 
@@ -192,6 +193,7 @@ class Http(var method: String, var url: String, var data: String = "") {
         var line: String = ""
         while ({ line = reader.readLine(); line } != null) {
             buffer.append(line)
+            buffer.append(TextFile.TERMINATOR)
         }
         reader.close()
 

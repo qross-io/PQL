@@ -177,7 +177,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
                                         value.asInstanceOf[java.math.BigInteger]
                                     }
                                     else if (dataType.originalName == "BIGINT" || dataType.originalName == "LONG") {
-                                        value.toInteger
+                                        value.toInteger(0)
                                     }
                                     else {
                                         rs.getInt(i)
@@ -193,10 +193,11 @@ class DataSource (val connectionName: String, val databaseName: String) {
                                         value.asInstanceOf[java.math.BigDecimal].stripTrailingZeros()
                                     }
                                     else if (dataType.originalName == "DOUBLE" || dataType.originalName == "DECIMAL") {
-                                        value.asInstanceOf[Double]
+                                        value.toDecimal(0)// .asInstanceOf[Double]
                                     }
                                     else {
-                                        value.asInstanceOf[Float]
+                                        rs.getFloat(i)
+                                        //value.asInstanceOf[Float]
                                     }
                                 }
                                 else {

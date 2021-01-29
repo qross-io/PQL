@@ -296,7 +296,7 @@ case class Json(text: String = "") {
     def findNode(path: String): JsonNode = {
         root.at(if (path.endsWith("/")) path.dropRight(1) else path)
     } */
-    
+
     def findNode(path: String): JsonNode = {
         var p = path
         if (p.startsWith("/")) p = p.substring(1)

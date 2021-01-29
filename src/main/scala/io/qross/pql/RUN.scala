@@ -15,9 +15,30 @@ object RUN {
 class RUN(val sentence: String) {
 
     def evaluate(PQL: PQL, express: Int = Solver.FULL): DataCell = {
-        sentence.$process(PQL, express, body => {
-            DataCell(sentence.takeAfterX($RUN).removeQuotes().run(), DataType.ROW)
-        })
+        $RUN.findFirstMatchIn(sentence) match {
+            case Some(m) =>
+                m.group(1).toUpperCase() match {
+                    case "PQL" =>
+                        sentence.$process(PQL, express, body => {
+                            val command = body.takeAfter(m.group(0)).trim().removeQuotes()
+                            val (file, args) = {
+                                if (command.contains("?")) {
+                                    (command.takeBefore("?"), command.takeAfter("?"))
+                                }
+                                else {
+                                    (command, "")
+                                }
+                            }
+                            io.qross.pql.PQL.openFile(file).place(args).run().toDataCell
+                        })
+                    case "COMMAND" | "SHELL" =>
+                        sentence.$process(PQL, express, body => {
+                            DataCell(body.takeAfter(m.group(0)).trim().removeQuotes().run(), DataType.ROW)
+                        })
+                    case _ => DataCell.NULL
+                }
+            case None =>DataCell.NULL
+        }
     }
 
     def execute(PQL: PQL): Unit = {

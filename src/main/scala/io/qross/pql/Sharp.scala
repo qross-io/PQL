@@ -1764,6 +1764,34 @@ object Sharp {
         }
     }
 
+    def WHERE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (arg.isText) {
+                data.asTable.where(arg.asText).toDataCell(DataType.TABLE)
+            }
+            else {
+                throw SharpLinkArgumentException.occur("WHERE", origin)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("WHERE", origin)
+        }
+    }
+
+    def DELETE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (arg.isText) {
+                data.asTable.delete(arg.asText).toDataCell(DataType.TABLE)
+            }
+            else {
+                throw SharpLinkArgumentException.occur("DELETE", origin)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("DELETE", origin)
+        }
+    }
+
     def TO$ROW(data: DataCell, arg: DataCell, origin: String): DataCell = {
         TURN$TO$ROW(data, arg, origin)
     }

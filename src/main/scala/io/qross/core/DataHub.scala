@@ -24,7 +24,9 @@ object DataHub {
 }
 
 class DataHub (val defaultConnectionName: String) {
-    
+
+    private var DEBUG: Boolean = Global.DEBUG
+
     private[qross] val SOURCES = mutable.HashMap[String, Any]()
     private[qross] val ALIASES = new mutable.HashMap[String, String]()
 
@@ -43,8 +45,6 @@ class DataHub (val defaultConnectionName: String) {
     private var lastSourceName = ""
     private[qross] var currentSourceName = if (SOURCES.contains("DEFAULT")) "DEFAULT" else ""  //current dataSource - open
     private[qross] var currentDestinationName = if (SOURCES.contains("DEFAULT")) "DEFAULT" else ""  //current dataDestination - saveTo
-
-    private var DEBUG: Boolean = Global.DEBUG
 
     private val HOLDER = s"temp_${DateTime.now.getString("yyyyMMddHHmmssSSS")}_${Math.round(Math.random() * 10000000D)}.sqlite".locate()
     private val TABLE = new DataTable()  //current buffer
@@ -204,6 +204,15 @@ class DataHub (val defaultConnectionName: String) {
         }
     }
 
+    def open(connectionName: String, driver: String, connectionString: String, username: String, password: String): DataHub = {
+        open(connectionName, driver, connectionString, username, password, "")
+    }
+
+    def open(connectionName: String, driver: String, connectionString: String, username: String, password: String, database: String): DataHub = {
+        JDBC.add(connectionName, driver, connectionString, username, password)
+        openSource(connectionName, new DataSource(connectionName, database))
+    }
+
     def use(databaseName: String): DataHub = {
         currentSource[DataSource].use(databaseName)
         this
@@ -232,6 +241,15 @@ class DataHub (val defaultConnectionName: String) {
     }
 
     def saveTo(connectionName: String, database: String): DataHub = {
+        saveToDestination(connectionName, new DataSource(connectionName, database))
+    }
+
+    def saveTo(connectionName: String, driver: String, connectionString: String, username: String, password: String): DataHub = {
+        saveTo(connectionName, driver, connectionString, username, password, "")
+    }
+
+    def saveTo(connectionName: String, driver: String, connectionString: String, username: String, password: String, database: String): DataHub = {
+        JDBC.add(connectionName, driver, connectionString, username, password)
         saveToDestination(connectionName, new DataSource(connectionName, database))
     }
 

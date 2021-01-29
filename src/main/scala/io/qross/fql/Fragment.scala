@@ -100,22 +100,39 @@ class Fragment(val phrase: String) {
         table
     }
 
-    def where(row: DataRow): Boolean = {
+    //提取字符串
+    //提取并计算函数
+    //提取并计算嵌套小括号
+    //提取并计算基本表达式  + - * / %
+    //CASE WHEN  END
+    // A = B
 
-        //提取字符串
-        //提取并计算函数
-        //提取并计算嵌套小括号
-        //提取并计算基本表达式  + - * / %
-        //CASE WHEN  END
-        // A = B
-
-        //"WHERE a % 2=1 AND LEFT(b, 2)='2' AND (true || false)"
-
-        false
+    //"WHERE a % 2=1 AND LEFT(b, 2)='2' AND (true || false)"
+    def where(table: DataTable): DataTable = {
+        val group = new ConditionGroup(phrase).parse()
+        val other = new DataTable()
+        table.foreach(row => {
+            if (group.where(row)) {
+                other.addRow(row)
+            }
+        })
+        other
     }
 
     def delete(table: DataTable): DataTable = {
-        table.filterNot(where)
+        val group = new ConditionGroup(phrase).parse()
+        val other = new DataTable()
+        table.foreach(row => {
+            if (!group.where(row)) {
+                other.addRow(row)
+            }
+        })
+        other
+    }
+
+    def update(table: DataTable): DataTable = {
+        //SET a = 1, b = 2 WHERE a = 1 AND b = 2;
+        null
     }
 
     def call(function: String): String = {

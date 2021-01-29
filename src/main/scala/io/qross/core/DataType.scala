@@ -24,7 +24,7 @@ object DataType extends Enumeration {
     //database data type name
     def ofTypeName(typeName: String, className: String = ""): DataType = {
         new DataType(
-            typeName.toUpperCase match {
+            typeName.takeBeforeIfContains(" ").toUpperCase match {
                 case "TEXT" | "VARCHAR" | "CHAR" | "NVARCHAR" | "TINYTEXT" | "SMALLTEXT" | "MEDIUMTEXT" | "LONGTEXT" | "STRING" | "NVARCHAR" | "NCHAR" => "TEXT"
                 case "INT" | "INTEGER" | "BIGINT" | "TINYINT" | "SMALLINT" | "MEDIUMINT" | "LONG" | "SHORT" => "INTEGER"
                 case "FLOAT" | "DOUBLE" | "DECIMAL" | "REAL" | "NUMBER" | "NUMERIC" | "MONEY" | "SMALLMONEY" => "DECIMAL"
@@ -59,9 +59,9 @@ object DataType extends Enumeration {
 
         new DataType(
              firstName.toLowerCase() match {
-                    case "string" => "TEXT"
-                    case "bit" | "int" | "integer" | "long" | "timestamp" => "INTEGER"
-                    case "float" | "double" | "bigdecimal" => "DECIMAL"
+                    case "string" | "object" => "TEXT"
+                    case "bit" | "int" | "integer" | "bigint" | "biginteger" | "long" | "timestamp" => "INTEGER"
+                    case "float" | "double" | "bigdecimal" | "decimal" => "DECIMAL"
                     case "boolean" => "BOOLEAN"
                     case "datetime" | "date" | "time" | "timestamp" => "DATETIME"
                     case "list" | "array" | "arraylist" => "ARRAY"

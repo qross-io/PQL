@@ -11,10 +11,51 @@ object Configurations {
 
     def load(): Unit = {
         if (JDBC.hasQrossSystem) {
-            DataSource.QROSS.executeDataTable("SELECT conf_key, conf_value FROM qross_conf")
+            val ds = DataSource.QROSS
+
+            //load configurations
+            ds.executeDataTable("SELECT conf_key, conf_value FROM qross_conf")
                 .foreach(row => {
                     CONFIG.set(row.getString("conf_key"), row.getString("conf_value"))
                 }).clear()
+
+            //load propertes
+            ds.executeDataTable("select * FROM qross_properties WHERE enabled='yes'")
+                .foreach(row => {
+                    val path = row.getString("property_path")
+                    val format = {
+                        row.getString("property_format") match {
+                            case "properties" => 0
+                            case "yaml" | "yml" => 1
+                            case "json" => 2
+                            case _ => 0
+                        }
+                    }
+                    row.getString("property_source") match {
+                        case "local" => Properties.loadLocalFile(path)
+                        case "resource" => Properties.loadResourcesFile(path)
+                        case "nacos" => Properties.loadNacosConfig(path, format)
+                        case "url" => Properties.loadUrlConfig(path, format)
+                    }
+                }).clear()
+
+            //connections
+            ds.executeDataTable("SELECT * FROM qross_connections WHERE database_class='system' AND enabled='yes'")
+                .foreach(row => {
+                    //从数据行新建
+                    JDBC.connections += row.getString("connection_name") -> new JDBC(
+                        row.getString("database_type"),
+                        row.getString("connection_string"),
+                        row.getString("jdbc_driver"),
+                        row.getString("username"),
+                        row.getString("password"),
+                        row.getInt("overtime"),
+                        row.getInt("retry_limit")
+                    )
+                }).clear()
+
+            //loadSystemPropertiesAndConnections
+            ds.close()
         }
     }
 

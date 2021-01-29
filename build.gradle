@@ -6,7 +6,7 @@ apply plugin: 'maven'
 apply plugin: "maven-publish"
 
 group = 'io.qross'
-version = '0.6.4'
+version = '1.1.0'
 
 sourceCompatibility = 1.8
 archivesBaseName = "qross-pql"
@@ -47,6 +47,11 @@ dependencies {
     //runtime('mysql:mysql-connector-java')
     runtime group: 'org.xerial', name: 'sqlite-jdbc', version: '3.20.0'
 
+    //compile group: 'org.postgresql', name: 'postgresql', version: '42.2.18'
+    //compile group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '8.2.2.jre8'
+    //compile group: 'com.oracle.database.jdbc', name: 'ojdbc8', version: '19.9.0.0'
+
+
     //compile group: 'commons-configuration', name: 'commons-configuration', version: '1.10'
     //compile group: 'org.apache.hadoop', name: 'hadoop-common', version: '2.7.1'
     //compile group: 'org.apache.hadoop', name: 'hadoop-hdfs', version: '2.7.1'
@@ -61,6 +66,7 @@ dependencies {
 
     compile group: 'redis.clients', name: 'jedis', version: '3.3.0'
     compile group: 'com.vladsch.flexmark', name: 'flexmark-all', version: '0.62.2'
+    compile group: 'org.yaml', name: 'snakeyaml', version: '1.23'
 }
 
 //发布到仓库
@@ -69,15 +75,15 @@ publishing {
         maven(MavenPublication) {
             groupId = 'io.qross'
             artifactId = 'pql'
-            version = '0.6.5-RELEASE'
+            version = '1.1.28-SNAPSHOT'
             from components.java
             artifact sourcesJar
         }
     }
 
     repositories {
-            maven { url "https://packages.aliyun.com/maven/repository/2011186-release-Aa5YmC/"
-            //maven { url "https://packages.aliyun.com/maven/repository/2011186-snapshot-FSoDsK/"
+            //maven { url "https://packages.aliyun.com/maven/repository/2011186-release-Aa5YmC/"
+            maven { url "https://packages.aliyun.com/maven/repository/2011186-snapshot-FSoDsK/"
             credentials {
                 username 'PtbpNI'
                 password 'kwCz3C0wHx'

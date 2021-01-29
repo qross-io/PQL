@@ -92,19 +92,7 @@ class SELECT(statement: String, processing: Boolean) {
             case Some(m) =>
                 sentence = sentence.substring(m.group(0).length - m.group(2).length).trim()
                 phrase = m.group(2).toUpperCase()
-                var exp = m.group(1).trim()
-                // 解析括号中的逻辑 () 并将表达式分步
-                breakable {
-                    while (true) {
-                        $BRACKET.findFirstMatchIn(exp) match {
-                            case Some(n) =>
-                                parseConditionExpression(n.group(1).trim)
-                                exp = exp.replace(n.group(0), "~condition[" + (this.conditions.size - 1) + "]")
-                            case _ => break
-                        }
-                    }
-                }
-                parseConditionExpression(exp)
+                this.conditions ++= new ConditionGroup(m.group(1).trim()).parse().conditions
             case None =>
         }
     }
@@ -245,88 +233,7 @@ class SELECT(statement: String, processing: Boolean) {
         (from , seek)
     }
 
-    //解析无括号()的表达式
-    private def parseConditionExpression(expression: String): Unit = {
 
-        var left = ""
-        var right = ""
-        var clause = ""
-        var exp = expression
-
-        breakable {
-            while (true) {
-                $AND$.findFirstMatchIn(exp) match {
-                    case Some(m) =>
-                        clause = m.group(2)
-                        left = m.group(3)
-                        right = m.group(4)
-
-                        breakable {
-                            while (true) {
-                                $OR.findFirstIn(clause) match {
-                                    case Some(or) =>
-                                        clause = clause.takeAfter(or)
-                                        left = left.takeAfter(or)
-                                    case None => break
-                                }
-                            }
-                        }
-
-                        if (!$CONDITION$N.test(left)) {
-                            exp = exp.replace(left, stashCondition)
-                            clause = clause.replace(left, stashCondition)
-                            conditions += new Condition(left.trim)
-                        }
-
-                        if (!$CONDITION$N.test(right)) {
-                            exp = exp.replace(right, stashCondition)
-                            clause = clause.replace(right, stashCondition)
-                            conditions += new Condition(right.trim)
-                        }
-
-                        exp = exp.replace(clause, stashCondition)
-                        conditions += new Condition(clause.trim) // left AND right
-                    case None => break
-                }
-            }
-        }
-
-        breakable {
-            while (true) {
-                $OR$.findFirstMatchIn(exp) match {
-                    case Some(m) =>
-                        clause = m.group(2)
-                        left = m.group(3)
-                        right = m.group(4)
-
-                        if (!$CONDITION$N.test(left)) {
-                            exp = exp.replace(left, stashCondition)
-                            clause = clause.replace(left, stashCondition)
-                            conditions += new Condition(left.trim)
-                        }
-
-                        if (!$CONDITION$N.test(right)) {
-                            exp = exp.replace(right, stashCondition)
-                            clause = clause.replace(right, stashCondition)
-                            conditions += new Condition(right.trim)
-                        }
-
-                        exp = exp.replace(clause, stashCondition)
-                        this.conditions += new Condition(clause.trim) // left OR right
-                    case None => break
-                }
-            }
-        }
-
-        //SINGLE
-        if (!$CONDITION$N.test(exp)) {
-            conditions += new Condition(exp.trim)
-        }
-    }
-
-    private def stashCondition: String = {
-        "~condition[" + this.conditions.size + "]"
-    }
 }
 
 class ORDER$BY(phrase: String) {

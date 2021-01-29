@@ -17,7 +17,10 @@ class ECHO(val content: String) {
         if (content.nonEmpty) {
             //ECHO不能支持变量$n，js表达式，函数或查询表达式，因为会与js中的定义冲突
             //只支持Sharp表达式，如 ${abc} 但可能与js富字符串冲突
-            PQL.RESULT += content.drop(if ("""^\s""".r.test(content)) 1 else 0).replaceEmbeddedVariables(PQL).replaceLanguageHolder(PQL)
+            PQL.RESULT += content.drop(if ("""^\s""".r.test(content)) 1 else 0)
+                            .replaceEmbeddedVariables(PQL)
+                            .replaceLanguageHolder(PQL)
+                            .replace("~u0025", "%")
         }
     }
 }

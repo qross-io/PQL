@@ -208,9 +208,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private[pql] val credential = new DataRow("userid" -> 0, "username" -> "anonymous", "role" -> "worker")
 
-    //当变量未赋值时是替换成UNDEFINED还是保持原样
-    private[pql] var intact = false
-
     //开始解析
     private def parseAll(): Unit = {
 
@@ -476,6 +473,12 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         this
     }
 
+    def place(args: DataRow): PQL = {
+        this.SQL = this.SQL.replaceArguments(args)
+        root.variables.combine(args)
+        this
+    }
+
     def place(args: (String, String)*): PQL = {
         this.SQL = this.SQL.replaceArguments(args.toMap[String, String])
 
@@ -510,7 +513,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
             this.SQL = this.SQL.replaceArguments(map)
             map.foreach(pair => {
-                root.setVariable(pair._1, pair._2)
+                root.setVariable(pair._1, pair._2.replaceAll("(?i)%3f", "?").replaceAll("(?i)%3d", "=").replaceAll("%26", "&").replaceAll("%20", " "))
             })
         }
         this
@@ -524,7 +527,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
             this.SQL = this.SQL.replaceArguments(map)
             map.foreach(pair => {
                 if (!root.containsVariable(pair._1)) {
-                    root.setVariable(pair._1, pair._2)
+                    root.setVariable(pair._1, pair._2.replaceAll("(?i)%3f", "?").replaceAll("(?i)%3d", "=").replaceAll("%26", "&").replaceAll("%20", " "))
                 }
             })
         }
@@ -554,7 +557,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     def set(queryString: String): PQL = {
         if (queryString != "") {
             queryString.$split().foreach(pair => {
-                root.setVariable(pair._1, pair._2)
+                root.setVariable(pair._1, pair._2.replaceAll("(?i)%3f", "?").replaceAll("(?i)%3d", "=").replaceAll("%26", "&").replaceAll("%20", " "))
             })
         }
         this
@@ -578,11 +581,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 root.setVariable(key, model.get(key))
             }
         })
-        this
-    }
-
-    def keepIntact(): PQL = {
-        intact = true
         this
     }
 

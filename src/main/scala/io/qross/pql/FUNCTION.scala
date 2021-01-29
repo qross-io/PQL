@@ -3,6 +3,7 @@ package io.qross.pql
 import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns._
+import io.qross.pql.Solver._
 
 object FUNCTION {
     def parse(sentence: String, PQL: PQL): Unit = {
@@ -31,7 +32,7 @@ object FUNCTION {
                             }
                         }
 
-                        $function.setVariable(name, if (defaultValue == null) null else defaultValue.eval())
+                        $function.setVariable(name, if (defaultValue == null) null else defaultValue.$eval(PQL))
                     })
 
                 //只进栈
@@ -52,8 +53,6 @@ class FUNCTION(val functionName: String) {
 
     //这个方法无意义, 函数的执行在CALL语句中
     def execute(PQL: PQL, statement: Statement): Unit = {
-        //if (PQL.dh.debugging) {
-            //Output.writeDebugging("This is a placeholder of FUNCTION. Please ignore it.")
-        //}
+        //Output.writeDebugging("This is a placeholder of FUNCTION. Please ignore it.")
     }
 }

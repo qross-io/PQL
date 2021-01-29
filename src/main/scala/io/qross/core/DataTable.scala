@@ -509,9 +509,14 @@ class DataTable() {
         table
     }
 
-    //按短语句删除 WHERE A=1 AND B='2' , WHERE关键词可忽略
+    //按短语句删除 WHERE A=1 AND B='2' , 忽略WHERE关键词
     def delete(fragment: String): DataTable = {
-        null
+        new Fragment(fragment).delete(this)
+    }
+
+    //delete 的反操作
+    def where(fragment: String): DataTable = {
+        new Fragment(fragment).where(this);
     }
 
     def update(setValue: DataRow => Unit): DataTable = {
@@ -533,7 +538,7 @@ class DataTable() {
 
     //按短语句修改 SET A=1, B='2' WHERE C=0 OR D>0
     def update(fragment: String): DataTable = {
-        null
+        new Fragment(fragment).update(this)
     }
 
     def upsert(filter: DataRow => Boolean)(setValue: DataRow => Unit)(fields: (String, Any)*): DataTable = {

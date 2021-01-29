@@ -1,7 +1,7 @@
 package io.qross.pql
 
 import io.qross.core.{DataCell, DataRow, DataTable, DataType}
-import io.qross.exception.{SQLExecuteException, SQLParseException}
+import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.pql.Patterns._
@@ -32,14 +32,13 @@ object FOR {
 
 class FOR(val variable: String, val method: String, val collection: String) {
 
-
     val variables: List[String] = variable.split(",").map(_.trim).toList
 
     def execute(PQL: PQL, statement: Statement): Unit = {
         val vars: ForVariables = this.computeVariables(PQL)
         PQL.FOR$VARIABLES.push(vars)
         PQL.EXECUTING.push(statement)
-        //根据loopMap遍历/
+        //根据loopMap遍历
         breakable {
             while (vars.hasNext) {
                 if (!PQL.breakCurrentLoop) {
