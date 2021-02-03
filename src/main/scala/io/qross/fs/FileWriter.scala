@@ -147,7 +147,7 @@ class FileWriter(val file: File, val format: Int, val outputType: String, delete
     }
 
     def writeLine(line: Any*): FileWriter = {
-        writer.append(line.mkString(this.delimiter) + System.getProperty("line.separator"))
+        writer.append(line.mkString(this.delimiter) + TextFile.TERMINATOR)
         this
     }
 
@@ -159,7 +159,7 @@ class FileWriter(val file: File, val format: Int, val outputType: String, delete
 
     def writeLines(lines: ArrayBuffer[String]): FileWriter = {
         for (line <- lines) {
-            writer.append(line + System.getProperty("line.separator"))
+            writer.append(line + TextFile.TERMINATOR)
         }
         this
     }

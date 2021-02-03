@@ -85,10 +85,6 @@ public class  Voyager extends AbstractTemplateView {
                     content = template.replace("#{content}", content);
                 }
 
-                //title
-                if (content.contains("#{title}") && content.contains("<h1>")) {
-                    content = content.replace("#{title}", content.substring(content.indexOf("<h1>") + 4, content.indexOf("</h1>")));
-                }
                 //scripts
                 if (content.contains("#{scripts}")) {
                     content = content.replace("#{scripts}", Cogo.getScripts(content));
@@ -127,10 +123,21 @@ public class  Voyager extends AbstractTemplateView {
                                 .set(model)
                                 .run();
 
+                if (result != null) {
+                    content = result.toString();
+                    //title
+                    if (content.contains("<title>#{title}</title>") && content.contains("<h1>")) {
+                        content = content.replace("<title>#{title}</title>", "<title>" + content.substring(content.indexOf("<h1>") + 4, content.indexOf("</h1>")) + "</title>");
+                    }
+                }
+                else {
+                    content = "";
+                }
+
                 response.setCharacterEncoding(Setting.VoyagerCharset);
                 response
                         .getWriter()
-                        .write(result == null ? "" : result.toString());
+                        .write(content);
             }
             else {
                 response

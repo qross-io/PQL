@@ -14,7 +14,9 @@ class LOAD(val sentence: String) {
         val plan = Syntax("LOAD").plan(sentence.$restore(PQL).drop(4).trim())
         val path = plan .headArgs
         plan.head match {
-            case "PROPERTIES" | "YAML" | "YML" | "JSON CONFIG" => Properties.loadLocalFile(path)
+            case "PROPERTIES" => Properties.loadLocalFile(path, Config.Properties)
+            case "YAML" | "YML" => Properties.loadLocalFile(path, Config.Yaml)
+            case "JSON CONFIG" => Properties.loadLocalFile(path, Config.Json)
             case "PROPERTIES FROM NACOS" => Properties.loadNacosConfig(path, Config.Properties)
             case "YAML FROM NACOS" | "YML FROM NACOS" => Properties.loadNacosConfig(path, Config.Yaml)
             case "JSON CONFIG FROM NACOS" => Properties.loadNacosConfig(path, Config.Json)

@@ -120,15 +120,25 @@ public class Marker {
 
     public Marker transform() {
 
+        List<String> pql = new ArrayList<>();
+
+        // embedded PQL
+        Pattern p = Pattern.compile("<%[\\s\\S]+?%>", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(0), "~pql[" + pql.size() + "]");
+            pql.add(m.group(0));
+        }
+
         // /green:我是绿色/
         // /16:abc/
         // //b,i,u,s
         // /green,b:绿色粗体/
         // primary, darker, lighter
 
-        Pattern p = Pattern.compile("/([#a-z0-9,\\s]+):([^/]+)(:[#a-z0-9]+)?/", Pattern.CASE_INSENSITIVE);
-        Matcher m = p.matcher(content);
-        while(m.find()) {
+        p = Pattern.compile("/([#a-z0-9,\\s]+):([^/]+)/", Pattern.CASE_INSENSITIVE);
+        m = p.matcher(content);
+        while (m.find()) {
             StringBuilder sb = new StringBuilder();
             for (String value : m.group(1).toLowerCase().split(",")) {
                 String s = value.trim();
@@ -159,23 +169,46 @@ public class Marker {
                 }
                 sb.append(s).append("; ");
             }
-            if (m.groupCount() == 3) {
-                sb.append("background-color: ").append(m.group(3)).append("; ")
+
+            String text = m.group(2);
+            Pattern q = Pattern.compile(":\\s*([#a-z0-9]+)\\s*$", Pattern.CASE_INSENSITIVE);
+            Matcher n = q.matcher(text);
+            if (n.find()) {
+                sb.append("background-color: ").append(n.group(1)).append("; ")
                     .append("border-radius: 0.2rem; ")
-                    .append("margin-inline-start: 0.1rem; ")
-                    .append("margin-inline-end: 0.1rem;");
+                    .append("padding-inline-start: 0.2rem; ")
+                    .append("padding-inline-end: 0.2rem;");
+
+                text = text.substring(0, text.lastIndexOf(":"));
             }
-            content = content.replace(m.group(0), "<span style=\"" + sb.toString() + "\">" + m.group(2) + "</span>");
+
+            content = content.replace(m.group(0), "<span style=\"" + sb.toString() + "\">" + text + "</span>");
         }
 
+        // -- n --
         p = Pattern.compile("--\\s*(\\d+)\\s*--");
         m = p.matcher(content);
         while (m.find()) {
             content = content.replace(m.group(0), "<div style=\"height: " + m.group(1) + "px\"></div>");
         }
 
+        // -| n |-
+        p = Pattern.compile("-\\|\\s*(\\d+)\\s*\\|-");
+        m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(0), "<span style=\"display: inline-block; width: " + m.group(1) + "px\"></span>");
+        }
+
         content = Marker.markdownToHtml(content);
         format = Marker.HTML;
+
+        //restore PQL
+        p = Pattern.compile("~pql\\[(\\d+)\\]");
+        m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(0), pql.get(Integer.parseInt(m.group(1))));
+        }
+
         //external links
         content = content.replace(" href=\"http", " target=\"_blank\" href=\"http");
 

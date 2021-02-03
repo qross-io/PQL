@@ -15,12 +15,11 @@ object Properties {
     /*
     加载顺序
     与jar包同一目录下的 qross.properties
-    与jar包同一目录下的 dbs.properties
     jar包运行参数 --properties 后的所有 properties文件 适用于worker
             jar包内的conf.properties
-    数据库中的 properties / qross_properties
+    数据库中的 properties
             数据库中的 连接串
-            连接名冲突时先到先得
+            连接名冲突时后到先得
 
     将所有连接串保存在 JDBC.connections中
     properties中的连接串调取时使用
@@ -91,11 +90,38 @@ object Properties {
         }
     }
 
+    def loadLocalFile(path: String, format: Int): Unit = {
+        val file = new File(path)
+        if (file.exists()) {
+            format match {
+                case Config.Properties => props.load(new BufferedInputStream(new FileInputStream(file)))
+                case Config.Yaml => recurseYamlMap(new Yaml().load[java.util.LinkedHashMap[String, Any]](new FileInputStream(file)))
+                case _ => loadConfig(new FileReader(path).readToEnd, Config.Json)
+            }
+        }
+        else {
+            loadResourcesFile(path, format)
+        }
+    }
+
     def loadResourcesFile(path: String): Unit = {
         try {
             path.takeAfterLast(".").toLowerCase() match {
                 case "properties" => props.load(new BufferedReader(new InputStreamReader(BaseClass.MAIN.getResourceAsStream(path))))
                 case "yaml" | "yml" => recurseYamlMap(new Yaml().load[java.util.LinkedHashMap[String, Any]](BaseClass.MAIN.getResourceAsStream(path)))
+                case _ => loadConfig(ResourceFile.open(path).content, Config.Json)
+            }
+        }
+        catch {
+            case e: Exception => e.printStackTrace()
+        }
+    }
+
+    def loadResourcesFile(path: String, format: Int): Unit = {
+        try {
+            format match {
+                case Config.Properties => props.load(new BufferedReader(new InputStreamReader(BaseClass.MAIN.getResourceAsStream(path))))
+                case Config.Yaml => recurseYamlMap(new Yaml().load[java.util.LinkedHashMap[String, Any]](BaseClass.MAIN.getResourceAsStream(path)))
                 case _ => loadConfig(ResourceFile.open(path).content, Config.Json)
             }
         }
@@ -272,5 +298,9 @@ object Properties {
                     loadUrlConfig(url, Config.Json)
                 })
         }
+    }
+
+    def clear(): Unit = {
+        props.clear()
     }
 }

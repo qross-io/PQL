@@ -9,6 +9,8 @@ import io.qross.ext.TypeExt._
 
 object Environment {
 
+    val lineSeparator: String = System.getProperty("line.separator")
+
     val cpuThreads: Int = Runtime.getRuntime.availableProcessors()
 
     def cpuUsage: Double = {

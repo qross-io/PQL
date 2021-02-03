@@ -215,46 +215,6 @@ object JDBC {
     def remove(connectionName: String): Unit = {
         connections.remove(connectionName)
     }
-
-    //加载保存在数据库中的连接 - 已整合进 properties
-    def loadSystemPropertiesAndConnections(): Unit = {
-        val ds = DataSource.QROSS
-
-        ds.executeDataTable("select * FROM qross_properties WHERE enabled='yes'")
-            .foreach(row => {
-                val path = row.getString("property_path")
-                val format = {
-                    row.getString("property_format") match {
-                        case "properties" => 0
-                        case "yaml" | "yml" => 1
-                        case "json" => 2
-                        case _ => 0
-                    }
-                }
-                row.getString("property_source") match {
-                    case "local" => Properties.loadLocalFile(path)
-                    case "resource" => Properties.loadResourcesFile(path)
-                    case "nacos" => Properties.loadNacosConfig(path, format)
-                    case "url" => Properties.loadUrlConfig(path, format)
-                }
-            }).clear()
-
-        ds.executeDataTable("SELECT * FROM qross_connections WHERE db_class='system' AND enabled='yes'")
-            .foreach(row => {
-                //从数据行新建
-                JDBC.connections += row.getString("connection_name") -> new JDBC(
-                    row.getString("db_type"),
-                    row.getString("connection_string"),
-                    row.getString("jdbc_driver"),
-                    row.getString("username"),
-                    row.getString("password"),
-                    row.getInt("overtime"),
-                    row.getInt("retry_limit")
-                )
-            }).clear()
-
-        ds.close()
-    }
 }
 
 class JDBC(val dbType: String,

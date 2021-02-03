@@ -19,7 +19,7 @@ object Configurations {
                     CONFIG.set(row.getString("conf_key"), row.getString("conf_value"))
                 }).clear()
 
-            //load propertes
+            //load properties
             ds.executeDataTable("select * FROM qross_properties WHERE enabled='yes'")
                 .foreach(row => {
                     val path = row.getString("property_path")
