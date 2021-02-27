@@ -9,7 +9,17 @@ DEBUG ON;
 --OPEN DATABASE 'jdbc:postgresql://47.92.224.122:30432/postgres' USERNAME 'postgres' PASSWORD 'pgsql@123' AS 'pg.temp';
 --OPEN DATABASE 'jdbc:oracle:thin:@47.92.224.122:31521/EE.oracle.docker' DRIVER 'oracle.jdbc.driver.OracleDriver' USERNAME 'system' PASSWORD 'oracle' AS 'oracle.test';
 
-PRINT ${ @RIGHT("ehllo world", 3) };
+PRINT ${ FILE LIST 'c:/Wallpaper' -> COLUMN 'name' JOIN ',\n' REPLACE '.jpg' TO '' };
+
+EXIT CODE 1;
+
+FOR $file OF (FILE LIST 'c:/Wallpaper') LOOP
+    IF @LEN($file.name) < 64 AND @LEFT($file.name, 5) != 'bing-' THEN
+        --SET $new := "abcdefghijklmnopqrstuvwxyz0123456789" RANDOM 64 CONCAT '.jpg';
+        PRINT $file.path;
+        -- FILE RENAME $file.path TO $new;
+    END IF;
+END LOOP;
 
 EXIT CODE 1;
 

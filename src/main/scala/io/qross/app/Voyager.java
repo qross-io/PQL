@@ -126,8 +126,8 @@ public class  Voyager extends AbstractTemplateView {
                 if (result != null) {
                     content = result.toString();
                     //title
-                    if (content.contains("<title>#{title}</title>") && content.contains("<h1>")) {
-                        content = content.replace("<title>#{title}</title>", "<title>" + content.substring(content.indexOf("<h1>") + 4, content.indexOf("</h1>")) + "</title>");
+                    if (content.contains("#{title}") && content.contains("<h1>")) {
+                        content = content.replace("#{title}", content.substring(content.indexOf("<h1>") + 4, content.indexOf("</h1>")));
                     }
                 }
                 else {

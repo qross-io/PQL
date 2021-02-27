@@ -136,14 +136,14 @@ public class Marker {
         // /green,b:绿色粗体/
         // primary, darker, lighter
 
-        p = Pattern.compile("/([#a-z0-9,\\s]+):([^/]+)/", Pattern.CASE_INSENSITIVE);
+        p = Pattern.compile("(?<!/)/([#a-z0-9,\\s]+):([^/]+)/", Pattern.CASE_INSENSITIVE);
         m = p.matcher(content);
         while (m.find()) {
             StringBuilder sb = new StringBuilder();
             for (String value : m.group(1).toLowerCase().split(",")) {
                 String s = value.trim();
                 if (s.matches("^\\d+$")) {
-                    s = "font-size: " + (Float.parseFloat(s) / 16f) + "em";
+                    s = "font-size: " + (Float.parseFloat(s) / 16f) + "rem";
                 }
                 else if (s.length() == 1) {
                     switch (s) {
@@ -199,8 +199,24 @@ public class Marker {
             content = content.replace(m.group(0), "<span style=\"display: inline-block; width: " + m.group(1) + "px\"></span>");
         }
 
+        //处理 DIV 元素
+        content = content.replaceAll("(?i)<div\\b", "<block").replaceAll("(?i)</div>", "</block>");
+
         content = Marker.markdownToHtml(content);
         format = Marker.HTML;
+
+        content = content.replaceAll("(?i)<block\\b", "<div").replaceAll("(?i)</block>", "</div>");
+        //处理 DIV 元素
+        p = Pattern.compile("<p>.*?<div\\b", Pattern.CASE_INSENSITIVE);
+        m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(0), m.group(0).substring(3));
+        }
+        p = Pattern.compile("</div>.*?</p>", Pattern.CASE_INSENSITIVE);
+        m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(0), m.group(0).substring(0, m.group(0).length() - 4));
+        }
 
         //restore PQL
         p = Pattern.compile("~pql\\[(\\d+)\\]");
@@ -222,6 +238,16 @@ public class Marker {
         }
 
         return title;
+    }
+
+    public String getSummary() {
+        String summary = "";
+        if (content.contains("<p>")) {
+            summary = content.substring(content.indexOf("<p>") + 3, content.indexOf("</p>"));
+            summary = summary.replaceAll("<[^>]+?>|\\n", "");
+        }
+
+        return summary;
     }
 
     public String getContent() {

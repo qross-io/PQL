@@ -27,7 +27,7 @@ public class Setting {
             switch(args[i].toLowerCase()) {
                 case "--properties":
                     if (i + 1 < args.length) {
-                        Properties.loadLocalFile(args[i+1]);
+                        Properties.loadLocalFile(args[i+1], true);
                     }
                     break;
                 case "--oneapi.service.name":

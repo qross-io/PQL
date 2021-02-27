@@ -22,10 +22,12 @@ public class Test {
 
     public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException {
 
-        Matcher m = Pattern.compile("(a)b", Pattern.CASE_INSENSITIVE).matcher("abcefg");
+         Matcher m = Pattern.compile("(?<!/)/([#a-z0-9,\\s]+):([^/]+)/", Pattern.CASE_INSENSITIVE).matcher("http://localhost:8080/abc");
         if (m.find()) {
-            Console.writeLine(m.groupCount());
+            Console.writeLine(m.group(0));
         }
+
+        Console.writeLine("-----------------");
 
         Console.writeLine(Test.class.getDeclaredField("INTEGER").get(null));
         Console.writeLine(Test.class.getDeclaredField("STRING").get(null));

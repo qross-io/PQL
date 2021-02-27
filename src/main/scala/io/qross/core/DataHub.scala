@@ -23,7 +23,7 @@ object DataHub {
     def DEFAULT: DataHub = new DataHub(JDBC.DEFAULT)
 }
 
-class DataHub (val defaultConnectionName: String) {
+class DataHub (val defaultConnectionName: String) extends Output {
 
     private var DEBUG: Boolean = Global.DEBUG
 
@@ -115,11 +115,11 @@ class DataHub (val defaultConnectionName: String) {
 
     // ---------- system ----------
 
-    def debug(enabled: Boolean = true): DataHub = {
+    def debug(enabled: Boolean = true, format: String = "text"): DataHub = {
         DEBUG = enabled
         SOURCES.values.foreach {
-            case db: DataSource => db.debug(enabled)
-            case excel: Excel => excel.debug(enabled)
+            case db: DataSource => db.debug(enabled, format)
+            case excel: Excel => excel.debug(enabled, format)
             case _ =>
         }
 
@@ -131,8 +131,8 @@ class DataHub (val defaultConnectionName: String) {
     def +=(dataSource:(String, Any)): DataHub = {
         SOURCES += dataSource._1 -> {
             dataSource._2 match {
-                case db: DataSource => db.debug(DEBUG)
-                case excel: Excel => excel.debug(DEBUG)
+                case db: DataSource => db.debug(DEBUG, LOG_FORMAT)
+                case excel: Excel => excel.debug(DEBUG, LOG_FORMAT)
                 case o => o
             }
         }
@@ -316,8 +316,9 @@ class DataHub (val defaultConnectionName: String) {
         fields.clear()
 
         if (DEBUG) {
-            Output.writeDebugging(createSQL)
-            Output.writeDebugging(s"${table.size} rows has been saved in cache table $tableName.")
+            writeHeader("Create SQL of Cache: ")
+            writeCode(createSQL)
+            writeDebugging(s"Result: ${table.size} rows has been saved in cache table $tableName.")
         }
 
         if (table.nonEmpty) {
@@ -394,8 +395,9 @@ class DataHub (val defaultConnectionName: String) {
         fields.clear()
 
         if (DEBUG) {
-            Output.writeDebugging(createSQL)
-            Output.writeDebugging(s"${table.size} rows has been saved in temp table $tableName.")
+            writeHeader("Create SQL of Temp:")
+            writeCode(createSQL)
+            writeDebugging(s"${table.size} rows has been saved in temp table $tableName.")
         }
 
         if (table.nonEmpty) {
@@ -448,7 +450,7 @@ class DataHub (val defaultConnectionName: String) {
         reset()
 
         if (DEBUG) {
-            println("GET # " + selectSQL)
+            writeCode("GET # " + selectSQL)
         }
 
         getSource match {
@@ -471,7 +473,7 @@ class DataHub (val defaultConnectionName: String) {
     def pass(querySentence: String, default:(String, Any)*): DataHub = {
 
         if (DEBUG) {
-            println("PASS # " + querySentence)
+            writeCode("PASS # " + querySentence)
         }
 
         if (TABLE.isEmpty) {
@@ -526,7 +528,7 @@ class DataHub (val defaultConnectionName: String) {
     def put(nonQuerySQL: String): DataHub = {
 
         if (DEBUG) {
-            println("PUT # " + nonQuerySQL)
+            writeCode("PUT # " + nonQuerySQL)
         }
 
         if (TABLE.nonEmpty) {
@@ -561,7 +563,7 @@ class DataHub (val defaultConnectionName: String) {
     def put(nonQuerySQL: String, table: DataTable): DataHub = {
 
         if (DEBUG) {
-            println("PUT # " + nonQuerySQL)
+            writeCode("PUT # " + nonQuerySQL)
         }
 
         if (table.nonEmpty) {
@@ -605,7 +607,7 @@ class DataHub (val defaultConnectionName: String) {
         reset()
 
         if (DEBUG) {
-            println("PAGE # " + selectSQL)
+            writeCode("PAGE # " + selectSQL)
         }
 
         selectSQL.matchBatchMark match {
@@ -628,7 +630,7 @@ class DataHub (val defaultConnectionName: String) {
         reset()
 
         if (DEBUG) {
-            println("BLOCK # " + selectSQL)
+            writeCode("BLOCK # " + selectSQL)
         }
 
         selectSQL.matchBatchMark match {
@@ -659,7 +661,7 @@ class DataHub (val defaultConnectionName: String) {
     def bulk(nonQuerySQL: String, beginKeyOrSQL: Any, endKeyOrSQL: Any, bulkSize: Int = 100000): DataHub = {
 
         if (DEBUG) {
-            println(nonQuerySQL)
+            writeCode(nonQuerySQL)
         }
 
         nonQuerySQL.matchBatchMark match {
@@ -721,7 +723,7 @@ class DataHub (val defaultConnectionName: String) {
     def batch(nonQuerySentence: String): DataHub = {
 
         if (DEBUG) {
-            println(nonQuerySentence)
+            writeCode(nonQuerySentence)
         }
 
         //pageSQLs or blockSQLs
@@ -1078,12 +1080,12 @@ class DataHub (val defaultConnectionName: String) {
 
     def show(limit: Int = 20): DataHub = {
         if (TABLE.nonEmpty) {
-            TABLE.show(limit)
+            writeTable(TABLE, limit)
         }
         else {
-            println("------------------------------------------------------------------------")
-            println("NO DATA IN BUFFER TO SHOW")
-            println("------------------------------------------------------------------------")
+            writeLine("------------------------------------------------------------------------")
+            writeWarning("NO DATA IN BUFFER TO SHOW")
+            writeLine("------------------------------------------------------------------------")
         }
 
         TO_BE_CLEAR = true

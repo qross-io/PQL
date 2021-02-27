@@ -35,7 +35,7 @@ object Solver {
 
     val EMBEDDED_VARIABLE: Regex = """([$@])\{\s*([a-zA-Z0-9_]+)(.[a-zA-Z0-9_]+)?\s*\}""".r
     val FUNCTION: Regex = """([$@])([a-zA-Z0-9_]+)\(""".r //用户函数, 未完成
-    val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\s*\(([^)]*)\)""".r //系统函数
+    //val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\s*\(([^)]*)\)""".r //系统函数
     val SHARP_EXPRESSION: Regex = """(?i)\$\{([^\{\}]+?)\}""".r //Sharp表达式
     val QUERY_EXPRESSION: Regex = """(?i)\$\{\{([\s\S]+?)\}\}""".r //查询表达式
     val INNER_SENTENCE: Regex = """(?i)\(\s*(SELECT|PARSE|REDIS|FILE|DIR|INSERT|UPDATE|DELETE|REPLACE|IF|CASE)\s""".r  //(SELECT...)

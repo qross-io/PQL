@@ -1321,7 +1321,7 @@ object Sharp {
 
     def FLOOR(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            data.asDecimal.floor(arg.asInteger.toInt).toDataCell(DataType.DECIMAL)
+            data.asDecimal.floor(arg.asInteger(0).toInt).toDataCell(DataType.DECIMAL)
         }
         else {
             data.asDecimal.floor(0).toDataCell(DataType.INTEGER)
@@ -1330,7 +1330,7 @@ object Sharp {
 
     def ROUND(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            data.asDecimal.round(arg.asInteger.toInt).toDataCell(DataType.DECIMAL)
+            data.asDecimal.round(arg.asInteger(0).toInt).toDataCell(DataType.DECIMAL)
         }
         else {
             data.asDecimal.round(0).toDataCell(DataType.INTEGER)
@@ -1778,6 +1778,20 @@ object Sharp {
         }
     }
 
+    def UPDATE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (arg.isText) {
+                data.asTable.update(arg.asText).toDataCell(DataType.TABLE)
+            }
+            else {
+                throw SharpLinkArgumentException.occur("UPDATE", origin)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("UPDATE", origin)
+        }
+    }
+
     def DELETE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             if (arg.isText) {
@@ -1814,7 +1828,7 @@ object Sharp {
     }
 
     def TO$HTML$TABLE(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        DataCell(data.asTable.toHtmlString, DataType.TEXT)
+        DataCell(data.asTable.toHtmlString(), DataType.TEXT)
     }
 
     //将TABLE聚合成一个LinkedHashMap

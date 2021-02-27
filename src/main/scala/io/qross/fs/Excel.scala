@@ -5,6 +5,7 @@ import java.nio.file.Files
 
 import io.qross.core._
 import io.qross.exception.{IncorrectDataSourceException, SQLParseException, UnsupportedSentenceException}
+import io.qross.ext.Output
 import io.qross.net.Email
 import io.qross.setting.Global
 import io.qross.fs.Path._
@@ -108,7 +109,7 @@ object Excel {
     }
 }
 
-class Excel(val fileName: String) {
+class Excel(val fileName: String) extends Output {
 
     var output: String = "file" // file or stream
     var autoCommit: Boolean = true //是否自动关闭文件, 在单线程模式下, 查询或修改一次即关闭, 在多线程模式下或流模式下需要手动关闭
@@ -125,8 +126,9 @@ class Excel(val fileName: String) {
     private var DEBUG = false
     def debugging: Boolean = DEBUG
 
-    def debug(enabled: Boolean = true): Excel = {
+    def debug(enabled: Boolean = true, format: String = "text"): Excel = {
         DEBUG = enabled
+        LOG_FORMAT = format
         this
     }
 

@@ -6,6 +6,7 @@ import java.util.regex.Pattern
 
 import io.qross.core.Parameter._
 import io.qross.core._
+import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.time.Timer
@@ -22,7 +23,7 @@ object DataSource {
 
 }
 
-class DataSource (val connectionName: String, val databaseName: String) {
+class DataSource (val connectionName: String, val databaseName: String) extends Output {
 
     private[jdbc] val batchSQLs = new mutable.ArrayBuffer[String]()
     private[jdbc] val batchValues = new mutable.ArrayBuffer[Vector[Any]]()
@@ -56,8 +57,9 @@ class DataSource (val connectionName: String, val databaseName: String) {
         connected
     }
 
-    def debug(enabled: Boolean = true): DataSource = {
+    def debug(enabled: Boolean = true, format: String = "text"): DataSource = {
         DEBUG = enabled
+        LOG_FORMAT = format
         this
     }
     //是否启用调试模式
@@ -145,8 +147,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
     def executeDataTable(SQL: String, values: Any*): DataTable = {
 
         if (DEBUG) {
-            println()
-            println(SQL)
+            writeCode(SQL)
         }
 
         val table: DataTable = new DataTable()
@@ -220,7 +221,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
         }
 
         if (DEBUG) {
-            table.show(10)
+            writeTable(table, 10)
         }
         
         table
@@ -229,9 +230,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
     def executeJavaMapList(SQL: String, values: Any*): util.List[util.Map[String, Any]] = {
 
         if (DEBUG) {
-            println()
-            println(SQL)
-            println("------------------------------------------------------------------------")
+            writeCode(SQL)
         }
 
         val mapList: util.List[util.Map[String, Any]] = new util.ArrayList[util.Map[String, Any]]()
@@ -255,7 +254,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
         }
 
         if (DEBUG) {
-            println(Json.serialize(mapList))
+            writeCode(Json.serialize(mapList), "json")
         }
 
         mapList
@@ -566,9 +565,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
         this.openIfNot()
 
         if (DEBUG) {
-            println()
-            println(SQL.take(1024))
-            println("------------------------------------------------------------------------")
+            writeCode(SQL)
         }
 
         var row: Int = -1
@@ -594,7 +591,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
         }
 
         if (DEBUG) {
-            println(s"$row row(s) affected. ")
+            writeAffected(row)
         }
 
         row
@@ -676,7 +673,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
                     if (this.batchValues.nonEmpty) {
 
                         if (DEBUG) {
-                            println(this.batchSQLs(0))
+                            writeCode(this.batchSQLs(0))
                         }
 
                         conn.setAutoCommit(false)
@@ -797,7 +794,7 @@ class DataSource (val connectionName: String, val databaseName: String) {
     def tableUpdate(SQL: String, table: DataTable): Int = {
 
         if (DEBUG) {
-            println(SQL)
+            writeCode(SQL)
         }
 
         var count = -1

@@ -131,8 +131,14 @@ class Fragment(val phrase: String) {
     }
 
     def update(table: DataTable): DataTable = {
-        //SET a = 1, b = 2 WHERE a = 1 AND b = 2;
-        null
+        //SET a = 1, b = 2
+        val set = new SET(phrase)
+        table.foreach(row => {
+            set.pieces.foreach(s => {
+                row.set(s.key, s.compute(row))
+            })
+        })
+        table
     }
 
     def call(function: String): String = {

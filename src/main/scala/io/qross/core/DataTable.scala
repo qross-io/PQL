@@ -903,7 +903,7 @@ class DataTable() {
 
     def show(limit: Int = 20): Unit = {
         Output.writeLine("------------------------------------------------------------------------")
-        Output.writeLine(rows.size, " ROWS")
+        Output.writeLine(rows.size, " rows")
         Output.writeLine("------------------------------------------------------------------------")
         Output.writeLine(getLabelNames.mkString(", "))
         breakable {
@@ -947,9 +947,9 @@ class DataTable() {
         new ObjectMapper().writeValueAsString(toJavaMapList)
     }
     
-    def toHtmlString: String = {
+    def toHtmlString(limit: Int = 0): String = {
         val sb = new StringBuilder()
-        sb.append("""<table cellpadding="5" cellspacing="1" border="0" style="background-color:#909090">""")
+        sb.append("""<table datatable="yes" cellpadding="5" cellspacing="1" border="0" style="background-color:#909090">""")
         sb.append("<tr>")
         columns.keySet.foreach(field => {
             sb.append("""<th style="text-align: left; background-color:#D0D0D0">""")
@@ -957,20 +957,30 @@ class DataTable() {
             sb.append("</th>")
         })
         sb.append("</tr>")
-        rows.foreach(row => {
-            sb.append("<tr>")
-            row.getFields.foreach(field => {
-                sb.append("""<td style="background-color: #FFFFFF;""")
-                row.getDataType(field) match {
-                    case Some(dt) => if (dt == DataType.DECIMAL || dt == DataType.INTEGER) sb.append(" text-align: right;")
-                    case _ =>
+        breakable {
+            var sum = 0
+            for (row <- rows) {
+                sb.append("<tr>")
+                row.getFields.foreach(field => {
+                    sb.append("""<td style="background-color: #FFFFFF;""")
+                    row.getDataType(field) match {
+                        case Some(dt) => if (dt == DataType.DECIMAL || dt == DataType.INTEGER) sb.append(" text-align: right;")
+                        case _ =>
+                    }
+                    sb.append("""">""")
+                    sb.append(row.getString(field))
+                    sb.append("</td>")
+                })
+                sb.append("</tr>")
+
+                if (limit > 0) {
+                    sum += 1
+                    if (sum >= limit) {
+                        break
+                    }
                 }
-                sb.append("""">""")
-                sb.append(row.getString(field))
-                sb.append("</td>")
-            })
-            sb.append("</tr>")
-        })
+            }
+        }
         sb.append("</table>")
         
         sb.toString()

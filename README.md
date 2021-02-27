@@ -203,5 +203,5 @@ PQL的最大的特点就是“简单”，可以在你的任何Java或Scala项�
 
 PQL语言免费使用，有任何问题均可联系作者或留言。PQL的更新频率为每周一次。
 
-**官方网站 [www.qross.io](http://www.qross.io)**  
+**官方网站 [www.qross.cn](http://www.qross.cn)**  
 **作者邮箱 [wu@qross.io](mailto:wu@qross.io)**

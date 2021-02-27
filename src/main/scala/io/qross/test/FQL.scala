@@ -24,17 +24,12 @@ object FQL {
 
         //new SELECT("select * from :hello where name='Tom' and age>18 order by age desc limit 10")
 
-//        Marker.openFile("c:/io.Qross/Folder/pql/overview.md")
-//            .replaceInMarkdown("](/", "[(/doc/")
-//            .replaceInMarkdown(".md)", ")")
-//            .transform()
-//            .removeHeader()
-//            .colorCodes(false)
-//            .getContent
-//            .print
+        Marker.openFile("/templates/markdown.md")
+            .transform()
+            .getContent
+            .print
 
-        new Marker(ResourceFile.open("/templates/markdown.md").content).transform().getContent.print
-
+        //new Marker(ResourceFile.open("/templates/markdown.md").content).transform().getContent.print
 
         System.exit(0)
 

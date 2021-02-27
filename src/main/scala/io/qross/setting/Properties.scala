@@ -76,7 +76,7 @@ object Properties {
         }
     }
 
-    def loadLocalFile(path: String): Unit = {
+    def loadLocalFile(path: String, loadResouces: Boolean = true): Unit = {
         val file = new File(path)
         if (file.exists()) {
             path.takeAfterLast(".").toLowerCase() match {
@@ -85,7 +85,7 @@ object Properties {
                 case _ => loadConfig(new FileReader(path).readToEnd, Config.Json)
             }
         }
-        else {
+        else if (loadResouces) {
             loadResourcesFile(path)
         }
     }
@@ -170,7 +170,7 @@ object Properties {
         }
     }
 
-    def loadSiblingFile(fileName: String): Unit = loadLocalFile(Environment.runningDirectory + fileName)
+    def loadSiblingFile(fileName: String): Unit = loadLocalFile(Environment.runningDirectory + fileName, loadResouces = false)
 
     def loadUrlConfig(url: String, format: Int = Config.Properties): Unit = loadConfig(Http.GET(url).request(), format)
 

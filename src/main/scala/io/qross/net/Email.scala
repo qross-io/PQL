@@ -111,10 +111,10 @@ object Email {
 
         def placeEmailDataTable(placeHolder: String = ""): DataHub = {
             if (placeHolder == "") {
-                EMAIL.placeData("#{data}", dh.getData.toHtmlString)
+                EMAIL.placeData("#{data}", dh.getData.toHtmlString())
             }
             else {
-                EMAIL.placeData("#{" + placeHolder + "}", dh.getData.toHtmlString)
+                EMAIL.placeData("#{" + placeHolder + "}", dh.getData.toHtmlString())
             }
 
             dh.preclear()

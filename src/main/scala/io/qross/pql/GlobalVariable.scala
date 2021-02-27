@@ -2,12 +2,12 @@ package io.qross.pql
 
 import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.exception.SQLExecuteException
+import io.qross.fs.TextFile._
 import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.net.{Cookies, Session}
 import io.qross.pql.Patterns.FUNCTION_NAMES
 import io.qross.setting.{Configurations, Language}
 import io.qross.time.DateTime
-import io.qross.fs.TextFile._
 
 object GlobalVariable {
 
@@ -165,4 +165,7 @@ object GlobalVariableDeclaration {
     def LANGUAGE(PQL: PQL): DataCell = DataCell(Language.name, DataType.TEXT)
 
     def POINTER(PQL: PQL): DataCell = DataCell(PQL.dh.cursor, DataType.INTEGER)
+
+    def SPOTLIGHT(PQL: PQL): DataCell = DataCell(io.qross.look.Spotlight.random, DataType.TEXT)
+    def THEME(PQL: PQL): DataCell = DataCell(io.qross.look.Theme.random, DataType.ROW)
 }
