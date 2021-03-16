@@ -6,6 +6,7 @@ import java.util.regex.Pattern
 import io.qross.core._
 import io.qross.exception.{ConvertFailureException, SQLExecuteException}
 import io.qross.net.Json
+import io.qross.pql.Patterns.$NULL
 import io.qross.pql.Solver._
 import io.qross.setting.Global
 import io.qross.time.DateTime
@@ -79,7 +80,7 @@ object TypeExt {
             queries.toMap
         }
 
-        //执行javascript
+        //执行 javascript
         def eval(): DataCell = {
             if (string.bracketsWith("{", "}")) {
                 DataCell(Json(string).parseRow("/"), DataType.ROW)
@@ -89,6 +90,9 @@ object TypeExt {
             }
             else if (string.bracketsWith("[", "]")) {
                 DataCell(Json(string).parseJavaList("/"), DataType.ARRAY)
+            }
+            else if ($NULL.test(string)) {
+                DataCell.NULL
             }
             else {
                 val jse: ScriptEngine = new ScriptEngineManager().getEngineByName("JavaScript")
@@ -325,6 +329,32 @@ object TypeExt {
         def replaceLastOne(instr: String, replacement: String): String = {
             if (string.contains(instr)) {
                 string.takeBeforeLast(instr) + replacement + string.takeAfterLast(instr)
+            }
+            else {
+                string
+            }
+        }
+
+        def repeat(times: Int): String = {
+            List.fill(times)(string).mkString
+        }
+
+        def repeat(times: Int, delimiter: String): String = {
+            List.fill(times)(string).mkString(delimiter)
+        }
+
+        def pad(length: Int, fill: String): String = {
+            if (string.length < length) {
+                fill.repeat(length - string.length).take(length - string.length) + string
+            }
+            else {
+                string
+            }
+        }
+
+        def padRight(length: Int, fill: String): String = {
+            if (string.length < length) {
+                string + fill.repeat(length - string.length).take(length - string.length)
             }
             else {
                 string
@@ -848,6 +878,33 @@ object TypeExt {
 
         def toJsonString: String = {
             Json.serialize(map)
+        }
+    }
+
+    implicit class ExceptionExt(e: Exception) {
+        def getReferMessage: String = {
+            val message = e.getMessage
+            if (message == null) {
+                if (e.getCause != null) {
+                    e.getCause.getMessage
+                }
+                else {
+                    e.getLocalizedMessage
+                }
+            }
+            else {
+                message
+            }
+        }
+
+        def getFullMessage: java.util.List[String] = {
+            val messages = new util.ArrayList[String]()
+            val buf = new java.io.ByteArrayOutputStream()
+            e.printStackTrace(new java.io.PrintWriter(buf, true))
+            messages.add(buf.toString())
+            buf.close()
+
+            messages
         }
     }
 }

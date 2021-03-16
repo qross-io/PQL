@@ -11,7 +11,7 @@ import scala.collection.mutable
 
 object Patterns {
 
-    val $USER$FUNCTION: Regex = """(?i)^FUNCTION\s+\$([a-z0-9_]+)\s*\(([^\)]*)\)\s*BEGIN\b""".r
+    val $USER$DEFINED$FUNCTION: Regex = """(?i)^FUNCTION\s+([\$@])([a-z0-9_]+)\s*\(([^\)]*)\)\s*BEGIN\b""".r
     val $FUNCTION$ARGUMENT: Regex = """(?i)^\$[a-z0-9]+(\s+[a-z]+)?(\s+DEFAULT\s+.+)?$""".r
 
     val $IF: Regex = """(?i)^IF\s+([\s\S]+?)\s+THEN\b""".r
@@ -47,7 +47,7 @@ object Patterns {
     val IN$$: Regex = """(?i)\sIN\s*\([^\(\)]*\)""".r  // IN (...)
 
     val STATEMENTS: Set[String] = Set[String]("IF", "ELSIF", "ELSE", "FOR", "WHILE", "CASE", "WHEN", "EXEC")
-    val NON_QUERY_CAPTIONS: Set[String] = Set[String]("INSERT", "UPDATE", "DELETE", "REPLACE", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT", "USE")
+    val NON_QUERY_CAPTIONS: Set[String] = Set[String]("INSERT", "UPDATE", "UPSERT", "DELETE", "REPLACE", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT", "RENAME", "USE")
     //可求值语句必须有返回值，且类中包含evaluate方法
     val EVALUATIONS: Set[String] = Set[String]("SELECT", "SHOW", "PARSE", "IF", "CASE", "FILE", "DIR", "REDIS", "INVOKE", "RUN", "SEND", "EXEC", "NEW")
 
@@ -98,7 +98,6 @@ object Patterns {
 
     val $VARIABLE: Regex = """^(\$|@)\(?[A-Za-z0-9_]+\)?$""".r
     val $INTERMEDIATE$N: Regex = """^~value\[(\d+)\]$""".r
-    val FUNCTION_NAMES: Set[String] = GlobalFunction.getClass.getDeclaredMethods.map(m => m.getName).filter(n => "^[A-Z]".r.test(n)).toSet
     val $RESERVED: Regex = """^[_A-Za-z0-9\.]+$""".r
     val $CONSTANT: Regex = """^\*$|^[A-Za-z][A-Za-z0-9_]*$|^[_][A-Za-z0-9_]+$""".r
     val $NULL: Regex = """(?i)^NULL$""".r

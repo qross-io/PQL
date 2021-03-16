@@ -42,9 +42,11 @@ class DataHub (val defaultConnectionName: String) extends Output {
     //虚库
     private[qross] lazy val FQL = new FQL(this)
 
-    private var lastSourceName = ""
+    private var lastSourceName = "" //最后使用的数据源名称
     private[qross] var currentSourceName = if (SOURCES.contains("DEFAULT")) "DEFAULT" else ""  //current dataSource - open
     private[qross] var currentDestinationName = if (SOURCES.contains("DEFAULT")) "DEFAULT" else ""  //current dataDestination - saveTo
+    private var stashedSource = "" // 暂存的数据源
+    private var stashedDestination = "" //暂存的数据目的
 
     private val HOLDER = s"temp_${DateTime.now.getString("yyyyMMddHHmmssSSS")}_${Math.round(Math.random() * 10000000D)}.sqlite".locate()
     private val TABLE = new DataTable()  //current buffer
@@ -141,13 +143,38 @@ class DataHub (val defaultConnectionName: String) extends Output {
 
     // ---------- open ----------
 
+    private[qross] def openSource(sourceName: String): DataHub = {
+        openSource(sourceName, "")
+    }
+
+    private[qross] def openSource(sourceName: String, databaseName: String): DataHub = {
+        if (!SOURCES.contains(sourceName) && !ALIASES.contains(sourceName.toLowerCase())) {
+            this += sourceName -> new DataSource(sourceName, databaseName)
+        }
+        currentSourceName = sourceName
+        lastSourceName = sourceName
+        this
+    }
+
     private[qross] def openSource(sourceName: String, source: Any): DataHub = {
-        //reset()
         if (!SOURCES.contains(sourceName) && !ALIASES.contains(sourceName.toLowerCase())) {
             this += sourceName -> source
         }
         currentSourceName = sourceName
         lastSourceName = sourceName
+        this
+    }
+
+    private[qross] def saveToDestination(destinationName: String): DataHub = {
+        saveToDestination(destinationName, "")
+    }
+
+    private[qross] def saveToDestination(destinationName: String, databaseName: String): DataHub = {
+        if (!SOURCES.contains(destinationName) && !ALIASES.contains(destinationName.toLowerCase())) {
+            this += destinationName -> new DataSource(destinationName, databaseName)
+        }
+        currentDestinationName = destinationName
+        lastSourceName = destinationName
         this
     }
 
@@ -196,9 +223,9 @@ class DataHub (val defaultConnectionName: String) extends Output {
         open(connectionNameOrDataSource, "")
     }
 
-    def open(connectionNameOrDataSource: Any, database: String): DataHub = {
+    def open(connectionNameOrDataSource: Any, databaseName: String): DataHub = {
         connectionNameOrDataSource match {
-            case connectionName: String => openSource(connectionName, new DataSource(connectionName, database))
+            case connectionName: String => openSource(connectionName, databaseName)
             case dataSource: DataSource => openSource(dataSource.connectionName, dataSource)
             case _ => throw new OpenDataSourceException("Unsupported data source parameter format, only support String or DataSource")
         }
@@ -254,6 +281,26 @@ class DataHub (val defaultConnectionName: String) extends Output {
     }
 
     // ---------- Reset ----------
+
+    private[qross] def stashSources(): DataHub = {
+        stashedSource = currentSourceName
+        stashedDestination = currentDestinationName
+        this
+    }
+
+    private[qross] def popSources(): DataHub = {
+        if (stashedSource != "") {
+            openSource(stashedSource)
+            stashedSource = ""
+        }
+
+        if (stashedDestination != "") {
+            saveToDestination(stashedDestination)
+            stashedDestination = ""
+        }
+
+        this
+    }
 
     def reset(): DataHub = {
         if (TO_BE_CLEAR) {

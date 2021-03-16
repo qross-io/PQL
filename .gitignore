@@ -24,3 +24,8 @@ dubbo-consumer/
 /target
 /project/project
 /project/target
+
+keeper/
+tasks/
+temp/
+worker/

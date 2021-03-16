@@ -17,7 +17,8 @@ object CodeCounter {
             "PQL" -> count(path + "PQL/src/main/scala/"),
                 "Keeper" -> count(path + "Keeper/src/main/scala/"),
                 "Master" -> count(path + "Master/src/main/"),
-                "Worker" -> count(path + "Worker/src/main/")
+                "Worker" -> count(path + "Worker/src/main/"),
+                "root.js" -> count(path + "root.js/", "root*.js")
         ).foreach(k => {
             println(k._1 + ": " + k._2)
         })

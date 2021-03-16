@@ -1506,7 +1506,7 @@ object Sharp {
 
     def IF$UNDEFINED(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.dataType == DataType.EXCEPTION && data.value == "NOT_FOUND") {
+            if (data.dataType == DataType.EXCEPTION && data.value == "UNDEFINED") {
                 arg
             }
             else if (data.asText.removeQuotes().containsArguments) {

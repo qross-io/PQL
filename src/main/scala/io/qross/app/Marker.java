@@ -120,14 +120,14 @@ public class Marker {
 
     public Marker transform() {
 
-        List<String> pql = new ArrayList<>();
+        List<String> stash = new ArrayList<>();
 
         // embedded PQL
         Pattern p = Pattern.compile("<%[\\s\\S]+?%>", Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(content);
         while (m.find()) {
-            content = content.replace(m.group(0), "~pql[" + pql.size() + "]");
-            pql.add(m.group(0));
+            content = content.replace(m.group(0), "~stash[" + stash.size() + "]");
+            stash.add(m.group(0));
         }
 
         // /green:我是绿色/
@@ -135,12 +135,13 @@ public class Marker {
         // //b,i,u,s
         // /green,b:绿色粗体/
         // primary, darker, lighter
-
-        p = Pattern.compile("(?<!/)/([#a-z0-9,\\s]+):([^/]+)/", Pattern.CASE_INSENSITIVE);
+        // 200%
+        // Consolas
+        p = Pattern.compile("(?<!/)/([#a-z0-9%,\\s]+):([^/]+)/", Pattern.CASE_INSENSITIVE);
         m = p.matcher(content);
         while (m.find()) {
             StringBuilder sb = new StringBuilder();
-            for (String value : m.group(1).toLowerCase().split(",")) {
+            for (String value : m.group(1).split(",")) {
                 String s = value.trim();
                 if (s.matches("^\\d+$")) {
                     s = "font-size: " + (Float.parseFloat(s) / 16f) + "rem";
@@ -160,6 +161,12 @@ public class Marker {
                             s = "text-decoration: line-through";
                             break;
                     }
+                }
+                else if (Pattern.compile("^[A-Z]").matcher(s).find()) {
+                    s = "font-family: " + s;
+                }
+                else if (s.endsWith("%")) {
+                    s = "line-height: " + s;
                 }
                 else {
                     if (s.matches("^(primary|darker|lighter)$")) {
@@ -199,8 +206,15 @@ public class Marker {
             content = content.replace(m.group(0), "<span style=\"display: inline-block; width: " + m.group(1) + "px\"></span>");
         }
 
-        //处理 DIV 元素
+        // DIV
         content = content.replaceAll("(?i)<div\\b", "<block").replaceAll("(?i)</div>", "</block>");
+        //TEXTAREA
+        p = Pattern.compile("(?i)<textarea\\b[\\s\\S]+?</textarea>", Pattern.CASE_INSENSITIVE);
+        m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(0), "~stash[" + stash.size() + "]");
+            stash.add(m.group(0));
+        }
 
         content = Marker.markdownToHtml(content);
         format = Marker.HTML;
@@ -218,11 +232,15 @@ public class Marker {
             content = content.replace(m.group(0), m.group(0).substring(0, m.group(0).length() - 4));
         }
 
-        //restore PQL
-        p = Pattern.compile("~pql\\[(\\d+)\\]");
+        //pop stash
+        p = Pattern.compile("~stash\\[(\\d+)\\]");
         m = p.matcher(content);
         while (m.find()) {
-            content = content.replace(m.group(0), pql.get(Integer.parseInt(m.group(1))));
+            content = content.replace(m.group(0), stash.get(Integer.parseInt(m.group(1))));
+        }
+        //recurse
+        while ((m = p.matcher(content)).find()) {
+            content = content.replace(m.group(0), stash.get(Integer.parseInt(m.group(1))));
         }
 
         //external links

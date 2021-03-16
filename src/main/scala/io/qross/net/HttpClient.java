@@ -131,11 +131,13 @@ public class HttpClient {
             }
 
             result = buffer.toString();
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             System.out.println("Post exception! " + e);
             e.printStackTrace();
             throw new IOException("Response exception!");
-        } finally {
+        }
+        finally {
             if (reader != null) {
                 reader.close();
             }

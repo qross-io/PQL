@@ -23,7 +23,7 @@ object Cogo {
         "editor" -> "root.editor.js",
         "editable" -> "root.editor.js",
         "table-datatable" -> "root.datatable.js,datatable.css",
-        "textarea-coder" -> "root.coder.js,coder/codemirror.js,coder/sql.js,coder/codemirror.css,coder.css",
+        "textarea-coder" -> "root.coder.js,coder/codemirror.js,coder/codemirror.css,coder.css",
         "a-help" -> "root.help.js,root.animation.js,root.popup.js,iconfont.css"
     )
 
@@ -66,7 +66,7 @@ object Cogo {
             |</html>""".stripMargin
 
     def getScripts(content: String): String = {
-        """(?i)<div[^>]+display=|\bpopup=|\bCallout\(|\bfocusView\b|\$cookie\b|<backtop\b|<input\b|<select\b|\sselect=|<button\b[^>]+?action\b|<button[^>]+\bwatch=|<calendar\b|<clock\b|<input[^>]+type="calendar"|<treeview\b|\$root.(confirm|alert|prompt)|<editor\b|\s(editable)=|<table[^>]+datatable="|<textarea[^>]+coder=|<a\b[^>]+help=""".r
+        """(?i)<div[^>]+display=|\bpopup=|\bCallout\b|\bfocusView\b|\$cookie\b|<backtop\b|<select\b|\sselect=|<input\b|<button\b[^>]+?action\b|<button[^>]+\bwatch=|<calendar\b|<clock\b|<input[^>]+type="calendar"|<treeview\b|\$root.(confirm|alert|prompt)|<editor\b|\s(editable)=|<table[^>]+datatable="|<textarea[^>]+coder=|<a\b[^>]+help=""".r
             .findAllIn(content)
             .map(v => {
                 val ms = "(?i)[a-z]+".r.findAllIn(v).map(_.toLowerCase()).toList
@@ -99,9 +99,10 @@ object Cogo {
             """<textarea[^>]+mode="([a-z-]+)"""".r
                 .findAllMatchIn(content)
                 .map(_.group(1).toLowerCase())
-                .toSet
+                .toSeq
+                .distinct
                 .map(codes(_))
-                .map(js => s"""<script type="text/javascript" src="@/coder/$js""")
+                .map(js => s"""<script type="text/javascript" src="@/coder/$js"></script>""")
                 .mkString("\n")
     }
 }

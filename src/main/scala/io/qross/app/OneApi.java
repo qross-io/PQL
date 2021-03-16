@@ -111,7 +111,7 @@ public class OneApi {
         // load all api and config from database
         if (!Setting.OneApiServiceName.isEmpty()) {
             if (JDBC.hasQrossSystem()) {
-                DataAccess ds = new DataAccess(JDBC.QROSS());
+                DataAccess ds = DataAccess.QROSS();
                 int serviceId = 0;
 
                 if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_services'")) {

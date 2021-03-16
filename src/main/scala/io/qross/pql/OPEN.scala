@@ -92,7 +92,7 @@ class OPEN(val sentence: String) {
                 if (plan.contains("SELECT")) {
                     val db = plan.oneArgs("SELECT")
                     if ("""^\d+$""".r.test(db)) {
-                        PQL.dh.openRedis(plan.headArgs, db.toInt)
+                        PQL.dh.openRedis(plan.headArgs.takeAfterIfContains("redis."), db.toInt)
                     }
                     else {
                         throw new SQLParseException("Incorrect database index: " + db + ". + It's must be a integer.")

@@ -48,7 +48,8 @@ public class HttpRequest {
             while ((line = br.readLine()) != null) {
                 sb.append(line);
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             e.printStackTrace();
         }
         if (sb.length() > 0) {

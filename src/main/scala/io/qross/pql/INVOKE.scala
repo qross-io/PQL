@@ -24,7 +24,7 @@ class INVOKE(sentence: String) {
             if (java.contains("(")) {
                 val args = java.takeAfter("(")
                     .takeBeforeLast(")")
-                    .split(",")
+                    .split(",", -1)
                     .map(_.trim)
                     .map(item => {
                         val (arg, dataType) = {

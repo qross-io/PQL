@@ -21,6 +21,26 @@ object DataSource {
 
     def MEMORY: DataSource = new DataSource(DBType.Memory)
 
+    def testConnection(driver: String, connectionString: String): String = {
+        testConnection(driver, connectionString, "", "")
+    }
+
+    def testConnection(driver: String, connectionString: String, username: String, password: String): String = {
+        try {
+            Class.forName(driver).newInstance()
+            if (username != "") {
+                DriverManager.getConnection(connectionString, username, password)
+            }
+            else {
+                DriverManager.getConnection(connectionString)
+            }
+
+            ""
+        }
+        catch {
+            case e: Exception => e.getReferMessage
+        }
+    }
 }
 
 class DataSource (val connectionName: String, val databaseName: String) extends Output {
@@ -44,7 +64,7 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
         this(connectionName, databaseName = "")
     }
     
-    def testConnection(): Boolean = {
+    def test(): Boolean = {
         var connected = false
         try {
             this.executeResultSet("SELECT 1 AS test")

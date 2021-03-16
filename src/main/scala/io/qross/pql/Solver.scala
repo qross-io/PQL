@@ -21,7 +21,7 @@ object Solver {
     //val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
     val USER_VARIABLE: List[Regex] = List[Regex](
         """\$\(([a-zA-Z0-9_]+)\)""".r,  //防冲突增加小括号时不考虑函数，因为函数没有防冲突的必要，全局变量同理。属性和索引规则符号前面也没有防冲突的必要
-        """\$([a-zA-Z0-9_]+)\b(?![(.\[:=])""".r // := 前的变量忽略，函数名忽略
+        """\$([a-zA-Z0-9_]+)\b(?!\s*[(.\[:=])""".r // := 前的变量忽略，函数名忽略
     )
     val GLOBAL_VARIABLE: List[Regex] = List[Regex](
         """@\(([a-zA-Z0-9_]+)\)""".r,
@@ -616,7 +616,7 @@ object Solver {
                                 Output.writeWarning(s"The variable $$$name has not been assigned.")
                             }
                             //变量未定义
-                            //sentence = sentence.replaceFirstOne(whole, "UNDEFINED")
+                            sentence = sentence.replaceFirstOne(whole, PQL.$stash(DataCell.UNDEFINED))
                         })
                 })
 

@@ -1,9 +1,9 @@
 package io.qross.pql
 
 import io.qross.core.DataCell
-import io.qross.exception.{SQLExecuteException, SQLParseException}
+import io.qross.exception.SQLExecuteException
 import io.qross.ext.TypeExt._
-import io.qross.pql.Patterns.{$CALL, FUNCTION_NAMES}
+import io.qross.pql.Patterns.$CALL
 import io.qross.pql.Solver._
 
 //CALL $FUNC_NAME(2, $b := 1);
@@ -49,7 +49,9 @@ object CALL {
 
                 //执行 - 在END或RETURN语句中退出
                 PQL.EXECUTING.push(statement)
+                PQL.dh.stashSources() //暂存主过程中的当前数据源和目标数据源
                 PQL.executeStatements($func.statements)
+                PQL.dh.popSources() //恢复父级过程使用的数据源，此步骤防止函数中的语句影响主过程
 
                 PQL.FUNCTION$RETURNS.pop()
             }
@@ -58,13 +60,20 @@ object CALL {
             }
         }
         else {
-            //系统函数
             //全局函数
-            if (FUNCTION_NAMES.contains(funcName)) {
-                new GlobalFunction(funcName).call(args.split(",").map(_.trim().$sharp(PQL)).toList)
+            if (GlobalFunction.NAMES.contains(funcName)) {
+                if (GlobalFunction.USER.contains(funcName)) {
+                    GlobalFunction.USER(funcName).call(args.$restore(PQL))
+                }
+                else if (GlobalFunction.SYSTEM.contains(funcName)) {
+                    GlobalFunction.SYSTEM(funcName).call(args.$restore(PQL))
+                }
+                else {
+                    GlobalFunction.call(funcName, args.split(",").map(_.trim().$sharp(PQL)).toList)
+                }
             }
             else {
-                DataCell.NULL
+                throw new SQLExecuteException("Incorrect global function name: " + funcName)
             }
         }
     }

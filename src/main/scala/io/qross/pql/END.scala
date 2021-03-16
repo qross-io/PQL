@@ -3,6 +3,7 @@ package io.qross.pql
 import io.qross.core.DataCell
 import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
+import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.pql.Patterns.$END
 
 object END {
@@ -76,7 +77,29 @@ object END {
 
                 //将语句从当前节点转移到functions
                 val $function = PQL.PARSING.pop()
-                PQL.USER$FUNCTIONS += $function.instance.asInstanceOf[FUNCTION].functionName -> new UserFunction($function)
+                val instance = $function.instance.asInstanceOf[FUNCTION]
+                PQL.USER$FUNCTIONS += instance.functionName -> new UserFunction($function)
+
+//                if (instance.prefix == "$") {
+//
+//                }
+//                else if (instance.prefix == "@") {
+//                    val user = PQL.credential.getInt("userid")
+//                    val functionArgs = $function.variables.join(",", " DEFAULT ")
+//                    val functionStatement = PQL.originalSQL.takeAfter("FUNC").takeAfter("BEGIN").takeBefore("END")
+//                    if (user == 0) {
+//                        GlobalFunction.SYSTEM += instance.functionName -> new GlobalFunction(instance.functionName, functionArgs, functionStatement)
+//                    }
+//                    else {
+//                        GlobalFunction.USER += instance.functionName -> new GlobalFunction(instance.functionName, functionArgs, functionStatement)
+//                    }
+//
+//                    // 保存到数据库
+//                    if (JDBC.hasQrossSystem) {
+//                        DataSource.QROSS.queryUpdate("REPLACE INTO qross_functions (function_name, function_args, function_statement, function_owner) VALUES (?, ?, ?, ?)",
+//                            instance.functionName, functionArgs, functionStatement, user)
+//                    }
+                //}
         }
     }
 }

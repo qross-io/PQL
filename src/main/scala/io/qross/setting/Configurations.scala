@@ -1,7 +1,9 @@
 package io.qross.setting
 
 import io.qross.core.DataRow
+import io.qross.ext.TypeExt._
 import io.qross.jdbc.{DataSource, JDBC}
+import io.qross.pql.{GlobalFunction, GlobalVariable}
 
 object Configurations {
 
@@ -39,24 +41,110 @@ object Configurations {
                     }
                 }).clear()
 
-            //connections
-            ds.executeDataTable("SELECT * FROM qross_connections WHERE database_class='system' AND enabled='yes'")
+            ds.executeDataTable("SELECT * FROM qross_connections WHERE connection_owner=0 AND enabled='yes'")
                 .foreach(row => {
-                    //从数据行新建
-                    JDBC.connections += row.getString("connection_name") -> new JDBC(
-                        row.getString("database_type"),
-                        row.getString("connection_string"),
-                        row.getString("jdbc_driver"),
-                        row.getString("username"),
-                        row.getString("password"),
-                        row.getInt("overtime"),
-                        row.getInt("retry_limit")
-                    )
+                    val databaseName = row.getString("database_name")
+                    if (databaseName != "redis") {
+                        JDBC.connections += row.getString("connection_name") -> new JDBC(
+                            databaseName,
+                            row.getString("connection_string"),
+                            row.getString("jdbc_driver"),
+                            row.getString("username"),
+                            row.getString("password"),
+                            row.getInt("overtime"),
+                            row.getInt("retry_limit")
+                        )
+                    }
+                    else {
+                        val connectionName = row.getString("connection_name").takeAfterIfContains("redis.")
+                        Properties.set(s"redis.$connectionName.host", row.getString("host"))
+                        Properties.set(s"redis.$connectionName.port", row.getString("port"))
+                        Properties.set(s"redis.$connectionName.password", row.getString("password"))
+                        Properties.set(s"redis.$connectionName.database", row.getString("default_database"))
+                    }
                 }).clear()
 
-            //loadSystemPropertiesAndConnections
+            ds.executeDataTable("SELECT function_name, function_args, function_statement FROM qross_functions WHERE function_owner=0")
+                .foreach(row => {
+                    val name = row.getString("function_name")
+                    val args = row.getString("function_args")
+                    if (args == "") {
+                        GlobalFunction.WITHOUT_ARGUMENTS += name
+                    }
+                    GlobalFunction.SYSTEM += name -> new GlobalFunction(name, args, row.getString("function_statement"))
+                    GlobalFunction.NAMES += name
+                }).clear()
+
+            ds.executeDataTable("SELECT var_group, var_name, var_type, var_value FROM qross_variables WHERE var_owner=0")
+                .foreach(row => {
+                    GlobalVariable.SYSTEM.set(
+                        row.getString("var_name").toUpperCase()
+                        , row.getString("var_type") match {
+                            case "INTEGER" => row.getLong("var_value")
+                            case "DECIMAL" => row.getDouble("var_value")
+                            case _ => row.getString("var_value")
+                        })
+
+                }).clear()
+
             ds.close()
         }
+    }
+
+    def load(userId: Int): Unit = {
+        //从数据库加载用户全局变量
+        if (JDBC.hasQrossSystem && userId > 0) {
+            val ds = DataSource.QROSS
+
+            ds.executeDataTable("SELECT * FROM qross_connections WHERE connection_owner=? AND enabled='yes'", userId)
+                .foreach(row => {
+                    val databaseName = row.getString("database_name")
+                    if (databaseName != "redis") {
+                        JDBC.connections += row.getString("connection_name") -> new JDBC(
+                            databaseName,
+                            row.getString("connection_string"),
+                            row.getString("jdbc_driver"),
+                            row.getString("username"),
+                            row.getString("password"),
+                            row.getInt("overtime"),
+                            row.getInt("retry_limit")
+                        )
+                    }
+                    else {
+                        val connectionName = row.getString("connection_name").takeAfterIfContains("redis.")
+                        Properties.set(s"redis.$connectionName.host", row.getString("host"))
+                        Properties.set(s"redis.$connectionName.port", row.getString("port"))
+                        Properties.set(s"redis.$connectionName.password", row.getString("password"))
+                        Properties.set(s"redis.$connectionName.database", row.getString("default_database"))
+                    }
+                }).clear()
+
+            ds.executeDataTable("SELECT function_name, function_args, function_statement FROM qross_functions WHERE function_owner=?", userId)
+                .foreach(row => {
+                    val name = row.getString("function_name")
+                    val args = row.getString("function_args")
+                    if (args == "") {
+                        GlobalFunction.WITHOUT_ARGUMENTS += name
+                    }
+                    GlobalFunction.USER += name -> new GlobalFunction(name, args, row.getString("function_statement"))
+                    GlobalFunction.NAMES += name
+                }).clear()
+
+            ds.executeDataTable("SELECT var_name, var_type, var_value FROM qross_variables WHERE var_owner=?", userId)
+                .foreach(row => {
+                    GlobalVariable.USER.set(
+                        row.getString("var_name").toUpperCase(),
+                        row.getString("var_type") match {
+                            case "INTEGER" => row.getLong("var_value")
+                            case "DECIMAL" => row.getDouble("var_value")
+                            case _ => row.getString("var_value")
+                        })
+
+                }).clear()
+
+            ds.close()
+        }
+
     }
 
     def contains(name: String): Boolean = {

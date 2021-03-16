@@ -15,7 +15,7 @@ object RETURN {
 class RETURN(content: String) {
 
     def execute(PQL: PQL): Unit = {
-        //因为RETURN可能在控制语句中，所以退出直到碰到CALL语句或ROOT
+        //因为 RETURN 可能在控制语句中，所以退出直到冒泡到 CALL 语句或 ROOT
         while (PQL.EXECUTING.head.caption != "CALL" && PQL.EXECUTING.head.caption != "ROOT") {
             PQL.EXECUTING.pop()
         }

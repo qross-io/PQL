@@ -24,10 +24,12 @@ object FQL {
 
         //new SELECT("select * from :hello where name='Tom' and age>18 order by age desc limit 10")
 
-        Marker.openFile("/templates/markdown.md")
-            .transform()
-            .getContent
-            .print
+        io.qross.pql.FUNCTION.testArgs("$a 1, $b default1").print
+
+//        Marker.openFile("/templates/markdown.md")
+//            .transform()
+//            .getContent
+//            .print
 
         //new Marker(ResourceFile.open("/templates/markdown.md").content).transform().getContent.print
 

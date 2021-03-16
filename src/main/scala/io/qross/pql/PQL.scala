@@ -7,7 +7,7 @@ import io.qross.fs.SourceFile
 import io.qross.net.Json
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
-import io.qross.setting.Language
+import io.qross.setting.{Configurations, Language}
 import io.qross.time.DateTime
 
 import scala.collection.JavaConverters._
@@ -26,8 +26,20 @@ object PQL {
         new PQL(EMBEDDED + SQL, new DataHub())
     }
 
+    def check(SQL: String): String = {
+        PQL.open(SQL).check()
+    }
+
+    def checkPQL(SQL: String): String = {
+        PQL.open(SQL).check()
+    }
+
     //直接运行
     def run(SQL: String): Any = {
+        PQL.open(SQL).run()
+    }
+
+    def runPQL(SQL: String): Any = {
         PQL.open(SQL).run()
     }
 
@@ -50,6 +62,10 @@ object PQL {
 
     def openEmbeddedFile(path: String, dh: DataHub): PQL = {
         new PQL(EMBEDDED + SourceFile.read(path), dh)
+    }
+
+    def checkFile(path: String): String = {
+        PQL.openFile(path).check()
     }
 
     //直接运行
@@ -589,7 +605,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         credential.set("username", userName)
         credential.set("role", role)
 
-        GlobalVariable.loadUserVariables(userId)
+        Configurations.load(userId)
 
         this
     }
@@ -600,7 +616,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         credential.set("role", role)
         info.foreach(kv => credential.set(kv._1, kv._2))
 
-        GlobalVariable.loadUserVariables(userId)
+        Configurations.load(userId)
 
         this
     }
@@ -608,10 +624,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     def signIn(info: (String, Any)*): PQL = {
         info.foreach(kv => credential.set(kv._1, kv._2))
 
-        val userId = credential.getInt("userid", 0)
-        if (userId > 0) {
-            GlobalVariable.loadUserVariables(userId)
-        }
+        Configurations.load(credential.getInt("userid", 0))
 
         this
     }
@@ -636,7 +649,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         }
 
         if (credential.contains("userid")) {
-            GlobalVariable.loadUserVariables(credential.getInt("userid"))
+            Configurations.load(credential.getInt("userid"))
         }
 
         this
@@ -651,7 +664,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
             credential.set(kv._1, kv._2)
         }
 
-        GlobalVariable.loadUserVariables(userId)
+        Configurations.load(userId)
 
         this
     }
@@ -666,7 +679,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         s"~value[${this.values.size - 1}]"
     }
 
-    //运行但不关闭DataHub
+    //运行但不关闭 DataHub
     def $run(): PQL = {
         this.parseAll()
         EXECUTING.push(root)
@@ -730,6 +743,38 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         }
     }
 
+    //仅检查语句的正确性，返回第一个错误
+    def check(): String = {
+        try {
+            this.parseAll()
+            ""
+        }
+        catch {
+            case e: Exception => e.getReferMessage
+        }
+    }
+
+    //运行并返回最多一个结果, 一般用在全局函数体中
+    def call(): DataCell = {
+        this.$run()
+        this.dh.close()
+
+        if (RESULT.nonEmpty) {
+            DataCell(RESULT.last)
+        }
+        else if (WORKING.nonEmpty) {
+            //显式输出为空时才使用隐式输出
+            DataCell(WORKING.last)
+        }
+        else if (AFFECTED_ROWS_OF_LAST_NON_QUERY > -1) {
+            //都为空时输出最后一条非查询语句影响的行数
+            DataCell(AFFECTED_ROWS_OF_LAST_NON_QUERY, DataType.INTEGER)
+        }
+        else {
+            DataCell.NULL
+        }
+    }
+
     //运行但关闭DataHub
     def run(): Any = {
         this.$run()
@@ -737,7 +782,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         this.$return
     }
 
-    //运行并输出，不关闭DataHub
+    //运行并输出，不关闭 DataHub
     def output: Any = {
         this.$run().$return
     }
