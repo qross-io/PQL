@@ -248,7 +248,7 @@ class TextFile(val fileNameOrPath: String, val format: Int) {
     private var meet = 0 //满足条件的行数
     private var head = "" //row head mark
     private var tail = "" //row tail mark
-    private var separator = if (format == TextFile.CSV) "," else "" //row delimiter
+    private var separator = "," //row delimiter
     private val columns = new mutable.LinkedHashMap[String, DataType]()
 
     private var values = "" //中间变量
@@ -416,7 +416,9 @@ class TextFile(val fileNameOrPath: String, val format: Int) {
 
         //默认数据结构
         SELECT.columns.foreach(column => {
-            table.addField(column.label, column.dataType)
+            if (column.label!= "*") {
+                table.addField(column.label, column.dataType)
+            }
         })
 
         //只有从头读时才跳行
@@ -481,7 +483,19 @@ class TextFile(val fileNameOrPath: String, val format: Int) {
             data
         }
         else {
-            val items = if (separator != "") line.split(separator, -1) else Array[String](line)
+            val items = {
+                if (separator != "") {
+                    if (format == TextFile.CSV) {
+                        line.$split(',').toArray
+                    }
+                    else {
+                        line.split(separator, -1)
+                    }
+                }
+                else {
+                    Array[String](line)
+                }
+            }
             val data = new DataRow()
 
             var i = 0

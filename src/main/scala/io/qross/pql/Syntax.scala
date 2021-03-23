@@ -27,7 +27,7 @@ object Syntax {
             OPEN  REDIS [host]  SELECT [database];
             OPEN  EXCEL [fileName]  AS [alias];
             OPEN  JSON FILE [fileName]  AS TABLE? [tableName];
-            OPEN  CSV FILE [fileName]  AS TABLE? [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  SKIP [amount];
+            OPEN  CSV FILE [fileName]  AS TABLE? [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  SKIP [amount];
             OPEN  TXT FILE [fileName]  AS TABLE? [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
             OPEN  GZ FILE [fileName]  AS TABLE? [tableName]  WITH FIRST ROW HEADERS  (id INT, name TEXT, ...)  BRACKETED BY m,n  DELIMITED BY 'delimiter'  SKIP [amount];
 

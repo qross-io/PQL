@@ -19,6 +19,7 @@ object DBType {
     val Spark = "spark"
     val Presto = "presto"
     val AnalyticDB = "analyticdb"
+    val Redis = "redis"
 }
 
 object JDBC {
@@ -200,20 +201,40 @@ object JDBC {
     def setup(id: Int): Unit = {
         if (hasQrossSystem) {
             val connection = DataSource.QROSS.queryDataRow("SELECT * FROM qross_connections WHERE id=?", id)
-            connections.put(connection.getString("connection_name"), new JDBC(
-                connection.getString("db_type"),
-                connection.getString("connection_string"),
-                connection.getString("jdbc_driver"),
-                connection.getString("username"),
-                connection.getString("password"),
-                connection.getInt("overtime"),
-                connection.getInt("retry_limit")
-            ))
+            if (connection.getString("database_name") != "redis") {
+                connections.put(connection.getString("connection_name"), new JDBC(
+                    connection.getString("database_name"),
+                    connection.getString("connection_string"),
+                    connection.getString("jdbc_driver"),
+                    connection.getString("username"),
+                    connection.getString("password"),
+                    connection.getInt("overtime"),
+                    connection.getInt("retry_limit")
+                ))
+            }
+            else {
+                //redis
+                val connectionName = connection.getString("connection_name")
+                Properties.set(s"redis.$connectionName.host", connection.getString("host"))
+                Properties.set(s"redis.$connectionName.port", connection.getString("port"))
+                Properties.set(s"redis.$connectionName.password", connection.getString("password"))
+                Properties.set(s"redis.$connectionName.database", connection.getString("default_database"))
+            }
         }
     }
 
     def remove(connectionName: String): Unit = {
         connections.remove(connectionName)
+        Properties.remove(connectionName)
+        Properties.remove(connectionName + ".url")
+        Properties.remove(connectionName + ".driver")
+        Properties.remove(connectionName + ".username")
+        Properties.remove(connectionName + ".password")
+        //redis blow
+        Properties.remove(s"redis.$connectionName.host")
+        Properties.remove(s"redis.$connectionName.port")
+        Properties.remove(s"redis.$connectionName.password")
+        Properties.remove(s"redis.$connectionName.database")
     }
 }
 

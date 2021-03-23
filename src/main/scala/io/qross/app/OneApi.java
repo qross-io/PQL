@@ -8,6 +8,7 @@ import io.qross.fs.*;
 import io.qross.jdbc.DataAccess;
 import io.qross.jdbc.JDBC;
 import io.qross.net.Redis;
+import io.qross.security.Token;
 import io.qross.time.DateTime;
 
 import java.io.File;
@@ -20,8 +21,7 @@ public class OneApi {
 
     // path -> METHOD -> OneApi
     public static Map<String, Map<String, OneApi>> ALL = new HashMap<>();
-    // token -> allowed name
-    public static Map<String, String> TOKENS = new HashMap<>();
+
     // path
     public static Set<String> OPEN = new HashSet<>();
     // path -> role or name
@@ -49,7 +49,7 @@ public class OneApi {
             String[] pairs = Setting.OneApiTokenList.split(";");
             for (String pair : pairs) {
                 if (pair.indexOf("=") > 0) {
-                    TOKENS.put(pair.substring(pair.indexOf("=") + 1), pair.substring(0, pair.indexOf("=")));
+                    Token.TOKENS.put(pair.substring(pair.indexOf("=") + 1), pair.substring(0, pair.indexOf("=")));
                 }
             }
         }
@@ -129,7 +129,7 @@ public class OneApi {
                 if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_requesters'")) {
                     DataTable tokens = ds.executeDataTable("SELECT name, token FROM qross_api_requesters");
                     for (DataRow token : tokens.getRowList()) {
-                        TOKENS.put(token.getString("token"), token.getString("name"));
+                        Token.TOKENS.put(token.getString("token"), token.getString("name"));
                     }
                     tokens.clear();
                 }
@@ -308,8 +308,8 @@ public class OneApi {
 
     //验证token访问
     public static boolean authenticateToken(String method, String path, String token) {
-        if (TOKENS.containsKey(token)) {
-            String requester = TOKENS.get(token);
+        if (Token.TOKENS.containsKey(token)) {
+            String requester = Token.TOKENS.get(token);
             String request = method.toUpperCase() + ":" + path;
             if (PERMIT.containsKey("*")) {
                 if (PERMIT.get("*").contains("*") || PERMIT.get("*").contains(requester)) {
@@ -369,7 +369,7 @@ public class OneApi {
 
         if (token != null && !token.isEmpty()) {
             //逻辑与Token逻辑相同
-            String requester = TOKENS.get(token);
+            String requester = Token.TOKENS.get(token);
             String request = method.toUpperCase() + ":" + path;
             if (PERMIT.containsKey("*")) {
                 if (PERMIT.get("*").contains("*") || PERMIT.get("*").contains(requester)) {

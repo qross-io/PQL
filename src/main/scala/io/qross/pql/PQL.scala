@@ -15,6 +15,9 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.Breaks._
 
+/**
+ * PQL 单例对象，用于快速创建类或快速运行 PQL
+ */
 object PQL {
 
     //打开但不运行
@@ -172,6 +175,11 @@ object PQL {
     }
 }
 
+/**
+ * PQL 类，整个系统的核心，多个组件都是基于 PQL 或与 PQL 结合紧密
+ * @param   originalSQL   原始 PQL 所有语句内容
+ * @param   dh            用于运行 PQL 的 DataHub
+ */
 class PQL(val originalSQL: String, val dh: DataHub) {
 
     //字符串 ~char[n]

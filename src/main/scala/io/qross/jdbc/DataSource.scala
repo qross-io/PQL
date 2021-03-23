@@ -9,6 +9,7 @@ import io.qross.core._
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
+import io.qross.setting.Global
 import io.qross.time.Timer
 
 import scala.collection.mutable
@@ -50,9 +51,6 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
 
     private[jdbc] var config = JDBC.get(connectionName)
 
-    //是否启用调试
-    private var DEBUG = false
-
     private var connection: Option[Connection] = None //current connection
     private var tick: Long = -1L //not opened
 
@@ -82,9 +80,7 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
         LOG_FORMAT = format
         this
     }
-    //是否启用调试模式
-    def debugging: Boolean = DEBUG
-    
+
     def open(): Unit = {
         //Class.forName(config.driver).newInstance()
         //检查driver
@@ -555,7 +551,7 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
     
     def executeResultSet(SQL: String, values: Any*): Option[ResultSet] = {
         this.openIfNot()
-        
+
         this.connection match {
             case Some(conn) =>
                 var rs: Option[ResultSet] = None

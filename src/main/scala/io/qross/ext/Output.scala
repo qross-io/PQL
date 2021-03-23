@@ -1,6 +1,8 @@
 package io.qross.ext
 
 import io.qross.core.{DataHub, DataTable}
+import io.qross.jdbc.DataSource
+import io.qross.setting.Global
 import io.qross.time.DateTime
 
 object Output {
@@ -65,7 +67,11 @@ object Output {
 
 trait Output {
 
+    protected var DEBUG: Boolean = Global.DEBUG
     protected var LOG_FORMAT = "text"
+
+    //是否启用调试模式
+    def debugging: Boolean = DEBUG
 
     def log(format: String = "text"): Unit = {
         LOG_FORMAT = format
@@ -117,7 +123,6 @@ trait Output {
         else {
             println()
             println(code)
-            println()
         }
     }
 

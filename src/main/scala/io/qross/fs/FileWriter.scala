@@ -121,12 +121,29 @@ class FileWriter(val file: File, val format: Int, val outputType: String, delete
     }
 
     def  writeTable(table: DataTable, withHeaders: Boolean = true): FileWriter = {
-        if (format != TextFile.JSON) {
+        if (format == TextFile.CSV) {
             if (withHeaders && !append) {
-                writeLine(table.getLabelNames.mkString(delimiter))
+                writeLine(table.getLabelNames.mkString(","))
             }
             table.foreach(row => {
-                writeLine(row.getValues.mkString(delimiter))
+                writeLine(row.values.values.map {
+                    case str: String =>
+                        if (str.contains(",")) {
+                            "\"" + str.replace("\"", "\\\"") + "\""
+                        }
+                        else {
+                            str
+                        }
+                    case o => o
+                }.mkString(","))
+            })
+        }
+        else if (format != TextFile.JSON) {
+            if (withHeaders && !append) {
+                writeLine(table.getLabelNames.mkString(this.delimiter))
+            }
+            table.foreach(row => {
+                writeLine(row.getValues.mkString(this.delimiter))
             })
         }
         else {
@@ -137,6 +154,22 @@ class FileWriter(val file: File, val format: Int, val outputType: String, delete
         this
     }
 
+    //        if (format == TextFile.CSV) {
+    //            writer.append(line.map {
+    //                case str: String =>
+    //                    if (str.contains(",")) {
+    //                        "\"" + str.replace("\"", "\\\"") + "\""
+    //                    }
+    //                    else {
+    //                        str
+    //                    }
+    //                case o => o
+    //            }.mkString(",") + TextFile.TERMINATOR)
+    //        }
+    //        else {
+    //            writer.append(line.mkString(this.delimiter) + TextFile.TERMINATOR)
+    //        }
+
     def writeTable(table: DataTable): FileWriter = {
         writeTable(table, true)
     }
@@ -146,8 +179,8 @@ class FileWriter(val file: File, val format: Int, val outputType: String, delete
         this
     }
 
-    def writeLine(line: Any*): FileWriter = {
-        writer.append(line.mkString(this.delimiter) + TextFile.TERMINATOR)
+    def writeLine(line: Any): FileWriter = {
+        writer.append(line + TextFile.TERMINATOR)
         this
     }
 

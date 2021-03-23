@@ -66,6 +66,57 @@ object TypeExt {
             }
         }
 
+        def $split(delimiter: Char): mutable.ArrayBuffer[String] = {
+            val cols = new mutable.ArrayBuffer[String]()
+
+            var m = 0
+            var n = 0
+            var p = false //
+            var q = false //quote 表示上一个字符是
+            for (i <- string.indices) {
+                if (string(i) == '"') {
+                    if (p) {
+                        //结尾
+                        if (string(i-1) != '\\' && (i == string.length - 1 || string(i+1) == delimiter)) {
+                            p = false
+                            q = true
+                        }
+                    }
+                    else if (i == 0 || string(i-1) == delimiter) {
+                        //开头
+                        p = true
+                    }
+                }
+                else if (string(i) == delimiter) {
+                    if (!p) {
+                        n = i
+                        cols += {
+                            if (q) {
+                                q = false
+                                string.substring(m, n).removeQuotes().replace("\\\"", "\"")
+                            }
+                            else {
+                                string.substring(m, n)
+                            }
+                        }
+                        m = i + 1
+                    }
+                }
+            }
+
+            cols += {
+                if (q) {
+                    q = false
+                    string.substring(m).removeQuotes().replace("\\\"", "\"")
+                }
+                else {
+                    string.substring(m)
+                }
+            }
+
+            cols
+        }
+
         def $split(delimiter: String = "&", terminator: String = "="): Map[String, String] = {
             val params = string.split(delimiter)
             val queries = new mutable.LinkedHashMap[String, String]()
@@ -326,6 +377,7 @@ object TypeExt {
                 string
             }
         }
+
         def replaceLastOne(instr: String, replacement: String): String = {
             if (string.contains(instr)) {
                 string.takeBeforeLast(instr) + replacement + string.takeAfterLast(instr)

@@ -5,6 +5,7 @@ import java.io._
 import com.fasterxml.jackson.databind.JsonNode
 import io.qross.ext.TypeExt._
 import io.qross.fs.{FileReader, ResourceFile}
+import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.net.{Http, Json}
 import org.yaml.snakeyaml.Yaml
 
@@ -66,7 +67,32 @@ object Properties {
         props.setProperty(key, value)
     }
 
+    def remove(key: String): Unit = {
+        props.remove(key)
+    }
+
     def keys: Array[java.lang.Object] = props.keySet().toArray
+
+    def load(id: Int): Unit = {
+        if (JDBC.hasQrossSystem) {
+            val property = DataSource.QROSS.queryDataRow("SELECT * FROM qross_properties WHERE id=?", id)
+            val path = property.getString("property_path")
+            val format = {
+                property.getString("property_format") match {
+                    case "properties" => 0
+                    case "yaml" | "yml" => 1
+                    case "json" => 2
+                    case _ => 0
+                }
+            }
+            property.getString("property_source") match {
+                case "local" => Properties.loadLocalFile(path)
+                case "resource" => Properties.loadResourcesFile(path)
+                case "nacos" => Properties.loadNacosConfig(path, format)
+                case "url" => Properties.loadUrlConfig(path, format)
+            }
+        }
+    }
 
     def loadConfig(content: String, format: Int = Config.Properties): Unit = {
         format match {
@@ -76,7 +102,7 @@ object Properties {
         }
     }
 
-    def loadLocalFile(path: String, loadResouces: Boolean = true): Unit = {
+    def loadLocalFile(path: String, loadResources: Boolean = true): Unit = {
         val file = new File(path)
         if (file.exists()) {
             path.takeAfterLast(".").toLowerCase() match {
@@ -85,7 +111,7 @@ object Properties {
                 case _ => loadConfig(new FileReader(path).readToEnd, Config.Json)
             }
         }
-        else if (loadResouces) {
+        else if (loadResources) {
             loadResourcesFile(path)
         }
     }
@@ -113,7 +139,9 @@ object Properties {
             }
         }
         catch {
-            case e: Exception => e.printStackTrace()
+            case e: Exception =>
+                //println(s"""File $path doesn't exists. Please check "/out/production/resources/" or "/build/resources/" if you are developing with Intellij Idea.""")
+                //e.printStackTrace()
         }
     }
 
@@ -170,7 +198,7 @@ object Properties {
         }
     }
 
-    def loadSiblingFile(fileName: String): Unit = loadLocalFile(Environment.runningDirectory + fileName, loadResouces = false)
+    def loadSiblingFile(fileName: String): Unit = loadLocalFile(Environment.runningDirectory + fileName, loadResources = false)
 
     def loadUrlConfig(url: String, format: Int = Config.Properties): Unit = loadConfig(Http.GET(url).request(), format)
 

@@ -3,22 +3,17 @@ DEBUG ON;
 -- PRINT $x(2, $p(2, 4));
 -- CALL $x(2, $p(2, 4));
 
-DEBUG ON;
+--DEBUG ON;
 
+SELECT * FROM qross_jobs LIMIT 1;
 
-PRINT @T;
+-- GET # SELECT * FROM td;
+-- SAVE AS CSV FILE 'c:/Space/td.csv' WITH HEADERS;
 
---OPEN CSV FILE '''@QROSS_HOME/data/calendar.csv''' AS TABLE 'calendar' (
---    solar_year INT,
---    solar_month INT,
---    solar_day INT,
---    lunar_day TEXT,
---    solar_term TEXT,
---    festival TEXT,
---    week_number INT,
---    workday INT
---);
---GET # SELECT * FROM :calendar;
+-- OPEN CSV FILE '''c:/Space/titanic.csv''' AS TABLE 'titanic' WITH FIRST ROW HEADERS;
+-- GET # SELECT * FROM :titanic LIMIT 10;
+-- SHOW 10;
+
 --PUT # INSERT INTO qross_calendar1 (solar_year, solar_month, solar_day, lunar_day, solar_term, festival, week_number, workday) VALUES (#solar_year, #solar_month, #solar_day, '#lunar_day', '#solar_term', '#festival', #week_number, #workday);
 
 --GET # SELECT solar_year,solar_month,solar_day,lunar_day,solar_term,festival_name,week_number,workday FROM qross_calendar;

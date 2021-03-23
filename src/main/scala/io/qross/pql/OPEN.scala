@@ -145,10 +145,6 @@ class OPEN(val sentence: String) {
                 if (plan.contains("AS", "AS TABLE")) {
                     PQL.dh.asTable(plan.oneArgs("AS", "AS TABLE"))
                 }
-                if (plan.contains("BRACKETED BY")) {
-                    val brackets = plan.limitArgs("BRACKETED BY")
-                    PQL.dh.bracketedBy(brackets._1, brackets._2)
-                }
                 if (plan.contains("SKIP")) {
                     PQL.dh.skipLines(plan.oneArgs("SKIP").toInteger(0).toInt)
                 }

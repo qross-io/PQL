@@ -122,10 +122,6 @@ class Excel(val fileName: String) extends Output {
     private var closed: Boolean = true
     private var $workbook: Workbook = _
 
-    //是否启用调试
-    private var DEBUG = false
-    def debugging: Boolean = DEBUG
-
     def debug(enabled: Boolean = true, format: String = "text"): Excel = {
         DEBUG = enabled
         LOG_FORMAT = format

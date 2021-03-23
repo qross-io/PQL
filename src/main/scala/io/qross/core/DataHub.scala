@@ -25,18 +25,16 @@ object DataHub {
 
 class DataHub (val defaultConnectionName: String) extends Output {
 
-    private var DEBUG: Boolean = Global.DEBUG
-
     private[qross] val SOURCES = mutable.HashMap[String, Any]()
     private[qross] val ALIASES = new mutable.HashMap[String, String]()
 
     if (defaultConnectionName != "") {
         if (Properties.contains(defaultConnectionName) || Properties.contains(defaultConnectionName + ".url")) {
-            SOURCES += "DEFAULT" -> new DataSource(defaultConnectionName)
+            SOURCES += "DEFAULT" -> new DataSource(defaultConnectionName).debug(DEBUG, LOG_FORMAT)
         }
     }
     else if (Properties.contains(JDBC.DEFAULT) || Properties.contains(JDBC.DEFAULT + ".url")) {
-        SOURCES += "DEFAULT" ->  new DataSource(JDBC.DEFAULT)
+        SOURCES += "DEFAULT" ->  new DataSource(JDBC.DEFAULT).debug(DEBUG, LOG_FORMAT)
     }
 
     //虚库
@@ -119,6 +117,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
 
     def debug(enabled: Boolean = true, format: String = "text"): DataHub = {
         DEBUG = enabled
+        LOG_FORMAT = format
         SOURCES.values.foreach {
             case db: DataSource => db.debug(enabled, format)
             case excel: Excel => excel.debug(enabled, format)
@@ -127,8 +126,6 @@ class DataHub (val defaultConnectionName: String) extends Output {
 
         this
     }
-
-    def debugging: Boolean = DEBUG
 
     def +=(dataSource:(String, Any)): DataHub = {
         SOURCES += dataSource._1 -> {
@@ -149,7 +146,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
 
     private[qross] def openSource(sourceName: String, databaseName: String): DataHub = {
         if (!SOURCES.contains(sourceName) && !ALIASES.contains(sourceName.toLowerCase())) {
-            this += sourceName -> new DataSource(sourceName, databaseName)
+            this += sourceName -> new DataSource(sourceName, databaseName).debug(DEBUG, LOG_FORMAT)
         }
         currentSourceName = sourceName
         lastSourceName = sourceName
@@ -171,7 +168,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
 
     private[qross] def saveToDestination(destinationName: String, databaseName: String): DataHub = {
         if (!SOURCES.contains(destinationName) && !ALIASES.contains(destinationName.toLowerCase())) {
-            this += destinationName -> new DataSource(destinationName, databaseName)
+            this += destinationName -> new DataSource(destinationName, databaseName).debug(DEBUG, LOG_FORMAT)
         }
         currentDestinationName = destinationName
         lastSourceName = destinationName
@@ -208,7 +205,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
     }
 
     def openTemp(): DataHub = {
-        openSource("TEMP", new DataSource(HOLDER))
+        openSource("TEMP", new DataSource(HOLDER).debug(DEBUG, LOG_FORMAT))
     }
 
     def openDefault(): DataHub = {
@@ -237,7 +234,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
 
     def open(connectionName: String, driver: String, connectionString: String, username: String, password: String, database: String): DataHub = {
         JDBC.add(connectionName, driver, connectionString, username, password)
-        openSource(connectionName, new DataSource(connectionName, database))
+        openSource(connectionName, new DataSource(connectionName, database).debug(DEBUG, LOG_FORMAT))
     }
 
     def use(databaseName: String): DataHub = {
@@ -252,7 +249,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
     }
 
     def saveToTemp(): DataHub = {
-        saveToDestination("TEMP", new DataSource(HOLDER))
+        saveToDestination("TEMP", new DataSource(HOLDER).debug(DEBUG, LOG_FORMAT))
     }
 
     def saveToDefault(): DataHub = {
@@ -268,7 +265,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
     }
 
     def saveTo(connectionName: String, database: String): DataHub = {
-        saveToDestination(connectionName, new DataSource(connectionName, database))
+        saveToDestination(connectionName, new DataSource(connectionName, database).debug(DEBUG, LOG_FORMAT))
     }
 
     def saveTo(connectionName: String, driver: String, connectionString: String, username: String, password: String): DataHub = {
@@ -277,7 +274,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
 
     def saveTo(connectionName: String, driver: String, connectionString: String, username: String, password: String, database: String): DataHub = {
         JDBC.add(connectionName, driver, connectionString, username, password)
-        saveToDestination(connectionName, new DataSource(connectionName, database))
+        saveToDestination(connectionName, new DataSource(connectionName, database).debug(DEBUG, LOG_FORMAT))
     }
 
     // ---------- Reset ----------
@@ -423,7 +420,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
         })
 
         if (!SOURCES.contains("TEMP")) {
-            this += "TEMP" -> new DataSource(HOLDER)
+            this += "TEMP" -> new DataSource(HOLDER).debug(DEBUG, LOG_FORMAT)
         }
 
         //var createSQL = "CREATE TABLE IF NOT EXISTS " + tableName + " (__pid INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE"

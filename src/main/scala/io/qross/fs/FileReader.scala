@@ -90,7 +90,17 @@ class FileReader(val file: File, val format: Int, val delimiter: String) {
     }
 
     def parseLine: DataRow = {
-        if (format != TextFile.JSON) {
+        if (format == TextFile.CSV) {
+            val row = new DataRow()
+            val line = this.readLine().$split(',')
+            var i = 0
+            for (field <- fields.keys) {
+                row.set(field, if (i < line.length) line(i) else fields(field))
+                i += 1
+            }
+            row
+        }
+        else if (format != TextFile.JSON) {
             val row = new DataRow()
             val line = this.readLine().split(this.delimiter, -1)
             var i = 0
@@ -123,7 +133,7 @@ class FileReader(val file: File, val format: Int, val delimiter: String) {
     def readToEnd(filter: String => Boolean): String = {
         var lines = new mutable.ArrayBuffer[String]()
         while(this.hasNextLine) {
-            val line = this.readLine
+            val line = this.readLine()
             if (filter(line)) {
                 lines += line
             }

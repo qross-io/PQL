@@ -159,11 +159,11 @@ public class OneApiRequester {
                 }
             }
             else {
-                return "{\"error\": \"WRONG or MISS path/Method '" + path + " " + method + "'\"}";
+                return "INCORRECT or MISS path/Method '" + path + " " + method + "'";
             }
         }
         else {
-            return "{\"error\": \"Need spring boot environment.\"}";
+            return "Need Spring Boot environment.";
         }
     }
 

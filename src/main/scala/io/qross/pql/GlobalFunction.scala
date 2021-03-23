@@ -3,6 +3,7 @@ package io.qross.pql
 import io.qross.core.{DataCell, DataHub, DataRow, DataType}
 import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
+import io.qross.jdbc.DataSource
 
 import scala.collection.mutable
 import scala.util.Random
@@ -43,8 +44,28 @@ object GlobalFunction {
         }
     }
 
-    def put(functionName: String, functionArgs: String, functionStatement: String): Unit = {
-        USER += functionName -> new GlobalFunction(functionName, functionArgs, functionStatement)
+    //更新一个函数
+    def renew(functionName: String, owner: Int = 0): Unit = {
+        val row = DataSource.QROSS.queryDataRow("SELECT function_args, function_statement FROM qross_functions WHERE function_name=? AND function_owner=?", functionName, owner)
+        put(functionName, row.getString("function_args"), row.getString("function_statement"), owner)
+    }
+
+    def remove(functionName: String, owner: Int = 0): Unit = {
+        if (owner == 0) {
+            SYSTEM.remove(functionName)
+        }
+        else {
+            USER.remove(functionName)
+        }
+    }
+
+    def put(functionName: String, functionArgs: String, functionStatement: String, owner: Int = 0): Unit = {
+        if (owner == 0) {
+            SYSTEM += functionName -> new GlobalFunction(functionName, functionArgs, functionStatement)
+        }
+        else {
+            USER += functionName -> new GlobalFunction(functionName, functionArgs, functionStatement)
+        }
     }
 }
 
