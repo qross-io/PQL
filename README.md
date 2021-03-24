@@ -225,7 +225,7 @@ PQL 的最大的特点就是“简单”，可以在你的任何 Java 或 Scala 
 
 ## PQL 技术支持
 
-PQL 语言免费使用，有任何问题均可联系作者或留言。PQL 每月发布一个新版本。
+PQL 语言免费使用，有任何问题均可联系作者或留言。PQL 每月发布一个新版本，最新版本 **1.3.0**。
 
 **官方网站 [www.qross.cn](http://www.qross.cn)**  
 **作者邮箱 [wu@qross.io](mailto:wu@qross.io)**
