@@ -24,9 +24,7 @@ dubbo-consumer/
 /target
 /project/project
 /project/target
-
 gradle.properties
-
 keeper/
 tasks/
 temp/
