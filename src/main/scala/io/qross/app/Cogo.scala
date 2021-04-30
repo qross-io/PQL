@@ -3,19 +3,18 @@ package io.qross.app
 object Cogo {
 
     private val scripts = Map[String, String](
-        "popup" -> "root.animation.js,root.popup.js",
+        "popup" -> "root.popup.js",
         "div-display" -> "root.layout.js",
         "callout" -> "root.callout.js",
         "focusview" -> "root.focusview.js",
         "cookie" -> "root.storage.js",
         "backtop" -> "root.backtop.js",
-        "input" -> "root.input.js",
         "select" -> "root.select.js,select.css",
-        "button-action" ->  "root.button.js",
-        "button-watch" ->  "root.button.js",
+        "button" ->  "root.popup.js,root.dialog.js,root.button.js",
         "calendar" -> "root.calendar.js,calendar.css",
         "input-calendar" -> "root.calendar.js,calendar.css,iconfont.css",
         "clock" -> "root.clock.js,clock.css",
+        "type-datetime" -> "root.datetimepicker.js,root.calendar.js,calendar.css,iconfont.css,root.clock.js,clock.css,root.popup.js",
         "treeview" -> "root.treeview.js,treeview.css",
         "confirm" -> "root.popup.js,root.dialog.js",
         "alert" -> "root.popup.js,root.dialog.js",
@@ -24,7 +23,8 @@ object Cogo {
         "editable" -> "root.editor.js",
         "table-datatable" -> "root.datatable.js,datatable.css",
         "textarea-coder" -> "root.coder.js,coder/codemirror.js,coder/codemirror.css,coder.css",
-        "a-help" -> "root.help.js,root.animation.js,root.popup.js,iconfont.css"
+        "a-help" -> "root.help.js,root.popup.js,iconfont.css",
+        "a-onclick" -> "root.anchor.js,root.dialog.js,root.callout.js,root.popup.js",
     )
 
     private val codes = Map[String, String](
@@ -40,6 +40,7 @@ object Cogo {
         "sql" -> "sql.js",
         "csharp" -> "clike.js",
         "javascript" -> "javascript.js",
+        "json" -> "javascript.js",
         "properties"-> "properties.js"
     )
 
@@ -54,6 +55,7 @@ object Cogo {
             |       <script type="text/javascript" src="@/root.model.js"></script>
             |       <script type="text/javascript" src="@/root.datetime.js"></script>
             |       <script type="text/javascript" src="@/root.animation.js"></script>
+            |       <script type="text/javascript" src="@/root.input.js"></script>
             |       <link href="@/css/root/main.css" rel="stylesheet" type="text/css" />
             |       <link href="@/css/root/iconfont.css" rel="stylesheet" type="text/css" />
             |       #{scripts}
@@ -66,7 +68,7 @@ object Cogo {
             |</html>""".stripMargin
 
     def getScripts(content: String): String = {
-        """(?i)<div[^>]+display=|\bpopup=|\bCallout\b|\bfocusView\b|\$cookie\b|<backtop\b|<select\b|\sselect=|<input\b|<button\b[^>]+?action\b|<button[^>]+\bwatch=|<calendar\b|<clock\b|<input[^>]+type="calendar"|<treeview\b|\$root.(confirm|alert|prompt)|<editor\b|\s(editable)=|<table[^>]+datatable="|<textarea[^>]+coder=|<a\b[^>]+help=""".r
+        """(?i)<div[^>]+display=|\bCallout\b|\bfocusView\b|\$cookie\b|<backtop\b|<select\b|\sselect=|<button\b|type="datetime"|<calendar\b|<clock\b|<input[^>]+type="calendar"|<treeview\b|\$root.(confirm|alert|prompt)|<editor\b|\s(editable)=|<table[^>]+datatable="|<textarea[^>]+coder=|<a\b[^>]+help=|<a\b[^>]+onclick\+=|\bpopup=""".r
             .findAllIn(content)
             .map(v => {
                 val ms = "(?i)[a-z]+".r.findAllIn(v).map(_.toLowerCase()).toList
@@ -95,8 +97,8 @@ object Cogo {
             })
             .toSeq
             .distinct
-            .mkString("\n") +
-            """<textarea[^>]+mode="([a-z-]+)"""".r
+            .mkString("\n") + "\n" +
+            """<textarea[^>]+coder="([a-z-]+)"""".r
                 .findAllMatchIn(content)
                 .map(_.group(1).toLowerCase())
                 .toSeq

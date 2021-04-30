@@ -36,7 +36,7 @@ object DataSource {
                 DriverManager.getConnection(connectionString)
             }
 
-            ""
+            "Connected."
         }
         catch {
             case e: Exception => e.getReferMessage

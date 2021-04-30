@@ -27,9 +27,6 @@ object JDBC {
     val QROSS = "mysql.qross"
     val DEFAULT = "jdbc.default"
 
-    private var QrossExists = false
-    private var QrossConnectable = false
-
     private val drivers: immutable.HashMap[String, String] = immutable.HashMap[String, String](
                 DBType.MySQL -> "com.mysql.cj.jdbc.Driver,com.mysql.jdbc.Driver", //com.mysql.cj.jdbc.Driver,com.mysql.jdbc.Driver",
                 DBType.PostgreSQL -> "org.postgresql.Driver",
@@ -55,24 +52,26 @@ object JDBC {
 
     def hasQrossSystem: Boolean = {
 
-        if (!QrossExists) {
+        var exists = false
+        var connectable = false
+
+        if (!exists) {
             if (Properties.contains(QROSS) || Properties.contains(QROSS + ".url")) {
-                QrossExists = true
+                exists = true
             }
         }
 
-        if (QrossExists && !QrossConnectable) {
-            if (!DataSource.QROSS.queryTest()) {
-                Output.writeException(s"Can't open database, please check your connection string of $QROSS.")
+        if (exists && !connectable) {
+            if (DataSource.QROSS.queryTest()) {
+                connectable = true
             }
             else {
-                if (DataSource.QROSS.queryExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_conf'")) {
-                    QrossConnectable = true
-                }
+
+                Output.writeException(s"Can't open database, please check your connection string of $QROSS.")
             }
         }
 
-        QrossExists && QrossConnectable
+        exists && connectable
     }
 
     //从Properties新建
@@ -200,26 +199,30 @@ object JDBC {
     //refresh
     def setup(id: Int): Unit = {
         if (hasQrossSystem) {
-            val connection = DataSource.QROSS.queryDataRow("SELECT * FROM qross_connections WHERE id=?", id)
-            if (connection.getString("database_name") != "redis") {
-                connections.put(connection.getString("connection_name"), new JDBC(
-                    connection.getString("database_name"),
-                    connection.getString("connection_string"),
-                    connection.getString("jdbc_driver"),
-                    connection.getString("username"),
-                    connection.getString("password"),
-                    connection.getInt("overtime"),
-                    connection.getInt("retry_limit")
-                ))
+            val ds = DataSource.QROSS
+            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_connections'")) {
+                val connection = ds.executeDataRow("SELECT * FROM qross_connections WHERE id=?", id)
+                if (connection.getString("database_name") != "redis") {
+                    connections.put(connection.getString("connection_name"), new JDBC(
+                        connection.getString("database_name"),
+                        connection.getString("connection_string"),
+                        connection.getString("jdbc_driver"),
+                        connection.getString("username"),
+                        connection.getString("password"),
+                        connection.getInt("overtime"),
+                        connection.getInt("retry_limit")
+                    ))
+                }
+                else {
+                    //redis
+                    val connectionName = connection.getString("connection_name")
+                    Properties.set(s"redis.$connectionName.host", connection.getString("host"))
+                    Properties.set(s"redis.$connectionName.port", connection.getString("port"))
+                    Properties.set(s"redis.$connectionName.password", connection.getString("password"))
+                    Properties.set(s"redis.$connectionName.database", connection.getString("default_database"))
+                }
             }
-            else {
-                //redis
-                val connectionName = connection.getString("connection_name")
-                Properties.set(s"redis.$connectionName.host", connection.getString("host"))
-                Properties.set(s"redis.$connectionName.port", connection.getString("port"))
-                Properties.set(s"redis.$connectionName.password", connection.getString("password"))
-                Properties.set(s"redis.$connectionName.database", connection.getString("default_database"))
-            }
+            ds.close()
         }
     }
 

@@ -1,42 +1,7 @@
-package io.qross.test
+package io.qross.pql.test
 
-import java.io.File
-import java.lang.management.ManagementFactory
-import java.nio.charset.Charset
-import java.sql.DriverManager
-import java.time.{LocalDateTime, ZoneId}
-import java.util
-import java.util.regex.{Matcher, Pattern}
-import java.util.Date
-import java.util.concurrent.ConcurrentHashMap
-
-import io.qross.app.OneApi
-import io.qross.core._
-import io.qross.ext.Console
-import io.qross.ext.Output.writeLineWithSeal
-import io.qross.pql._
-import io.qross.fs._
-import io.qross.jdbc.DataSource
-import io.qross.net.{Email, Http, Json, Redis, Session}
+import io.qross.pql.PQL
 import io.qross.ext.TypeExt._
-import io.qross.fs.Path._
-import io.qross.pql.Solver._
-import io.qross.time.{ChronExp, CronExp, DateTime}
-import io.qross.pql.Patterns._
-import io.qross.pql.PQL._
-import io.qross.security.{Base64, MD5}
-import io.qross.setting.{Environment, Global, Language, Properties}
-
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
-import scala.util.matching.Regex
-import io.qross.time.TimeSpan._
-import javax.servlet.http.Cookie
-
-import scala.collection.JavaConverters._
-import scala.util.Random
-import io.qross.fs.TextFile._
-import redis.clients.jedis.Protocol.Command
 
 object Main {
 
@@ -45,7 +10,6 @@ object Main {
     }
 
     def main(args: Array[String]): Unit = {
-
 
 //        val dh = DataHub.QROSS
 //

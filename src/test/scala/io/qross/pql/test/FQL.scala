@@ -1,22 +1,13 @@
-package io.qross.test
+package io.qross.pql.test
 
-import io.qross.app.{Cogo, Marker}
+import java.net.{URLDecoder, URLEncoder}
+
 import io.qross.core.DataHub
-import io.qross.fql.SELECT
-import io.qross.script.Shell._
-import io.qross.script.Shell
-import io.qross.ext.TypeExt._
-import io.qross.pql.{PQL, Patterns}
-import io.qross.pql.Solver._
-import io.qross.pql.Solver.USER_VARIABLE
-import io.qross.setting.{Environment, Global}
-import io.qross.time.{ChronExp, CronExp, DateTime}
-import io.qross.fs.Path._
-import io.qross.fs.ResourceFile
 import io.qross.net.Json
-
-import scala.sys.process._
-import scala.util.matching.Regex
+import io.qross.pql.PQL
+import io.qross.script.Shell.{destroy, end, kill, ps$ef}
+import io.qross.pql.Solver._
+import io.qross.ext.TypeExt._
 
 object FQL {
     def main(args: Array[String]): Unit = {
@@ -24,7 +15,11 @@ object FQL {
 
         //new SELECT("select * from :hello where name='Tom' and age>18 order by age desc limit 10")
 
-        io.qross.pql.FUNCTION.testArgs("$a 1, $b default1").print
+        val x = URLEncoder.encode("""[{"pattern":"/api/","ready ":"status == 'success'","info":"/message","path":"/data"}]""", "utf-8").replace("+", "%20")
+        println(x)
+        val y = java.net.URLDecoder.decode(x, "utf-8")
+        println(y)
+
 
 //        Marker.openFile("/templates/markdown.md")
 //            .transform()

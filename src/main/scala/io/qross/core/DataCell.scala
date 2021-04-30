@@ -17,7 +17,11 @@ object DataCell {
     val EMPTY: DataCell = DataCell("EMPTY", DataType.NULL) //表示一种空状态, 比如列表为空, 字符串为空等
 }
 
-case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
+case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
+
+    def this(value: Any) {
+        this(value, DataType.NULL)
+    }
 
     if (value != null && dataType == DataType.NULL) {
         dataType = DataType.ofValue(value)
@@ -709,8 +713,14 @@ case class DataCell(var value: Any, var dataType: DataType = DataType.NULL) {
         if (value == null) {
             null
         }
-        else {
+        else if (dataType == DataType.ARRAY || dataType == DataType.LIST) {
+            Json.serialize(value.asInstanceOf[AnyRef])
+        }
+        else if (DataType.isInternalType(dataType)) {
             value.toString
+        }
+        else {
+            Json.serialize(value.asInstanceOf[AnyRef])
         }
     }
 }

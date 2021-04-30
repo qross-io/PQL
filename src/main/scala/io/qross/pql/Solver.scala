@@ -12,6 +12,7 @@ import scala.collection.mutable
 import scala.util.matching.Regex
 import scala.util.control.Breaks._
 import scala.util.matching.Regex.Match
+import scala.collection.JavaConverters._
 
 object Solver {
 
@@ -453,6 +454,10 @@ object Solver {
         //替换外部变量
         def replaceArguments(args: (String, String)*): String = {
             replaceArguments(args.toMap)
+        }
+
+        def replaceArguments(args: java.util.Map[String, Object]): String = {
+            replaceArguments(args.asScala.map(kv => (kv._1, kv._2.toString)).toMap)
         }
 
         //替换外部传参

@@ -59,7 +59,11 @@ object GlobalFunction {
         }
     }
 
-    def put(functionName: String, functionArgs: String, functionStatement: String, owner: Int = 0): Unit = {
+    def put(functionName: String, functionArgs: String, functionStatement: String): Unit = {
+        put(functionName, functionArgs, functionStatement, 0)
+    }
+
+    def put(functionName: String, functionArgs: String, functionStatement: String, owner: java.lang.Integer): Unit = {
         if (owner == 0) {
             SYSTEM += functionName -> new GlobalFunction(functionName, functionArgs, functionStatement)
         }

@@ -1,21 +1,27 @@
 package io.qross.app;
 
 import io.qross.core.DataHub;
+import io.qross.ext.TypeExt;
 import io.qross.fs.ResourceFile;
 import io.qross.net.HttpRequest;
 import io.qross.pql.PQL;
+import io.qross.pql.Solver;
 import io.qross.setting.Properties;
 import org.springframework.web.servlet.view.AbstractTemplateView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class  Voyager extends AbstractTemplateView {
+
+    //Cache file content on first access
+    public static Map<String, String> Cache = new HashMap<>();
 
     @Override
     protected void renderMergedTemplateModel(Map<String, Object> model, HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -29,30 +35,67 @@ public class  Voyager extends AbstractTemplateView {
             String dir;
             if (name == null) {
                 dir = url.substring(0, url.substring(1).indexOf("/") + 2);
-            } else {
+            }
+            else {
                 dir = url.substring(0, url.indexOf(name));
             }
 
-            //html frist
-            ResourceFile file = ResourceFile.open(url);
+            String md = url.replaceAll("(?i)\\.html$", ".md");
+            String htm = url.replaceAll("(?i)\\.html$", ".htm");
+
+            String content = null;
             boolean markdown = false;
 
-            //markdown
-            if (!file.exists()) {
-                file = ResourceFile.open(url.replaceAll("(?i).html$", ".md"));
-                if (file.exists()) {
+            if (Setting.VoyagerCacheEnabled) {
+                if (Voyager.Cache.containsKey(url)) {
+                    content = Voyager.Cache.get(url);
+                }
+                else if (Voyager.Cache.containsKey(md)) {
                     markdown = true;
+                    content = Voyager.Cache.get(md);
+                }
+                else if (Voyager.Cache.containsKey(htm)) {
+                    content = Voyager.Cache.get(htm);
                 }
             }
 
-            //.htm
-            if (!file.exists()) {
-                file = ResourceFile.open(url.replaceAll("(?i).html$", ".htm"));
+            if (content == null) {
+                //html frist
+                ResourceFile file = ResourceFile.open(url);
+
+                //markdown
+                if (!file.exists()) {
+                    file = ResourceFile.open(md);
+                    if (file.exists()) {
+                        markdown = true;
+                        content = file.content();
+                        if (Setting.VoyagerCacheEnabled) {
+                            Voyager.Cache.put(md, content);
+                        }
+                    }
+                }
+                else {
+                    content = file.content();
+                    if (Setting.VoyagerCacheEnabled) {
+                        Voyager.Cache.put(url, content);
+                    }
+                }
+
+                //.htm
+                if (!file.exists()) {
+                    file = ResourceFile.open(htm);
+                }
+
+                if (file.exists()) {
+                    content = file.content();
+                    if (Setting.VoyagerCacheEnabled) {
+                        Voyager.Cache.put(htm, content);
+                    }
+                }
             }
 
-            if (file.exists()) {
+            if (content != null) {
 
-                String content = file.content();
                 String template = "";
                 List<String> baseArgs = new ArrayList<>();
 
@@ -66,10 +109,7 @@ public class  Voyager extends AbstractTemplateView {
                         uri = uri.substring(0, uri.indexOf("?"));
                     }
 
-                    file = ResourceFile.open((dir + uri).replace("//", "/"));
-                    if (file.exists()) {
-                        template = file.content();
-                    }
+                    template = ResourceFile.open((dir + uri).replace("//", "/")).content();
                 }
 
                 if (markdown) {
@@ -78,7 +118,6 @@ public class  Voyager extends AbstractTemplateView {
                     if (template.isEmpty()) {
                         content = Cogo.template().replace("#{content}", content);
                     }
-                    content = content.replace("&lt;%", "<%").replace("%&gt;", "%>");
                 }
 
                 if (!template.isEmpty()) {
@@ -102,7 +141,11 @@ public class  Voyager extends AbstractTemplateView {
                     }
                     if (path.endsWith(".sql")) {
                         content = content.replace(m.group(0), "<%" + ResourceFile.open(path).content() + "%>");
-                    } else {
+                    }
+                    else if (path.endsWith(".md")) {
+                        content = content.replace(m.group(0), Marker.openFile(path).transform().colorCodes().getContent());
+                    }
+                    else {
                         content = content.replace(m.group(0), ResourceFile.open(path).content());
                     }
                 }
@@ -115,23 +158,28 @@ public class  Voyager extends AbstractTemplateView {
                 }
 
                 HttpRequest http = new HttpRequest(request);
-                Object result =
-                        new PQL("EMBEDDED:" + content, new DataHub(Properties.contains(Setting.VoyagerConnection) ? Setting.VoyagerConnection : ""))
-                                .place(http.getParameters())
-                                .place(String.join("&", baseArgs))
-                                .set("request", http.getRequestInfo())
-                                .set(model)
-                                .run();
+                try {
+                    Object result =
+                            new PQL("EMBEDDED:" + content, new DataHub(Properties.contains(Setting.VoyagerConnection) ? Setting.VoyagerConnection : ""))
+                                    .place(http.getParameters())
+                                    .place(String.join("&", baseArgs))
+                                    .set("request", http.getRequestInfo())
+                                    .set(model)
+                                    .run();
 
-                if (result != null) {
-                    content = result.toString();
-                    //title
-                    if (content.contains("#{title}") && content.contains("<h1>")) {
-                        content = content.replace("#{title}", content.substring(content.indexOf("<h1>") + 4, content.indexOf("</h1>")));
+                    if (result != null) {
+                        content = result.toString();
+                        //title
+                        if (content.contains("#{title}") && content.contains("<h1>")) {
+                            content = content.replace("#{title}", content.substring(content.indexOf("<h1>") + 4, content.indexOf("</h1>")));
+                        }
+                    } else {
+                        content = "";
                     }
                 }
-                else {
-                    content = "";
+                catch (Exception e) {
+                    content = "<h1>500</h1><p>" + TypeExt.ExceptionExt(e).getReferMessage() + "</p>";
+                    //content += "<p style=\"color: #CC0000\">" + TypeExt.ExceptionExt(e).getFullMessage() + "</p>";
                 }
 
                 response.setCharacterEncoding(Setting.VoyagerCharset);

@@ -1,0 +1,1 @@
+INVOKE io.qross.pql.GlobalFunction.put("TEST", "$a", "", 0);

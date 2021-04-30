@@ -7,20 +7,25 @@ import io.qross.ext.TypeExt;
 import io.qross.fs.*;
 import io.qross.jdbc.DataAccess;
 import io.qross.jdbc.JDBC;
+import io.qross.net.Cookies;
 import io.qross.net.Redis;
 import io.qross.security.Token;
+import io.qross.setting.Global;
 import io.qross.time.DateTime;
 
 import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class OneApi {
 
-    public String defaultValue = "";
-    public String sentences = "";
-
+    public static int SERVICE_ID = 0;
+    public static int TRAFFIC_GRADE = 0;
+    public static boolean DOCUMENT_ENABLED = false;
     // path -> METHOD -> OneApi
-    public static Map<String, Map<String, OneApi>> ALL = new HashMap<>();
+    public static Map<String, Map<String, OneApiPlain>> ALL = new HashMap<>();
 
     // path
     public static Set<String> OPEN = new HashSet<>();
@@ -28,10 +33,19 @@ public class OneApi {
     public static Map<String, Set<String>> PERMIT = new HashMap<>();
     // secret mode :  token -> secret and update_time
     public static Map<String, String> SECRET = new HashMap<>();
-    public static Map<String, SecretKey> KEYS = new HashMap<>();
+    public static Map<String, OneApiSecretKey> KEYS = new HashMap<>();
 
-    //read all api settings from resources:/api/
+    //read all api settings from resources:/api/ and qross database
     public static void readAll() {
+
+        if (!Setting.OneApiAjaxSettings.isEmpty()) {
+            try {
+                Cookies.set("oneapi.ajax.settings", java.net.URLEncoder.encode(Setting.OneApiAjaxSettings, Global.CHARSET()).replace("+", "%20"));
+            }
+            catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        }
 
         //从jar包resources目录加载接口数据
         if (!Setting.OneApiResourceDirs.isEmpty()) {
@@ -39,7 +53,7 @@ public class OneApi {
             for (String dir : dirs) {
                 String[] files = ResourceDir.open(dir).listFiles("*.sql");
                 for (String file: files) {
-                    readAPIs(file.substring(0, file.lastIndexOf(".")).substring(file.indexOf(dir)), ResourceFile.open(file).content().split("##"));
+                    readAPIs(file.substring(0, file.lastIndexOf(".")).substring(file.indexOf(dir)), ResourceFile.open(file).content());
                 }
             }
         }
@@ -112,11 +126,11 @@ public class OneApi {
         if (!Setting.OneApiServiceName.isEmpty()) {
             if (JDBC.hasQrossSystem()) {
                 DataAccess ds = DataAccess.QROSS();
-                int serviceId = 0;
 
                 if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_services'")) {
-                    DataRow service = ds.executeDataRow("SELECT id, security_control FROM qross_api_services WHERE service_name=?", Setting.OneApiServiceName);
-                    serviceId = service.getInt("id");
+                    DataRow service = ds.executeDataRow("SELECT id, security_control, traffic_grade FROM qross_api_services WHERE service_name=?", Setting.OneApiServiceName);
+                    OneApi.SERVICE_ID = service.getInt("id");
+                    OneApi.TRAFFIC_GRADE = service.getInt("traffic_grade");
                     Setting.OneApiSecurityMode = service.getString("security_control");
                 }
 
@@ -132,12 +146,9 @@ public class OneApi {
                         Token.TOKENS.put(token.getString("token"), token.getString("name"));
                     }
                     tokens.clear();
-                }
-
-                //load permit and api
-                if (serviceId > 0) {
-                    if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_in_one'")) {
-                        DataTable controls = ds.executeDataTable("SELECT A.control, A.requester_id, B.name FROM qross_api_requesters_allows A INNER JOIN qross_api_requesters B ON (A.service_id=?) AND A.requester_id=B.id", serviceId);
+                    //load permit
+                    if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_requesters_allows'")) {
+                        DataTable controls = ds.executeDataTable("SELECT A.control, A.requester_id, B.name FROM qross_api_requesters_allows A INNER JOIN qross_api_requesters B ON (A.service_id=?) AND A.requester_id=B.id", OneApi.SERVICE_ID);
                         for (DataRow control : controls.getRowList()) {
                             String allow = control.getString("control");
                             if (PERMIT.containsKey(allow)) {
@@ -145,21 +156,33 @@ public class OneApi {
                             }
                             PERMIT.get(allow).add(control.getString("name"));
                         }
+                    }
+                }
 
-                        DataTable APIs = ds.executeDataTable("SELECT * FROM qross_api_in_one WHERE service_id=?", serviceId);
+                //load api
+                if (OneApi.SERVICE_ID > 0) {
+                    if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_in_one'")) {
+                        //synchronize to database
+                        String updateTime = DateTime.now().getString("yyyy-MM-dd HH:mm:ss");
+                        ds.setBatchCommand("INSERT INTO qross_api_in_one (service_id, method, path, pql, default_values, `source`, title, description, params, allowed, permit, return_value, creator, mender, update_time) VALUES (?, ?, ?, ?, ?, 'file', ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pql=?, default_values=?, title=?, description=?, params=?, allowed=?, permit=?, return_value=?, creator=?, mender=?, update_time=?");
+                        for (String path : ALL.keySet()) {
+                            for (Map.Entry<String, OneApiPlain> plain : ALL.get(path).entrySet()) {
+                                OneApiPlain api = plain.getValue();
+                                ds.addBatch(OneApi.SERVICE_ID, plain.getKey(), path, api.statement, api.defaultValues, api.title, api.description, api.params, api.allowed, api.permit, api.returnValue, api.creator, api.mender, updateTime, api.statement, api.defaultValues, api.title, api.description, api.params, api.allowed, api.permit, api.returnValue, api.creator, api.mender, updateTime);
+                            }
+                        }
+                        ds.executeBatchUpdate();
+                        //delete deprecated
+                        ds.executeNonQuery("DELETE FROM qross_api_in_one WHERE service_id=? AND `source`='file' AND update_time<>?", OneApi.SERVICE_ID, updateTime);
+
+                        //renew all api
+                        DataTable APIs = ds.executeDataTable("SELECT id, path, method, pql, default_values, IF(return_value_example IS NULL OR return_value_example = '', 1, 0) AS exampled FROM qross_api_in_one WHERE service_id=?", OneApi.SERVICE_ID);
                         for (DataRow API : APIs.getRowList()) {
-                            OneApi api = new OneApi();
-                            String path = API.getString("path");
-                            api.sentences = API.getString("pql");
-                            api.defaultValue = API.getString("default_value");
-
+                             String path = API.getString("path");
                             if (!ALL.containsKey(path)) {
                                 ALL.put(path, new LinkedHashMap<>());
                             }
-                            String[] methods = API.getString("method").toUpperCase().split(",");
-                            for (String method : methods) {
-                                ALL.get(path).put(method, api);
-                            }
+                            ALL.get(path).put(API.getString("method").toUpperCase(), new OneApiPlain(API.getInt("id"), API.getString("pql"), API.getString("default_values"), API.getBoolean("exampled")));
                         }
                         APIs.clear();
                     }
@@ -169,74 +192,146 @@ public class OneApi {
         }
     }
 
-    private static void readAPIs(String path, String[] APIs) {
-        for (int i = 0; i < APIs.length; i++) {
-            APIs[i] = APIs[i].trim();
-            if (!APIs[i].isEmpty() && APIs[i].contains(TextFile.TERMINATOR())) {
-                //it must be a new line after interface header
-                String[] API = APIs[i].substring(0, APIs[i].indexOf(TextFile.TERMINATOR())).trim().split("\\|");
-                //0 name
-                //1 method
-                //2 allowed | default values
-                //3 allowed | default values
+    private static void readAPIs(String path, String content) {
 
-                if (API.length >= 1) {
-                    OneApi api = new OneApi();
-                    api.sentences = APIs[i].substring(APIs[i].indexOf(TextFile.TERMINATOR())).trim();
+        Pattern p = Pattern.compile("(/\\*[\\s\\S]*?\\*/)?\\s*##\\s*[a-z0-9_-]+\\b", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(content);
+        List<String> splitted = new ArrayList<>();
+        while (m.find()) {
+            splitted.add(content.substring(0, content.indexOf(m.group(0))).trim());
+            splitted.add(m.group(0));
+            content = content.substring(content.indexOf(m.group(0)) + m.group(0).length()).trim();
+        }
+        splitted.add(content);
 
-                    String url = path + "/" + API[0].trim();
-                    String METHOD = "GET";
-                    String permit = "";
+        for (int i = 1; i < splitted.size(); i += 2) {
 
-                    if (API.length == 2) {
-                        METHOD = API[1];
+            OneApiPlain api = new OneApiPlain();
+
+            String head = splitted.get(i);
+            String[] comment = TypeExt.StringExt(head.substring(0, head.indexOf("##"))).$trim("/*", "*/").trim().split(TextFile.TERMINATOR());
+            for (String line : comment) {
+                line = line.replaceAll("^\\s*\\*\\s*", "");
+
+                if (line.startsWith("#")) {
+                    line = line.substring(1);
+                    if (!api.params.isEmpty()) {
+                        api.params += "&";
                     }
-                    else if (API.length == 3) {
-                        METHOD = API[1].trim().toUpperCase();
-                        if (API[2].contains("=")) {
-                            api.defaultValue = API[2].trim();
+                    if (line.contains(" ")) {
+                        api.params += line.substring(0, line.indexOf(" ")) + "=" + line.substring(line.indexOf(" ") + 1).trim().replace("&", "%26").replace("=", "%3D").replace(" ", "%20");
+                    }
+                    else {
+                        api.params += line + "=";
+                    }
+
+                    if (api.params.length() > 2000) {
+                        api.params = api.params.substring(0, 2000);
+                    }
+                }
+                else if (line.startsWith("@")) {
+                    if (line.startsWith("@return ")) {
+                        api.returnValue = line.substring(8).trim();
+                    }
+                    else if (line.startsWith("@created")) {
+                        api.creator = line.substring(9);
+                    }
+                    else if (line.startsWith("@updated")) {
+                        api.mender = line.substring(9);
+                    }
+                    else if (line.startsWith("@permit ")) {
+                        api.permit = line.substring(8).trim();
+                    }
+                }
+                else {
+                    if (api.title.isEmpty()) {
+                        api.title = line;
+                    }
+                    else {
+                        if (api.description.isEmpty()) {
+                            api.description = line;
                         }
                         else {
-                            permit = API[2].trim();
+                            api.description += "<br/>" + line;
+                        }
+                        if (api.description.length() > 500) {
+                            api.description = api.description.substring(0, 500);
                         }
                     }
-                    else if (API.length == 4) {
-                        METHOD = API[1].trim().toUpperCase();
-                        if (API[2].contains("=")) {
-                            api.defaultValue = API[2].trim();
-                            permit = API[3].trim();
-                        }
-                        else {
-                            permit = API[2].trim();
-                            api.defaultValue = API[3].trim();
-                        }
-                    }
-
-                    if (!ALL.containsKey(url)) {
-                        ALL.put(url, new LinkedHashMap<>());
-                    }
-
-                    String[] methods = METHOD.split(",");
-                    String[] names = permit.isEmpty() ? new String[0] : permit.split(",");
-                    for (String method : methods) {
-                        ALL.get(url).put(method.trim(), api);
-
-                        if (names.length > 0) {
-                            String p = method.trim() + ":" + url;
-                            if (!PERMIT.containsKey(p)) {
-                                PERMIT.put(p, new HashSet<>());
-                            }
-                            for (String name : names) {
-                                if (!name.trim().isEmpty()) {
-                                    PERMIT.get(p).add(name.trim());
-                                }
-                            }
-                        }
-                    }
-                    //PERMIT.get(permit).addAll(Arrays.asList(API[2].trim().split(",")));
-                    //Collections.addAll(PERMIT.get(permit), API[3].trim().split(","));
                 }
             }
+
+            String url = path + "/" + head.substring(head.indexOf("##") + 2).trim();
+            String body = "name";
+            if (i + 1 < splitted.size()) {
+                body += splitted.get(i + 1);
+            }
+            if (body.contains(TextFile.TERMINATOR())) {
+                api.statement = body.substring(body.indexOf(TextFile.TERMINATOR()) + 1);
+                body = body.substring(0, body.indexOf(TextFile.TERMINATOR()));
+            }
+            //it must be a new line after interface header
+            String[] options =  body.split("\\|");
+
+            if (options.length >= 1) {
+
+                String METHOD = "GET";
+
+                if (options.length == 2) {
+                    METHOD = options[1].trim().toUpperCase();
+                }
+                else if (options.length == 3) {
+                    METHOD = options[1].trim().toUpperCase();
+                    if (options[2].contains("=")) {
+                        api.defaultValues = options[2].trim();
+                    }
+                    else {
+                        api.allowed = options[2].trim();
+                    }
+                }
+                else if (options.length == 4) {
+                    METHOD = options[1].trim().toUpperCase();
+                    if (options[2].contains("=")) {
+                        api.defaultValues = options[2].trim();
+                        api.allowed = options[3].trim();
+                    }
+                    else {
+                        api.allowed = options[2].trim();
+                        api.defaultValues = options[3].trim();
+                    }
+                }
+
+                if (!ALL.containsKey(url)) {
+                    ALL.put(url, new LinkedHashMap<>());
+                }
+
+                String[] names = api.allowed.isEmpty() ? new String[0] : api.allowed.split(",");
+                ALL.get(url).put(METHOD, api);
+
+                if (names.length > 0) {
+                    String p1 = METHOD + ":" + url;
+                    if (!PERMIT.containsKey(p1)) {
+                        PERMIT.put(p1, new HashSet<>());
+                    }
+                    for (String name : names) {
+                        if (!name.trim().isEmpty()) {
+                            PERMIT.get(p1).add(name.trim());
+                        }
+                    }
+                }
+
+                //PERMIT.get(permit).addAll(Arrays.asList(API[2].trim().split(",")));
+                //Collections.addAll(PERMIT.get(permit), API[3].trim().split(","));
+            }
+
+        }
+    }
+
+    public static void saveExample(int id, Object example) {
+        if (JDBC.hasQrossSystem()) {
+            DataAccess ds = DataAccess.QROSS();
+            ds.executeNonQuery("UPDATE qross_api_in_one SET return_value_example=? WHERE id=?", example, id);
+            ds.close();
         }
     }
 
@@ -290,7 +385,7 @@ public class OneApi {
                     SECRET.put(token, key);
                 }
             }
-            KEYS.put(key, new SecretKey(token));
+            KEYS.put(key, new OneApiSecretKey(token));
         }
 
         return key;
@@ -360,7 +455,7 @@ public class OneApi {
         }
         else {
             if (KEYS.containsKey(secretKey)) {
-                SecretKey key = KEYS.get(secretKey);
+                OneApiSecretKey key = KEYS.get(secretKey);
                 if (!key.expired()) {
                     token = key.getToken();
                 }
@@ -481,18 +576,18 @@ public class OneApi {
         return (key.equals(Setting.OneApiManagementKey));
     }
 
-    public static OneApi pick(String path, String method) {
+    public static OneApiPlain pick(String path, String method) {
         return ALL.get(path).get(method.toUpperCase());
     }
 
-    public static Map<String, OneApi> pick(String path) {
+    public static Map<String, OneApiPlain> pick(String path) {
         return ALL.get(path);
     }
 
     public static String get(String path, String method) {
-        OneApi api = pick(path, method);
+        OneApiPlain api = pick(path, method);
         if (api != null) {
-            return api.sentences;
+            return api.statement;
         }
         else {
             return null;
@@ -500,11 +595,11 @@ public class OneApi {
     }
 
     public static Map<String, String> get(String path) {
-        Map<String, OneApi> api = pick(path);
+        Map<String, OneApiPlain> api = pick(path);
         if (api != null) {
             Map<String, String> sentences = new HashMap<>();
             for (String method : api.keySet()) {
-                sentences.put(method, api.get(method).sentences);
+                sentences.put(method, api.get(method).statement);
             }
             return sentences;
         }
@@ -540,6 +635,22 @@ public class OneApi {
         }
 
         return count;
+    }
+
+    public static void resetReturnValueExample(int id) {
+        if (JDBC.hasQrossSystem()) {
+            DataAccess ds = DataAccess.QROSS();
+            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_in_one'")) {
+                ds.executeNonQuery("UPDATE qross_api_in_one SET return_value_example='' WHERE id=?", id);
+                DataRow row = ds.executeDataRow("SELECT path, method FROM qross_api_in_one WHERE id=?", id);
+                String path = row.getString("path");
+                String method = row.getString("method");
+                if (ALL.containsKey(path) && ALL.get(path).containsKey(method)) {
+                    ALL.get(path).get(method).exampled = true;
+                }
+            }
+            ds.close();
+        }
     }
 
     public static String getSetting(String key) {
@@ -608,27 +719,5 @@ public class OneApi {
 
     public static Object request(String path, DataHub dh){
         return new OneApiRequester().request(path, dh);
-    }
-}
-
-class SecretKey {
-    public String token;
-    public DateTime createTime;
-
-    public SecretKey(String token) {
-        this.token = token;
-        createTime = DateTime.now();
-    }
-
-    public boolean expired() {
-        return createTime.earlier(DateTime.now()) / 1000 > Setting.OneApiSecretKeyTTL;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public long getTTL() {
-        return Setting.OneApiSecretKeyTTL - createTime.earlier(DateTime.now()) / 1000;
     }
 }

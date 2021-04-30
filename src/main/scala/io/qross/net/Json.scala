@@ -393,14 +393,6 @@ case class Json(text: String = "") {
         }
     }
 
-//    def asObject(): java.util.Map[String, Any] = {
-//
-//    }
-//
-//    def asArray(): java.util.List[Any] = {
-//        null
-//    }
-
     override def toString: String = {
         root.toString
     }

@@ -21,6 +21,10 @@ object DataType extends Enumeration {
     val EXCEPTION: DataType = new DataType("EXCEPTION")
     val REGEX: DataType = new DataType("REGEX")
 
+    def isInternalType(dataType: DataType): Boolean = {
+        "TEXT,INTEGER,DECIMAL,BOOLEAN,DATETIME,ARRAY,LIST,ROW,TABLE,JSON,EXCEPTION,REGEX,NULL".contains(dataType.typeName)
+    }
+
     //database data type name
     def ofTypeName(typeName: String, className: String = ""): DataType = {
         new DataType(

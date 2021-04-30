@@ -1,19 +1,20 @@
 package io.qross.app;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.qross.core.DataHub;
+import io.qross.ext.TypeExt;
 import io.qross.jdbc.DataAccess;
 import io.qross.jdbc.JDBC;
 import io.qross.net.HttpRequest;
+import io.qross.net.Json;
 import io.qross.pql.PQL;
 import io.qross.time.DateTime;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class OneApiRequester {
 
@@ -90,7 +91,16 @@ public class OneApiRequester {
         return this.request(path, DataHub.DEFAULT());
     }
 
-    public Object request(String path, DataHub dh) {
+    public Map<String, Object> request(String path, DataHub dh) {
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("timestamp", DateTime.now().getString("yyyy-MM-dd HH:mm:ss"));
+        result.put("code", 200);
+        result.put("data", null);
+        result.put("elapsed", -1L);
+
+        long mark = System.currentTimeMillis();
+
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
@@ -101,7 +111,7 @@ public class OneApiRequester {
             }
 
             if (OneApi.contains(path, method)) {
-                OneApi api = OneApi.pick(path, method);
+                OneApiPlain api = OneApi.pick(path, method);
 
                 boolean allowed = false;
                 if (Setting.OneApiSecurityMode.equals("none")) {
@@ -145,64 +155,111 @@ public class OneApiRequester {
                 }
 
                 if (allowed) {
-                    //count(api.path);
                     HttpRequest http = new HttpRequest(request);
-                    return  new PQL(api.sentences, dh)
+                    Map<String, Object> parameters = http.getParameters();
+                    try {
+                        result.put("data", new PQL(api.statement, dh)
                                 .signIn(userId, username, role, info)
-                                .place(http.getParameters())
-                                .placeDefault(api.defaultValue)
+                                .place(parameters)
+                                .placeDefault(api.defaultValues)
                                 .set("request", http.getRequestInfo())
-                                .run();
+                                .run());
+
+                        result.put("message", "");
+                        result.put("elapsed", System.currentTimeMillis() - mark);
+                        result.put("status", "success");
+
+                        if (api.exampled) {
+                            OneApi.saveExample(api.id, new ObjectMapper().writeValueAsString(result.get("data")));
+                            api.exampled = false;
+                        }
+                    }
+                    catch(Exception e) {
+                        result.put("message", TypeExt.ExceptionExt(e).getReferMessage());
+                        result.put("status", "exception");
+                        result.put("code", 500);
+                    }
+
+                    if (OneApi.TRAFFIC_GRADE > 0) {
+                        count(userId, api.id, parameters, (long) result.get("elapsed"));
+                    }
                 }
                 else {
-                    return "{\"error\": \"Access denied.\"}";
+                    result.put("message", "Access denied.");
+                    result.put("status", "denied");
+                    result.put("code", 403);
                 }
             }
             else {
-                return "INCORRECT or MISS path/Method '" + path + " " + method + "'";
+                result.put("message", "Incorrect or miss '" + method + ":" + path + "'");
+                result.put("status", "incorrect-method-or-path");
+                result.put("code", 404);
             }
         }
         else {
-            return "Need Spring Boot environment.";
+            result.put("message", "Need Spring Boot environment.");
+            result.put("status", "spring-boot-required");
+            result.put("code", 503);
         }
+
+        return result;
     }
 
-    //to be review
+    public static ConcurrentLinkedQueue<OneApiPageView> TRAFFIC = new ConcurrentLinkedQueue<>();
+    private static long TRAFFIC_TIMESTAMP = System.currentTimeMillis();
 
-    //service,path,date,hour -> pv
-    public static List<String> TRAFFIC = new ArrayList<>();
-    private static DateTime LastSaveTime = DateTime.now();
+    private static void count(int userId, int apiId, Map<String, Object> parameters, long elapsed) {
+        //cache
+        TRAFFIC.add(new OneApiPageView(userId, apiId, parameters, elapsed));
+        //record
+        if (TRAFFIC.size() >= 1000 || System.currentTimeMillis() - TRAFFIC_TIMESTAMP > 60000) {
 
-    //unsaved traffic data
-    public static List<String> traffic() {
-        return TRAFFIC;
-    }
+            List<OneApiPageView> pageViews = new ArrayList<>(TRAFFIC);
+            TRAFFIC.clear();
 
-    //traffic count
-    private static void count(String path) {
-        if (!Setting.OneApiServiceName.isEmpty()) {
-            TRAFFIC.add(path + DateTime.now().getString(",yyyy-MM-dd,HH"));
-            if (TRAFFIC.size() >= 1000 || LastSaveTime.earlier(DateTime.now()) >= 60000) {
-                DataAccess ds = new DataAccess(JDBC.QROSS());
-                Map<String, Integer> traffic = new HashMap<>();
-                for (String pv : TRAFFIC) {
-                    if (traffic.containsKey(pv)) {
-                        traffic.put(pv, traffic.get(pv) + 1);
-                    }
-                    else {
-                        traffic.put(pv, 1);
-                    }
-                }
-                ds.setBatchCommand("INSERT INTO qross_api_traffic (service_name, path, record_date, record_hour, pv) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pv=pv+?");
-                for (String key : traffic.keySet()) {
-                    String[] values = key.split(",");
-                    ds.addBatch(Setting.OneApiServiceName, values[0], values[1], values[2], traffic.get(key), traffic.get(key));
+            DataAccess ds = new DataAccess(JDBC.QROSS());
+
+            //summary
+            ds.setBatchCommand("INSERT INTO qross_api_traffic_summary (userid, service_id, api_id, stat_date, stat_hour, times) VALUES (?, ?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE times=times+1");
+            for (OneApiPageView pv : pageViews) {
+                ds.addBatch(userId, OneApi.SERVICE_ID, pv.apiId, pv.requestTime.substring(0, 10), pv.requestTime.substring(11, 13));
+            }
+            ds.executeBatchUpdate();
+
+            //details
+            if (OneApi.TRAFFIC_GRADE > 1) {
+                ds.setBatchCommand("INSERT INTO qross_api_traffic_details (userid, service_id, api_id, elapsed, request_time) VALUES (?, ?, ?, ?, ?);");
+                for (OneApiPageView pv : pageViews) {
+                    ds.addBatch(userId, OneApi.SERVICE_ID, pv.apiId, pv.elapsed, pv.requestTime);
                 }
                 ds.executeBatchUpdate();
-                ds.close();
-
-                LastSaveTime = DateTime.now();
             }
+
+            //queries summary
+            if (OneApi.TRAFFIC_GRADE > 2) {
+                ds.setBatchCommand("INSERT INTO qross_api_traffic_queries_summary (userid, service_id, api_id, query_name, query_value, stat_date, times) VALUES (?, ?, ?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE times=times+1");
+                for (OneApiPageView pv : pageViews) {
+                    for (Map.Entry<String, Object> entry : pv.parameters.entrySet()) {
+                        ds.addBatch(userId, OneApi.SERVICE_ID, pv.apiId, entry.getKey(), entry.getValue(), pv.requestTime.substring(0, 10));
+                    }
+                }
+                ds.executeBatchUpdate();
+            }
+
+            //queries details
+            if (OneApi.TRAFFIC_GRADE > 3) {
+                ds.setBatchCommand("INSERT INTO qross_api_traffic_queries_details (userid, service_id, api_id, query_name, query_value, request_time) VALUES (?, ?, ?, ?, ?, ?)");
+                for (OneApiPageView pv : pageViews) {
+                    for (Map.Entry<String, Object> entry : pv.parameters.entrySet()) {
+                        ds.addBatch(userId, OneApi.SERVICE_ID, pv.apiId, entry.getKey(), entry.getValue(), pv.requestTime);
+                    }
+                }
+                ds.executeBatchUpdate();
+            }
+
+            ds.close();
+
+            TRAFFIC_TIMESTAMP = System.currentTimeMillis();
         }
     }
 }

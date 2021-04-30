@@ -1303,7 +1303,8 @@ object Sharp {
 
     def IF$ZERO(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.asInteger == 0) arg else data
+            val then$else = SharpLink.then$else(data, arg)
+            if (data.asInteger == 0) then$else._1 else then$else._2
         }
         else {
             throw SharpLinkArgumentException.occur("IF ZERO", origin)
@@ -1312,10 +1313,31 @@ object Sharp {
 
     def IF$NOT$ZERO(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.asInteger != 0) arg else data
+            val then$else = SharpLink.then$else(data, arg)
+            if (data.asInteger != 0) then$else._1 else then$else._2
         }
         else {
             throw SharpLinkArgumentException.occur("IF NOT ZERO", origin)
+        }
+    }
+
+    def IF$GREATER$THAN$ZERO(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            val then$else = SharpLink.then$else(data, arg)
+            if (data.asDecimal > 0) then$else._1 else then$else._2
+        }
+        else {
+            throw SharpLinkArgumentException.occur("IF GREATER THAN ZERO", origin)
+        }
+    }
+
+    def IF$LESS$THAN$ZERO(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            val then$else = SharpLink.then$else(data, arg)
+            if (data.asDecimal < 0) then$else._1 else then$else._2
+        }
+        else {
+            throw SharpLinkArgumentException.occur("IF LESS THAN ZERO", origin)
         }
     }
 
@@ -1452,6 +1474,7 @@ object Sharp {
 
     def IF$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
+            val then$else = SharpLink.then$else(data, arg)
             if (
                 if (data.isTable) {
                     data.asTable.isEmpty
@@ -1466,10 +1489,10 @@ object Sharp {
                     data.asText.isEmpty
                 }
             ) {
-                arg
+                then$else._1
             }
             else {
-                data
+                then$else._2
             }
         }
         else {
@@ -1479,7 +1502,26 @@ object Sharp {
 
     def IF$NOT$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.asText != "") arg else data
+            val then$else = SharpLink.then$else(data, arg)
+            if (
+                if (data.isTable) {
+                    data.asTable.nonEmpty
+                }
+                else if (data.isRow) {
+                    data.asRow.nonEmpty
+                }
+                else if (data.isJavaList) {
+                    !data.asJavaList.isEmpty
+                }
+                else {
+                    data.asText.nonEmpty
+                }
+            ) {
+                then$else._1
+            }
+            else {
+                then$else._2
+            }
         }
         else {
             throw SharpLinkArgumentException.occur("IF NOT EMPTY", origin)
@@ -1488,7 +1530,8 @@ object Sharp {
 
     def IF$NULL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.invalid || data.value == null) arg else data
+            val then$else = SharpLink.then$else(data, arg)
+            if (data.invalid || data.value == null) then$else._1 else then$else._2
         }
         else {
             throw SharpLinkArgumentException.occur("IF NULL", origin)
@@ -1497,7 +1540,8 @@ object Sharp {
 
     def IF$NOT$NULL(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.valid && data.value != null) arg else data
+            val then$else = SharpLink.then$else(data, arg)
+            if (data.valid && data.value != null) then$else._1 else then$else._2
         }
         else {
             throw SharpLinkArgumentException.occur("IF NOT NULL", origin)
@@ -1505,25 +1549,22 @@ object Sharp {
     }
 
     def IF$UNDEFINED(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (arg.valid) {
-            if (data.dataType == DataType.EXCEPTION && data.value == "UNDEFINED") {
-                arg
-            }
-            else if (data.asText.removeQuotes().containsArguments) {
-                arg
-            }
-            else {
-                data
-            }
+        val then$else = SharpLink.then$else(data, arg)
+        if (data.dataType == DataType.EXCEPTION && data.value == "UNDEFINED") {
+            then$else._1
+        }
+        else if (data.asText.removeQuotes().containsArguments) {
+            then$else._1
         }
         else {
-            throw SharpLinkArgumentException.occur("IF UNDEFINED", origin)
+            then$else._2
         }
     }
 
     def IF$TRUE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.asBoolean) arg else data
+            val then$else = SharpLink.then$else(data, arg)
+            if (data.asBoolean) then$else._1 else then$else._2
         }
         else {
             throw SharpLinkArgumentException.occur("IF TRUE", origin)
@@ -1532,10 +1573,20 @@ object Sharp {
 
     def IF$FALSE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (!data.asBoolean) arg else data
+            val then$else = SharpLink.then$else(data, arg)
+            if (!data.asBoolean) then$else._1 else then$else._2
         }
         else {
             throw SharpLinkArgumentException.occur("IF FALSE", origin)
+        }
+    }
+
+    def ELSE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+             List[Any](data, "ELSE", arg).asJava.toDataCell(DataType.ARRAY)
+         }
+        else {
+            throw SharpLinkArgumentException.occur("ELSE", origin)
         }
     }
 
@@ -2547,7 +2598,18 @@ object SharpLink {
             "MINUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MICRO", "MICROS", "NANO", "NANOS"),
             "INSERT" -> Set[String]("VALUES"),
             "INSERT$IF$EMPTY" -> Set[String]("VALUES"),
-            "TURN" -> Set[String]("AND"))
+            "TURN" -> Set[String]("AND"),
+            "IF$ZERO" -> Set[String]("ELSE"),
+            "IF$NOT$ZERO" -> Set[String]("ELSE"),
+            "IF$GREATER$THAN$ZERO" -> Set[String]("ELSE"),
+            "IF$LESS$THAN$ZERO" -> Set[String]("ELSE"),
+            "IF$TRUE" -> Set[String]("ELSE"),
+            "IF$FALSE" -> Set[String]("ELSE"),
+            "IF$NULL" -> Set[String]("ELSE"),
+            "IF$NOT$NULL" -> Set[String]("ELSE"),
+            "IF$UNDEFINED" -> Set[String]("ELSE"),
+            "IF$EMPTY" -> Set[String]("ELSE"),
+            "IF$NOT$EMPTY" -> Set[String]("ELSE"))
     //有可能属性值是一个参数（至少有一个参数，不能为空参数）且参数可能是英文单词的link名称
     val columns: Set[String] = Set[String]("SELECT", "REMOVE", "ORDER$BY", "GROUP$BY")
 
@@ -2599,14 +2661,20 @@ object SharpLink {
                         }
                     }
                     else if (more != "") {
-                        links += new Link$Argument(origin, "")
+                        """(?i)^(true|false|null|undefined)\b""".r.findFirstMatchIn(more) match {
+                            case Some(m) =>
+                                links += new Link$Argument(origin, m.group(1))
+                                origin = more.takeAfter(m.group(1)).trim()
+                            case None =>
+                                links += new Link$Argument(origin, "")
+                                origin = more
+                        }
 
-                        origin = more
                         more = ""
                         linkName = SharpLink.format(origin)
                     }
                     else {
-                        links += new Link$Argument(origin, args)
+                        links += new Link$Argument(origin, "")
                         origin = ""
                     }
                 }
@@ -2625,6 +2693,21 @@ object SharpLink {
         }
 
         links
+    }
+
+    def then$else(data: DataCell, arg: DataCell): (DataCell, DataCell) = {
+        if (arg.isJavaList) {
+            val list = arg.asList[Any]
+            if (list.size == 3 && list(1) == "ELSE") {
+                (list.head.asInstanceOf[DataCell], list.last.asInstanceOf[DataCell])
+            }
+            else {
+                (arg, data)
+            }
+        }
+        else {
+            (arg, data)
+        }
     }
 }
 

@@ -12,3 +12,28 @@ SCI包括哪些期刊? /48,red,s:SCI是一个国际上知名权威的学术检�
 <for in="1 to 10">
     <div style="width: 100px">大家发表论文一般会向这里发表，国内已经形成了一个产业链，大家可以百度“SCI”一下。</div>
 </for>
+
+```html
+<script type="text/javascript" src="/root.clock.js"></script>
+<script type="text/javascript" src="/root.popup.js"></script>
+<link href="/css/root/clock.css" rel="stylesheet" type="text/css" />
+
+<input id="DateTime" type="text" size="30" placeholder="yyyy-MM-dd HH:mm:00" /><a id="DateTimePicker_OpenButton" href="javascript:void(0)" style="margin-left: -24px"><i class="iconfont icon-calendar"></i></a>
+
+<div id="DateTimePicker" popup="yes" class="popup-autosize" display="sidebar" position="right">
+    <div id="DateTimePicker_CloseButton" class="popup-close-button"><i class="iconfont icon-quxiao"></i></div>
+    <div class="popup-bar"><i class="iconfont icon-calendar"></i> &nbsp; <span id="DateTimePickerTitle"></span></div>
+    <div class="popup-title">请分别选择日期和时间</div>
+    <calendar id="Calendar" lunar="yes" corner-names="休,班" week-title="周" week-names="一,二,三,四,五,六,日" month-names="一月,二月,三月,四月,五月,六月,七月,八月,九月,十月,十一月,十二月" this-month-text="本月" today-text="今天" head-format="yyyy年M月" holiday="yes" extension-api="/api/system/calendar?year=" date="today"></calendar>
+    <div class="space10"></div>
+    <clock id="Clock" hour-interval="1" minute-interval="1" second-interval="0" option-frame-side="upside" value="HH:mm:00"></clock>
+    <div id="DateTimePickerTip" class="space40 error" style="display: flex; justify-content: center; align-items: center;">&nbsp;</div>
+    <div class="popup-button"><input id="DateTimePicker_ConfirmButton" type="button" value=" OK " class="normal-button prime-button w80" /> &nbsp; &nbsp; &nbsp; <input id="DateTimePicker_CancelButton" type="button" value=" Cancel " class="normal-button minor-button w80" /></div>
+</div>
+
+<script type="text/javascript">
+$listen('DateTimePicker').on('confirm', function() {
+    $x('#DateTime').value($calendar('Calendar').date + ' ' + $clock('Clock').time);
+});
+</script>
+```

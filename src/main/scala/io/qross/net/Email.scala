@@ -24,11 +24,15 @@ object Email {
         //get all recipients
         if (JDBC.hasQrossSystem) {
             val recipients = new mutable.HashMap[String, (String, String)]()
-            DataSource.QROSS.queryDataTable("SELECT username, fullname, email FROM qross_users WHERE enabled='yes'")
+            val ds = DataSource.QROSS
+            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_users'")) {
+                ds.executeDataTable("SELECT username, fullname, email FROM qross_users WHERE enabled='yes'")
                     .foreach(row => {
                         recipients += row.getString("username") -> (row.getString("email"), row.getString("fullname"))
                         recipients += row.getString("fullname") -> (row.getString("email"), row.getString("fullname"))
                     }).clear()
+            }
+            ds.close()
 
             recipients.toMap
         }
@@ -243,25 +247,29 @@ class Email(private var title: String) {
             }
         }
         else if (JDBC.hasQrossSystem) {
-            val sender = DataSource.QROSS.queryDataRow("SELECT smtp_host, smtp_port, sender_address, sender_password FROM qross_email_senders WHERE sender_personal=?", personal)
-            if (sender.nonEmpty) {
-                val host = sender.getString("smtp_host")
-                val port = sender.getString("smtp_port")
-                if (host != "") {
-                    smtp.setProperty("mail.smtp.host", host)
-                }
-                if (port != "") {
-                    smtp.setProperty("mail.smtp.socketFactory.port", port)
-                    smtp.setProperty("mail.smtp.port", port)
-                }
+            val ds = DataSource.QROSS
+            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_email_senders'")) {
+                val sender = ds.executeDataRow("SELECT smtp_host, smtp_port, sender_address, sender_password FROM qross_email_senders WHERE sender_personal=?", personal)
+                if (sender.nonEmpty) {
+                    val host = sender.getString("smtp_host")
+                    val port = sender.getString("smtp_port")
+                    if (host != "") {
+                        smtp.setProperty("mail.smtp.host", host)
+                    }
+                    if (port != "") {
+                        smtp.setProperty("mail.smtp.socketFactory.port", port)
+                        smtp.setProperty("mail.smtp.port", port)
+                    }
 
-                from += "account" -> sender.getString("sender_address")
-                from += "password" -> sender.getString("sender_password")
-                from += "personal" -> personal
+                    from += "account" -> sender.getString("sender_address")
+                    from += "password" -> sender.getString("sender_password")
+                    from += "personal" -> personal
+                }
+                else {
+                    throw new EmailInvalidSenderException("Invalid sender personal: " + personal)
+                }
             }
-            else {
-                throw new EmailInvalidSenderException("Invalid sender personal: " + personal)
-            }
+            ds.close()
         }
         this
     }

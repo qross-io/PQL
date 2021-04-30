@@ -34,7 +34,7 @@ public class HttpRequest {
         Map<String, String[]> map = request.getParameterMap();
         for (String key : map.keySet()) {
             String[] values = map.get(key);
-            if (values.length > 0) {
+            if (values.length > 0 && !key.startsWith("r0x")) {
                 params.put(key, values[0]);
             }
         }

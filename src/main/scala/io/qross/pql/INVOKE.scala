@@ -1,6 +1,7 @@
 package io.qross.pql
 
 import io.qross.core.DataCell
+import io.qross.ext.ClassT
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.$BLANK
 import io.qross.pql.Solver._
@@ -36,45 +37,54 @@ class INVOKE(sentence: String) {
                         }
 
                         if (dataType != "") {
-                            dataType.toLowerCase() match {
-                                case "string" => (arg.removeQuotes(), Class.forName("java.lang.String"))
-                                case "int" | "integer" => (arg.toInt, Class.forName("java.lang.Integer"))
-                                case "object" => (arg.removeQuotes(), Class.forName("java.lang.Object"))
-                                case "char" | "character" => (arg.removeQuotes(), Class.forName("java.lang.Character"))
-                                case "long" => (arg.toLong, Class.forName("java.lang.Long"))
-                                case "float" => (arg.toFloat, Class.forName("java.lang.Float"))
-                                case "double" => (arg.toDouble, Class.forName("java.lang.Double"))
-                                case "bool" | "boolean" => (if (arg.toLowerCase() == "true") true else false, Class.forName("java.lang.Boolean"))
+                            dataType match {
+                                case "String" => (arg.removeQuotes(), ClassT.$String)
+                                case "int" => (arg.toInt, ClassT.$int)
+                                case "Integer" => (arg.toInt, ClassT.$Integer)
+                                case "Object" => (arg.removeQuotes(), ClassT.$Object)
+                                case "char" => (arg.removeQuotes(), ClassT.$char)
+                                case "Character" => (arg.removeQuotes(), ClassT.$Character)
+                                case "long" => (arg.replaceAll("(?i)l$", "").toLong, ClassT.$long)
+                                case "Long" => (arg.replaceAll("(?i)l$", "").toLong, ClassT.$Long)
+                                case "float" => (arg.replaceAll("(?i)f$", "").toFloat, ClassT.$float)
+                                case "Float" => (arg.replaceAll("(?i)f$", "").toFloat, ClassT.$Float)
+                                case "double" => (arg.replaceAll("(?i)d$", "").toDouble, ClassT.$double)
+                                case "Double" => (arg.replaceAll("(?i)d$", "").toDouble, ClassT.$Double)
+                                case "boolean" => (if (arg.toLowerCase() == "true") true else false, ClassT.$boolean)
+                                case "Boolean" => (if (arg.toLowerCase() == "true") true else false, ClassT.$Boolean)
                                 case _ => (arg.removeQuotes(), Class.forName(dataType))
                             }
                         }
                         else {
                             if (arg.quotesWith("\"")) {
-                                (arg.removeQuotes(), Class.forName("java.lang.String"))
+                                (arg.removeQuotes(), ClassT.$String)
                             }
                             else if (arg.quotesWith("'")) {
-                                (arg.removeQuotes(), Class.forName("java.lang.Character"))
+                                (arg.removeQuotes(), ClassT.$char)
                             }
                             else if ("""^\d+$""".r.test(arg)) {
-                                (arg.toInt, Class.forName("java.lang.Integer"))
+                                (arg.toInt, ClassT.$int)
                             }
                             else if ("""(?i)^\d+l$""".r.test(arg)) {
-                                (arg.toLong, Class.forName("java.lang.Long"))
+                                (arg.dropRight(1).toLong, ClassT.$long)
                             }
-                            else if ("""(?i)^\d+f$""".r.test(arg)) {
-                                (arg.toFloat, Class.forName("java.lang.Float"))
+                            else if ("""(?i)\d+f$""".r.test(arg)) {
+                                (arg.dropRight(1).toFloat, ClassT.$float)
                             }
-                            else if ("""(?i)^\d+d$""".r.test(arg)) {
-                                (arg.toDouble, Class.forName("java.lang.Double"))
+                            else if ("""^\d+\.\d+$""".r.test(arg)) {
+                                (arg.toFloat, ClassT.$float)
+                            }
+                            else if ("""(?i)\d+d$""".r.test(arg)) {
+                                (arg.dropRight(1).toDouble, ClassT.$double)
                             }
                             else if ("""(?i)^(true|false)$""".r.test(arg)) {
-                                (if (arg.toLowerCase() == "true") true else false, Class.forName("java.lang.Boolean"))
+                                (if (arg.toLowerCase() == "true") true else false, ClassT.$boolean)
                             }
                             else {
-                                (arg, Class.forName("java.lang.Object"))
+                                (arg, ClassT.$Object)
                             }
                         }
-                    }).filter(_._1 != "")
+                    })
 
                 java = java.takeBefore("(")
                 val method = java.takeAfterLast(".")
@@ -85,7 +95,6 @@ class INVOKE(sentence: String) {
                     .invoke(null, args.map(_._1.asInstanceOf[Object]): _*))
             }
             else {
-                val java = body.drop(6).trim()
                 val field = java.takeAfterLast(".")
                 val className = java.takeBeforeLast(".")
 

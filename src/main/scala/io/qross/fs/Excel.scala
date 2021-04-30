@@ -153,10 +153,14 @@ class Excel(val fileName: String) extends Output {
 
         if (!templatePath.endsWith(".xlsx") && !templatePath.endsWith(".xls")) {
             if (JDBC.hasQrossSystem) {
-                DataSource.QROSS.querySingleValue("SELECT template_path FROM qross_excel_templates WHERE template_name=?", this.templatePath).data match {
-                    case Some(tplPath) => templatePath = tplPath.toString
-                    case None => templatePath += ".xlsx"
+                val ds = DataSource.QROSS
+                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_excel_templates'")) {
+                    ds.executeSingleValue("SELECT template_path FROM qross_excel_templates WHERE template_name=?", this.templatePath).data match {
+                        case Some(tplPath) => templatePath = tplPath.toString
+                        case None => templatePath += ".xlsx"
+                    }
                 }
+                ds.close()
             }
         }
 

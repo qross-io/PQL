@@ -7,7 +7,7 @@ apply plugin: "maven-publish"
 apply plugin: 'signing'
 
 group = 'io.qross'
-version = '1.3.0'
+version = '1.4.0'
 sourceCompatibility = 1.8
 archivesBaseName = "pql"
 
@@ -106,7 +106,7 @@ uploadArchives {
                 name 'Qross PQL'
                 packaging 'jar'
                 // optionally artifactId can be defined here
-                description 'A cross-datasource middleware language.'
+                description 'A powerful cross-datasource middleware language.'
                 url 'http://www.qross.cn/pql'
 
                 scm {
@@ -141,7 +141,7 @@ publishing {
         maven(MavenPublication) {
             groupId = 'io.qross'
             artifactId = 'pql'
-            version = '1.3.23-SNAPSHOT'
+            version = '1.4.38-SNAPSHOT'
             from components.java
             artifact sourcesJar
             artifact javadocJar

@@ -124,7 +124,7 @@ object TypeExt {
                 if (param.contains(terminator)) {
                     queries += param.takeBefore(terminator) -> param.takeAfter(terminator)
                 }
-                else {
+                else if (param != "") {
                     queries += param -> ""
                 }
             }
@@ -547,6 +547,59 @@ object TypeExt {
             }
 
             (l, r)
+        }
+
+        def isHTML: Boolean = {
+            var str = string
+            """(?i)<([a-z]+|h[1-6])\b""".r
+                .findAllMatchIn(str)
+                .foreach(m => {
+                    val tag = m.group(1)
+                    str = s"""(?i)<$tag\b.+</$tag>""".r.replaceAllIn(str, "").trim()
+                    str = s"""(?i)<$tag\s*/>""".r.replaceAllIn(str, "").trim()
+                })
+
+            str == "" || """(?i)^<([a-z]+|h[1-6]).*?>.*$""".r.test(str) || """(?i)^.*</([a-z]+|h[1-6])>$""".r.test(str)
+        }
+
+        def stackAllPairOf(left: String, right: String, toClose: Int): Int = {
+            val n = toClose + ("(?i)" + left).r.findAllIn(string).size - ("(?i)" + right).r.findAllIn(string).size
+            if (n >= 0) {
+                n
+            }
+            else {
+                0
+            }
+        }
+
+        def stackPairOf(left: String, right: String, toClose: Int): Int = {
+
+            var l = string.indexOf(left)
+            var r = string.indexOf(right)
+            var stack = toClose
+
+            while (l > -1 || r > -1) {
+                if (l > -1 && r > -1) {
+                    if (l < r) {
+                        stack += 1
+                        l = string.indexOf(left, l + left.length)
+                    }
+                    else {
+                        stack -= 1
+                        r = string.indexOf(right, r + right.length)
+                    }
+                }
+                else if (l > -1) {
+                    stack += 1
+                    l = string.indexOf(left, l + left.length)
+                }
+                else {
+                    stack -= 1
+                    r = string.indexOf(right, r + right.length)
+                }
+            }
+
+            stack
         }
 
         //查找字符left的另一半匹配right

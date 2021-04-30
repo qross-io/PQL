@@ -62,10 +62,10 @@ object Environment {
     def localHostAddress: String = InetAddress.getLocalHost.getHostAddress
 
     def runningDirectory: String = {
-        val sameDir = BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath
+        val sameDir = BaseClass.MAIN.getProtectionDomain.getCodeSource.getLocation.getPath.replaceAll("^/(?=[a-zA-Z]+:/)", "")
         //spring boot - Master
         if (sameDir.contains(".jar!")) {
-            sameDir.takeAfter("file:").takeBefore(".jar!").takeBeforeLast("/") + "/"
+            sameDir.takeAfter("file:").replaceAll("^/(?=[a-zA-Z]+:/)", "").takeBefore(".jar!").takeBeforeLast("/") + "/"
         }
         //一般jar包 - Keeper
         else if (sameDir.endsWith(".jar")) {

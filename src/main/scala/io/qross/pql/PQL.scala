@@ -7,7 +7,7 @@ import io.qross.fs.SourceFile
 import io.qross.net.Json
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
-import io.qross.setting.{Configurations, Language}
+import io.qross.setting.{Configurations, Global, Language}
 import io.qross.time.DateTime
 
 import scala.collection.JavaConverters._
@@ -405,7 +405,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
             }
         }
         else if (symbol == "@") {
-            GlobalVariable.set(name, value.value, credential.getInt("userid"), credential.getString("role"))
+            GlobalVariable.set(name, value, credential.getInt("userid"))
         }
     }
 
@@ -434,6 +434,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                     for (i <- EXECUTING.indices) {
                         if (EXECUTING(i).containsVariable(name)) {
                             cell = EXECUTING(i).getVariable(name)
+                            found = true
                             break
                         }
                     }
@@ -533,11 +534,11 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     def place(queryString: String): PQL = {
         if (queryString != "") {
-            val map = queryString.$split()
+            val map = queryString.replaceArguments(root.variables).$split().map(pair => (pair._1.trim(), java.net.URLDecoder.decode(pair._2, Global.CHARSET)))
 
             this.SQL = this.SQL.replaceArguments(map)
             map.foreach(pair => {
-                root.setVariable(pair._1, pair._2.replaceAll("(?i)%3f", "?").replaceAll("(?i)%3d", "=").replaceAll("%26", "&").replaceAll("%20", " "))
+                root.setVariable(pair._1, pair._2)
             })
         }
         this
@@ -546,12 +547,12 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     //设置默认值, 变量没有时才赋值
     def placeDefault(queryString: String): PQL = {
         if (queryString != "") {
-            val map = queryString.$split()
+            val map = queryString.replaceArguments(root.variables).$split().map(pair => (pair._1.trim(), java.net.URLDecoder.decode(pair._2, Global.CHARSET)))
 
             this.SQL = this.SQL.replaceArguments(map)
             map.foreach(pair => {
                 if (!root.containsVariable(pair._1)) {
-                    root.setVariable(pair._1, pair._2.replaceAll("(?i)%3f", "?").replaceAll("(?i)%3d", "=").replaceAll("%26", "&").replaceAll("%20", " "))
+                    root.setVariable(pair._1, pair._2)
                 }
             })
         }
@@ -716,8 +717,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 RESULT.head match {
                     case table: DataTable => table.toJavaMapList
                     case row: DataRow => row.toJavaMap
-                    case dt: DateTime => dt.toString.useQuotes("\"")
-                    case str: String => str.useQuotes("\"")
+                    case dt: DateTime => dt.toString //.useQuotes("\"")
+                    case str: String => str //.useQuotes("\"")
                     case o => o
                 }
             }
@@ -726,8 +727,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 RESULT.map {
                         case table: DataTable => table.toJavaMapList
                         case row: DataRow => row.toJavaMap
-                        case dt: DateTime => dt.toString.useQuotes("\"")
-                        case str: String => str.useQuotes("\"")
+                        case dt: DateTime => dt.toString //.useQuotes("\"")
+                        case str: String => str //.useQuotes("\"")
                         case o => o
                 }.asJava
             }
@@ -737,8 +738,8 @@ class PQL(val originalSQL: String, val dh: DataHub) {
             WORKING.last match {
                 case table: DataTable => table.toJavaMapList
                 case row: DataRow => row.toJavaMap
-                case dt: DateTime => dt.toString.useQuotes("\"")
-                case str: String => str.useQuotes("\"")
+                case dt: DateTime => dt.toString //.useQuotes("\"")
+                case str: String => str //.useQuotes("\"")
                 case o => o
             }
         }

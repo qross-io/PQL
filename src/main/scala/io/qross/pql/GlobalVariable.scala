@@ -5,7 +5,7 @@ import io.qross.exception.SQLExecuteException
 import io.qross.fs.TextFile._
 import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.net.{Cookies, Session}
-import io.qross.setting.{Configurations, Language}
+import io.qross.setting.{Configurations, Environment, Language}
 import io.qross.time.DateTime
 
 object GlobalVariable {
@@ -29,7 +29,7 @@ object GlobalVariable {
     }
 
     //更新用户变量
-    def set(name: String, value: Any, userid: Int, role: String): Unit = {
+    def set(name: String, value: DataCell, userid: Int): Unit = {
 
         if (Patterns.GLOBAL_VARIABLES.contains(name)) {
             throw new SQLExecuteException("Can't update process variable. This variable is readonly.")
@@ -38,42 +38,41 @@ object GlobalVariable {
             throw new SQLExecuteException(s"$name is a global function.")
         }
         else if (Configurations.contains(name)) {
-            Configurations.set(name, value)
+            Configurations.set(name, value.value)
         }
         else if (SYSTEM.contains(name) || userid == 0) {
             SYSTEM.set(name, value)
             if (JDBC.hasQrossSystem) {
-                DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_owner, var_name, var_value) VALUES ('system', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""",
-                    value match {
-                        case _: Int => "INTEGER"
-                        case _: Long => "INTEGER"
-                        case _: Float => "DECIMAL"
-                        case _: Double => "DECIMAL"
-                        case _ => "TEXT"
-                    }, name, value.toString, value.toString)
+                val ds = DataSource.QROSS
+                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_variables'")) {
+                    val field = value.toString
+                    ds.executeNonQuery(s"""INSERT INTO qross_variables (var_group, var_type, var_owner, var_name, var_value) VALUES ('system', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""",
+                        value.dataType, name, field, field)
+                }
+                ds.close()
             }
         }
         else {
             USER.set(name, value)
             if (JDBC.hasQrossSystem) {
-                DataSource.QROSS.queryUpdate(s"""INSERT INTO qross_variables (var_group, var_type, var_owner, var_name, var_value) VALUES ('user', ?, ?, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""",
-                    value match {
-                        case _: Int => "INTEGER"
-                        case _: Long => "INTEGER"
-                        case _: Float => "DECIMAL"
-                        case _: Double => "DECIMAL"
-                        case _ => "TEXT"
-                    }, userid, name, value.toString, value.toString)
+                val ds = DataSource.QROSS
+                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_variables'")) {
+                    val field = value.toString
+                    ds.executeNonQuery(s"""INSERT INTO qross_variables (var_group, var_type, var_owner, var_name, var_value) VALUES ('user', ?, ?, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""",
+                        value.dataType, userid, name, field, field)
+                }
+                ds.close()
             }
         }
     }
 
     //得到全局变量的值
-    def get(name: String, PQL: PQL ): DataCell = {
+    def get(name: String, PQL: PQL): DataCell = {
         if (Patterns.GLOBAL_VARIABLES.contains(name)) {
             Class.forName("io.qross.pql.GlobalVariableDeclaration")
                 .getDeclaredMethod(name, Class.forName("io.qross.pql.PQL"))
-                .invoke(null, PQL).asInstanceOf[DataCell]
+                .invoke(null, PQL)
+                .asInstanceOf[DataCell]
         }
         else if (USER.contains(name)) {
             USER.getCell(name)
@@ -134,4 +133,7 @@ object GlobalVariableDeclaration {
 
     def SPOTLIGHT(PQL: PQL): DataCell = DataCell(io.qross.look.Spotlight.random, DataType.TEXT)
     def THEME(PQL: PQL): DataCell = DataCell(io.qross.look.Theme.random, DataType.ROW)
+
+    def RUNNING_DIR(PQL: PQL): DataCell = DataCell(Environment.runningDirectory, DataType.TEXT)
+    def LOCAL_IP(PQL: PQL): DataCell = DataCell(Environment.localHostAddress, DataType.TEXT)
 }

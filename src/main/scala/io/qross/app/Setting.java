@@ -1,5 +1,6 @@
 package io.qross.app;
 
+import io.qross.ext.TypeExt;
 import io.qross.setting.Global;
 import io.qross.setting.Properties;
 
@@ -14,6 +15,7 @@ public class Setting {
     public static String OneApiTokenList = Properties.get("oneapi.token.list", "");
     public static String OneApiAccessOpen = Properties.get("oneapi.access.open", "");
     public static String OneApiAccessPermit = Properties.get("oneapi.access.permit", "");
+    public static String OneApiAjaxSettings = Properties.get("oneapi.ajax.settings", "");
 
     public static String VoyagerDirectory = Properties.get("voyager.directory", "/templates/");
     public static String VoyagerConnection = Properties.get("voyager.connection", "jdbc.default");
@@ -21,6 +23,7 @@ public class Setting {
     public static String VoyagerLanguage = Properties.get("voyager.language", Global.VOYAGER_LANGUAGE());
     public static String VoyagerStaticSite = Properties.get("voyager.static.site", "");
     public static String VoyagerGallerySite = Properties.get("voyager.gallery.site", "");
+    public static boolean VoyagerCacheEnabled = TypeExt.StringExt(Properties.get("voyager.cache.enabled", "false")).toBoolean(false);
 
     public static void handleArguments(String[] args) {
         for (int i = 0; i < args.length; i++) {

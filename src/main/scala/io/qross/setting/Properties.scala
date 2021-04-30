@@ -75,22 +75,26 @@ object Properties {
 
     def load(id: Int): Unit = {
         if (JDBC.hasQrossSystem) {
-            val property = DataSource.QROSS.queryDataRow("SELECT * FROM qross_properties WHERE id=?", id)
-            val path = property.getString("property_path")
-            val format = {
-                property.getString("property_format") match {
-                    case "properties" => 0
-                    case "yaml" | "yml" => 1
-                    case "json" => 2
-                    case _ => 0
+            val ds = DataSource.QROSS
+            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_properties'")) {
+                val property = ds.executeDataRow("SELECT * FROM qross_properties WHERE id=?", id)
+                val path = property.getString("property_path")
+                val format = {
+                    property.getString("property_format") match {
+                        case "properties" => 0
+                        case "yaml" | "yml" => 1
+                        case "json" => 2
+                        case _ => 0
+                    }
+                }
+                property.getString("property_source") match {
+                    case "local" => Properties.loadLocalFile(path)
+                    case "resource" => Properties.loadResourcesFile(path)
+                    case "nacos" => Properties.loadNacosConfig(path, format)
+                    case "url" => Properties.loadUrlConfig(path, format)
                 }
             }
-            property.getString("property_source") match {
-                case "local" => Properties.loadLocalFile(path)
-                case "resource" => Properties.loadResourcesFile(path)
-                case "nacos" => Properties.loadNacosConfig(path, format)
-                case "url" => Properties.loadUrlConfig(path, format)
-            }
+            ds.close()
         }
     }
 

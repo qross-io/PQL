@@ -1,11 +1,6 @@
 package io.qross.app;
 
-import io.qross.setting.Global;
-import io.qross.setting.Properties;
 import org.springframework.web.servlet.view.AbstractTemplateViewResolver;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class VoyagerResolver extends AbstractTemplateViewResolver {
 
