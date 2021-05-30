@@ -544,6 +544,30 @@ public class Marker {
             box.add(m.group(0));
         }
 
+        //TEXTAREA
+        p = Pattern.compile("(?i)<textarea\\b[\\s\\S]+?</textarea>", Pattern.CASE_INSENSITIVE);
+        m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(0), "~stash[" + stash.size() + "]");
+            stash.add(m.group(0));
+        }
+
+        //code
+        p = Pattern.compile("```\\S*\\s*(\\S[\\s\\S]*?\\S)\\s*```", Pattern.CASE_INSENSITIVE);
+        m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(1), "~stash[" + stash.size() + "]");
+            stash.add(m.group(1));
+        }
+
+        //include
+        p = Pattern.compile("<#\\s*(include|page)\\s+[\\s\\S]+?/>", Pattern.CASE_INSENSITIVE);
+        m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(0), "~box[" + box.size() + "]");
+            box.add(m.group(0));
+        }
+
         // /green:我是绿色/
         // /16:abc/
         // //b,i,u,s
@@ -551,10 +575,11 @@ public class Marker {
         // primary, darker, lighter
         // 200%
         // Consolas
-        p = Pattern.compile("(?<!/)/([#a-z0-9%,\\s]+):([\\s\\S]*?[^<])/(?![a-z]+>)", Pattern.CASE_INSENSITIVE);
+        p = Pattern.compile("(?<!/)/([#a-z0-9%,.\\s]+):([\\s\\S]*?[^<])/(?![a-z]+>)", Pattern.CASE_INSENSITIVE);
         m = p.matcher(content);
         while (m.find()) {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder(); //style=
+            StringBuilder cb = new StringBuilder(); //class=
             for (String value : m.group(1).split(",")) {
                 String s = value.trim();
                 if (s.matches("^\\d+$")) {
@@ -582,13 +607,19 @@ public class Marker {
                 else if (s.endsWith("%")) {
                     s = "line-height: " + s;
                 }
+                else if (s.startsWith(".")) {
+                    cb.append(s.substring(1)).append(" ");
+                    s = "";
+                }
                 else {
                     if (s.matches("^(primary|darker|lighter)$")) {
                         s = "var(--" + s + ")";
                     }
                     s = "color: " + s;
                 }
-                sb.append(s).append("; ");
+                if (!s.isEmpty()) {
+                    sb.append(s).append("; ");
+                }
             }
 
             String text = m.group(2);
@@ -596,38 +627,14 @@ public class Marker {
             Matcher n = q.matcher(text);
             if (n.find()) {
                 sb.append("background-color: ").append(n.group(1)).append("; ")
-                    .append("border-radius: 0.2rem; ")
-                    .append("padding-inline-start: 0.2rem; ")
-                    .append("padding-inline-end: 0.2rem;");
+                        .append("border-radius: 0.2rem; ")
+                        .append("padding-inline-start: 0.2rem; ")
+                        .append("padding-inline-end: 0.2rem;");
 
                 text = text.substring(0, text.lastIndexOf(":"));
             }
 
-            content = content.replace(m.group(0), "<span style=\"" + sb.toString() + "\">" + text + "</span>");
-        }
-
-        //TEXTAREA
-        p = Pattern.compile("(?i)<textarea\\b[\\s\\S]+?</textarea>", Pattern.CASE_INSENSITIVE);
-        m = p.matcher(content);
-        while (m.find()) {
-            content = content.replace(m.group(0), "~stash[" + stash.size() + "]");
-            stash.add(m.group(0));
-        }
-
-        //code
-        p = Pattern.compile("```\\S*\\s([\\s\\S]*?)\\s```", Pattern.CASE_INSENSITIVE);
-        m = p.matcher(content);
-        while (m.find()) {
-            content = content.replace(m.group(1), "~stash[" + stash.size() + "]");
-            stash.add(m.group(1));
-        }
-
-        //include
-        p = Pattern.compile("<#\\s*(include|page)\\s+[\\s\\S]+?/>", Pattern.CASE_INSENSITIVE);
-        m = p.matcher(content);
-        while (m.find()) {
-            content = content.replace(m.group(0), "~box[" + box.size() + "]");
-            box.add(m.group(0));
+            content = content.replace(m.group(0), "<span" + (cb.length() > 0 ? " class=\"" + cb.toString() + "\"" : "") + " style=\"" + sb.toString() + "\">" + text + "</span>");
         }
 
         // -- n --

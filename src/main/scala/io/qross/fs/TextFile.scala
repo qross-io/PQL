@@ -63,13 +63,28 @@ object TextFile {
             dh
         }
 
+        def openTextFile(file: File): DataHub = {
+            dh.FQL.create(file.getAbsolutePath, new TextFile(file, TextFile.TXT))
+            dh
+        }
+
         def openJsonFile(fileNameOrFullPath: String): DataHub = {
             dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.JSON).bracketedBy("{", "}"))
             dh
         }
 
+        def openJsonFile(file: File): DataHub = {
+            dh.FQL.create(file.getAbsolutePath, new TextFile(file, TextFile.JSON).bracketedBy("{", "}"))
+            dh
+        }
+
         def openCsvFile(fileNameOrFullPath: String): DataHub = {
             dh.FQL.create(fileNameOrFullPath, new TextFile(fileNameOrFullPath, TextFile.CSV).delimitedBy(","))
+            dh
+        }
+
+        def openCsvFile(file: File): DataHub = {
+            dh.FQL.create(file.getAbsolutePath, new TextFile(file, TextFile.CSV).delimitedBy(","))
             dh
         }
 
@@ -237,10 +252,8 @@ object TextFile {
     }
 }
 
-class TextFile(val fileNameOrPath: String, val format: Int) {
+class TextFile(val file: File, val format: Int) {
 
-    private val file = new File(fileNameOrPath.locate())
-    val exists: Boolean = file.exists()
     private lazy val access = new RandomAccessFile(file, "r") //read
 
     private var row = 0 //行号
@@ -255,8 +268,16 @@ class TextFile(val fileNameOrPath: String, val format: Int) {
     private val table = new DataTable()  //result
     private var SELECT: SELECT = _
 
+    def this(fileNameOrPath: String, format: Int) {
+        this(new File(fileNameOrPath.locate()), format)
+    }
+
     def this(fileNameOrPath: String) {
-        this(fileNameOrPath, TextFile.TXT)
+        this(new File(fileNameOrPath.locate()), TextFile.TXT)
+    }
+
+    def this(file: File) {
+        this(file, TextFile.TXT)
     }
 
     def withColumns(fields: String*): TextFile = {

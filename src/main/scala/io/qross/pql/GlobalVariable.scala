@@ -4,7 +4,7 @@ import io.qross.core.{DataCell, DataRow, DataType}
 import io.qross.exception.SQLExecuteException
 import io.qross.fs.TextFile._
 import io.qross.jdbc.{DataSource, JDBC}
-import io.qross.net.{Cookies, Session}
+import io.qross.net.{Cookies, Json, Session}
 import io.qross.setting.{Configurations, Environment, Language}
 import io.qross.time.DateTime
 
@@ -46,8 +46,8 @@ object GlobalVariable {
                 val ds = DataSource.QROSS
                 if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_variables'")) {
                     val field = value.toString
-                    ds.executeNonQuery(s"""INSERT INTO qross_variables (var_group, var_type, var_owner, var_name, var_value) VALUES ('system', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""",
-                        value.dataType, name, field, field)
+                    ds.executeNonQuery(s"""INSERT INTO qross_variables (variable_group, variable_type, owner, variable_name, variable_value) VALUES ('system', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE variable_value=?""",
+                        value.dataType.typeName, name, field, field)
                 }
                 ds.close()
             }
@@ -58,8 +58,8 @@ object GlobalVariable {
                 val ds = DataSource.QROSS
                 if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_variables'")) {
                     val field = value.toString
-                    ds.executeNonQuery(s"""INSERT INTO qross_variables (var_group, var_type, var_owner, var_name, var_value) VALUES ('user', ?, ?, ?, ?) ON DUPLICATE KEY UPDATE var_value=?""",
-                        value.dataType, userid, name, field, field)
+                    ds.executeNonQuery(s"""INSERT INTO qross_variables (variable_group, variable_type, owner, variable_name, variable_value) VALUES ('user', ?, ?, ?, ?) ON DUPLICATE KEY UPDATE variable_value=?""",
+                        value.dataType.typeName, userid, name, field, field)
                 }
                 ds.close()
             }
@@ -96,6 +96,43 @@ object GlobalVariable {
 
     def contains(name: String, PQL: PQL): Boolean = {
         Patterns.GLOBAL_VARIABLES.contains(name) || USER.contains(name) || SYSTEM.contains(name) || PQL.credential.contains(name) || Configurations.contains(name)
+    }
+
+    def renew(name: String, owner: Int = 0): Unit = {
+        val row = DataSource.QROSS.queryDataRow("SELECT variable_type, variable_value FROM qross_variables WHERE variable_name=? AND owner=?", name, owner)
+        if (owner == 0) {
+            SYSTEM.set(name, row.getString("variable_type") match {
+                case "TEXT" => row.getString("variable_value")
+                case "INTEGER" => row.getLong("variable_value")
+                case "DECIMAL" => row.getDouble("variable_value")
+                case "BOOLEAN" => row.getBoolean("variable_value")
+                case "ARRAY" => Json.fromText(row.getString("variable_value")).parseJavaList("/")
+                case "ROW" => Json.fromText(row.getString("variable_value")).parseRow("/")
+                case "TABLE" => Json.fromText(row.getString("variable_value")).parseTable("/")
+                case _ => row.getString("variable_value")
+            }, new DataType(row.getString("variable_type")))
+        }
+        else {
+            USER.set(name, row.getString("variable_type") match {
+                case "TEXT" => row.getString("variable_value")
+                case "INTEGER" => row.getLong("variable_value")
+                case "DECIMAL" => row.getDouble("variable_value")
+                case "BOOLEAN" => row.getBoolean("variable_value")
+                case "ARRAY" => Json.fromText(row.getString("variable_value")).parseJavaList("/")
+                case "ROW" => Json.fromText(row.getString("variable_value")).parseRow("/")
+                case "TABLE" => Json.fromText(row.getString("variable_value")).parseTable("/")
+                case _ => row.getString("variable_value")
+            }, new DataType(row.getString("variable_type")))
+        }
+    }
+
+    def remove(name: String, owner: Int = 0): Unit = {
+        if (owner == 0) {
+            SYSTEM.remove(name)
+        }
+        else {
+            USER.remove(name)
+        }
     }
 }
 

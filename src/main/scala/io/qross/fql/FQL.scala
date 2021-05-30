@@ -58,9 +58,9 @@ class FQL(dh: DataHub, PQL: PQL) {
         }
     }
 
-    def select(SQL: String, values: Any*): DataTable = {
+    def select(SQL: String): DataTable = {
 
-        //替换参数 values
+        //替换参数 values   , values: Any*
         //解析语句并生成执行计划，类似条件解析的分步
 
         val SELECT = new SELECT(SQL)

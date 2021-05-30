@@ -15,7 +15,7 @@ object PRINT {
     val NONE: String = "NONE"
 
     def parse(sentence: String, PQL: PQL): Unit = {
-        PQL.PARSING.head.addStatement(new Statement("PRINT", sentence, new PRINT(sentence.takeAfterX($PRINT))))
+        PQL.PARSING.head.addStatement(new Statement("PRINT", sentence, new PRINT(sentence.takeAfterX($PRINT).trim())))
     }
 }
 
@@ -46,8 +46,11 @@ class PRINT(var message: String) {
             else if (message.bracketsWith("[", "]") || this.message.bracketsWith("{", "}")) {
                 message.$restore(PQL, "\"")
             }
-            else {
+            else if (message != "") {
                 message.$eval(PQL).asText
+            }
+            else {
+                ""
             }
         }
 

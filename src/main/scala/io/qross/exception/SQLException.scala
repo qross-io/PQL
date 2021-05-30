@@ -54,6 +54,10 @@ object SharpLinkArgumentException {
     def occur(linkName: String, origin: String): SharpLinkArgumentException = {
         new SharpLinkArgumentException(s"Empty or incorrect argument(s) at $linkName: $origin")
     }
+
+    def miss(linkName: String, origin: String, expected: Int, actual: Int): SharpLinkArgumentException = {
+        new SharpLinkArgumentException(s"Missing argument(s) at $linkName: $origin. expected: $expected, actual: $actual")
+    }
 }
 
 class SharpLinkArgumentException(val s: String) extends RuntimeException(s) {

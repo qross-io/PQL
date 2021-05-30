@@ -342,6 +342,24 @@ object TypeExt {
             }
         }
 
+        def takeUp(length: Int): String = {
+            if (string == null) {
+                null
+            }
+            else {
+                string.take(length)
+            }
+        }
+
+        def takeRightUp(length: Int): String = {
+            if (string == null) {
+                null
+            }
+            else {
+                string.takeRight(length)
+            }
+        }
+
         //不包含 left 和 right
         def takeBetween(left: String, right: String): String = {
             val li: Int = string.indexOf(left)
@@ -549,6 +567,48 @@ object TypeExt {
             (l, r)
         }
 
+        def indexPairOf(left: String, right: String, start: Int, toClose: Int): Int = {
+            var l = string.indexOf(left, start)
+            var r = string.indexOf(right, start)
+            var stack = toClose
+
+            breakable {
+                while (l > -1 || r > -1) {
+                    if (l > -1 && r > -1) {
+                        if (l < r) {
+                            stack += 1
+                            l = string.indexOf(left, l + left.length)
+                        }
+                        else {
+                            stack -= 1
+                            if (stack == 0) {
+                                break
+                            }
+                            r = string.indexOf(right, r + right.length)
+                        }
+                    }
+                    else if (l > -1) {
+                        stack += 1
+                        l = string.indexOf(left, l + left.length)
+                    }
+                    else {
+                        stack -= 1
+                        if (stack == 0) {
+                            break
+                        }
+                        r = string.indexOf(right, r + right.length)
+                    }
+                }
+            }
+
+            if (stack == 0) {
+                r
+            }
+            else {
+                -1
+            }
+        }
+
         def isHTML: Boolean = {
             var str = string
             """(?i)<([a-z]+|h[1-6])\b""".r
@@ -562,6 +622,7 @@ object TypeExt {
             str == "" || """(?i)^<([a-z]+|h[1-6]).*?>.*$""".r.test(str) || """(?i)^.*</([a-z]+|h[1-6])>$""".r.test(str)
         }
 
+        //left - regex, right - regex
         def stackAllPairOf(left: String, right: String, toClose: Int): Int = {
             val n = toClose + ("(?i)" + left).r.findAllIn(string).size - ("(?i)" + right).r.findAllIn(string).size
             if (n >= 0) {
@@ -633,6 +694,14 @@ object TypeExt {
                 sb.append(string.substring(random, random + 1))
             }
             sb.toString()
+        }
+
+        def decodeURL(): String = {
+            java.net.URLDecoder.decode(string, Global.CHARSET)
+        }
+
+        def encodeURL(): String = {
+            java.net.URLEncoder.encode(string, Global.CHARSET)
         }
     }
 
@@ -988,18 +1057,21 @@ object TypeExt {
 
     implicit class ExceptionExt(e: Exception) {
         def getReferMessage: String = {
-            val message = e.getMessage
+            var message = e.getMessage
             if (message == null) {
-                if (e.getCause != null) {
-                    e.getCause.getMessage
-                }
-                else {
-                    e.getLocalizedMessage
+                var cause = e.getCause
+                if (cause != null) {
+                    message = cause.getMessage
+                    while (message == null && cause != null) {
+                        cause = cause.getCause
+                        if (cause != null) {
+                            message = cause.getMessage
+                        }
+                    }
                 }
             }
-            else {
-                message
-            }
+
+            message
         }
 
         def getFullMessage: java.util.List[String] = {

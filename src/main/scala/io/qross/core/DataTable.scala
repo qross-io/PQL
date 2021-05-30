@@ -1,5 +1,7 @@
 package io.qross.core
 
+import java.util
+
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.qross.ext.Output
 import io.qross.ext.TypeExt._
@@ -705,6 +707,54 @@ class DataTable() {
         map
     }
 
+    /**
+     * 按照指定的列做为分层依据将表格转成一个树形结构
+     * @param   parentColumn    父级列的名称
+     * @param   startPoint      父组列起始层的值，支持整数和字符串
+     * @param   newColumn       新列的 id
+     */
+    def turnToTree(primaryColumn: String, parentColumn: String, startPoint: String, newColumn: String): java.util.List[java.util.Map[String, Any]] = {
+        //id -> data
+        val relations = new mutable.HashMap[String, java.util.Map[String, Any]]()
+        //[data]
+        val result: java.util.List[util.Map[String, Any]] = new util.ArrayList[util.Map[String, Any]]()
+
+        rows.foreach(row => {
+            val parent = row.getString(parentColumn)
+            val map = row.toJavaMap
+            map.put(newColumn, new util.ArrayList[Any]())
+
+            relations += row.getString(primaryColumn) -> map
+            if (parent == startPoint || !relations.contains(parent)) {
+                result.add(map)
+            }
+            else if (relations.contains(parent)) {
+                relations(parent).get(newColumn).asInstanceOf[java.util.ArrayList[Any]].add(map)
+            }
+        })
+        relations.clear()
+        this.clear()
+
+        result
+    }
+
+    def collect(newColumnName: String, columns: String*): java.util.List[java.util.Map[String, Any]] = {
+        val result: java.util.List[util.Map[String, Any]] = new util.ArrayList[util.Map[String, Any]]()
+
+        rows.foreach(row => {
+            val map = row.toJavaMap
+            val child: java.util.Map[String, Any] = new java.util.HashMap[String, Any]()
+            for (column <- columns) {
+                child.put(column, map.get(column))
+                map.remove(column)
+            }
+            map.put(newColumnName, child)
+            result.add(map)
+        })
+
+        result
+    }
+
     def updateSource(SQL: String): DataTable = {
         updateSource(JDBC.DEFAULT, SQL)
         this
@@ -928,7 +978,11 @@ class DataTable() {
     }
 
     def toJavaList[T]: java.util.List[T] = {
-        toList[T].asJava
+        rows.map(row => row.values.head._2.asInstanceOf[T]).asJava
+    }
+
+    def toHashSet[T]: java.util.Set[T] = {
+        rows.map(row => row.values.head._2.asInstanceOf[T]).toSet.asJava
     }
 
     def toJsonString: String = {

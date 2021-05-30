@@ -89,6 +89,7 @@ object Syntax {
             REQUEST  JSON API [url]  USE? METHOD [GET/POST/PUT/DELETE]  SEND? DATA {"data": "value"}  SET? HEADER {"name": "value"};
             PARSE  [path]  AS TABLE;
             PARSE  [path]  AS ROW;
+            PARSE  [path]  AS OBJECT;
             PARSE  [path]  AS LIST;
             PARSE  [path]  AS ARRAY;
             PARSE  [path]  AS VALUE;
@@ -121,6 +122,7 @@ object Syntax {
             FILE  WRITE [filePath]  APPEND [content];
             FILE  READ [filePath];
             FILE  DOWNLOAD [filePath];
+            FILE  VOYAGE [filePath]  WITH {"key": "value"}  TO [newPath];
 
             DIR  [path];
             DIR  LIST [path];

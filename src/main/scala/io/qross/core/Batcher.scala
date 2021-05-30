@@ -4,7 +4,7 @@ import io.qross.jdbc.DataSource
 import io.qross.time.Timer
 import io.qross.ext.Output
 
-class Batcher(source: DataSource, sentence: String) extends Thread {
+class Batcher(source: DataSource, sentence: String, dh: DataHub) extends Thread {
 
     override def run(): Unit = {
 
@@ -34,7 +34,8 @@ class Batcher(source: DataSource, sentence: String) extends Thread {
                 }
 
             if (table != null) {
-                ds.tableUpdate(sentence, table)
+                dh.AFFECTED_ROWS_OF_LAST_PUT = ds.tableUpdate(sentence, table)
+                dh.TOTAL_AFFECTED_ROWS_OF_RECENT_PUT += dh.AFFECTED_ROWS_OF_LAST_PUT
             }
 
             Timer.sleep(100)

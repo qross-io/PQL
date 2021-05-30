@@ -557,14 +557,15 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
                 var rs: Option[ResultSet] = None
                 var retry: Int = 0
                 while (rs.isEmpty && retry < 3) {
-                    //try {
+                    //try { try 会忽略错误，不能 try
                         val prest: PreparedStatement = conn.prepareStatement(trimSQL(SQL))
                         for (i <- 0 until values.length) {
                             prest.setObject(i + 1, values(i))
                         }
                         rs = Some(prest.executeQuery)
                         //prest.close()
-                    //} catch {
+                    //}
+                    //catch {
                     //    case e: SQLException => e.printStackTrace()
                             //if (e.getClass.getSimpleName == "CommunicationsException") {
                             //    Console.writeMessage("MATCHED!")
@@ -587,7 +588,6 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
         var row: Int = -1
         this.connection match {
             case Some(conn) =>
-
                 var retry: Int = 0
                 while(row == -1 && retry < 3) {
                     //try {
@@ -598,7 +598,8 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
                         row = prest.executeUpdate
 
                         prest.close()
-                    //} catch {
+                    //}
+                    //catch {
                     //    case e: SQLException => e.printStackTrace()
                     //}
                     retry += 1

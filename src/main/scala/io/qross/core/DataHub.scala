@@ -503,8 +503,8 @@ class DataHub (val defaultConnectionName: String) extends Output {
             case _ =>
         }
 
-        TOTAL_COUNT_OF_RECENT_GET += TABLE.count()
         COUNT_OF_LAST_GET = TABLE.count()
+        TOTAL_COUNT_OF_RECENT_GET += COUNT_OF_LAST_GET
 
         this
     }
@@ -535,8 +535,8 @@ class DataHub (val defaultConnectionName: String) extends Output {
             case _ =>
         }
 
-        TOTAL_COUNT_OF_RECENT_GET = TABLE.count()
         COUNT_OF_LAST_GET = TABLE.count()
+        TOTAL_COUNT_OF_RECENT_GET += COUNT_OF_LAST_GET
 
         this
     }
@@ -787,7 +787,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
 
                 //producer
                 for (i <- 0 until LINES) { //Global.CORES
-                    parallel.add(new Pager(currentSource[DataSource], selectSQL, param, pageSize, TANKS))
+                    parallel.add(new Pager(currentSource[DataSource], selectSQL, param, pageSize, TANKS, this))
                 }
             }
         }
@@ -811,7 +811,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
 
             //producer
             for (i <- 0 until LINES) { //Global.CORES
-                parallel.add(new Blocker(currentSource[DataSource]))
+                parallel.add(new Blocker(currentSource[DataSource], TANKS, this))
             }
         }
 
@@ -824,7 +824,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
 
         //最终消费者
         for (i <- 0 until LINES) {
-            parallel.add(new Batcher(currentDestination[DataSource], nonQuerySentence))
+            parallel.add(new Batcher(currentDestination[DataSource], nonQuerySentence, this))
         }
 
         parallel.startAll()
@@ -853,15 +853,15 @@ class DataHub (val defaultConnectionName: String) extends Output {
                 val parallel = new Parallel()
                 //producer
                 for (i <- 0 until LINES) {
-                    parallel.add(new Pager(currentSource[DataSource], selectSQL, param, pageSize, TANKS))
+                    parallel.add(new Pager(currentSource[DataSource], selectSQL, param, pageSize, TANKS, this))
                 }
                 parallel.startAll()
                 //consumer
                 while(Pager.DATA.size() > 0 || parallel.running) {
                     val table = Pager.DATA.poll()
                     if (table != null) {
-                        //TOTAL_COUNT_OF_RECENT_GET += table.count()
-                        //COUNT_OF_LAST_GET += table.count()
+                        COUNT_OF_LAST_GET = table.count()
+                        TOTAL_COUNT_OF_RECENT_GET += COUNT_OF_LAST_GET
                         handler(table)
                         Output.writeMessage(s"$pageSize SAVED")
                     }
@@ -872,15 +872,15 @@ class DataHub (val defaultConnectionName: String) extends Output {
                 Output.writeMessage("Exit All Page")
             }
             else {
-                //单线程, 多线程使用block方法
+                //单线程, 多线程使用 block 方法
                 //SELECT * FROM table WHERE id>@{id} LIMIT 10000;
                 var id = 0L //primaryKey
                 val field = param.$trim("@{", "}")
                 var continue = true
                 do {
                     val table = currentSource[DataSource].executeDataTable(selectSQL.replace(param, String.valueOf(id)))
-                    //TOTAL_COUNT_OF_RECENT_GET += table.count()
-                    //COUNT_OF_LAST_GET += table.count()
+                    COUNT_OF_LAST_GET = table.count()
+                    TOTAL_COUNT_OF_RECENT_GET += COUNT_OF_LAST_GET
                     if (table.nonEmpty) {
                         if (table.contains(field)) {
                             id = table.max(field).firstCellLongValue
@@ -920,7 +920,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
             val parallel = new Parallel()
             //producer
             for (i <- 0 until LINES) {  //Global.CORES
-                parallel.add(new Blocker(currentSource, TANKS))
+                parallel.add(new Blocker(currentSource, TANKS, this))
             }
             parallel.startAll()
             //consumer
@@ -928,8 +928,8 @@ class DataHub (val defaultConnectionName: String) extends Output {
                 if (Blocker.DATA.size() > 0) {
                     val table = Blocker.DATA.poll()
                     if (table != null) {
-                        //TOTAL_COUNT_OF_RECENT_GET += table.count()
-                        //COUNT_OF_LAST_GET += table.count()
+                        COUNT_OF_LAST_GET = table.count()
+                        TOTAL_COUNT_OF_RECENT_GET += COUNT_OF_LAST_GET
                         handler(table)
                         Output.writeMessage(s"${config._4} SAVED.")
                     }
@@ -967,8 +967,8 @@ class DataHub (val defaultConnectionName: String) extends Output {
         reset()
 
         TABLE.merge(table)
-        TOTAL_COUNT_OF_RECENT_GET += TABLE.count()
         COUNT_OF_LAST_GET = TABLE.count()
+        TOTAL_COUNT_OF_RECENT_GET += COUNT_OF_LAST_GET
 
         this
     }
@@ -1285,7 +1285,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
 
     def executeDataTable(SQL: String, values: Any*): DataTable = {
         if (Patterns.$SELECT$CUSTOM.test(SQL)) {
-            FQL.select(SQL, values: _*)
+            FQL.select(SQL)
         }
         else {
             getSource match {

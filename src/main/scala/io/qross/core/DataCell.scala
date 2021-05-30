@@ -41,9 +41,10 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
     def isEmpty: Boolean = {
         dataType match {
             case DataType.TEXT => asText == ""
-            case DataType.ARRAY | DataType.LIST => asJavaList.size() == 0
+            case DataType.ARRAY | DataType.LIST => asJavaList.isEmpty
             case DataType.ROW => asRow.isEmpty
             case DataType.TABLE => asTable.isEmpty
+            case DataType.HASHSET => asHashSet.isEmpty
             case DataType.NULL | DataType.EXCEPTION => true
             case _ => value == null
         }
@@ -204,6 +205,7 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
             case DataType.TABLE => this.toTable
             case DataType.ROW => this.toRow
             case DataType.ARRAY | DataType.LIST => this.toJavaList
+            case DataType.HASHSET => this.toHashSet
             case DataType.JSON => this.toJson
             case _ => throw new ConvertFailureException("Unsupported conversion format: " + dataType)
         }
@@ -330,12 +332,19 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                     //this.value.asInstanceOf[DataRow].turnToTable("key", "value")
                 case DataType.ARRAY | DataType.LIST =>
                     val table = new DataTable()
-                    val list = this.value.asInstanceOf[java.util.List[Any]]
-                    for (i <- 0 until list.size()) {
+                    this.value.asInstanceOf[java.util.List[Any]].forEach(item => {
                         val row = new DataRow()
-                        row.set("item", DataCell(list.get(i)))
+                        row.set("item", DataCell(item))
                         table += row
-                    }
+                    })
+                    table
+                case DataType.HASHSET =>
+                    val table = new DataTable()
+                    this.value.asInstanceOf[java.util.Set[Any]].forEach(item => {
+                        val row = new DataRow()
+                        row.set("item", DataCell(item))
+                        table += row
+                    })
                     table
                 case _ => new DataTable(new DataRow("value" -> this.value))
             }
@@ -352,13 +361,21 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                     //this.value.asInstanceOf[DataRow].turnToTable(if (fields.nonEmpty) fields.head else "key", if (fields.length > 1) fields(1) else "value")
                 case DataType.ARRAY | DataType.LIST =>
                     val table = new DataTable()
-                    val list = this.value.asInstanceOf[java.util.List[Any]]
                     val field = if (fields.nonEmpty) fields.head else "item"
-                    for (i <- 0 until list.size()) {
+                    this.value.asInstanceOf[java.util.List[Any]].forEach(item => {
                         val row = new DataRow()
-                        row.set(field, DataCell(list.get(i)))
+                        row.set(field, DataCell(item))
                         table += row
-                    }
+                    })
+                    table
+                case DataType.HASHSET =>
+                    val table = new DataTable()
+                    val field = if (fields.nonEmpty) fields.head else "item"
+                    this.value.asInstanceOf[java.util.Set[Any]].forEach(item => {
+                        val row = new DataRow()
+                        row.set(field, DataCell(item))
+                        table += row
+                    })
                     table
                 case _ => new DataTable(new DataRow((if (fields.nonEmpty) fields.head else "value") -> this.value))
             }
@@ -389,6 +406,13 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                         row.set("item_" + i, list.get(i))
                     }
                     row
+                case DataType.HASHSET =>
+                    val list = this.value.asInstanceOf[java.util.Set[Any]].asScala
+                    val row = new DataRow()
+                    for (i <- 0 until list.size) {
+                        row.set("item_" + i, list(i))
+                    }
+                    row
                 case _ => new DataRow("value" -> this.value)
             }
         }
@@ -412,6 +436,7 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable].toList[T]
                 case DataType.ROW => this.value.asInstanceOf[DataRow].getValues[T]
                 case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[T]].asScala.toList
+                case DataType.HASHSET => this.value.asInstanceOf[java.util.Set[T]].asScala.toList
                 case DataType.TEXT => this.value.asInstanceOf[String].split("").asInstanceOf[List[T]]
                 case _ => List[T](this.value.asInstanceOf[T])
             }
@@ -426,6 +451,7 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                 case DataType.TABLE => this.value.asInstanceOf[DataTable].toJavaList
                 case DataType.ROW => this.value.asInstanceOf[DataRow].toJavaList
                 case DataType.ARRAY | DataType.LIST => this.value.asInstanceOf[java.util.List[Any]]
+                case DataType.HASHSET => new util.ArrayList[Any](this.value.asInstanceOf[java.util.Set[Any]])
                 case DataType.TEXT =>
                     val list = new util.ArrayList[Any]()
                     this.value.asInstanceOf[String].split("").foreach(list.add)
@@ -446,6 +472,34 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
         }
     }
 
+    def isHashSet: Boolean = this.dataType == DataType.HASHSET
+    def asHashSet: java.util.Set[Any] = {
+        if (valid) {
+            this.dataType match {
+                case DataType.TABLE => this.value.asInstanceOf[DataTable].toHashSet
+                case DataType.ROW => this.value.asInstanceOf[DataRow].toHashSet
+                case DataType.ARRAY | DataType.LIST => new java.util.HashSet[Any](this.value.asInstanceOf[java.util.List[Any]])
+                case DataType.HASHSET => this.value.asInstanceOf[java.util.Set[Any]]
+                case DataType.TEXT =>
+                    val set = new java.util.HashSet[Any]()
+                    this.value.asInstanceOf[String].split("").foreach(set.add)
+                    set
+                case _ => Set[Any](this.value).asJava
+            }
+        }
+        else {
+            new java.util.HashSet[Any]()
+        }
+    }
+    def toHashSet: DataCell = {
+        if (!this.isHashSet) {
+            DataCell(this.asHashSet, DataType.HASHSET)
+        }
+        else {
+            this
+        }
+    }
+
     def is(dataType: String): Boolean = {
         this.dataType.typeName == dataType || this.dataType.className == dataType || this.dataType.originalName == dataType
     }
@@ -453,12 +507,6 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
     def isExtensionType: Boolean = {
         this.dataType.typeName.contains(".")
     }
-
-//    def asClass: Unit = {
-//        Class.forName(this.dataType.typeName).getClass.getDeclaredMethod("getCell")
-//        //this.value
-//    }
-
 
     def getDataByProperty(attr: String): DataCell = {
 
@@ -484,7 +532,7 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                 else {
                     throw new TableColumnNotFoundException(s"Table doesn't contains column '$attr'.")
                 }
-            case DataType.ARRAY =>
+            case DataType.ARRAY | DataType.LIST =>
                 val list = this.asJavaList
                 if (!list.isEmpty) {
                     if (attr.equalsIgnoreCase("first")) {
@@ -494,11 +542,27 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                         DataCell(list.get(list.size() - 1))
                     }
                     else {
-                        throw new IncorrectPropertyNameException(s"List doesn't contains property $attr.")
+                        throw new IncorrectPropertyNameException(s"Array/List doesn't contains property $attr.")
                     }
                 }
                 else {
-                    throw new OutOfIndexBoundaryException("Array is empty.")
+                    throw new OutOfIndexBoundaryException("Array/List is empty.")
+                }
+            case DataType.HASHSET =>
+                val list = this.asHashSet.asScala
+                if (list.nonEmpty) {
+                    if (attr.equalsIgnoreCase("first")) {
+                        DataCell(list.head)
+                    }
+                    else if (attr.equalsIgnoreCase("last")) {
+                        DataCell(list.last)
+                    }
+                    else {
+                        throw new IncorrectPropertyNameException(s"HashSet doesn't contains property $attr.")
+                    }
+                }
+                else {
+                    throw new OutOfIndexBoundaryException("HashSet is empty.")
                 }
             case _ =>
                 if (this.isExtensionType) {
@@ -521,9 +585,8 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
     def getDataByIndex(expression: String): DataCell = {
 
         val value = expression.eval()
-
         this.dataType match {
-            case DataType.ARRAY =>
+            case DataType.ARRAY | DataType.LIST =>
                 val list = this.asJavaList
                 if (!list.isEmpty) {
                     if (value.isInteger || value.isDecimal) {
@@ -532,7 +595,7 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                             DataCell(list.get(index))
                         }
                         else {
-                            throw new OutOfIndexBoundaryException(s"Index $index is greater than list size.")
+                            throw new OutOfIndexBoundaryException(s"Index $index is greater than Array/List size.")
                         }
                     }
                     else if (value.isText) {
@@ -544,15 +607,15 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                             DataCell(list.get(list.size() - 1))
                         }
                         else {
-                            throw new IncorrectPropertyNameException(s"List doesn't contains property $attr.")
+                            throw new IncorrectPropertyNameException(s"Array/List doesn't contains property $attr.")
                         }
                     }
                     else {
-                        throw new IncorrectIndexDataTypeException("Only supports integer index in Array.")
+                        throw new IncorrectIndexDataTypeException("Only supports integer index in Array/List.")
                     }
                 }
                 else {
-                    throw new OutOfIndexBoundaryException("Array is empty.")
+                    throw new OutOfIndexBoundaryException("Array/List is empty.")
                 }
             case DataType.ROW =>
                 val row = this.asRow
@@ -562,7 +625,7 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                         row.getCell(index)
                     }
                     else {
-                        throw new OutOfIndexBoundaryException(s"Index ${index + 1} is greater than row size.")
+                        throw new OutOfIndexBoundaryException(s"Index ${index + 1} is greater than Row size.")
                     }
                 }
                 else if (value.isText) {
@@ -584,7 +647,7 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                     if (table.nonEmpty) {
                         table.getRow(index) match {
                             case Some(row) => DataCell(row, DataType.ROW)
-                            case None => throw new OutOfIndexBoundaryException(s"Index $index is greater than table size.")
+                            case None => throw new OutOfIndexBoundaryException(s"Index $index is greater than Table size.")
                         }
                     }
                     else {
@@ -614,6 +677,37 @@ case class DataCell(var value: Any, var dataType: DataType= DataType.NULL) {
                 }
                 else {
                     throw new IncorrectIndexDataTypeException("Only supports string and integer index in Table.")
+                }
+            case DataType.HASHSET =>
+                val list = this.asHashSet.asScala
+                if (list.nonEmpty) {
+                    if (value.isInteger || value.isDecimal) {
+                        val index = value.asInteger.toInt //索引从0开始
+                        if (index < list.size) {
+                            DataCell(list(index))
+                        }
+                        else {
+                            throw new OutOfIndexBoundaryException(s"Index $index is greater than HashSet size.")
+                        }
+                    }
+                    else if (value.isText) {
+                        val attr = value.asText
+                        if (attr.equalsIgnoreCase("first")) {
+                            DataCell(list.head)
+                        }
+                        else if (attr.equalsIgnoreCase("last")) {
+                            DataCell(list.last)
+                        }
+                        else {
+                            throw new IncorrectPropertyNameException(s"HashSet doesn't contains property $attr.")
+                        }
+                    }
+                    else {
+                        throw new IncorrectIndexDataTypeException("Only supports integer index in HashSet.")
+                    }
+                }
+                else {
+                    throw new OutOfIndexBoundaryException("HashSet is empty.")
                 }
             case _ =>
                 if (this.isExtensionType) {

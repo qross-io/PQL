@@ -128,43 +128,45 @@ case class Json(text: String = "") {
         val table = new DataTable
         
         val node = findNode(path)
-        if (node.isArray) {
-            node.elements().forEachRemaining(child => {
-                val row = new DataRow()
-                if (child.isObject) {
-                    child.fields().forEachRemaining(item => {
-                        //table.addField(item.getKey, DataType.from(node))
-                        row.set(item.getKey, getCell(item.getValue))
-                    })
+        if (node != null) {
+            if (node.isArray) {
+                node.elements().forEachRemaining(child => {
+                    val row = new DataRow()
+                    if (child.isObject) {
+                        child.fields().forEachRemaining(item => {
+                            //table.addField(item.getKey, DataType.from(node))
+                            row.set(item.getKey, getCell(item.getValue))
+                        })
+                    }
+                    else if (child.isArray) {
+                        child.elements().forEachRemaining(item => {
+                            //table.addField("c" + row.size, DataType.from(item))
+                            row.set("c" + row.size, getCell(item))
+                        })
+                    }
+                    else {
+                        //table.addField("value", DataType.from(child))
+                        row.set("_array", getCell(child))
+                    }
+                    table.addRow(row)
+                })
+                if (table.isEmpty) {
+                    table.addField("empty", DataType.NULL)
                 }
-                else if (child.isArray)  {
-                    child.elements().forEachRemaining(item => {
-                        //table.addField("c" + row.size, DataType.from(item))
-                        row.set("c" + row.size, getCell(item))
-                    })
-                }
-                else {
-                    //table.addField("value", DataType.from(child))
-                    row.set("_array", getCell(child))
-                }
-                table.addRow(row)
-            })
-            if (table.isEmpty) {
-                table.addField("empty", DataType.NULL)
             }
-        }
-        else if (node.isObject) {
-            val row = new DataRow()
-            node.fields().forEachRemaining(child => {
-                //table.addField(child.getKey, DataType.from(child.getValue))
-                row.set(child.getKey, getCell(child.getValue))
-            })
-            table.addRow(row)
-        }
-        else {
-            val row = new DataRow()
-            row.set("_value", getCell(node))
-            table.addRow(row)
+            else if (node.isObject) {
+                val row = new DataRow()
+                node.fields().forEachRemaining(child => {
+                    //table.addField(child.getKey, DataType.from(child.getValue))
+                    row.set(child.getKey, getCell(child.getValue))
+                })
+                table.addRow(row)
+            }
+            else {
+                val row = new DataRow()
+                row.set("_value", getCell(node))
+                table.addRow(row)
+            }
         }
         
         table
@@ -175,18 +177,20 @@ case class Json(text: String = "") {
         val row = new DataRow()
         
         val node = findNode(path)
-        if (node.isObject) {
-            node.fields().forEachRemaining(child => {
-                row.set(child.getKey, getCell(child.getValue))
-            })
-        }
-        else if (node.isArray) {
-            node.elements().forEachRemaining(child => {
-                row.set("c" + row.size, getCell(child))
-            })
-        }
-        else {
-            row.set("value", getCell(node))
+        if (node != null) {
+            if (node.isObject) {
+                node.fields().forEachRemaining(child => {
+                    row.set(child.getKey, getCell(child.getValue))
+                })
+            }
+            else if (node.isArray) {
+                node.elements().forEachRemaining(child => {
+                    row.set("c" + row.size, getCell(child))
+                })
+            }
+            else {
+                row.set("value", getCell(node))
+            }
         }
         
         row
@@ -196,13 +200,15 @@ case class Json(text: String = "") {
         val map = new mutable.LinkedHashMap[String, String]()
 
         val node = findNode(path)
-        if (node.isObject) {
-            node.fields().forEachRemaining(child => {
-                map.put(child.getKey, child.getValue.asText())
-            })
-        }
-        else {
-            throw new JsonParseException("Wrong input format. The json path must point to a Object.")
+        if (node != null) {
+            if (node.isObject) {
+                node.fields().forEachRemaining(child => {
+                    map.put(child.getKey, child.getValue.asText())
+                })
+            }
+            else {
+                throw new JsonParseException("Wrong input format. The json path must point to a Object.")
+            }
         }
 
         map.toMap
@@ -212,18 +218,20 @@ case class Json(text: String = "") {
         val map = new util.HashMap[String, String]()
 
         val node = findNode(path)
-        if (node.isObject) {
-            node.fields().forEachRemaining(child => {
-                if (child.getValue.isTextual) {
-                    map.put(child.getKey, child.getValue.asText())
-                }
-                else {
-                    map.put(child.getKey, child.getValue.toString)
-                }
-            })
-        }
-        else {
-            throw new JsonParseException("Wrong input format. The json path must point to a Object.")
+        if (node != null) {
+            if (node.isObject) {
+                node.fields().forEachRemaining(child => {
+                    if (child.getValue.isTextual) {
+                        map.put(child.getKey, child.getValue.asText())
+                    }
+                    else {
+                        map.put(child.getKey, child.getValue.toString)
+                    }
+                })
+            }
+            else {
+                throw new JsonParseException("Wrong input format. The json path must point to a Object.")
+            }
         }
 
         map
@@ -233,13 +241,15 @@ case class Json(text: String = "") {
         val list = new java.util.ArrayList[Any]()
         
         val node = findNode(path)
-        if (node.isArray) {
-            node.elements().forEachRemaining(child => {
-                list.add(getCell(child).value)
-            })
-        }
-        else {
-            list.add(getCell(node).value)
+        if (node != null) {
+            if (node.isArray) {
+                node.elements().forEachRemaining(child => {
+                    list.add(getCell(child).value)
+                })
+            }
+            else {
+                list.add(getCell(node).value)
+            }
         }
         
         list
@@ -249,13 +259,15 @@ case class Json(text: String = "") {
         val list = new mutable.ListBuffer[DataCell]()
 
         val node = findNode(path)
-        if (node.isArray) {
-            node.elements().forEachRemaining(child => {
-                list += getCell(child)
-            })
-        }
-        else {
-            list += getCell(node)
+        if (node != null) {
+            if (node.isArray) {
+                node.elements().forEachRemaining(child => {
+                    list += getCell(child)
+                })
+            }
+            else {
+                list += getCell(node)
+            }
         }
 
         list.toList

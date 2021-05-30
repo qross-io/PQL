@@ -9,6 +9,8 @@ DEBUG ON;
 --OPEN DATABASE 'jdbc:postgresql://47.92.224.122:30432/postgres' USERNAME 'postgres' PASSWORD 'pgsql@123' AS 'pg.temp';
 --OPEN DATABASE 'jdbc:oracle:thin:@47.92.224.122:31521/EE.oracle.docker' DRIVER 'oracle.jdbc.driver.OracleDriver' USERNAME 'system' PASSWORD 'oracle' AS 'oracle.test';
 
+VAR $e, $d := 255;
+
 PRINT @RPAD('5', 4, '0');
 
 EXIT CODE 0;
@@ -41,10 +43,12 @@ FUNCTION $func_name ($a DEFAULT 0, $b DEFAULT 'hello')
         PRINT $row.info;
         RETURN $a;
     END;
-
+/*
 CALL $func_name($a := 10, 'world', $c := 10);
 
-PRINT "hello world" TO MD5;
+PRINT "#{hello} #{'world'}" TO MD5;
+*/
+PRINT '#{"double"}';
 
 
 

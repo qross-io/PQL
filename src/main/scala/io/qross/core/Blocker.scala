@@ -13,9 +13,9 @@ object Blocker {
     val DATA = new ConcurrentLinkedQueue[DataTable]()
 }
 
-class Blocker(source: DataSource, tanks: Int = 3) extends Thread {
+class Blocker(source: DataSource, tanks: Int, dh: DataHub) extends Thread {
 
-    //活跃线程+1, 线程创建时加1 - 在线程内部判断时使用
+    //活跃线程 +1, 线程创建时加 1 - 在线程内部判断时使用
     Blocker.CUBE.mark()
 
     override def run(): Unit = {
@@ -26,7 +26,11 @@ class Blocker(source: DataSource, tanks: Int = 3) extends Thread {
         while (!Blocker.QUEUE.isEmpty) {
             val SQL = Blocker.QUEUE.poll()
             if (SQL != null) {
-                Blocker.DATA.add(ds.executeDataTable(SQL))
+                val table = ds.executeDataTable(SQL)
+                Blocker.DATA.add(table)
+
+                dh.COUNT_OF_LAST_GET = table.size
+                dh.TOTAL_COUNT_OF_RECENT_GET += dh.COUNT_OF_LAST_GET
             }
 
             while (Blocker.DATA.size() >= tanks) {

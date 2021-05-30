@@ -17,38 +17,43 @@ import scala.collection.JavaConverters._
 object Solver {
 
     //val ARGUMENT: Regex = """[#&]\{([a-zA-Z0-9_]+)\}""".r  //入参 #{name} 或 &{name}
-    val ARGUMENTS: List[Regex] = List[Regex]("""[#&]\{([a-zA-Z0-9_]+)\}""".r, """[#&]\{('[a-zA-Z0-9_]+')\}""".r, """[#&]\{("[a-zA-Z0-9_]+")\}""".r)
+    val ARGUMENTS: List[Regex] = List[Regex]("""#\{(\w+)}""".r, """#\{('\w+')}""".r, """#\{("\w+")}""".r)
     //val GLOBAL_VARIABLE: Regex = """@\(?([a-zA-Z0-9_]+)\)?""".r //全局变量 @name 或 @(name)
     //val USER_VARIABLE: Regex = """\$\(?([a-zA-Z0-9_]+)\)?""".r //用户变量  $name 或 $(name)
     val USER_VARIABLE: List[Regex] = List[Regex](
-        """\$\(([a-zA-Z0-9_]+)\)""".r,  //防冲突增加小括号时不考虑函数，因为函数没有防冲突的必要，全局变量同理。属性和索引规则符号前面也没有防冲突的必要
-        """\$([a-zA-Z0-9_]+)\b(?!\s*[(.\[:=])""".r // := 前的变量忽略，函数名忽略
+        """\$\((\w+)\)""".r,  //防冲突增加小括号时不考虑函数，因为函数没有防冲突的必要，全局变量同理。属性和索引规则符号前面也没有防冲突的必要
+        """\$(\w+)\b(?!\s*(\(|\.|\\|\[|:=))""".r // := 前的变量忽略，函数名忽略
     )
     val GLOBAL_VARIABLE: List[Regex] = List[Regex](
-        """@\(([a-zA-Z0-9_]+)\)""".r,
-        """@([a-zA-Z0-9_]+)\b(?![(.\[])""".r
+        """@\((\w+)\)""".r,
+        """@(\w+)\b(?![(.\[])""".r
+    )
+    val JOB_VARIABLE: List[Regex] = List[Regex](
+        """%\((\w+)\)""".r,
+        """%(\w+)\b(?![(.\[])""".r
     )
 
-    val USER_COMPLEX_VARIABLE: Regex = """(?i)\$([a-z0-9_]+)([.\[])""".r
-    val GLOBAL_COMPLEX_VARIABLE: Regex = """(?i)@([a-z0-9_]+)([.\[])""".r
+    val USER_COMPLEX_VARIABLE: Regex = """\$(\w+)([.\[])""".r
+    val GLOBAL_COMPLEX_VARIABLE: Regex = """@(\w+)([.\[])""".r
+    val JOB_COMPLEX_VARIABLE: Regex = """%(\w+)([.\[])""".r
     //val USE_COMPLEX_VARIABLE: Regex = """(?i)\$([a-z0-9_]+)(\.[a-z0-9_]+|\[[^]]+\])+""".r
     //val GLOBAL_COMPLEX_VARIABLE: Regex = """(?i)@([a-z0-9_]+)(\.[a-z0-9_]+|\[[^]]+\])+""".r
 
-    val EMBEDDED_VARIABLE: Regex = """([$@])\{\s*([a-zA-Z0-9_]+)(.[a-zA-Z0-9_]+)?\s*\}""".r
-    val FUNCTION: Regex = """([$@])([a-zA-Z0-9_]+)\(""".r //用户函数, 未完成
+    val EMBEDDED_VARIABLE: Regex = """([$@])\{\s*(\w+)(.\w+)?\s*\}""".r
+    val FUNCTION: Regex = """([$@])(\w+)\(""".r //用户函数, 未完成
     //val GLOBAL_FUNCTION: Regex = """@([A-Za-z_]+)\s*\(([^)]*)\)""".r //系统函数
-    val SHARP_EXPRESSION: Regex = """(?i)\$\{([^\{\}]+?)\}""".r //Sharp表达式
-    val QUERY_EXPRESSION: Regex = """(?i)\$\{\{([\s\S]+?)\}\}""".r //查询表达式
+    val SHARP_EXPRESSION: Regex = """(?i)\$\{([^{}]+?)}""".r //Sharp表达式
+    val QUERY_EXPRESSION: Regex = """(?i)\$\{\{([\s\S]+?)}}""".r //查询表达式
     val INNER_SENTENCE: Regex = """(?i)\(\s*(SELECT|PARSE|REDIS|FILE|DIR|INSERT|UPDATE|DELETE|REPLACE|IF|CASE)\s""".r  //(SELECT...)
 
     val RICH_CHAR: List[Regex] = List[Regex]("%rich-string%\"[\\s\\S]*?\"%rich-string%".r, "%rich-string%'[\\s\\S]*?'%rich-string%".r) //富字符串
-    val CHAR$N: Regex = """~char\[(\d+)\]""".r  //字符串占位符
-    val TEXT$N: Regex = """~text\[(\d+)\]""".r  //富字符串占位符
-    val JSON$N: Regex = """~json\[(\d+)\]""".r  //JSON占位符
-    val SHARP$N: Regex = """~sharp\[(\d+)\]""".r  //Sharp表达式
-    val VALUE$N: Regex = """~value\[(\d+)\]""".r //中间结果占位符
-    val STR$N: Regex = """~str\[(\d+)\]""".r //计算过程中的字符串占位符
-    val INNER$N: Regex = """~inner\[(\d+)\]""".r //IF和CASE短语句中的内部语句
+    val CHAR$N: Regex = """~char\[(\d+)]""".r  //字符串占位符
+    val TEXT$N: Regex = """~text\[(\d+)]""".r  //富字符串占位符
+    val JSON$N: Regex = """~json\[(\d+)]""".r  //JSON占位符
+    val SHARP$N: Regex = """~sharp\[(\d+)]""".r  //Sharp表达式
+    val VALUE$N: Regex = """~value\[(\d+)]""".r //中间结果占位符
+    val STR$N: Regex = """~str\[(\d+)]""".r //计算过程中的字符串占位符
+    val INNER$N: Regex = """~inner\[(\d+)]""".r //IF和CASE短语句中的内部语句
 
     //清理模式
     val FULL: Int = 0 //完全模式, 默认
@@ -443,12 +448,15 @@ object Solver {
             sentence.restoreJsons(PQL)
                     .restoreChars(PQL)
                     .restoreValues(PQL, quote)
-                    .replaceLanguageHolder(PQL)
                     .restoreSymbols()
         }
 
         def containsArguments: Boolean = {
             ARGUMENTS.flatMap(_.findAllMatchIn(sentence)).nonEmpty
+        }
+
+        def replaceArguments(args: String): String = {
+            replaceArguments(args.$split())
         }
 
         //替换外部变量
@@ -679,18 +687,28 @@ object Solver {
                         })
                 })
 
-            sentence
-        }
-
-        //替换多语言标记
-        def replaceLanguageHolder(PQL: PQL): String = {
-            if (sentence != null && sentence != "") {
-                Language.holder.findAllMatchIn(sentence)
+            if (PQL.jobId > 0) {
+                JOB_VARIABLE
+                    .map(r => r.findAllMatchIn(sentence))
+                    .flatMap(s => s.toList.sortBy(m => m.group(0)).reverse)
                     .foreach(m => {
-                        val text = Language.get(PQL.language, PQL.languageModules, m.group(1))
-                        if (text != null) {
-                            sentence = sentence.replace(m.group(0), text)
-                        }
+                        val whole = m.group(0)
+                        val name = m.group(1)
+
+                        PQL.findVariable("%" + name)
+                            .ifFound(data => {
+                                sentence = sentence.replaceFirstOne(whole, PQL.$stash(data))
+                            })
+                    })
+
+                JOB_COMPLEX_VARIABLE
+                    .findAllMatchIn(sentence)
+                    .foreach(m => {
+                        val name = m.group(1)
+                        PQL.findVariable("%" + name)
+                            .ifFound(data => {
+                                sentence = sentence.creep(data, m, PQL)
+                            })
                     })
             }
 
@@ -826,13 +844,7 @@ object Solver {
         def $sharp(PQL: PQL, quote: String = "'"): DataCell = {
             //中间变量
             if ($INTERMEDIATE$N.test(sentence)) {
-                val data = PQL.values(sentence.$trim("~value[", "]").toInt)
-                if (data.dataType == DataType.TEXT) {
-                    DataCell(data.value.asInstanceOf[String].replaceLanguageHolder(PQL), DataType.TEXT)
-                }
-                else {
-                    data
-                }
+                PQL.values(sentence.$trim("~value[", "]").toInt)
             }
             else if ($NULL.test(sentence)) {
                 DataCell.NULL

@@ -15,7 +15,9 @@ object Pager {
 class Pager(source: DataSource,
             selectSQL: String,
             param: String = "@{offset}",
-            pageSize: Int = 10000, tanks: Int = 3) extends Thread {
+            pageSize: Int = 10000,
+            tanks: Int,
+            dh: DataHub) extends Thread {
 
     //活跃线程+1, 线程创建时加1 - 在线程内部判断时使用
     Pager.CUBE.mark()
@@ -33,6 +35,9 @@ class Pager(source: DataSource,
 
             //无数据也得执行，以保证会正确创建表
             Pager.DATA.add(table)
+
+            dh.COUNT_OF_LAST_GET = table.size
+            dh.TOTAL_COUNT_OF_RECENT_GET += dh.COUNT_OF_LAST_GET
 
             if (table.isEmpty) {
                 break = true

@@ -3,8 +3,6 @@ package io.qross.core
 import com.fasterxml.jackson.databind.JsonNode
 import io.qross.ext.TypeExt._
 
-//case class DataType(className: String, typeName: String)
-
 object DataType extends Enumeration {
     val INTEGER: DataType = new DataType("INTEGER")
     val DECIMAL: DataType = new DataType("DECIMAL")
@@ -17,6 +15,7 @@ object DataType extends Enumeration {
     val ROW: DataType = new DataType("ROW")
     val LIST: DataType = new DataType("LIST")
     val ARRAY: DataType = new DataType("ARRAY")
+    val HASHSET: DataType = new DataType("HASHSET")
     val JSON: DataType = new DataType("JSON")
     val EXCEPTION: DataType = new DataType("EXCEPTION")
     val REGEX: DataType = new DataType("REGEX")
@@ -69,6 +68,7 @@ object DataType extends Enumeration {
                     case "boolean" => "BOOLEAN"
                     case "datetime" | "date" | "time" | "timestamp" => "DATETIME"
                     case "list" | "array" | "arraylist" => "ARRAY"
+                    case "set" | "hashset" | "treeset" => "HASHSET"
                     case "map" => "ROW"
                     case "datarow" => "ROW"
                     case "datatable" => "TABLE"

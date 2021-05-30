@@ -398,9 +398,21 @@ class DataRow() {
     def isEmpty: Boolean = fields.isEmpty
     def nonEmpty: Boolean = fields.nonEmpty
 
+    def combine(queryOrJsonString: String): DataRow = {
+        if (queryOrJsonString.bracketsWith("{", "}")) {
+            combine(Json.fromText(queryOrJsonString).parseRow("/"))
+        }
+        else if (queryOrJsonString.contains("=")) {
+            for ((key, value) <- queryOrJsonString.$split()) {
+                set(key, value, DataType.TEXT)
+            }
+        }
+        this
+    }
+
     def combine(otherRow: DataRow): DataRow = {
         for (field <- otherRow.fields) {
-            this.set(field, otherRow.values(field), otherRow.columns(field))
+            set(field, otherRow.values(field), otherRow.columns(field))
         }
         this
     }
@@ -433,6 +445,7 @@ class DataRow() {
     def toSeq: Seq[(String, Any)] = values.toSeq
     def toJavaMap: java.util.Map[String, Any] = values.asJava
     def toJavaList: java.util.List[Any] = values.values.toList.asJava
+    def toHashSet: java.util.Set[Any] = values.values.toSet.asJava
 
     def asTable: DataTable = {
         new DataTable(this)

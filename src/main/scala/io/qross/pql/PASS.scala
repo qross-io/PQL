@@ -3,6 +3,7 @@ package io.qross.pql
 import io.qross.exception.{SQLExecuteException, SQLParseException}
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.$PASS
+import io.qross.pql.Solver._
 
 object PASS {
     def parse(sentence: String, PQL: PQL): Unit = {
@@ -17,6 +18,7 @@ object PASS {
 
 class PASS(val sentence: String) {
     def execute(PQL: PQL): Unit = {
+
         val data =  {
             sentence.takeBeforeX(Patterns.$BLANK).toUpperCase() match {
                 case "SELECT" => new SELECT(sentence).select(PQL, PQL.dh.getData) //PQL.dh.pass(sentence.$restore(PQL)
@@ -26,6 +28,7 @@ class PASS(val sentence: String) {
             }
         }
 
+        //sentence.$compute(PQL).asTable
         PQL.dh.clear().buffer(data.asTable)
     }
 }

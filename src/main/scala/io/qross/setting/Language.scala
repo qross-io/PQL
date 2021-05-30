@@ -65,30 +65,26 @@ object Language {
         props.getProperty(label, "NULL")
     }
 
-    def get(modules: String, holder: String): String = {
-        get(Language.name, modules, holder)
-    }
-
-    def get(language: String, modules: String, holder: String): String = {
-
+    def get(holder: String, modules: java.util.List[String]): String = {
         if (labels.isEmpty) {
             loadAll()
         }
 
         var text: String = null
-        val label = (language + "." + holder).toLowerCase()
+        val langName = Language.name
+        val label = (langName + "." + holder).toLowerCase()
         if (labels.contains(label)) {
             text = labels(label)
         }
         else {
             breakable {
-                for (module <- modules.split(",")) {
-                    val label = (language + "." + module.trim() + "." + holder).replace("..", ".").toLowerCase()
+                modules.forEach(module => {
+                    val label = (langName + "." + module + "." + holder).toLowerCase()
                     if (labels.contains(label)) {
                         text = labels(label)
                         break
                     }
-                }
+                })
             }
         }
 

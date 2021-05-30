@@ -1451,6 +1451,17 @@ object Sharp {
                 DataCell(data.asDecimal(0).min(arg.asDecimal(0)), DataType.DECIMAL)
             }
         }
+        else if (data.isJavaList) {
+            val list = data.asJavaList.asScala
+            DataCell (
+                list.head match {
+                    case _: Int => list.map(_.asInstanceOf[Int]).min
+                    case _: Long => list.map(_.asInstanceOf[Long]).min
+                    case _: Float => list.map(_.asInstanceOf[Float]).min
+                    case _: Double => list.map(_.asInstanceOf[Double]).min
+                    case _ => list.map(_.toString()).min
+                })
+        }
         else {
             throw SharpLinkArgumentException.occur("MIN", origin)
         }
@@ -1897,6 +1908,39 @@ object Sharp {
         }
     }
 
+    def TO$TREE(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid && arg.isJavaList) {
+            val args = arg.asJavaList
+            if (args.size() >= 4) {
+                DataCell(data.asTable.turnToTree(args.get(0).toString, args.get(1).toString, args.get(2).toString, args.get(3).toString), DataType.ARRAY)
+            }
+            else {
+                throw SharpLinkArgumentException.miss("TO TREE", origin, 4, args.size())
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("TO TREE", origin)
+        }
+    }
+
+    def COLLECT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid && arg.isJavaList) {
+            val args = arg.asJavaList
+            if (args.size() >= 2) {
+                val arguments = args.asScala.map(_.asInstanceOf[String])
+                val as = arguments.last.takeAfter(" AS ").removeQuotes()
+                val last = arguments.last.takeBefore(" AS ").$trimRight(")").trim()
+                DataCell(data.asTable.collect(as, arguments.dropRight(1) += last :_*), DataType.ARRAY)
+            }
+            else {
+                throw SharpLinkArgumentException.miss("COLLECT", origin, 3, args.size())
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("COLLECT", origin)
+        }
+    }
+
     /* ---------- DataRow ---------- */
     def SET(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid && arg.isRow) {
@@ -2025,11 +2069,40 @@ object Sharp {
 
     /* ---------- DataList ---------- */
 
+    def TO$HASHSET(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isJavaList) {
+            DataCell(new java.util.HashSet[Any](data.asJavaList), DataType.HASHSET)
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("TO HASHSET", origin)
+        }
+    }
+
     def ADD(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (data.isJavaList) {
             if (arg.valid) {
                 if (arg.isJavaList) {
                     data.asJavaList.addAll(arg.asJavaList)
+                }
+                else if (arg.isHashSet) {
+                    data.asJavaList.addAll(arg.asHashSet)
+                }
+                else {
+                    data.asJavaList.add(arg.value)
+                }
+                data
+            }
+            else {
+                throw SharpLinkArgumentException.occur("ADD", origin)
+            }
+        }
+        else if (data.isHashSet) {
+            if (arg.valid) {
+                if (arg.isJavaList) {
+                    data.asHashSet.addAll(arg.asJavaList)
+                }
+                else if (arg.isHashSet) {
+                    data.asHashSet.addAll(arg.asHashSet)
                 }
                 else {
                     data.asJavaList.add(arg.value)
@@ -2059,7 +2132,8 @@ object Sharp {
     def SIZE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         DataCell(data.dataType match {
             case DataType.TEXT => data.asText.length
-            case DataType.ARRAY => data.asList.size
+            case DataType.ARRAY | DataType.LIST => data.asJavaList.size()
+            case DataType.HASHSET => data.asHashSet.size()
             case DataType.ROW => data.asRow.size
             case DataType.TABLE => data.asTable.size
             case _ => throw new SharpInapplicableLinkNameException("Inapplicable data type for link name SIZE. " + origin)
@@ -2073,7 +2147,8 @@ object Sharp {
     def COUNT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         DataCell(data.dataType match {
             case DataType.TEXT => data.asText.length
-            case DataType.ARRAY => data.asList.size
+            case DataType.ARRAY | DataType.LIST => data.asJavaList.size()
+            case DataType.HASHSET => data.asHashSet.size()
             case DataType.ROW => data.asRow.size
             case DataType.TABLE => data.asTable.size
             case _ => throw new SharpInapplicableLinkNameException("Inapplicable data type for link name COUNT. " + origin)
@@ -2090,14 +2165,14 @@ object Sharp {
 
     def GET(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.isJavaList) {
+            if (data.isJavaList || data.isHashSet) {
                 val index = arg.asInteger.toInt - 1
                 val list = data.asList
                 if (index < list.size) {
                     DataCell(list(index))
                 }
                 else {
-                    throw new SharpLinkArgumentException(s"Out of index at GET, index: $index. " + origin)
+                    throw new SharpLinkArgumentException(s"Index out of bounds at GET, index: $index. " + origin)
                 }
             }
             else if (data.isRow) {
@@ -2147,10 +2222,15 @@ object Sharp {
     }
 
     def REVERSE(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        val list = data.asList.reverse.asJava
-        data.asJavaList.clear()
-        data.asJavaList.addAll(list)
-        data
+        if (data.isJavaList) {
+            DataCell(new util.ArrayList[Any](data.asList.reverse.asJava), DataType.ARRAY)
+        }
+        else if (data.isHashSet) {
+            DataCell(new util.HashSet[Any](data.asList.reverse.asJava), DataType.HASHSET)
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("REVERSE", origin)
+        }
     }
 
     def SORT(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -2166,9 +2246,10 @@ object Sharp {
             }
         }).asJava
 
-        data.asJavaList.clear()
-        data.asJavaList.addAll(list)
-        data
+        DataCell(new util.ArrayList[Any](list), DataType.ARRAY)
+//        data.asJavaList.clear()
+//        data.asJavaList.addAll(list)
+//        data
     }
 
     def ASC(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -2188,9 +2269,10 @@ object Sharp {
             }
         }).asJava
 
-        data.asJavaList.clear()
-        data.asJavaList.addAll(list)
-        data
+        DataCell(new util.ArrayList[Any](list), DataType.ARRAY)
+//        data.asJavaList.clear()
+//        data.asJavaList.addAll(list)
+//        data
     }
 
     def DELIMIT(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -2214,6 +2296,9 @@ object Sharp {
                    .map(_.restoreChars(chars).removeQuotes())
                    .contains(data.asText.removeQuotes()).toDataCell(DataType.BOOLEAN)
             }
+            else if (arg.isHashSet) {
+                arg.asHashSet.contains(data.value).toDataCell(DataType.BOOLEAN)
+            }
             else {
                 arg.asList.toSet.contains(data.value).toDataCell(DataType.BOOLEAN)
             }
@@ -2236,6 +2321,9 @@ object Sharp {
                         .map(_.restoreChars(chars).removeQuotes())
                         .contains(data.asText.removeQuotes())
                 }.toDataCell(DataType.BOOLEAN)
+            }
+            else if (arg.isHashSet) {
+                DataCell(!arg.asHashSet.contains(data.value), DataType.BOOLEAN)
             }
             else {
                 DataCell(!arg.asList.toSet.contains(data.value), DataType.BOOLEAN)
@@ -2321,7 +2409,7 @@ object Sharp {
     }
 
     def AS$LIST(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        AS$ROW(data, arg, origin)
+        AS$ARRAY(data, arg, origin)
     }
 
     def AS$VALUE(data: DataCell, arg: DataCell, origin: String): DataCell = {

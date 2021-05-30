@@ -7,6 +7,8 @@ import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
 
+import scala.collection.mutable
+
 object SET {
     def parse(sentence: String, PQL: PQL): Unit = {
         $SET.findFirstMatchIn(sentence) match {
@@ -21,6 +23,8 @@ object SET {
 
 class SET(val declare: String, val symbol: String, val expression: String) {
 
+    val variables: mutable.ArrayBuffer[String] = mutable.ArrayBuffer[String](declare.split(",").map(_.trim().toLowerCase()): _*)
+
     def execute(PQL: PQL): Unit = {
         //1. SELECT查询  - 以SELECT开头 - 需要解析$开头的变量和函数
         //2. 非SELECT查询 - 以INSERT,UPDATE,DELETE开头 - 需要解析$开头的变量和函数
@@ -29,7 +33,6 @@ class SET(val declare: String, val symbol: String, val expression: String) {
         //5. 变量间直接赋值 - 是变量格式(有$前缀)且是存在于变量列表中的变量 - 直接赋值
         //6. 数学表达式 - 其他 - 解析函数和变量然后求值，出错则抛出异常
 
-        val variables: Array[String] = declare.split(",").map(_.trim)
         val result = expression.$compute(PQL)
 
 //        if (variables.length == 1 && PQL.containsVariable(variables(0))) {

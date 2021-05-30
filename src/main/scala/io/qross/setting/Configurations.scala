@@ -1,8 +1,9 @@
 package io.qross.setting
 
-import io.qross.core.DataRow
+import io.qross.core.{DataRow, DataType}
 import io.qross.ext.TypeExt._
 import io.qross.jdbc.{DataSource, JDBC}
+import io.qross.net.Json
 import io.qross.pql.{GlobalFunction, GlobalVariable}
 
 object Configurations {
@@ -44,7 +45,7 @@ object Configurations {
             }
 
             if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_connections'")) {
-                ds.executeDataTable("SELECT * FROM qross_connections WHERE connection_owner=0 AND enabled='yes'")
+                ds.executeDataTable("SELECT * FROM qross_connections WHERE owner=0 AND enabled='yes'")
                     .foreach(row => {
                         val databaseName = row.getString("database_name")
                         if (databaseName != "redis") JDBC.connections += row.getString("connection_name") -> new JDBC(
@@ -67,7 +68,7 @@ object Configurations {
             }
 
             if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_functions'")) {
-                ds.executeDataTable("SELECT function_name, function_args, function_statement FROM qross_functions WHERE function_owner=0")
+                ds.executeDataTable("SELECT function_name, function_args, function_statement FROM qross_functions WHERE owner=0")
                     .foreach(row => {
                         val name = row.getString("function_name")
                         val args = row.getString("function_args")
@@ -78,15 +79,19 @@ object Configurations {
             }
 
             if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_variables'")) {
-                ds.executeDataTable("SELECT var_group, var_name, var_type, var_value FROM qross_variables WHERE var_owner=0")
+                ds.executeDataTable("SELECT variable_group, variable_name, variable_type, variable_value FROM qross_variables WHERE owner=0")
                     .foreach(row => {
-                        GlobalVariable.SYSTEM.set(
-                            row.getString("var_name").toUpperCase()
-                            , row.getString("var_type") match {
-                                case "INTEGER" => row.getLong("var_value")
-                                case "DECIMAL" => row.getDouble("var_value")
-                                case _ => row.getString("var_value")
-                            })
+                        GlobalVariable.SYSTEM.set(row.getString("variable_name"), row.getString("variable_type") match {
+                            case "TEXT" => row.getString("variable_value")
+                            case "INTEGER" => row.getLong("variable_value")
+                            case "DECIMAL" => row.getDouble("variable_value")
+                            case "BOOLEAN" => row.getBoolean("variable_value")
+                            case "DATETIME" => row.getDateTime("variable_value")
+                            case "ARRAY" => Json.fromText(row.getString("variable_value")).parseJavaList("/")
+                            case "ROW" => Json.fromText(row.getString("variable_value")).parseRow("/")
+                            case "TABLE" => Json.fromText(row.getString("variable_value")).parseTable("/")
+                            case _ => row.getString("variable_value")
+                        }, new DataType(row.getString("variable_type")))
 
                     }).clear()
             }
@@ -100,7 +105,7 @@ object Configurations {
         if (JDBC.hasQrossSystem && userId > 0) {
             val ds = DataSource.QROSS
             if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_connections'")) {
-                ds.executeDataTable("SELECT * FROM qross_connections WHERE connection_owner=? AND enabled='yes'", userId)
+                ds.executeDataTable("SELECT * FROM qross_connections WHERE owner=? AND enabled='yes'", userId)
                     .foreach(row => {
                         val databaseName = row.getString("database_name")
                         if (databaseName != "redis") {
@@ -125,7 +130,7 @@ object Configurations {
             }
 
             if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_functions'")) {
-                ds.executeDataTable("SELECT function_name, function_args, function_statement FROM qross_functions WHERE function_owner=?", userId)
+                ds.executeDataTable("SELECT function_name, function_args, function_statement FROM qross_functions WHERE owner=?", userId)
                     .foreach(row => {
                         val name = row.getString("function_name")
                         val args = row.getString("function_args")
@@ -138,15 +143,20 @@ object Configurations {
             }
 
             if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_variables'")) {
-                ds.executeDataTable("SELECT var_name, var_type, var_value FROM qross_variables WHERE var_owner=?", userId)
+                ds.executeDataTable("SELECT variable_name, variable_type, variable_value FROM qross_variables WHERE owner=?", userId)
                     .foreach(row => {
                         GlobalVariable.USER.set(
-                            row.getString("var_name").toUpperCase(),
-                            row.getString("var_type") match {
-                                case "INTEGER" => row.getLong("var_value")
-                                case "DECIMAL" => row.getDouble("var_value")
-                                case _ => row.getString("var_value")
-                            })
+                            row.getString("variable_name"),
+                            row.getString("variable_type") match {
+                                case "TEXT" => row.getString("variable_value")
+                                case "INTEGER" => row.getLong("variable_value")
+                                case "DECIMAL" => row.getDouble("variable_value")
+                                case "BOOLEAN" => row.getBoolean("variable_value")
+                                case "ARRAY" => Json.fromText(row.getString("variable_value")).parseJavaList("/")
+                                case "ROW" => Json.fromText(row.getString("variable_value")).parseRow("/")
+                                case "TABLE" => Json.fromText(row.getString("variable_value")).parseTable("/")
+                                case _ => row.getString("variable_value")
+                            }, new DataType(row.getString("variable_type")))
 
                     }).clear()
             }

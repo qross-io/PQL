@@ -1,30 +1,26 @@
 package io.qross.app
 
+import scala.util.matching.Regex
+
 object Cogo {
 
     private val scripts = Map[String, String](
         "popup" -> "root.popup.js",
         "div-display" -> "root.layout.js",
-        "callout" -> "root.callout.js",
         "focusview" -> "root.focusview.js",
-        "cookie" -> "root.storage.js",
         "backtop" -> "root.backtop.js",
         "select" -> "root.select.js,select.css",
-        "button" ->  "root.popup.js,root.dialog.js,root.button.js",
+        "button" ->  "root.popup.js,root.button.js",
         "calendar" -> "root.calendar.js,calendar.css",
         "input-calendar" -> "root.calendar.js,calendar.css,iconfont.css",
         "clock" -> "root.clock.js,clock.css",
         "type-datetime" -> "root.datetimepicker.js,root.calendar.js,calendar.css,iconfont.css,root.clock.js,clock.css,root.popup.js",
         "treeview" -> "root.treeview.js,treeview.css",
-        "confirm" -> "root.popup.js,root.dialog.js",
-        "alert" -> "root.popup.js,root.dialog.js",
-        "prompt" -> "root.popup.js,root.dialog.js",
-        "editor" -> "root.editor.js",
         "editable" -> "root.editor.js",
-        "table-datatable" -> "root.datatable.js,datatable.css",
-        "textarea-coder" -> "root.coder.js,coder/codemirror.js,coder/codemirror.css,coder.css",
+        "table-data" -> "root.table.js,table.css",
+        "coder" -> "root.coder.js,coder/codemirror.js,coder/codemirror.css,coder.css",
         "a-help" -> "root.help.js,root.popup.js,iconfont.css",
-        "a-onclick" -> "root.anchor.js,root.dialog.js,root.callout.js,root.popup.js",
+        "a-onclick" -> "root.anchor.js,root.popup.js",
     )
 
     private val codes = Map[String, String](
@@ -41,7 +37,8 @@ object Cogo {
         "csharp" -> "clike.js",
         "javascript" -> "javascript.js",
         "json" -> "javascript.js",
-        "properties"-> "properties.js"
+        "properties"-> "properties.js",
+        "markdown" -> "markdown.js"
     )
 
     val template: String =
@@ -68,7 +65,7 @@ object Cogo {
             |</html>""".stripMargin
 
     def getScripts(content: String): String = {
-        """(?i)<div[^>]+display=|\bCallout\b|\bfocusView\b|\$cookie\b|<backtop\b|<select\b|\sselect=|<button\b|type="datetime"|<calendar\b|<clock\b|<input[^>]+type="calendar"|<treeview\b|\$root.(confirm|alert|prompt)|<editor\b|\s(editable)=|<table[^>]+datatable="|<textarea[^>]+coder=|<a\b[^>]+help=|<a\b[^>]+onclick\+=|\bpopup=""".r
+        """(?i)<div[^>]+display=|\bfocusView\b|<backtop\b|<select\b|\sselect=|<button\b|type="datetime"|<calendar\b|<clock\b|<input[^>]+type="calendar"|<treeview\b|\seditable\b|<table[^>]+data\b|coder=|<a\b[^>]+help=|<a\b[^>]+onclick\+=|\bpopup=""".r
             .findAllIn(content)
             .map(v => {
                 val ms = "(?i)[a-z]+".r.findAllIn(v).map(_.toLowerCase()).toList
@@ -98,12 +95,14 @@ object Cogo {
             .toSeq
             .distinct
             .mkString("\n") + "\n" +
-            """<textarea[^>]+coder="([a-z-]+)"""".r
-                .findAllMatchIn(content)
-                .map(_.group(1).toLowerCase())
-                .toSeq
+                List[Regex]("""(?i)coder=["']?([a-z]+)""".r,
+                    """(?i)alternative=["']?([a-z, ]+)""".r)
+                .flatMap(_.findAllMatchIn(content))
+                .flatMap(_.group(1).toLowerCase().split(","))
+                .map(_.trim())
                 .distinct
-                .map(codes(_))
+                .filter(_ != "")
+                .map(c => codes.getOrElse(c, c))
                 .map(js => s"""<script type="text/javascript" src="@/coder/$js"></script>""")
                 .mkString("\n")
     }

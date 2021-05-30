@@ -30,7 +30,7 @@ class PARSE(val sentence: String) {
                     if (plan.size > 1) {
                         plan.last match {
                             case "AS TABLE" => PQL.dh.parseTable(path).toDataCell(DataType.TABLE)
-                            case "AS ROW" => PQL.dh.parseRow(path).toDataCell(DataType.ROW)
+                            case "AS ROW" | "AS OBJECT" => PQL.dh.parseRow(path).toDataCell(DataType.ROW)
                             case "AS LIST" | "AS ARRAY" => PQL.dh.parseList(path).toDataCell(DataType.ARRAY)
                             case "AS VALUE" => PQL.dh.parseValue(path)
                             case _ => PQL.dh.parseTable(path).toDataCell(DataType.TABLE)

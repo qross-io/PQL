@@ -79,7 +79,7 @@ object CALL {
     }
 }
 
-class CALL(sentence: String) {
+class CALL(val sentence: String) {
     def execute(PQL: PQL): Unit = {
         PQL.WORKING += sentence.$eval(PQL).value
     }

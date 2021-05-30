@@ -1,9 +1,12 @@
 package io.qross.pql
 
+import java.util
+
 import io.qross.core._
 import io.qross.exception.{ExtensionNotFoundException, SQLParseException}
 import io.qross.ext.TypeExt._
 import io.qross.fs.SourceFile
+import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.net.Json
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
@@ -26,7 +29,7 @@ object PQL {
     }
 
     def openEmbedded(SQL: String): PQL = {
-        new PQL(EMBEDDED + SQL, new DataHub())
+        new PQL(SQL, embedded = true, new DataHub())
     }
 
     def check(SQL: String): String = {
@@ -35,6 +38,14 @@ object PQL {
 
     def checkPQL(SQL: String): String = {
         PQL.open(SQL).check()
+    }
+
+    def recognizeParametersIn(SQL: String): util.Set[String] = {
+        PQL.open(SQL).recognizeParameters()
+    }
+
+    def recognizeParametersInEmbedded(SQL: String): util.Set[String] = {
+        PQL.openEmbedded(SQL).recognizeParameters()
     }
 
     //直接运行
@@ -60,15 +71,23 @@ object PQL {
     }
 
     def openEmbeddedFile(path: String): PQL = {
-        new PQL(EMBEDDED + SourceFile.read(path), new DataHub())
+        new PQL(SourceFile.read(path), embedded = true, new DataHub())
     }
 
     def openEmbeddedFile(path: String, dh: DataHub): PQL = {
-        new PQL(EMBEDDED + SourceFile.read(path), dh)
+        new PQL(SourceFile.read(path), embedded = true, dh)
     }
 
     def checkFile(path: String): String = {
         PQL.openFile(path).check()
+    }
+
+    def recognizeParametersInFile(path: String): util.Set[String] = {
+        PQL.openFile(path).recognizeParameters()
+    }
+
+    def recognizeParametersInEmbeddedFile(path: String): util.Set[String] = {
+        PQL.openEmbeddedFile(path).recognizeParameters()
     }
 
     //直接运行
@@ -102,7 +121,7 @@ object PQL {
         }
 
         def openEmbeddedPQL(SQL: String): DataHub = {
-            dh.plug("PQL", new PQL(EMBEDDED + SQL, dh))
+            dh.plug("PQL", new PQL(SQL, embedded = true, dh))
         }
 
         def openFilePQL(filePath: String): DataHub = {
@@ -110,7 +129,7 @@ object PQL {
         }
 
         def openEmbeddedFilePQL(filePath: String): DataHub = {
-            dh.plug("PQL", new PQL(EMBEDDED + SourceFile.read(filePath), dh))
+            dh.plug("PQL", new PQL(SourceFile.read(filePath), embedded = true, dh))
         }
 
         def setArgs(name: String, value: String): DataHub = {
@@ -162,7 +181,7 @@ object PQL {
         }
 
         def runEmbedded(SQL: String): Any = {
-            new PQL(if (!SQL.startsWith(EMBEDDED)) EMBEDDED + SQL else SQL, dh).$run().$return
+            new PQL(SQL, embedded = true, dh).$run().$return
         }
 
         def runFile(filePath: String): Any = {
@@ -170,17 +189,30 @@ object PQL {
         }
 
         def runEmbeddedFile(filePath: String): Any = {
-            new PQL(EMBEDDED + SourceFile.read(filePath), dh).$run().$return
+            new PQL(SourceFile.read(filePath), embedded = true, dh).$run().$return
         }
     }
 }
 
 /**
- * PQL 类，整个系统的核心，多个组件都是基于 PQL 或与 PQL 结合紧密
+ * PQL 类，整个系统的核心，多个组件都是基于 PQL 实现或与 PQL 结合紧密
  * @param   originalSQL   原始 PQL 所有语句内容
+ * @param   embedded      是否是嵌入式 PQL
  * @param   dh            用于运行 PQL 的 DataHub
- */
-class PQL(val originalSQL: String, val dh: DataHub) {
+  */
+class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
+
+    def this(originalSQL: String, dh: DataHub) {
+        this(originalSQL, false, dh)
+    }
+
+    def this(originalSQL: String) {
+        this(originalSQL, false, DataHub.DEFAULT)
+    }
+
+    def this(originalSQL: String, embedded: Boolean) {
+        this(originalSQL, embedded, DataHub.DEFAULT)
+    }
 
     //字符串 ~char[n]
     private[pql] val chars = new ArrayBuffer[String]()
@@ -195,13 +227,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private[pql] var SQL: String = originalSQL
 
-    private[pql] val embedded: Boolean = SQL.startsWith(EMBEDDED) || SQL.bracketsWith("<", ">") || (SQL.contains("<%") && SQL.contains("%>"))
-    if (embedded && SQL.startsWith(EMBEDDED)) {
-        SQL = SQL.drop(9)
-    }
-    private[pql] var language: String = Language.name
-    private[pql] var languageModules: String = ""
-
     private[pql] val root: Statement = new Statement("ROOT", SQL)
 
     //结果集
@@ -212,6 +237,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     //正在解析的所有语句, 控制语句包含ELSE和ELSIF
     private[pql] val PARSING = new mutable.ArrayStack[Statement]()
+
     //正在执行的控制语句
     private[pql] val EXECUTING = new mutable.ArrayStack[Statement]()
     //待关闭的控制语句，如IF, FOR, WHILE等，不保存ELSE和ELSIF
@@ -232,6 +258,9 @@ class PQL(val originalSQL: String, val dh: DataHub) {
 
     private[pql] val credential = new DataRow("userid" -> 0, "username" -> "anonymous", "role" -> "worker")
 
+    //与 Keeper 相关的调度作业 id，用于保存仅作用于 job 范围的变量
+    private[pql] var jobId = 0
+
     //开始解析
     private def parseAll(): Unit = {
 
@@ -247,18 +276,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 SQL.split(";").map(_.trim)
             }
             else {
-                //内嵌语言模块
-                Language.include.findAllMatchIn(SQL)
-                        .foreach(m => {
-                            if (languageModules == "") {
-                                languageModules = m.group(1)
-                            }
-                            else {
-                                languageModules += "," + m.group(1)
-                            }
-                            SQL = SQL.replace(m.group(0), "")
-                        })
-
                 SQL.split(EM$RIGHT)
                     .flatMap(block => {
                         if (block.contains(EM$LEFT)) {
@@ -279,7 +296,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                             s
                         }
                         else {
-                            List[String]("ECHO " + block)
+                            Array[String]("ECHO " + block)
                         }
                     })
             }
@@ -407,6 +424,15 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         else if (symbol == "@") {
             GlobalVariable.set(name, value, credential.getInt("userid"))
         }
+        else if (symbol == "%") {
+            if (this.jobId > 0 && JDBC.hasQrossSystem) {
+                val ds = DataSource.QROSS
+                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_jobs_variables'")) {
+                    ds.executeNonQuery("INSERT INTO qross_jobs_variables (job_id, variable_name, variable_type, variable_value) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE variable_type=?, variable_value=?", jobId, name, value.dataType, value.value, value.dataType.typeName, value.value)
+                }
+                ds.close()
+            }
+        }
     }
 
     //变量名称存储时均为大写, 即在执行过程中不区分大小写
@@ -450,44 +476,28 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         else if (symbol == "@") {
             cell = GlobalVariable.get(name, this)
         }
+        else if (symbol == "%") {
+            if (this.jobId > 0 && JDBC.hasQrossSystem) {
+                val ds = DataSource.QROSS
+                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_jobs_variables'")) {
+                    val row = ds.executeDataRow("SELECT variable_type, variable_value FROM qross_jobs_variables WHERE job_id=? AND variable_name=?", jobId, name)
+                    cell = DataCell(row.getString("variable_type") match {
+                                    case "TEXT" => row.getString("variable_value")
+                                    case "INTEGER" => row.getLong("variable_value")
+                                    case "DECIMAL" => row.getDouble("variable_value")
+                                    case "BOOLEAN" => row.getBoolean("variable_value")
+                                    case "DATETIME" => row.getDateTime("variable_value")
+                                    case "ARRAY" => Json.fromText(row.getString("variable_value")).parseJavaList("/")
+                                    case "ROW" => Json.fromText(row.getString("variable_value")).parseRow("/")
+                                    case "TABLE" => Json.fromText(row.getString("variable_value")).parseTable("/")
+                                    case _ => row.getString("variable_value")
+                                }, new DataType(row.getString("variable_type")))
+                }
+                ds.close()
+            }
+        }
 
         cell
-    }
-
-    //变量名称存储时均为大写, 即在执行过程中不区分大小写
-    def containsVariable(field: String): Boolean = {
-
-        val symbol = field.take(1)
-        val name = field.drop(1).toUpperCase()
-
-        var found = false
-
-        if (symbol == "$") {
-            breakable {
-                for (i <- FOR$VARIABLES.indices) {
-                    if (FOR$VARIABLES(i).contains(name)) {
-                        found = true
-                        break
-                    }
-                }
-            }
-
-            if (!found) {
-                breakable {
-                    for (i <- EXECUTING.indices) {
-                        if (EXECUTING(i).containsVariable(name)) {
-                            found = true
-                            break
-                        }
-                    }
-                }
-            }
-        }
-        else if (symbol == "@") {
-            GlobalVariable.contains(name, this)
-        }
-
-        found
     }
 
     //传递参数和数据, Spring Boot的httpRequest参数
@@ -499,8 +509,10 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     }
 
     def place(args: DataRow): PQL = {
-        this.SQL = this.SQL.replaceArguments(args)
-        root.variables.combine(args)
+        if (args != null && args.nonEmpty) {
+            this.SQL = this.SQL.replaceArguments(args)
+            root.variables.combine(args)
+        }
         this
     }
 
@@ -532,14 +544,14 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         this
     }
 
-    def place(queryString: String): PQL = {
-        if (queryString != "") {
-            val map = queryString.replaceArguments(root.variables).$split().map(pair => (pair._1.trim(), java.net.URLDecoder.decode(pair._2, Global.CHARSET)))
-
-            this.SQL = this.SQL.replaceArguments(map)
-            map.foreach(pair => {
-                root.setVariable(pair._1, pair._2)
-            })
+    def place(queryOrJsonString: String): PQL = {
+        if (queryOrJsonString != "") {
+            if (queryOrJsonString.bracketsWith("{", "}")) {
+                place(Json.fromText(queryOrJsonString).parseRow("/"))
+            }
+            else if (queryOrJsonString.contains("=")) {
+                place(queryOrJsonString.replaceArguments(root.variables).$split().map(pair => (pair._1.trim(), pair._2.decodeURL())))
+            }
         }
         this
     }
@@ -548,7 +560,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     def placeDefault(queryString: String): PQL = {
         if (queryString != "") {
             val map = queryString.replaceArguments(root.variables).$split().map(pair => (pair._1.trim(), java.net.URLDecoder.decode(pair._2, Global.CHARSET)))
-
             this.SQL = this.SQL.replaceArguments(map)
             map.foreach(pair => {
                 if (!root.containsVariable(pair._1)) {
@@ -579,11 +590,23 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         this
     }
 
-    def set(queryString: String): PQL = {
-        if (queryString != "") {
-            queryString.$split().foreach(pair => {
-                root.setVariable(pair._1, pair._2.replaceAll("(?i)%3f", "?").replaceAll("(?i)%3d", "=").replaceAll("%26", "&").replaceAll("%20", " "))
-            })
+    def set(args: Map[String, String]): PQL = {
+        args.foreach(pair => {
+            root.setVariable(pair._1, pair._2)
+        })
+        this
+    }
+
+    def set(queryOrJsonString: String): PQL = {
+        if (queryOrJsonString != "") {
+            if (queryOrJsonString.bracketsWith("{", "}")) {
+                set(Json.fromText(queryOrJsonString).parseRow("/"))
+            }
+            else {
+                queryOrJsonString.$split().foreach(pair => {
+                    root.setVariable(pair._1.trim(), pair._2.decodeURL())
+                })
+            }
         }
         this
     }
@@ -606,6 +629,11 @@ class PQL(val originalSQL: String, val dh: DataHub) {
                 root.setVariable(key, model.get(key))
             }
         })
+        this
+    }
+
+    def asCommandOf(jobId: Int): PQL = {
+        this.jobId = jobId
         this
     }
 
@@ -678,11 +706,6 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         this
     }
 
-    def setLanguage(languageName: String): PQL = {
-        this.language = Language.verify(languageName)
-        this
-    }
-
     def $stash(value: DataCell): String = {
         this.values += value
         s"~value[${this.values.size - 1}]"
@@ -691,6 +714,11 @@ class PQL(val originalSQL: String, val dh: DataHub) {
     //运行但不关闭 DataHub
     def $run(): PQL = {
         this.parseAll()
+        recognizeParameters().forEach(name => {
+            if (!root.containsVariable(name)) {
+                root.setVariable(name, DataCell.UNDEFINED)
+            }
+        })
         EXECUTING.push(root)
         this.executeStatements(root.statements)
         dh.clear()
@@ -702,7 +730,7 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         if (RESULT.nonEmpty) {
             if (embedded) {
                 //嵌入式输出全部
-                RESULT.map{
+                RESULT.map {
                     case table: DataTable => table.toString
                     case row: DataRow => row.toString
                     case dt: DateTime => dt.toString
@@ -761,6 +789,52 @@ class PQL(val originalSQL: String, val dh: DataHub) {
         catch {
             case e: Exception => e.getReferMessage
         }
+    }
+
+    private def recognizeExcludingParameters(statements: mutable.ArrayBuffer[Statement]): mutable.HashSet[String] = {
+        val excluding = new mutable.HashSet[String]
+        for (statement <- statements) {
+            statement.caption match {
+                case "SET" =>
+                    excluding ++= statement.instance.asInstanceOf[SET].variables.map(_.drop(1))
+                case "VAR" =>
+                    excluding ++= statement.instance.asInstanceOf[VAR].variables.map(_._1.drop(1))
+                case "FOR" =>
+                    excluding ++= statement.instance.asInstanceOf[FOR].variables.map(_.drop(1))
+                case "CALL" =>
+                    excluding ++= """\$(\w+)\s*(?=:=)""".r.findAllMatchIn(statement.instance.asInstanceOf[CALL].sentence).map(_.group(1).toLowerCase())
+                case _ =>
+            }
+
+            if (statement.statements.nonEmpty) {
+                excluding ++= recognizeExcludingParameters(statement.statements)
+            }
+        }
+
+        excluding
+    }
+
+    def recognizeParameters(): util.Set[String] = {
+        if (root.statements.isEmpty) {
+            this.parseAll()
+        }
+
+        val parameters = new util.TreeSet[String]()
+        val excluding = new mutable.HashSet[String]
+
+        (Solver.ARGUMENTS ++ Solver.USER_VARIABLE)
+            .flatMap(_.findAllMatchIn(this.originalSQL.replaceAll("--.+?\\r?\\n", "").replaceAll("(?s)/\\*.+?\\*/", "")))
+            .foreach(m => parameters.add(m.group(1).removeQuotes().toLowerCase()))
+
+        this.USER$FUNCTIONS.values.foreach(f => {
+            excluding ++= f.variables.fields
+        })
+
+        excluding ++= recognizeExcludingParameters(root.statements)
+
+        parameters.removeAll(excluding.asJava)
+
+        parameters
     }
 
     //运行并返回最多一个结果, 一般用在全局函数体中

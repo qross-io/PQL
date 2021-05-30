@@ -114,7 +114,7 @@ public class OneApiRequester {
                 OneApiPlain api = OneApi.pick(path, method);
 
                 boolean allowed = false;
-                if (Setting.OneApiSecurityMode.equals("none")) {
+                if (Setting.OneApiSecurityMode.equals("none") || Setting.OneApiSecurityMode.isEmpty()) {
                     allowed = true;
                 }
                 else if (Setting.OneApiSecurityMode.equals("token")) {
@@ -153,6 +153,9 @@ public class OneApiRequester {
                         allowed = true;
                     }
                 }
+                else {
+                    allowed = true;
+                }
 
                 if (allowed) {
                     HttpRequest http = new HttpRequest(request);
@@ -178,6 +181,7 @@ public class OneApiRequester {
                         result.put("message", TypeExt.ExceptionExt(e).getReferMessage());
                         result.put("status", "exception");
                         result.put("code", 500);
+                        e.printStackTrace();
                     }
 
                     if (OneApi.TRAFFIC_GRADE > 0) {
@@ -240,7 +244,7 @@ public class OneApiRequester {
                 ds.setBatchCommand("INSERT INTO qross_api_traffic_queries_summary (userid, service_id, api_id, query_name, query_value, stat_date, times) VALUES (?, ?, ?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE times=times+1");
                 for (OneApiPageView pv : pageViews) {
                     for (Map.Entry<String, Object> entry : pv.parameters.entrySet()) {
-                        ds.addBatch(userId, OneApi.SERVICE_ID, pv.apiId, entry.getKey(), entry.getValue(), pv.requestTime.substring(0, 10));
+                        ds.addBatch(userId, OneApi.SERVICE_ID, pv.apiId, entry.getKey(), TypeExt.StringExt((String) entry.getValue()).takeUp(100), pv.requestTime.substring(0, 10));
                     }
                 }
                 ds.executeBatchUpdate();
@@ -251,7 +255,7 @@ public class OneApiRequester {
                 ds.setBatchCommand("INSERT INTO qross_api_traffic_queries_details (userid, service_id, api_id, query_name, query_value, request_time) VALUES (?, ?, ?, ?, ?, ?)");
                 for (OneApiPageView pv : pageViews) {
                     for (Map.Entry<String, Object> entry : pv.parameters.entrySet()) {
-                        ds.addBatch(userId, OneApi.SERVICE_ID, pv.apiId, entry.getKey(), entry.getValue(), pv.requestTime);
+                        ds.addBatch(userId, OneApi.SERVICE_ID, pv.apiId, entry.getKey(), TypeExt.StringExt((String) entry.getValue()).takeUp(100), pv.requestTime);
                     }
                 }
                 ds.executeBatchUpdate();

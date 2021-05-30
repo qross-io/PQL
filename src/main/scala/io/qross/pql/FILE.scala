@@ -1,6 +1,6 @@
 package io.qross.pql
 
-import io.qross.core.{DataCell, DataTable, DataType}
+import io.qross.core.{DataCell, DataHub, DataTable, DataType}
 import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
 import io.qross.fs.Path._
@@ -59,6 +59,15 @@ class FILE(val sentence: String) {
                     else {
                         throw new SQLParseException("Miss phrase: APPEND 'filePath'. " + sentence)
                     }
+                case "VOYAGE" =>
+                    val pql = new PQL(new FileReader(path).readToEnd, embedded = true, DataHub.DEFAULT)
+                    if (plan.contains("WITH")) {
+                        pql.place(plan.oneArgs("WITH"))
+                    }
+                    if (plan.contains("TO")) {
+                        new FileWriter(plan.oneArgs("TO"), true).write(pql.run().asInstanceOf[String])
+                    }
+                    DataCell(plan.oneArgs("TO"), DataType.TEXT)
                 case "DOWNLOAD" => DataCell(path.download()) //, DataType.BOOLEAN
                 case _ => path.fileInfo.toDataCell(DataType.ROW)
             }

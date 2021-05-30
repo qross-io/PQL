@@ -1,6 +1,6 @@
 package io.qross.pql
 
-import io.qross.exception.{SQLExecuteException, SQLParseException}
+import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.$GET
 import io.qross.pql.Solver._

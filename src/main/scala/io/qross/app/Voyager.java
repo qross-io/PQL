@@ -1,20 +1,20 @@
 package io.qross.app;
 
 import io.qross.core.DataHub;
+import io.qross.core.DataRow;
 import io.qross.ext.TypeExt;
 import io.qross.fs.ResourceFile;
 import io.qross.net.HttpRequest;
+import io.qross.net.Json;
 import io.qross.pql.PQL;
 import io.qross.pql.Solver;
+import io.qross.setting.Language;
 import io.qross.setting.Properties;
 import org.springframework.web.servlet.view.AbstractTemplateView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -97,10 +97,25 @@ public class  Voyager extends AbstractTemplateView {
             if (content != null) {
 
                 String template = "";
+                String setup = "";
                 List<String> baseArgs = new ArrayList<>();
+                String extArgs = "";
 
-                Pattern p = Pattern.compile("<#\\s*page\\s+template=[\"'](.+?)[\"']\\s*/>", Pattern.CASE_INSENSITIVE);
+                HttpRequest http = new HttpRequest(request);
+                Map<String, Object> queries = http.getParameters();
+
+                content = Solver.Sentence$Solver(content).replaceArguments(queries); //replace parameters at first
+
+                //setup
+                Pattern p = Pattern.compile("<%!(.*?)%>", Pattern.DOTALL);
                 Matcher m = p.matcher(content);
+                if (m.find()) {
+                    setup = m.group(1);
+                    content = content.replace(m.group(0), "");
+                }
+                
+                p = Pattern.compile("<#\\s*page\\s+template=[\"'](.+?)[\"']\\s*/>", Pattern.CASE_INSENSITIVE);
+                m = p.matcher(content);
                 if (m.find()) {
                     content = content.replace(m.group(0), "");
                     String uri = m.group(1);
@@ -110,6 +125,25 @@ public class  Voyager extends AbstractTemplateView {
                     }
 
                     template = ResourceFile.open((dir + uri).replace("//", "/")).content();
+                }                               
+                
+                // @{ "name": "value" }
+                p = Pattern.compile("@(\\{[\\s\\S]+?})(?=\\s*\\n)");
+                m = p.matcher(content);
+                while (m.find()) {
+                    String match = m.group(1);
+                    if (match.contains(":")) {
+                        int stack = TypeExt.StringExt(match).stackAllPairOf("\\{", "\\}", 0);
+                        if (stack > 0) {
+                            int index = content.indexOf(match);
+                            int pair = TypeExt.StringExt(content).indexPairOf("{", "}", index + match.length(), stack);
+                            if (pair > -1) {
+                                match += content.substring(index, pair + 1);
+                            }
+                        }
+                        extArgs = match;
+                        content = content.replace("@" + match, "");
+                    }
                 }
 
                 if (markdown) {
@@ -127,6 +161,11 @@ public class  Voyager extends AbstractTemplateView {
                 //scripts
                 if (content.contains("#{scripts}")) {
                     content = content.replace("#{scripts}", Cogo.getScripts(content));
+                }
+
+                //setup
+                if (!setup.isEmpty()) {
+                    content = "<%" + setup + "%>" + content;
                 }
 
                 //replace server includes
@@ -150,6 +189,30 @@ public class  Voyager extends AbstractTemplateView {
                     }
                 }
 
+                //language module
+                p = Pattern.compile("<#\\s*include\\s+language=[\"'](.+?)[\"']\\s*/>", Pattern.CASE_INSENSITIVE);
+                m = p.matcher(content);
+                List<String> languageModules = new ArrayList<>();
+                while (m.find()) {
+                    Arrays.asList(m.group(1).split(",")).forEach(lan -> {
+                        lan = lan.trim();
+                        if (!lan.isEmpty()) {
+                            languageModules.add(lan);
+                        }
+                    });
+                    content = content.replace(m.group(0), "");
+                }
+                //language holder
+                p = Pattern.compile("#\\s*([a-z0-9-]+(\\.[a-z0-9-]+)*)\\s*#", Pattern.CASE_INSENSITIVE);
+                m = p.matcher(content);
+                while (m.find()) {
+                    String replacement = Language.get(m.group(1), languageModules);
+                    if (replacement != null) {
+                        content = content.replace(m.group(0), replacement);
+                    }
+                }
+                languageModules.clear();
+
                 //static site  @ or %
                 p = Pattern.compile("\\s(src|href)=\"([@|%])", Pattern.CASE_INSENSITIVE);
                 m = p.matcher(content);
@@ -157,12 +220,12 @@ public class  Voyager extends AbstractTemplateView {
                     content = content.replace(m.group(0), " " + m.group(1) + "=\"" + (m.group(2).equals("@") ? Setting.VoyagerStaticSite : Setting.VoyagerGallerySite));
                 }
 
-                HttpRequest http = new HttpRequest(request);
                 try {
                     Object result =
-                            new PQL("EMBEDDED:" + content, new DataHub(Properties.contains(Setting.VoyagerConnection) ? Setting.VoyagerConnection : ""))
-                                    .place(http.getParameters())
+                            new PQL(content, true, new DataHub(Properties.contains(Setting.VoyagerConnection) ? Setting.VoyagerConnection : ""))
+                                    .place(queries)
                                     .place(String.join("&", baseArgs))
+                                    .place(extArgs)
                                     .set("request", http.getRequestInfo())
                                     .set(model)
                                     .run();

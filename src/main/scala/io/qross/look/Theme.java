@@ -70,8 +70,8 @@ public class Theme {
         themes.add(new Theme("#9A0089", "#BC22AB", "#780067"));
         themes.add(new Theme("#6000DD", "#8000FF", "#4000BB"));
         themes.add(new Theme("#40BB00", "#60DD00", "#209900"));
-        themes.add(new Theme("#32D68B", "#54F8AD", "#10B469"));
-        themes.add(new Theme("#33CC33", "#55EE55", "#11AA11"));
+        themes.add(new Theme("#21C57A", "#43C79C", "#00A358"));
+        themes.add(new Theme("#22BB22", "#44DD44", "#009900"));
         themes.add(new Theme("#317AB9", "#539CDB", "#105897"));
         themes.add(new Theme("#10893E", "#32AB5F", "#00671B"));
         themes.add(new Theme("#00B294", "#22D4B6", "#009072"));

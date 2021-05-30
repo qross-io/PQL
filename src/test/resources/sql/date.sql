@@ -11,9 +11,62 @@ DEBUG ON;
 --SELECT id, project_id, owner  FROM :jobs SEEK 0 LIMIT 5;
 --PRINT @POINTER;
 
-PRINT '\'hello\n world\'';
+SET $C := 'HOURLY 0/5';
+SET $T := @NOW;
+VAR $RECENT := [];
+SET $M := $C TICK BY $T;
+FOR $I IN 1 TO 10 LOOP
+    IF $M IS NOT NULL THEN
+        LET $RECENT ADD ${ $M FORMAT 'yyyy-MM-dd HH:mm:ss' };
+        SET $T := $M PLUS 1 SECOND;
+        SET $M :=  $C TICK BY $T;
+    END IF;
+END LOOP;
+PRINT $RECENT;
 
-FILE DELETE 'c:/Space/test.log';
+EXIT CODE 0;
+
+SET $command_type, $command_logic := SELECT command_type, command_logic FROM qross_commands_templates WHERE id=8;
+    IF $command_logic IS NOT NULL AND $command_logic IS NOT EMPTY THEN
+        IF $command_type == 'pql' THEN
+            GET # INVOKE io.qross.pql.PQL.recognizeParametersIn(String $command_logic);
+        ELSE
+            GET # INVOKE io.qross.pql.PQL.recognizeParametersInEmbedded(String $command_logic);
+        END IF;
+    END IF;
+
+FOR $param IN @BUFFER LOOP
+    PRINT $param;
+END LOOP;
+
+EXIT CODE 0;
+
+IF ${ '(?i)^SELECT' FIND FIRST IN 'select * from qross_jobs' } === 'Select' THEN
+    PRINT 'HELLO';
+END IF;
+
+EXIT CODE 0;
+
+SELECT * FROM qross_projects -> COLLECT (id, project_name, parent_project_id) AS 'combined';
+
+EXIT CODE 0;
+
+IF $template_id != '0' AND NOT EXISTS (SELECT id FROM qross_commands_templates_parameters WHERE template_id=#{template_id}) THEN
+    SET $command_logic := SELECT command_logic FROM qross_commands_templates WHERE id=#{template_id};
+    IF $command_logic IS NOT NULL AND $command_logic IS NOT EMPTY THEN
+        GET # INVOKE io.qross.pql.PQL.recognizeParametersIn(String $command_logic);
+        PUT # INSERT INTO qross_commands_templates_parameters (template_id, parameter_name, creator) VALUES (#{template_id}, &item, @userid);
+    END IF;
+END IF;
+SELECT * FROM qross_commands_templates_parameters WHERE template_id=#{template_id};
+
+EXIT CODE 0;
+
+SET $x := 'PRINT #{hello};\nSELECT * FROM $a!;\n';
+VAR $y := INVOKE io.qross.pql.PQL.recognizeParametersIn($x);
+PRINT $y;
+
+-- FILE DELETE 'c:/Space/test.log';
 
 /*
 SET $table := "qross_jobs";

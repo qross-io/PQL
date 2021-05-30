@@ -32,29 +32,29 @@ object VAR {
 
 class VAR(val assignments: String) {
 
+    val variables: mutable.LinkedHashMap[String, String] = new mutable.LinkedHashMap[String, String]()
+
+    private var assigns = "," + assignments
+    while (assigns != "") {
+        """,\s*\$\w+$""".r.findFirstIn(assigns) match {
+            case Some(v) =>
+                variables += v.takeAfter(",").trim().toLowerCase() -> null
+                assigns = assigns.takeBeforeLast(v).trim()
+            case None =>
+                """,\s*\$\w+\s*:=""".r.findAllIn(assigns).toList.lastOption match  {
+                    case Some(v) =>
+                        variables += v.takeBetween(",", ":=").trim().toLowerCase() -> assigns.takeAfterLast(v).trim()
+                        assigns = assigns.takeBeforeLast(v).trim()
+                    case None =>
+                        throw new SQLParseException("Wrong assignment sentence: " + assigns.substring(1))
+                }
+        }
+    }
+
     def execute(PQL: PQL): Unit = {
 
-        var assigns = "," + assignments
-        val aps = new mutable.LinkedHashMap[String, String]()
-
-        while (assigns != "") {
-            """(?i),\s*\$[a-z0-9_]+$""".r.findFirstIn(assigns) match {
-                case Some(v) =>
-                    aps += v.takeAfter(",").trim() -> null
-                    assigns = assigns.takeBeforeLast(v).trim()
-                case None =>
-                    """(?i),\s*\$[a-z0-9_]+\s*:=""".r.findAllIn(assigns).toList.lastOption match  {
-                        case Some(v) =>
-                            aps += v.takeBetween(",", ":=").trim() -> assigns.takeAfterLast(v).trim()
-                            assigns = assigns.takeBeforeLast(v).trim()
-                        case None =>
-                            throw new SQLParseException("Wrong assignment sentence: " + assigns.substring(1))
-                    }
-            }
-        }
-
-        aps.keys.toArray.reverse.foreach(name => {
-            val value = aps(name)
+        variables.keys.toArray.reverse.foreach(name => {
+            val value = variables(name)
             PQL.updateVariable(name, {
                 if (value == null) {
                     DataCell.NULL

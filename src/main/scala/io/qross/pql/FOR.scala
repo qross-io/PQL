@@ -32,7 +32,7 @@ object FOR {
 
 class FOR(val variable: String, val method: String, val collection: String) {
 
-    val variables: List[String] = variable.split(",").map(_.trim).toList
+    val variables: Array[String] = variable.split(",").map(_.trim().toLowerCase())
 
     def execute(PQL: PQL, statement: Statement): Unit = {
         val vars: ForVariables = this.computeVariables(PQL)
@@ -120,6 +120,14 @@ class FOR(val variable: String, val method: String, val collection: String) {
                     })
             case DataType.ARRAY | DataType.LIST =>
                 data.asJavaList.forEach(item => {
+                    val newRow = new DataRow()
+                    for (i <- variables.indices) {
+                        newRow.set(variables(i).drop(1).toUpperCase(), item)
+                    }
+                    forVars.addRow(newRow)
+                })
+            case DataType.HASHSET =>
+                data.asHashSet.forEach(item => {
                     val newRow = new DataRow()
                     for (i <- variables.indices) {
                         newRow.set(variables(i).drop(1).toUpperCase(), item)

@@ -23,7 +23,6 @@ public class OneApi {
 
     public static int SERVICE_ID = 0;
     public static int TRAFFIC_GRADE = 0;
-    public static boolean DOCUMENT_ENABLED = false;
     // path -> METHOD -> OneApi
     public static Map<String, Map<String, OneApiPlain>> ALL = new HashMap<>();
 
@@ -173,7 +172,7 @@ public class OneApi {
                         }
                         ds.executeBatchUpdate();
                         //delete deprecated
-                        ds.executeNonQuery("DELETE FROM qross_api_in_one WHERE service_id=? AND `source`='file' AND update_time<>?", OneApi.SERVICE_ID, updateTime);
+                        ds.executeNonQuery("DELETE FROM qross_api_in_one WHERE service_id=? AND `source`='file' AND update_time<>? AND TIMESTAMPDIFF(DAY, update_time, NOW()) > 30", OneApi.SERVICE_ID, updateTime);
 
                         //renew all api
                         DataTable APIs = ds.executeDataTable("SELECT id, path, method, pql, default_values, IF(return_value_example IS NULL OR return_value_example = '', 1, 0) AS exampled FROM qross_api_in_one WHERE service_id=?", OneApi.SERVICE_ID);
@@ -230,17 +229,17 @@ public class OneApi {
                     }
                 }
                 else if (line.startsWith("@")) {
-                    if (line.startsWith("@return ")) {
-                        api.returnValue = line.substring(8).trim();
+                    if (line.startsWith("@return")) {
+                        api.returnValue = line.substring(7).trim();
                     }
-                    else if (line.startsWith("@created")) {
-                        api.creator = line.substring(9);
+                    else if (line.startsWith("@created") || line.startsWith("@create")) {
+                        api.creator = line.substring(8);
                     }
-                    else if (line.startsWith("@updated")) {
-                        api.mender = line.substring(9);
+                    else if (line.startsWith("@updated") || line.startsWith("@update")) {
+                        api.mender = line.substring(8);
                     }
-                    else if (line.startsWith("@permit ")) {
-                        api.permit = line.substring(8).trim();
+                    else if (line.startsWith("@permit")) {
+                        api.permit = line.substring(7).trim();
                     }
                 }
                 else {
@@ -668,6 +667,7 @@ public class OneApi {
         settings.put("oneapi.secret.key.ttl", Setting.OneApiSecretKeyTTL);
         settings.put("oneapi.secret.key.digit", Setting.OneApiSecretKeyDigit);
         settings.put("oneapi.management.key", Setting.OneApiManagementKey);
+        settings.put("oneapi.ajax.settings", Setting.OneApiAjaxSettings);
 
         return settings;
     }

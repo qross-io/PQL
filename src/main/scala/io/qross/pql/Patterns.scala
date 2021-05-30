@@ -70,12 +70,12 @@ object Patterns {
     val $PUT: Regex = """(?i)^PUT\s*#""".r
     val $PREP: Regex = """(?i)^PREP\s*#""".r
     val $PAGE: Regex = """(?i)^PAGE\s*#\s*SELECT\b""".r
-    val $BLOCK: Regex = """(?i)^BLOCK[\s\S]+?#\s*(SELECT|UPDATE|DELETE)\b""".r
+    val $BLOCK: Regex = """(?i)^BLOCK[\s\S]+?#""".r
     val $PROCESS: Regex = """(?i)^PROCESS\s*#\s*SELECT\b""".r
     val $BATCH: Regex = """(?i)^BATCH\s*#""".r
     val $OUTPUT: Regex = """(?i)^OUTPUT\s*#?""".r
     val $RETURN: Regex = """(?i)^RETURN(\s*#?|$)""".r
-    val $PRINT: Regex = """(?i)^PRINT\s""".r
+    val $PRINT: Regex = """(?i)^PRINT\b""".r
     val $PRINT$SEAL: Regex = """(?i)^[a-z]+\s""".r
     val $SHOW: Regex = """(?i)^SHOW\s""".r
     val $RUN: Regex = """(?i)^RUN\s+(COMMAND|SHELL|PQL)\s+""".r
@@ -96,7 +96,7 @@ object Patterns {
     val $CALL: Regex = """(?i)^CALL\s""".r
     val $EXEC: Regex = """(?i)EXEC\s""".r
 
-    val $VARIABLE: Regex = """^(\$|@)\(?[A-Za-z0-9_]+\)?$""".r
+    val $VARIABLE: Regex = """^(\$|@|%)\(?[A-Za-z0-9_]+\)?$""".r
     val $INTERMEDIATE$N: Regex = """^~value\[(\d+)\]$""".r
     val $RESERVED: Regex = """^[_A-Za-z0-9\.]+$""".r
     val $CONSTANT: Regex = """^\*$|^[A-Za-z][A-Za-z0-9_]*$|^[_][A-Za-z0-9_]+$""".r
@@ -106,7 +106,6 @@ object Patterns {
     val GLOBAL_VARIABLES: Set[String] = GlobalVariableDeclaration.getClass.getDeclaredMethods.map(m => m.getName).toSet
     val ARROW: String = "->"
 
-    val EMBEDDED: String = "EMBEDDED:"
     val EM$LEFT: String = "<%"
     val EM$RIGHT: String = "%>"
 

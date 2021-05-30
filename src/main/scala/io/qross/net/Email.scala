@@ -208,7 +208,6 @@ class Email(private var title: String) {
     private var ccRecipients = new mutable.HashMap[String, String]()
     private var bccRecipients = new mutable.HashMap[String, String]()
     private var content: String = ""
-    private var language: String = Language.name
     private var placement: String = "NOTHING"
 
     def setSmtpServer(host: String, port: String): Email = {
@@ -366,11 +365,6 @@ class Email(private var title: String) {
         this
     }
 
-    def setTemplateLanguage(language: String): Email = {
-        this.language = language
-        this
-    }
-
     def setTitle(title: String): Email = {
         this.title = title
         this
@@ -465,7 +459,7 @@ class Email(private var title: String) {
         if (Global.EMAIL_SENDER_ACCOUNT_AVAILABLED) {
             if (toRecipients.nonEmpty || ccRecipients.nonEmpty || bccRecipients.nonEmpty) {
                 if (this.content != "") {
-                    this.content = PQL.openEmbedded(this.content).setLanguage(language).run().toString
+                    this.content = PQL.openEmbedded(this.content).run().toString
                 }
                 transfer()
             }

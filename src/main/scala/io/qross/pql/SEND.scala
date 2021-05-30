@@ -43,7 +43,6 @@ class SEND(val sentence: String) {
                         case "FROM" => email.setFrom(plan.oneArgs("FROM"))
                         case "PERSONAL" | "SET PERSONAL" => email.setFromPersonal(plan.oneArgs("PERSONAL", "SET PERSONAL"))
                         case "PASSWORD" | "SET PASSWORD" => email.setFromPassword(plan.oneArgs("PASSWORD", "SET PASSWORD"))
-                        case "LANGUAGE" | "SET LANGUAGE" => email.setTemplateLanguage(plan.oneArgs("LANGUAGE", "SET LANGUAGE"))
                         case "CONTENT" | "SET CONTENT" => email.setContent(plan.oneArgs("CONTENT", "SET CONTENT"))
                         case "TEMPLATE" | "USE TEMPLATE" => email.useTemplate(plan.oneArgs("TEMPLATE", "USE TEMPLATE"))
                         case "DEFAULT TEMPLATE" | "USE DEFAULT TEMPLATE" => email.useDefaultTemplate()
