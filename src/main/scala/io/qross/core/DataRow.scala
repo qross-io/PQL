@@ -403,7 +403,7 @@ class DataRow() {
             combine(Json.fromText(queryOrJsonString).parseRow("/"))
         }
         else if (queryOrJsonString.contains("=")) {
-            for ((key, value) <- queryOrJsonString.$split()) {
+            for ((key, value) <- queryOrJsonString.splitToMap()) {
                 set(key, value, DataType.TEXT)
             }
         }

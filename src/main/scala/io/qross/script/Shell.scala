@@ -198,7 +198,6 @@ object Shell {
             val logs = new util.ArrayList[String]()
             val errors = new util.ArrayList[String]()
             val process = command.shell.run(ProcessLogger(out => {
-                println(out)
                 logs.add(out)
             }, err => {
                 System.err.println(err)

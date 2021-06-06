@@ -15,7 +15,6 @@ public class Setting {
     public static String OneApiTokenList = Properties.get("oneapi.token.list", "");
     public static String OneApiAccessOpen = Properties.get("oneapi.access.open", "");
     public static String OneApiAccessPermit = Properties.get("oneapi.access.permit", "");
-    public static String OneApiAjaxSettings = Properties.get("oneapi.ajax.settings", "");
 
     public static String VoyagerDirectory = Properties.get("voyager.directory", "/templates/");
     public static String VoyagerConnection = Properties.get("voyager.connection", "jdbc.default");

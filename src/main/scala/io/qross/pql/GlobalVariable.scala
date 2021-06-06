@@ -137,6 +137,7 @@ object GlobalVariable {
 }
 
 object GlobalVariableDeclaration {
+
     def TODAY(PQL: PQL): DataCell = DataCell(DateTime.now.setZeroOfDay(), DataType.DATETIME)
     def YESTERDAY(PQL: PQL): DataCell = DataCell(DateTime.now.minusDays(1).setZeroOfDay(), DataType.DATETIME)
     def TOMORROW(PQL: PQL): DataCell = DataCell(DateTime.now.plusDays(1).setZeroOfDay(), DataType.DATETIME)
@@ -173,4 +174,6 @@ object GlobalVariableDeclaration {
 
     def RUNNING_DIR(PQL: PQL): DataCell = DataCell(Environment.runningDirectory, DataType.TEXT)
     def LOCAL_IP(PQL: PQL): DataCell = DataCell(Environment.localHostAddress, DataType.TEXT)
+
+    def KEEPER_IS_RUNNING(PQL: PQL): DataCell = DataCell(DataSource.QROSS.queryExists("SELECT id FROM qross_keeper_beats WHERE actor_name='Keeper' AND `status`='running' AND timestampdiff(second, last_beat_time, now())<120"), DataType.BOOLEAN)
 }

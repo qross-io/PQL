@@ -98,7 +98,17 @@ object Main {
         //PQL.run("LOAD JSON CONFIG FROM URL 'http://localhost:8848/nacos/v1/cs/configs?dataId=json&group=io.qross.config'")
         //http://localhost:8848/nacos/v1/cs/configs?dataId=test&group=io.qross.config
         //localhost:8848:io.qross.config:test
-        PQL.openFile("/sql/date.sql").place("job_id=274&task_id=12245&record_time=2021-05-27%2001%3A00%3A00&cursor=0&action_id=0&mode=all").run().print
+        PQL.openFile("/test.sql").asCommandOf(309).place("""{
+                                          |"start_point":"0",
+                                          |"source_database_name":"MySQL",
+                                          |"source_connection_name":"mysql.qross",
+                                          |"get_sentence":"SELECT id, task_time FROM qross_tasks WHERE id>%increment LIMIT 10;",
+                                          |"destination_database_name":"MySQL",
+                                          |"destination_connection_name":"mysql.qross",
+                                          |"prep_sentence":"delete from td where id < 100;",
+                                          |"put_sentence":"insert into td (tid, info) values(?,?);",
+                                          |"increment_key": "id"
+                                          |}""".stripMargin).place("job_id=309&task_id=12381&record_time=2021-05-31 20:39:36").run().print
 
         //PQL.openFile("""C:\io.Qross\Keeper\src\main\resources\pql/keeper_clean.sql""").place("date=2020-06-23&hour=15").run()
 

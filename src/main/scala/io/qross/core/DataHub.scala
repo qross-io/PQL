@@ -799,8 +799,8 @@ class DataHub (val defaultConnectionName: String) extends Output {
             var i = if (config._2 == 0) 0 else config._2 - 1
             while (i < config._3) {
                 Blocker.QUEUE.add(
-                    selectSQL.replaceFirst(config._1, i.toString)
-                            .replaceFirst(config._1, {
+                    selectSQL.replaceFirstOne(config._1, i.toString)
+                            .replaceFirstOne(config._1, {
                                 i += config._4
                                 if (i > config._3) {
                                     i = config._3
@@ -810,8 +810,8 @@ class DataHub (val defaultConnectionName: String) extends Output {
             }
 
             //producer
-            for (i <- 0 until LINES) { //Global.CORES
-                parallel.add(new Blocker(currentSource[DataSource], TANKS, this))
+            for (i <- 0 until TANKS * 2) { //Global.CORES
+                parallel.add(new Blocker(currentSource[DataSource], TANKS,  this))
             }
         }
 
@@ -906,8 +906,8 @@ class DataHub (val defaultConnectionName: String) extends Output {
             var i = if (config._2 == 0) 0 else config._2 - 1
             while (i < config._3) {
                 Blocker.QUEUE.add(
-                    selectSQL.replaceFirst(config._1, i.toString)
-                             .replaceFirst(config._1, {
+                    selectSQL.replaceFirstOne(config._1, i.toString)
+                             .replaceFirstOne(config._1, {
                                  i += config._4
                                  if (i > config._3) {
                                      i = config._3
@@ -919,7 +919,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
             //consumer
             val parallel = new Parallel()
             //producer
-            for (i <- 0 until LINES) {  //Global.CORES
+            for (i <- 0 until TANKS * 2) {  //Global.CORES
                 parallel.add(new Blocker(currentSource, TANKS, this))
             }
             parallel.startAll()
