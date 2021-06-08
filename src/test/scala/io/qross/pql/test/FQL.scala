@@ -9,6 +9,7 @@ import io.qross.script.Shell.{destroy, end, kill, ps$ef}
 import io.qross.pql.Solver._
 import io.qross.ext.TypeExt._
 import io.qross.fs.ResourceFile
+import io.qross.jdbc.DataSource
 
 object FQL {
     def main(args: Array[String]): Unit = {
@@ -25,7 +26,8 @@ object FQL {
 
         //new Marker(ResourceFile.open("/templates/markdown.md").content).transform().getContent.print
 
-        PQL.openFile("/sql/args.sql").run()
+        val select = DataSource.QROSS.querySingleValue("SELECT info FROM td WHERE id=100").asText("")
+        PQL.openFile("/sql/args.sql").place(select).run()
 
         System.exit(0)
 
