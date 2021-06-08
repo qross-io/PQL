@@ -31,11 +31,6 @@ object FQL {
 
         System.exit(0)
 
-        val select = DataSource.QROSS.querySingleValue("SELECT info FROM td WHERE id=100").asText("")
-        PQL.openFile("/sql/args.sql").place(select).run()
-
-        System.exit(0)
-
         val row = new Json("""{"action_id":5089,"job_id":2,"task_id":3584,"command_id":26,"task_time":"20201012112122","record_time":"2020-10-12 11:21:22","start_mode":"manual_start","command_type":"shell","command_text":"java -jar hello.jar ${ $task_time FORMAT \"yyyy-MM-dd\" }","overtime":0,"retry_limit":0,"job_type":"scheduled","title":"Test Job 2","owner":"吴佳妮<wujini@outlook.com>"}""").parseRow("/")
         val text = "java -jar hello.jar ${ $task_time FORMAT \"yyyy-MM-dd\" }"
         text.$restore(new PQL("", DataHub.DEFAULT).set(row), "").print
