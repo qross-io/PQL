@@ -117,21 +117,7 @@ object TypeExt {
             cols
         }
 
-        def splitToJavaMap(delimiter: String, terminator: String): java.util.Map[String, String] = {
-            val map: java.util.Map[String, String] = new java.util.HashMap[String, String]()
-            val params = string.split(delimiter)
-            for (param <- params) {
-                if (param.contains(terminator)) {
-                    map.put(param.takeBefore(terminator), param.takeAfter(terminator))
-                }
-                else if (param != "") {
-                    map.put(param, "")
-                }
-            }
-            map
-        }
-
-        def splitToMap(delimiter: String = "&", terminator: String = "="): Map[String, String] = {
+        def $split(delimiter: String = "&", terminator: String = "="): Map[String, String] = {
             val params = string.split(delimiter)
             val queries = new mutable.LinkedHashMap[String, String]()
             for (param <- params) {

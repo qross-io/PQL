@@ -3,7 +3,6 @@ package io.qross.app;
 import io.qross.core.DataHub;
 import io.qross.core.DataRow;
 import io.qross.core.DataTable;
-import io.qross.ext.Console;
 import io.qross.ext.TypeExt;
 import io.qross.fs.*;
 import io.qross.jdbc.DataAccess;
@@ -37,6 +36,15 @@ public class OneApi {
 
     //read all api settings from resources:/api/ and qross database
     public static void readAll() {
+
+        if (!Setting.OneApiAjaxSettings.isEmpty()) {
+            try {
+                Cookies.set("oneapi.ajax.settings", java.net.URLEncoder.encode(Setting.OneApiAjaxSettings, Global.CHARSET()).replace("+", "%20"));
+            }
+            catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        }
 
         //从jar包resources目录加载接口数据
         if (!Setting.OneApiResourceDirs.isEmpty()) {
@@ -183,89 +191,87 @@ public class OneApi {
         }
     }
 
-    public static void readAPIs(String path, String content) {
+    private static void readAPIs(String path, String content) {
 
-        Pattern p = Pattern.compile("^\\s*##\\s*([a-z0-9_-]+)\\b", Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
+        Pattern p = Pattern.compile("(/\\*[\\s\\S]*?\\*/)?\\s*##\\s*[a-z0-9_-]+\\b", Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(content);
         List<String> splitted = new ArrayList<>();
         while (m.find()) {
-            String label = m.group(0);
-            String prefix = TypeExt.StringExt(content).takeBefore(label).trim();
-            String comment = "";
-            if (prefix.endsWith("*/") && prefix.contains("/*")) {
-                comment = TypeExt.StringExt(prefix).takeAfterLast("/*");
-                comment = comment.substring(0, comment.length() - 2).trim();
-                prefix = TypeExt.StringExt(prefix).takeBeforeLast("/*");
-            }
-            splitted.add(prefix);
-            splitted.add(comment);
-            splitted.add(m.group(1));
-
-            content = TypeExt.StringExt(content).takeAfter(label).trim();
+            splitted.add(content.substring(0, content.indexOf(m.group(0))).trim());
+            splitted.add(m.group(0));
+            content = content.substring(content.indexOf(m.group(0)) + m.group(0).length()).trim();
         }
         splitted.add(content);
 
-        for (int i = 1; i < splitted.size(); i += 3) {
+        for (int i = 1; i < splitted.size(); i += 2) {
 
             OneApiPlain api = new OneApiPlain();
 
-            if (!splitted.get(i).isEmpty()) {
-                String[] comment = splitted.get(i).split(TextFile.TERMINATOR());
-                for (String line : comment) {
-                    line = line.replaceAll("^\\s*\\*\\s*", "");
+            String head = splitted.get(i);
+            String[] comment = TypeExt.StringExt(head.substring(0, head.indexOf("##"))).$trim("/*", "*/").trim().split(TextFile.TERMINATOR());
+            for (String line : comment) {
+                line = line.replaceAll("^\\s*\\*\\s*", "");
 
-                    if (line.startsWith("#")) {
-                        line = line.substring(1);
-                        if (!api.params.isEmpty()) {
-                            api.params += "&";
-                        }
-                        if (line.contains(" ")) {
-                            api.params += line.substring(0, line.indexOf(" ")) + "=" + line.substring(line.indexOf(" ") + 1).trim().replace("&", "%26").replace("=", "%3D").replace(" ", "%20");
-                        } else {
-                            api.params += line + "=";
-                        }
+                if (line.startsWith("#")) {
+                    line = line.substring(1);
+                    if (!api.params.isEmpty()) {
+                        api.params += "&";
+                    }
+                    if (line.contains(" ")) {
+                        api.params += line.substring(0, line.indexOf(" ")) + "=" + line.substring(line.indexOf(" ") + 1).trim().replace("&", "%26").replace("=", "%3D").replace(" ", "%20");
+                    }
+                    else {
+                        api.params += line + "=";
+                    }
 
-                        if (api.params.length() > 2000) {
-                            api.params = api.params.substring(0, 2000);
+                    if (api.params.length() > 2000) {
+                        api.params = api.params.substring(0, 2000);
+                    }
+                }
+                else if (line.startsWith("@")) {
+                    if (line.startsWith("@return")) {
+                        api.returnValue = line.substring(7).trim();
+                    }
+                    else if (line.startsWith("@created") || line.startsWith("@create")) {
+                        api.creator = line.substring(8);
+                    }
+                    else if (line.startsWith("@updated") || line.startsWith("@update")) {
+                        api.mender = line.substring(8);
+                    }
+                    else if (line.startsWith("@permit")) {
+                        api.permit = line.substring(7).trim();
+                    }
+                }
+                else {
+                    if (api.title.isEmpty()) {
+                        api.title = line;
+                    }
+                    else {
+                        if (api.description.isEmpty()) {
+                            api.description = line;
                         }
-                    } else if (line.startsWith("@")) {
-                        if (line.startsWith("@return")) {
-                            api.returnValue = line.substring(7).trim();
-                        } else if (line.startsWith("@created") || line.startsWith("@create")) {
-                            api.creator = line.substring(8);
-                        } else if (line.startsWith("@updated") || line.startsWith("@update")) {
-                            api.mender = line.substring(8);
-                        } else if (line.startsWith("@permit")) {
-                            api.permit = line.substring(7).trim();
+                        else {
+                            api.description += "<br/>" + line;
                         }
-                    } else {
-                        if (api.title.isEmpty()) {
-                            api.title = line;
-                        } else {
-                            if (api.description.isEmpty()) {
-                                api.description = line;
-                            } else {
-                                api.description += "<br/>" + line;
-                            }
-                            if (api.description.length() > 500) {
-                                api.description = api.description.substring(0, 500);
-                            }
+                        if (api.description.length() > 500) {
+                            api.description = api.description.substring(0, 500);
                         }
                     }
                 }
             }
 
-            String url = path + "/" + splitted.get(i+1);
+            String url = path + "/" + head.substring(head.indexOf("##") + 2).trim();
             String body = "name";
-            if (i + 2 < splitted.size()) {
-                body += splitted.get(i + 2);
+            if (i + 1 < splitted.size()) {
+                body += splitted.get(i + 1);
             }
-            if (body.contains("\n")) {
-                api.statement = body.substring(body.indexOf("\n") + 1);
-                body = body.substring(0, body.indexOf("\n"));
+            if (body.contains(TextFile.TERMINATOR())) {
+                api.statement = body.substring(body.indexOf(TextFile.TERMINATOR()) + 1);
+                body = body.substring(0, body.indexOf(TextFile.TERMINATOR()));
             }
             //it must be a new line after interface header
             String[] options =  body.split("\\|");
+
             if (options.length >= 1) {
 
                 String METHOD = "GET";
@@ -661,6 +667,7 @@ public class OneApi {
         settings.put("oneapi.secret.key.ttl", Setting.OneApiSecretKeyTTL);
         settings.put("oneapi.secret.key.digit", Setting.OneApiSecretKeyDigit);
         settings.put("oneapi.management.key", Setting.OneApiManagementKey);
+        settings.put("oneapi.ajax.settings", Setting.OneApiAjaxSettings);
 
         return settings;
     }

@@ -390,7 +390,7 @@ class Email(private var title: String) {
     }
 
     def placeData(queryString: String): Email = {
-        placeData(queryString.splitToMap().toRow)
+        placeData(queryString.$split().toRow)
     }
 
     def placeData(row: DataRow): Email = {

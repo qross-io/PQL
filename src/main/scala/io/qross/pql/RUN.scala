@@ -34,7 +34,7 @@ class RUN(val sentence: String) {
                     case "COMMAND" | "SHELL" =>
                         sentence.$process(PQL, express, body => {
                             DataCell(body.takeAfter(m.group(0)).trim().removeQuotes().run(), DataType.ROW)
-                        }, "\"")
+                        })
                     case _ => DataCell.NULL
                 }
             case None =>DataCell.NULL

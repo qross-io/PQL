@@ -3,32 +3,20 @@ package io.qross.pql.test
 import io.qross.ext.TypeExt._
 import io.qross.ext.Console
 import io.qross.jdbc.DataSource
-import io.qross.net.Json
 import io.qross.pql.PQL
 import io.qross.time.{ChronExp, DateTime}
 
 object Enter {
     def main(args: Array[String]): Unit = {
 
-
-        PQL.openFile("/test.sql").place("""{
-                                          |"pagesize":"1000",
-                                          |"source_database_name":"PostgresSQL",
-                                          |"source_connection_name":"postgresql.test",
-                                          |"start_point":"SELECT MIN(id)-1 FROM test.data_test_30000",
-                                          |"end_point":"SELECT MAX(id) FROM test.data_test_30000",
-                                          |"block_sentence":"SELECT * FROM test.data_test_30000 WHERE id>@{id} AND id<=@{id};",
-                                          |"destination_database_name":"MySQL",
-                                          |"destination_connection_name":"mysql.test",
-                                          |"prep_sentence":"delete from test.data_test1_30000;",
-                                          |"batch_sentence":"insert into test.data_test1_30000(ID,NAME,AGE,ADDRESS,SALARY,JOIN_DATE) values(?,?,?,?,?,?);"
-                                          |}""".stripMargin).run()
+        ChronExp("HOURLY 0/5").getNextTickOrNone(DateTime.now).print
 
         System.exit(0)
 
-        PQL.openFile("c:/io.Qross/Keeper/src/main/resources/pql/metadata.sql")
-            .place("prefix=qross")
-            .run()
+//        PQL.openFile("/api/test.sql").place("module_name=数据集成&project_name=数据计算").placeDefault("module_name=&parent=0").run().print
+
+        PQL.recognizeParametersInEmbedded("python datax.py --json <%=FILE VOYAGE '''@QROSS_HOME/pql/datax.json''' WITH '#{params}' TO '''@QROSS_HOME/temp/$task_id/$(action_id).json''' %>")
+                .forEach(println)
 
         System.exit(0)
 

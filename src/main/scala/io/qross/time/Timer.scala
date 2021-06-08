@@ -2,8 +2,6 @@ package io.qross.time
 
 import java.util.Calendar
 
-import scala.util.Random
-
 object Timer {
 
     //sleep to next minute
@@ -36,10 +34,6 @@ object Timer {
     def rest(): Long = {
         sleepToNextSecond()
         System.currentTimeMillis() / 1000
-    }
-
-    def sleepRandom(ms: Int): Unit = {
-        sleep(Random.nextInt(ms))
     }
 
     def sleepToNextSecond(): Unit = {

@@ -7,7 +7,7 @@ apply plugin: "maven-publish"
 apply plugin: 'signing'
 
 group = 'io.qross'
-version = '1.6.0'
+version = '1.5.0'
 sourceCompatibility = 1.8
 archivesBaseName = "pql"
 
@@ -60,8 +60,6 @@ dependencies {
     compile group: 'redis.clients', name: 'jedis', version: '3.3.0'
     compile group: 'com.vladsch.flexmark', name: 'flexmark-all', version: '0.62.2'
     compile group: 'org.yaml', name: 'snakeyaml', version: '1.23'
-
-    //compile group: 'org.postgresql', name: 'postgresql', version: '42.2.18'
 }
 
 //打包时同时打包文档
@@ -143,7 +141,7 @@ publishing {
         maven(MavenPublication) {
             groupId = 'io.qross'
             artifactId = 'pql'
-            version = '1.6.10-SNAPSHOT'
+            version = '1.5.38-SNAPSHOT'
             from components.java
             artifact sourcesJar
             artifact javadocJar

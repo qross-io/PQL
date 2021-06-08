@@ -428,7 +428,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
             if (this.jobId > 0 && JDBC.hasQrossSystem) {
                 val ds = DataSource.QROSS
                 if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_jobs_variables'")) {
-                    ds.executeNonQuery("INSERT INTO qross_jobs_variables (job_id, variable_name, variable_type, variable_value) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE variable_type=?, variable_value=?", jobId, name, value.dataType.typeName, value.value, value.dataType.typeName, value.value)
+                    ds.executeNonQuery("INSERT INTO qross_jobs_variables (job_id, variable_name, variable_type, variable_value) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE variable_type=?, variable_value=?", jobId, name, value.dataType, value.value, value.dataType.typeName, value.value)
                 }
                 ds.close()
             }
@@ -481,19 +481,17 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
                 val ds = DataSource.QROSS
                 if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_jobs_variables'")) {
                     val row = ds.executeDataRow("SELECT variable_type, variable_value FROM qross_jobs_variables WHERE job_id=? AND variable_name=?", jobId, name)
-                    if (row.nonEmpty) {
-                        cell = DataCell(row.getString("variable_type") match {
-                            case "TEXT" => row.getString("variable_value")
-                            case "INTEGER" => row.getLong("variable_value")
-                            case "DECIMAL" => row.getDouble("variable_value")
-                            case "BOOLEAN" => row.getBoolean("variable_value")
-                            case "DATETIME" => row.getDateTime("variable_value")
-                            case "ARRAY" => Json.fromText(row.getString("variable_value")).parseJavaList("/")
-                            case "ROW" => Json.fromText(row.getString("variable_value")).parseRow("/")
-                            case "TABLE" => Json.fromText(row.getString("variable_value")).parseTable("/")
-                            case _ => row.getString("variable_value")
-                        }, new DataType(row.getString("variable_type")))
-                    }
+                    cell = DataCell(row.getString("variable_type") match {
+                                    case "TEXT" => row.getString("variable_value")
+                                    case "INTEGER" => row.getLong("variable_value")
+                                    case "DECIMAL" => row.getDouble("variable_value")
+                                    case "BOOLEAN" => row.getBoolean("variable_value")
+                                    case "DATETIME" => row.getDateTime("variable_value")
+                                    case "ARRAY" => Json.fromText(row.getString("variable_value")).parseJavaList("/")
+                                    case "ROW" => Json.fromText(row.getString("variable_value")).parseRow("/")
+                                    case "TABLE" => Json.fromText(row.getString("variable_value")).parseTable("/")
+                                    case _ => row.getString("variable_value")
+                                }, new DataType(row.getString("variable_type")))
                 }
                 ds.close()
             }
@@ -552,7 +550,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
                 place(Json.fromText(queryOrJsonString).parseRow("/"))
             }
             else if (queryOrJsonString.contains("=")) {
-                place(queryOrJsonString.replaceArguments(root.variables).splitToMap().map(pair => (pair._1.trim(), pair._2.decodeURL())))
+                place(queryOrJsonString.replaceArguments(root.variables).$split().map(pair => (pair._1.trim(), pair._2.decodeURL())))
             }
         }
         this
@@ -561,7 +559,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
     //设置默认值, 变量没有时才赋值
     def placeDefault(queryString: String): PQL = {
         if (queryString != "") {
-            val map = queryString.replaceArguments(root.variables).splitToMap().map(pair => (pair._1.trim(), java.net.URLDecoder.decode(pair._2, Global.CHARSET)))
+            val map = queryString.replaceArguments(root.variables).$split().map(pair => (pair._1.trim(), java.net.URLDecoder.decode(pair._2, Global.CHARSET)))
             this.SQL = this.SQL.replaceArguments(map)
             map.foreach(pair => {
                 if (!root.containsVariable(pair._1)) {
@@ -605,7 +603,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
                 set(Json.fromText(queryOrJsonString).parseRow("/"))
             }
             else {
-                queryOrJsonString.splitToMap().foreach(pair => {
+                queryOrJsonString.$split().foreach(pair => {
                     root.setVariable(pair._1.trim(), pair._2.decodeURL())
                 })
             }
@@ -824,10 +822,8 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
         val parameters = new util.TreeSet[String]()
         val excluding = new mutable.HashSet[String]
 
-        val SQL = this.originalSQL.replaceAll("--.+?\\r?\\n", "").replaceAll("(?s)/\\*.+?\\*/", "")
-
         (Solver.ARGUMENTS ++ Solver.USER_VARIABLE)
-            .flatMap(_.findAllMatchIn(SQL))
+            .flatMap(_.findAllMatchIn(this.originalSQL.replaceAll("--.+?\\r?\\n", "").replaceAll("(?s)/\\*.+?\\*/", "")))
             .foreach(m => parameters.add(m.group(1).removeQuotes().toLowerCase()))
 
         this.USER$FUNCTIONS.values.foreach(f => {
@@ -835,8 +831,6 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
         })
 
         excluding ++= recognizeExcludingParameters(root.statements)
-
-        excluding --= """(?i)\$(\w+)\s+IS\s+UNDEFINED""".r.findAllMatchIn(SQL).map(_.group(1).toLowerCase())
 
         parameters.removeAll(excluding.asJava)
 

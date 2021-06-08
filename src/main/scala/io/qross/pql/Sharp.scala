@@ -716,7 +716,7 @@ object Sharp {
         if (arg.valid) {
             if (arg.isJavaList) {
                 val delimiter = arg.asList[String]
-                data.asText.splitToMap(delimiter.head, delimiter.last).toRow.toDataCell(DataType.ROW)
+                data.asText.$split(delimiter.head, delimiter.last).toRow.toDataCell(DataType.ROW)
             }
             else {
                 val delimiter = arg.asText

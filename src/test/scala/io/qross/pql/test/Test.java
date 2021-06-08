@@ -1,20 +1,15 @@
 package io.qross.pql.test;
 
 import io.qross.app.Marker;
-import io.qross.app.OneApi;
-import io.qross.app.Setting;
 import io.qross.ext.Console;
 import io.qross.ext.TypeExt;
-import io.qross.fs.ResourceDir;
-import io.qross.fs.ResourceFile;
 import io.qross.jdbc.DataAccess;
+import io.qross.net.Json;
+import io.qross.setting.Properties;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static io.qross.app.OneApi.readAPIs;
 
 public class Test {
 
@@ -43,7 +38,18 @@ public class Test {
 
     public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException {
 
-        readAPIs("/api", ResourceFile.open("/api/report.sql").content());
+        Object x = null;
+       Object y = "";
+
+        Console.writeLine((String) x);
+
+        System.exit(0);
+
+        Pattern p = Pattern.compile("(?<!/)/([#a-z0-9%,.\\s]+):([\\s\\S]*?[^<])/(?![a-z]+>)", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher("hello/gray:因为参数的不同，才能让模板生成不同的逻辑。在配置工作流时需要配置这些参数，请一定配置完整。当模板逻辑改变时会<a onclick+=\"/api/system/command-template-parameters-reload?template_id=&(id)\" onclick+success-=\"reload: #Parameters\" confirm-text=\"确定要重新识别逻辑中的所有参数吗？\">自动获取逻辑中参数</a>，可以在此基础上再进行编辑。双击参数的某一项开始编辑，编辑完按回车自动保存。在最后一行空白行可以添加新的参数，输入完成后点击“添加”按钮完成添加。/world");
+        if (m.find()) {
+            Console.writeLine(m.group(0));
+        }
 
         System.exit(0);
 

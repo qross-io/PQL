@@ -29,3 +29,8 @@ keeper/
 tasks/
 temp/
 worker/
+
+src/test/
+/src/test/
+src/test
+/src/test/

@@ -1,5 +1,9 @@
 DEBUG ON;
 
+#{select};
+
+EXIT CODE 0;
+
 REQUEST JSON API 'https://oapi.dingtalk.com/robot/send?access_token=c6aaa20d244da5dfd00da55b329a1af6379be431e63486214bc66a103bcf1480'
     METHOD 'POST'
     DATA {

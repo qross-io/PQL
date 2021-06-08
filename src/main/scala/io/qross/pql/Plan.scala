@@ -72,7 +72,7 @@ class Plan {
             Json(args).parseMap("/")
         }
         else if (args != "") {
-            args.removeQuotes().splitToMap()
+            args.removeQuotes().$split()
         }
         else {
             Map[String, String]()
@@ -112,7 +112,7 @@ class Plan {
             }).toMap
         }
         else {
-            args.removeQuotes().splitToMap()
+            args.removeQuotes().$split()
         }
     }
 

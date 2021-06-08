@@ -26,47 +26,43 @@ object DataType extends Enumeration {
 
     //database data type name
     def ofTypeName(typeName: String, className: String = ""): DataType = {
-        if (typeName != null) {
-            new DataType(
-                typeName.takeBeforeIfContains(" ").toUpperCase match {
-                    case "TEXT" | "VARCHAR" | "CHAR" | "NVARCHAR" | "TINYTEXT" | "SMALLTEXT" | "MEDIUMTEXT" | "LONGTEXT" | "STRING" | "NVARCHAR" | "NCHAR" => "TEXT"
-                    case "INT" | "INTEGER" | "BIGINT" | "TINYINT" | "SMALLINT" | "MEDIUMINT" | "LONG" | "SHORT" => "INTEGER"
-                    case "FLOAT" | "DOUBLE" | "DECIMAL" | "REAL" | "NUMBER" | "NUMERIC" | "MONEY" | "SMALLMONEY" => "DECIMAL"
-                    case "DATE" | "TIME" | "DATETIME" | "TIMESTAMP" | "YEAR" => "DATETIME"
-                    case "BIT" | "BOOL" | "BOOLEAN" => "BOOLEAN"
-                    case "MAP" | "ROW" | "OBJECT" | "DATAROW" => "ROW"
-                    case "TABLE" | "DATATABLE" => "TABLE"
-                    case "NULL" | "EMPTY" => "NULL"
-                    case "JSON" => "JSON"
-                    case "BLOB" | "TINYBLOB" | "MEDIUMBLOB" | "VARBINARY" | "BINARY" => "BLOB"
-                    case _ => DataType.ofClassName(className).typeName
-                }, typeName.toUpperCase(), className)
-        }
-        else {
-            DataType.ofClassName(className)
-        }
+        new DataType(
+            typeName.takeBeforeIfContains(" ").toUpperCase match {
+                case "TEXT" | "VARCHAR" | "CHAR" | "NVARCHAR" | "TINYTEXT" | "SMALLTEXT" | "MEDIUMTEXT" | "LONGTEXT" | "STRING" | "NVARCHAR" | "NCHAR" => "TEXT"
+                case "INT" | "INTEGER" | "BIGINT" | "TINYINT" | "SMALLINT" | "MEDIUMINT" | "LONG" | "SHORT" => "INTEGER"
+                case "FLOAT" | "DOUBLE" | "DECIMAL" | "REAL" | "NUMBER" | "NUMERIC" | "MONEY" | "SMALLMONEY" => "DECIMAL"
+                case "DATE" | "TIME" | "DATETIME" | "TIMESTAMP" | "YEAR" => "DATETIME"
+                case "BIT" | "BOOL" | "BOOLEAN" => "BOOLEAN"
+                case "MAP" | "ROW" | "OBJECT" | "DATAROW" => "ROW"
+                case "TABLE" | "DATATABLE" => "TABLE"
+                case "NULL" | "EMPTY" => "NULL"
+                case "JSON" => "JSON"
+                case "BLOB" | "TINYBLOB" | "MEDIUMBLOB" | "VARBINARY" | "BINARY" => "BLOB"
+                case _ =>
+                    if (className != "") {
+                        DataType.ofClassName(className).typeName
+                    }
+                    else {
+                        "NULL"
+                    }
+            }, typeName.toUpperCase(), className)
     }
 
     //从java类名判断
     // java class name
     def ofClassName(className: String): DataType = {
         val firstName = {
-            if (className != null && className != "") {
-                if (className.contains(".")) {
-                    className.substring(className.lastIndexOf(".") + 1)
-                }
-                else {
-                    className
-                }
+            if (className.contains(".")) {
+                className.substring(className.lastIndexOf(".") + 1)
             }
             else {
-                "TEXT"
+                className
             }
         }
 
         new DataType(
              firstName.toLowerCase() match {
-                    case "string" | "object" | "text" => "TEXT"
+                    case "string" | "object" => "TEXT"
                     case "bit" | "int" | "integer" | "bigint" | "biginteger" | "long" | "timestamp" => "INTEGER"
                     case "float" | "double" | "bigdecimal" | "decimal" => "DECIMAL"
                     case "boolean" => "BOOLEAN"
