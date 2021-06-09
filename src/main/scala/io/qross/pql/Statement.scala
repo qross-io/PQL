@@ -1,6 +1,6 @@
 package io.qross.pql
 
-import io.qross.core.{DataCell, DataRow}
+import io.qross.core.{DataCell, DataRow, DataType}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -19,6 +19,10 @@ class Statement(val caption: String, val sentence: String = "", val instance: An
             case cell: DataCell => this.variables.set(name, cell)
             case _ => this.variables.set(name, value)
         }
+    }
+
+    def setVariable(name: String, value: Any, dataType: DataType): Unit = {
+        this.variables.set(name, value, dataType)
     }
 
     def addStatement(statement: Statement): Unit = this.statements += statement

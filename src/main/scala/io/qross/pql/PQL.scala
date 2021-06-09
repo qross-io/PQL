@@ -261,6 +261,8 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
     //与 Keeper 相关的调度作业 id，用于保存仅作用于 job 范围的变量
     private[pql] var jobId = 0
 
+    val ARGUMENTS = new DataRow()
+
     //开始解析
     private def parseAll(): Unit = {
 
@@ -503,32 +505,35 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
     //传递参数和数据, Spring Boot的httpRequest参数
     def place(name: String, value: String): PQL = {
         this.SQL = this.SQL.replaceArguments(Map[String, String](name -> value))
-
-        root.setVariable(name, value)
+        ARGUMENTS.set(name, value, DataType.TEXT)
+        root.setVariable(name, value, DataType.TEXT)
         this
     }
 
     def place(args: DataRow): PQL = {
         if (args != null && args.nonEmpty) {
             this.SQL = this.SQL.replaceArguments(args)
+            ARGUMENTS.combine(args)
             root.variables.combine(args)
         }
         this
     }
 
     def place(args: (String, String)*): PQL = {
-        this.SQL = this.SQL.replaceArguments(args.toMap[String, String])
+        this.SQL = this.SQL.replaceArguments(args: _*)
 
         args.foreach(pair => {
-            root.setVariable(pair._1, pair._2)
+            ARGUMENTS.set(pair._1, pair._2, DataType.TEXT)
+            root.setVariable(pair._1, pair._2, DataType.TEXT)
         })
         this
     }
 
     def place(map: java.util.Map[String, Object]): PQL = {
-        this.SQL = this.SQL.replaceArguments(map.asScala.map(kv => (kv._1, kv._2.toString)).toMap)
+        this.SQL = this.SQL.replaceArguments(map)
 
         map.keySet().forEach(key => {
+            ARGUMENTS.set(key, map.get(key))
             root.setVariable(key, map.get(key))
         })
         this
@@ -538,7 +543,8 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
         this.SQL = this.SQL.replaceArguments(args)
 
         args.foreach(pair => {
-            root.setVariable(pair._1, pair._2)
+            ARGUMENTS.set(pair._1, pair._2, DataType.TEXT)
+            root.setVariable(pair._1, pair._2, DataType.TEXT)
         })
 
         this
@@ -550,22 +556,39 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
                 place(Json.fromText(queryOrJsonString).parseRow("/"))
             }
             else if (queryOrJsonString.contains("=")) {
-                place(queryOrJsonString.replaceArguments(root.variables).$split().map(pair => (pair._1.trim(), pair._2.decodeURL())))
+                place(queryOrJsonString.$split().map(pair => (pair._1.trim(), pair._2.decodeURL())))
             }
         }
         this
     }
 
     //设置默认值, 变量没有时才赋值
-    def placeDefault(queryString: String): PQL = {
-        if (queryString != "") {
-            val map = queryString.replaceArguments(root.variables).$split().map(pair => (pair._1.trim(), java.net.URLDecoder.decode(pair._2, Global.CHARSET)))
-            this.SQL = this.SQL.replaceArguments(map)
-            map.foreach(pair => {
-                if (!root.containsVariable(pair._1)) {
-                    root.setVariable(pair._1, pair._2)
-                }
-            })
+    def placeDefault(queryOrJsonString: String): PQL = {
+        if (queryOrJsonString != "") {
+            if (queryOrJsonString.bracketsWith("{", "}")) {
+                val row = Json.fromText(queryOrJsonString).parseRow("/")
+                this.SQL = this.SQL.replaceArguments(row)
+                row.fields.foreach(field => {
+                    if (!ARGUMENTS.contains(field)) {
+                        ARGUMENTS.set(field, row.getCell(field))
+                    }
+                    if (!root.containsVariable(field)) {
+                        root.setVariable(field, row.getCell(field))
+                    }
+                })
+            }
+            else {
+                val map = queryOrJsonString.$split().map(pair => (pair._1.trim(), pair._1.decodeURL()))
+                this.SQL = this.SQL.replaceArguments(map)
+                map.foreach(pair => {
+                    if (!ARGUMENTS.contains(pair._1)) {
+                        ARGUMENTS.set(pair._1, pair._2, DataType.TEXT)
+                    }
+                    if (!root.containsVariable(pair._1)) {
+                        root.setVariable(pair._1, pair._2, DataType.TEXT)
+                    }
+                })
+            }
         }
         this
     }
@@ -592,7 +615,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
 
     def set(args: Map[String, String]): PQL = {
         args.foreach(pair => {
-            root.setVariable(pair._1, pair._2)
+            root.setVariable(pair._1, pair._2, DataType.TEXT)
         })
         this
     }
@@ -604,7 +627,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
             }
             else {
                 queryOrJsonString.$split().foreach(pair => {
-                    root.setVariable(pair._1.trim(), pair._2.decodeURL())
+                    root.setVariable(pair._1.trim(), pair._2.decodeURL(), DataType.TEXT)
                 })
             }
         }

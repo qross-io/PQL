@@ -341,7 +341,7 @@ case class Syntax(caption: String) {
                         else {
                             $BLANK.findFirstIn(sentence) match {
                                 case Some(blank) =>
-                                    plan += phrase -> sentence.takeBefore(blank).trim()
+                                    plan += phrase -> sentence.takeBefore(blank).trim().restoreChars(chars)
                                     sentence = sentence.takeAfter(blank).trim()
                                 case None =>
                                     if (sentence != "") {

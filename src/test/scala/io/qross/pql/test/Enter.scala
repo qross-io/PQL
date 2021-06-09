@@ -9,7 +9,7 @@ import io.qross.time.{ChronExp, DateTime}
 object Enter {
     def main(args: Array[String]): Unit = {
 
-        ChronExp("HOURLY 0/5").getNextTickOrNone(DateTime.now).print
+        PQL.openFile("/sql/args.sql").place("""source_database_name=MySQL&source_connection_name=mysql.test&source_where=&source_columns="id","name","age","address","salary"&destination_connection_name=test&source_splitPk=&source_table=data_test1_30000&source_ddl=&target_database_name=PostgreSQL&target_connection_name=postgresql.test&target_preSql=&target_columns="id","name","age","address","salary"&target_postSql=&target_table=test.data_test_30000""").run()
 
         System.exit(0)
 

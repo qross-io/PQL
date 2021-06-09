@@ -137,6 +137,9 @@ object GlobalVariable {
 }
 
 object GlobalVariableDeclaration {
+
+    def ARGUMENTS(PQL: PQL): DataCell = DataCell(PQL.ARGUMENTS, DataType.ROW)
+
     def TODAY(PQL: PQL): DataCell = DataCell(DateTime.now.setZeroOfDay(), DataType.DATETIME)
     def YESTERDAY(PQL: PQL): DataCell = DataCell(DateTime.now.minusDays(1).setZeroOfDay(), DataType.DATETIME)
     def TOMORROW(PQL: PQL): DataCell = DataCell(DateTime.now.plusDays(1).setZeroOfDay(), DataType.DATETIME)

@@ -62,10 +62,10 @@ class FILE(val sentence: String) {
                 case "VOYAGE" =>
                     val pql = new PQL(new FileReader(path).readToEnd, embedded = true, DataHub.DEFAULT)
                     if (plan.contains("WITH")) {
-                        pql.place(plan.oneArgs("WITH"))
+                        pql.place(plan.mapArgs("WITH"))
                     }
                     if (plan.contains("TO")) {
-                        new FileWriter(plan.oneArgs("TO"), true).write(pql.run().asInstanceOf[String])
+                        new FileWriter(plan.oneArgs("TO"), true).write(pql.run().asInstanceOf[String]).close()
                     }
                     DataCell(plan.oneArgs("TO"), DataType.TEXT)
                 case "DOWNLOAD" => DataCell(path.download()) //, DataType.BOOLEAN
