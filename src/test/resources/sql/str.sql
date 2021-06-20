@@ -7,8 +7,7 @@ DEBUG ON;
 
 -- INVOKE io.qross.pql.test.Test.HELLO(10);
 
-SET $connection_string := "jdbc:mysql://localhost:3306/qross?user=root&password=diablo&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true";
-RUN SHELL java -jar @RUNNING_DIR!datago-compute-1.0.0.jar -driver "com.mysql.cj.jdbc.Driver" -url $connection_string;
+
 
 
 SET $json := '{ "name": "Tom", "age": 18 }';

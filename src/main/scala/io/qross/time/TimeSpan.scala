@@ -1,7 +1,5 @@
 package io.qross.time
 
-import io.qross.time
-
 object TimeSpan {
     implicit class TimeSpan$Long(val milli: Long) {
         def toSeconds: Double = TimeSpan(milli).seconds

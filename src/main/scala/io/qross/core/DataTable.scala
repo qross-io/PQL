@@ -470,6 +470,22 @@ class DataTable() {
         }
     }
 
+    def insertIfNotExists(row: DataRow): DataTable = {
+        var exists = false
+        breakable{
+            for (i <- rows.indices) {
+                if (rows(i).getRow(row.fields: _*).mkString() == row.mkString()) {
+                    exists = true
+                    break
+                }
+            }
+        }
+        if (!exists) {
+            addRow(row)
+        }
+        this
+    }
+
     //按字段添加行, addRow的重载
     def insert(fields: (String, Any)*): DataTable = {
         addRow(new DataRow(fields: _*))
@@ -541,6 +557,57 @@ class DataTable() {
     //按短语句修改 SET A=1, B='2' WHERE C=0 OR D>0
     def update(fragment: String): DataTable = {
         new Fragment(fragment).update(this)
+    }
+
+    def update(values: DataRow): DataTable = {
+        rows.foreach(row => {
+            values.fields.foreach(field => {
+                row.set(field, values.getCell(field))
+            })
+        })
+
+        this
+    }
+
+    def updateIfNull(values: DataRow): DataTable = {
+        rows.foreach(row => {
+            values.fields.foreach(field => {
+                row.get(field) match {
+                    case Some(value) =>
+                        if (value == null) {
+                            row.set(field, values.getCell(field))
+                        }
+                    case None =>
+                }
+            })
+        })
+
+        this
+    }
+
+    def updateIfUndefined(values: DataRow): DataTable = {
+        rows.foreach(row => {
+            values.fields.foreach(field => {
+                if (!row.contains(field)) {
+                    row.set(field, values.getCell(field))
+                }
+            })
+        })
+
+        this
+    }
+
+    def updateIfEmpty(values: DataRow): DataTable = {
+        rows.foreach(row => {
+            values.fields.foreach(field => {
+                val value = row.getString(field)
+                if (value == null || value == "") {
+                    row.set(field, values.getCell(field))
+                }
+            })
+        })
+
+        this
     }
 
     def upsert(filter: DataRow => Boolean)(setValue: DataRow => Unit)(fields: (String, Any)*): DataTable = {
@@ -796,11 +863,22 @@ class DataTable() {
         this
     }
 
+    def mergeNotExists(otherTable: DataTable): DataTable = {
+        val all = rows.map(_.mkString()).toSet
+        otherTable.rows.foreach(row => {
+            if (!all.contains(row.mkString())) {
+                addRow(row)
+            }
+        })
+        otherTable.clear()
+        this
+    }
+
     //可不同结构的表进行结合
     def union(otherTable: DataTable): DataTable = {
         otherTable.fields.foreach(field => {
             if (!columns.contains(field)) {
-                this.fields += field
+                fields += field
             }
         })
         columns ++= otherTable.columns

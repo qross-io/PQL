@@ -5,6 +5,7 @@ import io.qross.ext.Console;
 import io.qross.ext.TypeExt;
 import io.qross.jdbc.DataAccess;
 import io.qross.net.Json;
+import io.qross.setting.Environment;
 import io.qross.setting.Properties;
 
 import java.util.Stack;
@@ -38,10 +39,9 @@ public class Test {
 
     public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException {
 
-        Object x = null;
-       Object y = "";
+        Console.writeLine();
 
-        Console.writeLine((String) x);
+
 
         System.exit(0);
 

@@ -44,7 +44,7 @@ object Global {
 
     def EMAIL_SENDER_PASSWORD: String = Configurations.getOrProperty("EMAIL_SENDER_PASSWORD", "email.sender.password")
 
-    def EMAIL_SENDER_ACCOUNT_AVAILABLED: Boolean = EMAIL_SMTP_HOST != "" && EMAIL_SMTP_HOST != "smtp.domain.com" && EMAIL_SENDER_ACCOUNT != "" && EMAIL_SENDER_ACCOUNT != "user@domain.com"
+    def EMAIL_SENDER_ACCOUNT_AVAILABLE: Boolean = EMAIL_SMTP_HOST != "" && EMAIL_SMTP_HOST != "smtp.domain.com" && EMAIL_SENDER_ACCOUNT != "" && EMAIL_SENDER_ACCOUNT != "user@domain.com"
 
     //for Keeper & Master
     def KEEPER_HTTP_ADDRESS: String = {
@@ -56,8 +56,6 @@ object Global {
         address
     }
     def KEEPER_HTTP_PORT: Int = Configurations.getOrProperty("KEEPER_HTTP_PORT", "keeper.http.port", "7700").toInt
-
-    def EMAIL_KEEPER_EXCEPTION: Boolean = Configurations.getOrProperty("EMAIL_KEEPER_EXCEPTION", "email.keeper.exception").toBoolean(false)
 
     def EMAIL_NOTIFICATION: Boolean = Configurations.getOrProperty("EMAIL_NOTIFICATION", "email.notification").toBoolean(false)
 }

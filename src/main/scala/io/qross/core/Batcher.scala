@@ -1,8 +1,10 @@
 package io.qross.core
 
+import java.util.concurrent.ConcurrentLinkedQueue
+
 import io.qross.jdbc.DataSource
+import io.qross.thread.Cube
 import io.qross.time.Timer
-import io.qross.ext.Output
 
 class Batcher(source: DataSource, sentence: String, dh: DataHub) extends Thread {
 
@@ -16,7 +18,6 @@ class Batcher(source: DataSource, sentence: String, dh: DataHub) extends Thread 
             else
                 !Processer.closed
         ) {
-
             val table: DataTable =
                 if (index == -1) {
                     if (!Pager.DATA.isEmpty) {
@@ -35,14 +36,19 @@ class Batcher(source: DataSource, sentence: String, dh: DataHub) extends Thread 
 
             if (table != null) {
                 dh.AFFECTED_ROWS_OF_LAST_PUT = ds.tableUpdate(sentence, table)
-                dh.TOTAL_AFFECTED_ROWS_OF_RECENT_PUT += dh.AFFECTED_ROWS_OF_LAST_PUT
+                table.clear()
+                if (dh.AFFECTED_ROWS_OF_LAST_PUT > 0) {
+                    dh.TOTAL_AFFECTED_ROWS_OF_RECENT_PUT += dh.AFFECTED_ROWS_OF_LAST_PUT
+                }
+
+                if (dh.debugging) {
+                    println(s"""Transfer Data ${dh.AFFECTED_ROWS_OF_LAST_PUT}, Total Transfer ${dh.TOTAL_AFFECTED_ROWS_OF_RECENT_PUT}.""")
+                }
             }
 
-            Timer.sleep(100)
+            Timer.sleepRandom(50)
         }
 
         ds.close()
-
-        Output.writeMessage("Batcher Thread Exit!")
     }
 }

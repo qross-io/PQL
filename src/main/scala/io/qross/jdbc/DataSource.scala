@@ -377,6 +377,7 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
         map
     }
 
+    //将第一行的每个字段和值生成一个 Map
     def executeHashMap(SQL: String, values: Any*): Map[String, Any] = {
 
         if (DEBUG) {
@@ -409,6 +410,7 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
         map.toMap
     }
 
+    //将第一列和第二列的值生成一个 Map
     def executeDataMap[S, T](SQL: String, values: Any*): Map[S, T] = {
 
         if (DEBUG) {

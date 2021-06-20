@@ -59,7 +59,7 @@ object Patterns {
     val $EXIT: Regex = """(?i)^EXIT(\s+WHEN\s([\s\S]+))?$""".r
     val $EXIT$CODE: Regex = """(?i)^EXIT\s+(CODE|PROCEDURE)\b""".r
     val $CONTINUE: Regex = """(?i)^CONTINUE(\s+WHEN\s([\s\S]+))?$""".r
-    val $SET: Regex = """(?i)^SET\s+([\s\S]+?)(:=|=:)([\s\S]+)$""".r
+    val $SET: Regex = """(?i)^SET\s+([\s\S]+?)(:=|=:)([\s\S]*)$""".r
     val $VAR: Regex = """(?i)^VAR\s+\$[a-z0-9_]""".r
     val $OPEN: Regex = """(?i)^OPEN\s+""".r
     val $SAVE: Regex = """(?i)^SAVE\s+(AS|TO)\s""".r

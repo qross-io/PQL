@@ -1,7 +1,6 @@
 package io.qross.app;
 
 import io.qross.core.DataHub;
-import io.qross.core.DataRow;
 import io.qross.ext.TypeExt;
 import io.qross.fs.ResourceFile;
 import io.qross.net.HttpRequest;
@@ -202,6 +201,16 @@ public class  Voyager extends AbstractTemplateView {
                     });
                     content = content.replace(m.group(0), "");
                 }
+
+                Map<String, Object> args = new HashMap<>(queries);
+                if (!baseArgs.isEmpty()) {
+                    args.putAll(TypeExt.StringExt(String.join(",", baseArgs)).splitToJavaMap("&", "="));
+                }
+                if (!extArgs.isEmpty()) {
+                    args.putAll(Json.fromText(extArgs).parseJavaMap("/"));
+                }
+                content = Solver.Sentence$Solver(content).replaceArguments(args);
+
                 //language holder
                 p = Pattern.compile("#\\s*([a-z0-9-]+(\\.[a-z0-9-]+)*)\\s*#", Pattern.CASE_INSENSITIVE);
                 m = p.matcher(content);
@@ -223,12 +232,13 @@ public class  Voyager extends AbstractTemplateView {
                 try {
                     Object result =
                             new PQL(content, true, new DataHub(Properties.contains(Setting.VoyagerConnection) ? Setting.VoyagerConnection : ""))
-                                    .place(queries)
-                                    .place(String.join("&", baseArgs))
-                                    .place(extArgs)
+                                    .set(args)
                                     .set("request", http.getRequestInfo())
                                     .set(model)
                                     .run();
+//                                    .place(queries)
+//                                    .place(String.join("&", baseArgs))
+//                                    .place(extArgs)
 
                     if (result != null) {
                         content = result.toString();

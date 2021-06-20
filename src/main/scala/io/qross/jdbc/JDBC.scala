@@ -8,18 +8,19 @@ import scala.collection.{immutable, mutable}
 import scala.util.control.Breaks._
 
 object DBType {
-    val MySQL = "mysql"
-    val SQLServer = "sqlserver"
-    val Hive = "hive"
-    val Memory = "sqlite.memory"
-    val SQLite = "sqlite"
-    val Oracle = "oracle"
-    val PostgreSQL = "postgresql"
-    val Impala = "impala"
-    val Spark = "spark"
-    val Presto = "presto"
-    val AnalyticDB = "analyticdb"
-    val Redis = "redis"
+    val MySQL = "MySQL"
+    val SQLServer = "SQL Server"
+    val Hive = "Hive"
+    val Memory = "SQLite.Memory"
+    val SQLite = "SQLite"
+    val Oracle = "Oracle"
+    val PostgreSQL = "PostgreSQL"
+    val Impala = "Impala"
+    val Spark = "Spark"
+    val Presto = "Presto"
+    val AnalyticDB = "AnalyticDB"
+    val Phoenix = "Phoenix"
+    val Redis = "Redis"
 }
 
 object JDBC {
@@ -202,9 +203,10 @@ object JDBC {
             val ds = DataSource.QROSS
             if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_connections'")) {
                 val connection = ds.executeDataRow("SELECT * FROM qross_connections WHERE id=?", id)
-                if (connection.getString("database_name") != "redis") {
+                val databaseType = connection.getString("database_type")
+                if (databaseType != DBType.Redis) {
                     connections.put(connection.getString("connection_name"), new JDBC(
-                        connection.getString("database_name"),
+                        databaseType,
                         connection.getString("connection_string"),
                         connection.getString("jdbc_driver"),
                         connection.getString("username"),

@@ -2,7 +2,7 @@ package io.qross.setting
 
 import io.qross.core.{DataRow, DataType}
 import io.qross.ext.TypeExt._
-import io.qross.jdbc.{DataSource, JDBC}
+import io.qross.jdbc.{DBType, DataSource, JDBC}
 import io.qross.net.Json
 import io.qross.pql.{GlobalFunction, GlobalVariable}
 
@@ -47,9 +47,9 @@ object Configurations {
             if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_connections'")) {
                 ds.executeDataTable("SELECT * FROM qross_connections WHERE owner=0 AND enabled='yes'")
                     .foreach(row => {
-                        val databaseName = row.getString("database_name")
-                        if (databaseName != "redis") JDBC.connections += row.getString("connection_name") -> new JDBC(
-                            databaseName,
+                        val databaseType = row.getString("database_type")
+                        if (databaseType != DBType.Redis) JDBC.connections += row.getString("connection_name") -> new JDBC(
+                            databaseType,
                             row.getString("connection_string"),
                             row.getString("jdbc_driver"),
                             row.getString("username"),
@@ -107,10 +107,10 @@ object Configurations {
             if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_connections'")) {
                 ds.executeDataTable("SELECT * FROM qross_connections WHERE owner=? AND enabled='yes'", userId)
                     .foreach(row => {
-                        val databaseName = row.getString("database_name")
-                        if (databaseName != "redis") {
+                        val databaseType = row.getString("database_type")
+                        if (databaseType != DBType.Redis) {
                             JDBC.connections += row.getString("connection_name") -> new JDBC(
-                                databaseName,
+                                databaseType,
                                 row.getString("connection_string"),
                                 row.getString("jdbc_driver"),
                                 row.getString("username"),

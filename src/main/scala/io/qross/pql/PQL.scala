@@ -430,7 +430,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
             if (this.jobId > 0 && JDBC.hasQrossSystem) {
                 val ds = DataSource.QROSS
                 if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_jobs_variables'")) {
-                    ds.executeNonQuery("INSERT INTO qross_jobs_variables (job_id, variable_name, variable_type, variable_value) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE variable_type=?, variable_value=?", jobId, name, value.dataType, value.value, value.dataType.typeName, value.value)
+                    ds.executeNonQuery("INSERT INTO qross_jobs_variables (job_id, variable_name, variable_type, variable_value) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE variable_type=?, variable_value=?", jobId, name, value.dataType.typeName, value.value, value.dataType.typeName, value.value)
                 }
                 ds.close()
             }
@@ -483,17 +483,19 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
                 val ds = DataSource.QROSS
                 if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_jobs_variables'")) {
                     val row = ds.executeDataRow("SELECT variable_type, variable_value FROM qross_jobs_variables WHERE job_id=? AND variable_name=?", jobId, name)
-                    cell = DataCell(row.getString("variable_type") match {
-                                    case "TEXT" => row.getString("variable_value")
-                                    case "INTEGER" => row.getLong("variable_value")
-                                    case "DECIMAL" => row.getDouble("variable_value")
-                                    case "BOOLEAN" => row.getBoolean("variable_value")
-                                    case "DATETIME" => row.getDateTime("variable_value")
-                                    case "ARRAY" => Json.fromText(row.getString("variable_value")).parseJavaList("/")
-                                    case "ROW" => Json.fromText(row.getString("variable_value")).parseRow("/")
-                                    case "TABLE" => Json.fromText(row.getString("variable_value")).parseTable("/")
-                                    case _ => row.getString("variable_value")
-                                }, new DataType(row.getString("variable_type")))
+                    if (row.nonEmpty) {
+                        cell = DataCell(row.getString("variable_type") match {
+                            case "TEXT" => row.getString("variable_value")
+                            case "INTEGER" => row.getLong("variable_value")
+                            case "DECIMAL" => row.getDouble("variable_value")
+                            case "BOOLEAN" => row.getBoolean("variable_value")
+                            case "DATETIME" => row.getDateTime("variable_value")
+                            case "ARRAY" => Json.fromText(row.getString("variable_value")).parseJavaList("/")
+                            case "ROW" => Json.fromText(row.getString("variable_value")).parseRow("/")
+                            case "TABLE" => Json.fromText(row.getString("variable_value")).parseTable("/")
+                            case _ => row.getString("variable_value")
+                        }, new DataType(row.getString("variable_type")))
+                    }
                 }
                 ds.close()
             }
@@ -556,7 +558,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
                 place(Json.fromText(queryOrJsonString).parseRow("/"))
             }
             else if (queryOrJsonString.contains("=")) {
-                place(queryOrJsonString.$split().map(pair => (pair._1.trim(), pair._2.decodeURL())))
+                place(queryOrJsonString.splitToMap().map(pair => (pair._1.trim(), pair._2.decodeURL())))
             }
         }
         this
@@ -578,7 +580,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
                 })
             }
             else {
-                val map = queryOrJsonString.$split().map(pair => (pair._1.trim(), pair._1.decodeURL()))
+                val map = queryOrJsonString.splitToMap().map(pair => (pair._1.trim(), pair._1.decodeURL()))
                 this.SQL = this.SQL.replaceArguments(map)
                 map.foreach(pair => {
                     if (!ARGUMENTS.contains(pair._1)) {
@@ -626,7 +628,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
                 set(Json.fromText(queryOrJsonString).parseRow("/"))
             }
             else {
-                queryOrJsonString.$split().foreach(pair => {
+                queryOrJsonString.splitToMap().foreach(pair => {
                     root.setVariable(pair._1.trim(), pair._2.decodeURL(), DataType.TEXT)
                 })
             }
@@ -855,10 +857,13 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
 
         excluding ++= recognizeExcludingParameters(root.statements)
 
+        excluding --= """(?i)\$(\w+)\s+IS\s+UNDEFINED""".r.findAllMatchIn(SQL).map(_.group(1).toLowerCase())
+
         parameters.removeAll(excluding.asJava)
 
         parameters
     }
+
 
     //运行并返回最多一个结果, 一般用在全局函数体中
     def call(): DataCell = {

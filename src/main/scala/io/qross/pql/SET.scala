@@ -33,7 +33,13 @@ class SET(val declare: String, val symbol: String, val expression: String) {
         //5. 变量间直接赋值 - 是变量格式(有$前缀)且是存在于变量列表中的变量 - 直接赋值
         //6. 数学表达式 - 其他 - 解析函数和变量然后求值，出错则抛出异常
 
-        val result = expression.$compute(PQL)
+        val result = {
+            if (expression != "") {
+                expression.$compute(PQL)
+            } else {
+                DataCell.UNDEFINED
+            }
+        }
 
 //        if (variables.length == 1 && PQL.containsVariable(variables(0))) {
 //            PQL.updateVariable(variables.head, result)

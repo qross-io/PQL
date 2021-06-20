@@ -2,13 +2,14 @@ package io.qross.pql
 
 import java.util
 
-import io.qross.core.{DataCell, DataRow, DataType}
+import io.qross.core.{DataCell, DataRow, DataTable, DataType}
 import io.qross.exception.{SharpDataExceptionException, SharpInapplicableLinkNameException, SharpLinkArgumentException}
 import io.qross.ext.TypeExt._
 import io.qross.fql.Fragment
 import io.qross.net.Json
 import io.qross.pql.Patterns._
 import io.qross.pql.Solver._
+import io.qross.script.Script
 import io.qross.security.{Base64, MD5}
 import io.qross.setting.Global
 import io.qross.time.ChronExp
@@ -716,7 +717,7 @@ object Sharp {
         if (arg.valid) {
             if (arg.isJavaList) {
                 val delimiter = arg.asList[String]
-                data.asText.$split(delimiter.head, delimiter.last).toRow.toDataCell(DataType.ROW)
+                data.asText.splitToMap(delimiter.head, delimiter.last).toRow.toDataCell(DataType.ROW)
             }
             else {
                 val delimiter = arg.asText
@@ -1773,21 +1774,46 @@ object Sharp {
         }
     }
 
+    def INSERT$IF$NOT$EXISTS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid && (arg.isTable || arg.isRow)) {
+            DataCell(data.asTable.merge(arg.asTable), DataType.TABLE)
+        }
+        else {
+            throw SharpLinkArgumentException.occur("INSERT IF NOT EXISTS", origin)
+        }
+    }
+
     def VALUES(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.isJavaList && arg.isJavaList) {
-
-                val fields = data.asJavaList
-                val values = arg.asJavaList
-                if (fields.size() == values.size()) {
-                    val row = new DataRow()
-                    for (i <- 0 until fields.size()) {
-                        row.set(fields.get(i).toString, values.get(i))
+            if (data.isJavaList) {
+                if (arg.isJavaList) {
+                    val fields = data.asJavaList
+                    val values = arg.asJavaList
+                    if (fields.size() == values.size()) {
+                        val row = new DataRow()
+                        for (i <- 0 until fields.size()) {
+                            row.set(fields.get(i).toString, values.get(i))
+                        }
+                        DataCell(row, DataType.ROW)
                     }
-                    DataCell(row, DataType.ROW)
+                    else {
+                        throw new SharpLinkArgumentException("Column count doesn't match value count: VALUES")
+                    }
+                }
+                else if (arg.isTable) {
+                    val fields = data.asJavaList
+                    val table = new DataTable()
+                    arg.asTable.rows.foreach(group => {
+                        val row = new DataRow()
+                        for (i <- 0 until fields.size()) {
+                            row.set(fields.get(i).toString, group.getCell(i))
+                        }
+                        table.addRow(row)
+                    })
+                    DataCell(table, DataType.TABLE)
                 }
                 else {
-                    throw new SharpLinkArgumentException("Column count doesn't match value count: VALUES")
+                    throw SharpLinkArgumentException.occur("VALUES", origin)
                 }
             }
             else {
@@ -1842,6 +1868,9 @@ object Sharp {
 
     def UPDATE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
+            if (arg.isRow) {
+                data.asTable.update(arg.asRow).toDataCell(DataType.TABLE)
+            }
             if (arg.isText) {
                 data.asTable.update(arg.asText).toDataCell(DataType.TABLE)
             }
@@ -1851,6 +1880,48 @@ object Sharp {
         }
         else {
             throw SharpLinkArgumentException.occur("UPDATE", origin)
+        }
+    }
+
+    def UPDATE$IF$NULL(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isTable && arg.valid) {
+            if (arg.isRow) {
+                DataCell(data.asTable.updateIfNull(arg.asRow), DataType.TABLE)
+            }
+            else {
+                throw SharpLinkArgumentException.occur("UPDATE IF NULL", origin)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("UPDATE IF NULL", origin)
+        }
+    }
+
+    def UPDATE$IF$EMPTY(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isTable && arg.valid) {
+            if (arg.isRow) {
+                DataCell(data.asTable.updateIfEmpty(arg.asRow), DataType.TABLE)
+            }
+            else {
+                throw SharpLinkArgumentException.occur("UPDATE IF EMPTY", origin)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("UPDATE IF EMPTY", origin)
+        }
+    }
+
+    def UPDATE$IF$UNDEFINED(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isTable && arg.valid) {
+            if (arg.isRow) {
+                DataCell(data.asTable.updateIfUndefined(arg.asRow), DataType.TABLE)
+            }
+            else {
+                throw SharpLinkArgumentException.occur("UPDATE IF UNDEFINED", origin)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("UPDATE IF UNDEFINED", origin)
         }
     }
 
@@ -1942,6 +2013,7 @@ object Sharp {
     }
 
     /* ---------- DataRow ---------- */
+
     def SET(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid && arg.isRow) {
             if (data.isRow) {
@@ -2278,6 +2350,18 @@ object Sharp {
     def DELIMIT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             data.asList[String].delimit(arg.asText).toRow.toDataCell(DataType.ROW)
+        }
+        else {
+            throw SharpLinkArgumentException.occur(s"DELIMIT", origin)
+        }
+    }
+
+    def MAP(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            val template = arg.asText
+            data.asJavaList.asScala.map(item => {
+                template.replace("#item", item.toString).eval().value
+            }).asJava.toDataCell(DataType.ARRAY)
         }
         else {
             throw SharpLinkArgumentException.occur(s"DELIMIT", origin)
@@ -2686,6 +2770,7 @@ object SharpLink {
             "MINUS" -> Set[String]("YEAR", "YEARS", "MONTH", "MONTHS", "DAY", "DAYS", "HOUR", "HOURS", "MINUTE", "MINUTES", "SECOND", "SECONDS", "MILLI", "MILLIS", "MICRO", "MICROS", "NANO", "NANOS"),
             "INSERT" -> Set[String]("VALUES"),
             "INSERT$IF$EMPTY" -> Set[String]("VALUES"),
+            "INSERT$IF$NOT$EXISTS" -> Set[String]("VALUES"),
             "TURN" -> Set[String]("AND"),
             "IF$ZERO" -> Set[String]("ELSE"),
             "IF$NOT$ZERO" -> Set[String]("ELSE"),
@@ -2843,7 +2928,7 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
 
     def solve(PQL: PQL): DataCell = {
         if (argument != "") {
-            if ("""(?i),|\sAS\s|^\*$""".r.test(argument)) {
+            if ("""(?i)=|,|\sAS\s|^\*$""".r.test(argument)) {
                 //SET或SELECT或VALUES
                 if (argument.contains("=")) {
                     val row = new DataRow()
@@ -2859,6 +2944,22 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
                             }
                         })
                     DataCell(row, DataType.ROW)
+                }
+                else if (argument.contains("),(")) {
+                    //VALUES 中多项值
+                    val table = new DataTable()
+                    argument
+                        .$trim("(", ")")
+                        .split("\\),\\(")
+                        .map(group => {
+                            val row = new DataRow()
+                            val values = group.split(",").map(item => item.$sharp(PQL).value)
+                            for (i <- values.indices) {
+                                row.set("$" + i, values(i))
+                            }
+                            table.addRow(row)
+                        })
+                    DataCell(table, DataType.TABLE)
                 }
                 else {
                     //SELECT/FIND/VALUES

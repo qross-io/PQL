@@ -36,7 +36,7 @@ class DataRow() {
         this()
 
         for ((k, v) <- items) {
-            this.set(k, v)
+            set(k, v)
         }
     }
 
@@ -105,25 +105,22 @@ class DataRow() {
     }
 
     def foreach(callback: (String, Any) => Unit): Unit = {
-        for ((k, v) <- this.values) {
+        for ((k, v) <- values) {
             callback(k, v)
         }
     }
 
     def get(fieldName: String): Option[Any] = {
-        val name = this.getFieldName(fieldName).getOrElse("")
-        if (name != "") {
-            this.values.get(name)
-        }
-        else {
-            None
+        getFieldName(fieldName) match {
+            case Some(name) => values.get(name)
+            case None => None
         }
     }
 
     //by index
     def get(index: Int): Option[Any] = {
-        if (index < this.values.size) {
-            this.values.get(this.fields(index))
+        if (index < values.size) {
+            values.get(fields(index))
         }
         else {
             None
@@ -357,17 +354,25 @@ class DataRow() {
         }
     }
 
+    def getRow(fields: String*): DataRow = {
+        val row = new DataRow()
+        fields.foreach(field => {
+            row.set(field, getCell(field))
+        })
+        row
+    }
+
     def getFields: List[String] = fields.toList
     def getDataTypes: List[DataType] = columns.values.toList
     def getValues[T]: List[T] = values.values.map(_.asInstanceOf[T]).toList
     def getFieldName(fieldName: String): Option[String] = {
-        if (this.columns.contains(fieldName)) {
+        if (columns.contains(fieldName)) {
             Some(fieldName)
         }
         else {
             var name = ""
             breakable {
-                for (field <- this.fields) {
+                for (field <- fields) {
                     if (field.equalsIgnoreCase(fieldName)) {
                         name = field
                         break
@@ -399,12 +404,14 @@ class DataRow() {
     def nonEmpty: Boolean = fields.nonEmpty
 
     def combine(queryOrJsonString: String): DataRow = {
-        if (queryOrJsonString.bracketsWith("{", "}")) {
-            combine(Json.fromText(queryOrJsonString).parseRow("/"))
-        }
-        else if (queryOrJsonString.contains("=")) {
-            for ((key, value) <- queryOrJsonString.$split()) {
-                set(key, value, DataType.TEXT)
+        if (queryOrJsonString != null) {
+            if (queryOrJsonString.bracketsWith("{", "}")) {
+                combine(Json.fromText(queryOrJsonString).parseRow("/"))
+            }
+            else if (queryOrJsonString.contains("=")) {
+                for ((key, value) <- queryOrJsonString.splitToMap()) {
+                    set(key, value, DataType.TEXT)
+                }
             }
         }
         this

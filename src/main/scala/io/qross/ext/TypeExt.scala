@@ -117,7 +117,21 @@ object TypeExt {
             cols
         }
 
-        def $split(delimiter: String = "&", terminator: String = "="): Map[String, String] = {
+        def splitToJavaMap(delimiter: String, terminator: String): java.util.Map[String, String] = {
+            val map: java.util.Map[String, String] = new java.util.HashMap[String, String]()
+            val params = string.split(delimiter)
+            for (param <- params) {
+                if (param.contains(terminator)) {
+                    map.put(param.takeBefore(terminator), param.takeAfter(terminator))
+                }
+                else if (param != "") {
+                    map.put(param, "")
+                }
+            }
+            map
+        }
+
+        def splitToMap(delimiter: String = "&", terminator: String = "="): Map[String, String] = {
             val params = string.split(delimiter)
             val queries = new mutable.LinkedHashMap[String, String]()
             for (param <- params) {
@@ -129,6 +143,21 @@ object TypeExt {
                 }
             }
             queries.toMap
+        }
+
+        def splitToDataRow(delimiter: String = "&", terminator: String = "="): DataRow = {
+            val params = string.split(delimiter)
+            val row = new DataRow()
+            for (param <- params) {
+                if (param.contains(terminator)) {
+                    row.set(param.takeBefore(terminator), param.takeAfter(terminator), DataType.TEXT)
+                }
+                else if (param != "") {
+                    row.set(param, "", DataType.TEXT)
+                }
+            }
+
+            row
         }
 
         //执行 javascript

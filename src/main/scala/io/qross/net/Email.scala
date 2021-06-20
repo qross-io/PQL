@@ -390,7 +390,7 @@ class Email(private var title: String) {
     }
 
     def placeData(queryString: String): Email = {
-        placeData(queryString.$split().toRow)
+        placeData(queryString.splitToMap().toRow)
     }
 
     def placeData(row: DataRow): Email = {
@@ -456,7 +456,7 @@ class Email(private var title: String) {
     }
 
     def send(): DataRow = {
-        if (Global.EMAIL_SENDER_ACCOUNT_AVAILABLED) {
+        if (Global.EMAIL_SENDER_ACCOUNT_AVAILABLE) {
             if (toRecipients.nonEmpty || ccRecipients.nonEmpty || bccRecipients.nonEmpty) {
                 if (this.content != "") {
                     this.content = PQL.openEmbedded(this.content).run().toString

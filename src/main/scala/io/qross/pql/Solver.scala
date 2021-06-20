@@ -456,7 +456,7 @@ object Solver {
         }
 
         def replaceArguments(args: String): String = {
-            replaceArguments(args.$split())
+            replaceArguments(args.splitToMap())
         }
 
         //替换外部变量
