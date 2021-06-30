@@ -48,7 +48,7 @@ class Processer(source: DataSource, sentence: String, index: Int, tanks: Int = 3
 
     override def run(): Unit = {
 
-        val ds = new DataSource(source.connectionName, source.databaseName)
+        val ds = new DataSource(source.config, source.databaseName)
 
         while (
             if (index == 0)

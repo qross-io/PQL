@@ -10,7 +10,7 @@ class Batcher(source: DataSource, sentence: String, dh: DataHub) extends Thread 
 
     override def run(): Unit = {
 
-        val ds = new DataSource(source.connectionName, source.databaseName)
+        val ds = new DataSource(source.config, source.databaseName)
         val index = Processer.DATA.size - 1
         while (
             if (index == -1)

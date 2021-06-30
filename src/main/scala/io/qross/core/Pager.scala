@@ -24,7 +24,7 @@ class Pager(source: DataSource,
 
     override def run(): Unit = {
 
-        val ds = new DataSource(source.connectionName, source.databaseName)
+        val ds = new DataSource(source.config, source.databaseName)
         var break = false
         do {
             while (Pager.DATA.size() >= tanks) {

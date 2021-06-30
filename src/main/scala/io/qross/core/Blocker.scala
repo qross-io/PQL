@@ -30,7 +30,7 @@ class Blocker(source: DataSource, tanks: Int, dh: DataHub) extends Thread {
 
         Timer.sleepRandom(50)
 
-        val ds = new DataSource(source.connectionName, source.databaseName)
+        val ds = new DataSource(source.config, source.databaseName)
 
         while (!Blocker.QUEUE.isEmpty) {
 

@@ -12,7 +12,7 @@ object Bulker {
 class Bulker(source: DataSource) extends Thread {
 
     override def run(): Unit = {
-        val ds = new DataSource(source.connectionName, source.databaseName)
+        val ds = new DataSource(source.config, source.databaseName)
         while (!Bulker.QUEUE.isEmpty) {
             val SQL = Bulker.QUEUE.poll()
             if (SQL != null) {

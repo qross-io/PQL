@@ -27,8 +27,8 @@ object Patterns {
 
     val $CONDITION: Regex = """(?i)=|!=|>|<|IS""".r
 
-    val $IFX: String = """^IF\s|\bTHEN\s|\bELSIF\s|\bELSE\s|\bEND$"""
-    val $CASEX: String = """^CASE\s|\bWHEN\s|\bTHEN\s|\bELSE\s|\bEND$"""
+    val $IFX: String = """(?i)^IF\s|\bTHEN\s|\bELSIF\s|\bELSE\s|\bEND$"""
+    val $CASEX: String = """(?i)^CASE\s|\bWHEN\s|\bTHEN\s|\bELSE\s|\bEND$"""
     val $END$: Regex = """(?i)\bEND(\s*->|$)""".r
 
     val $BLANK: Regex = """\s""".r

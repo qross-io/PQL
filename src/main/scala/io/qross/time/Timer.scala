@@ -25,10 +25,11 @@ object Timer {
 
     def sleep(millis: Long): Unit = {
         try {
-            Thread.sleep(millis)
+            Thread.sleep(if (millis > 5) millis else Random.nextInt(50))
         }
         catch {
-            case e: InterruptedException => e.printStackTrace()
+            case e: Exception => e.printStackTrace()
+                //InterruptedException
         }
     }
     

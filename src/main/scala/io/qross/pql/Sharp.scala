@@ -1365,12 +1365,17 @@ object Sharp {
             data.asDecimal.pow(arg.asInteger.toInt).toDataCell(DataType.DECIMAL)
         }
         else {
-            data.asDecimal.pow(2).toDataCell(DataType.DECIMAL)
+            data.asDecimal.pow().toDataCell(DataType.DECIMAL)
         }
     }
 
     def TO$PERCENT(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        data.asDecimal.percent.toDataCell(DataType.TEXT)
+        if (arg.valid) {
+            data.asDecimal.percent(arg.asInteger(2).toInt).toDataCell(DataType.TEXT)
+        }
+        else {
+            data.asDecimal.percent.toDataCell(DataType.TEXT)
+        }
     }
 
     def TO$CAPACITY(data: DataCell, arg: DataCell, origin: String): DataCell = {

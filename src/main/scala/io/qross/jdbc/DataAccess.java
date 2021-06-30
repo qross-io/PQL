@@ -38,17 +38,17 @@ public class DataAccess extends DataSource {
 //    }
 
     public DataAccess() {
-        super(JDBC.DEFAULT());
+        super(JDBC.get(JDBC.DEFAULT()), "");
         //this.config_$eq(JDBC.get(this.connectionName()));
     }
 
     public DataAccess(String connectionName) {
-        super(connectionName);
+        super(JDBC.get(connectionName), "");
         //this.config_$eq(JDBC.get(this.connectionName()));
     }
 
     public DataAccess(String connectionName, String databaseName) {
-        super(connectionName, databaseName);
+        super(JDBC.get(connectionName), databaseName);
         //this.config_$eq(JDBC.get(this.connectionName()));
     }
 
@@ -76,7 +76,7 @@ public class DataAccess extends DataSource {
             while (rs.next()) {
                 map.put((S) rs.getObject(1), (T) rs.getObject(2));
             }
-            if (!config().dbType().equals(DBType.Presto())) {
+            if (!config().dbType().equalsIgnoreCase(DBType.Presto())) {
                 rs.getStatement().close();
             }
             rs.close();

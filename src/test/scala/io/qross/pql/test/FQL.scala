@@ -31,12 +31,12 @@ object FQL {
 
         //new Marker(ResourceFile.open("/templates/markdown.md").content).transform().getContent.print
 
-        //PQL.openFile("/test.sql").place("jobId=3").run().print
+        PQL.openFile("/test.sql").place("record_time=2021-06-29 11:30:04&job_id=4&task_id=4041").placeDefault("cursor=0").run().print
 
         //val select = DataSource.QROSS.querySingleValue("SELECT info FROM td WHERE id=100").asText("")
         //PQL.openFile("/sql/args.sql").place(select).run()
 
-        println(Environment.localHostAddress)
+        //DataSource.testConnection("MySQL", "com.mysql.cj.jdbc.Driver", "jdbc:mysql://39.99.240.254:3306", "root", "root", "eeeeee").print
 
         System.exit(0)
 

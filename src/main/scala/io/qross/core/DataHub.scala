@@ -216,16 +216,12 @@ class DataHub (val defaultConnectionName: String) extends Output {
         openSource("QROSS", DataSource.QROSS)
     }
 
-    def open(connectionNameOrDataSource: Any): DataHub = {
-        open(connectionNameOrDataSource, "")
+    def open(connectionName: String): DataHub = {
+        open(connectionName, "")
     }
 
-    def open(connectionNameOrDataSource: Any, databaseName: String): DataHub = {
-        connectionNameOrDataSource match {
-            case connectionName: String => openSource(connectionName, databaseName)
-            case dataSource: DataSource => openSource(dataSource.connectionName, dataSource)
-            case _ => throw new OpenDataSourceException("Unsupported data source parameter format, only support String or DataSource")
-        }
+    def open(connectionName: String, databaseName: String): DataHub = {
+        openSource(connectionName, databaseName)
     }
 
     def open(connectionName: String, driver: String, connectionString: String, username: String, password: String): DataHub = {
@@ -1131,6 +1127,9 @@ class DataHub (val defaultConnectionName: String) extends Output {
         TABLE.isEmpty
     }
 
+    def count(): Int = TABLE.count()
+    def size: Int = TABLE.size
+
     def show(limit: Int = 20): DataHub = {
         if (TABLE.nonEmpty) {
             writeTable(TABLE, limit)
@@ -1309,6 +1308,7 @@ class DataHub (val defaultConnectionName: String) extends Output {
     def executeJavaMapList(SQL: String, values: Any*): java.util.List[java.util.Map[String, Any]] = currentSource[DataSource].executeJavaMapList(SQL, values: _*)
     def executeJavaList(SQL: String, values: Any*): java.util.List[Any] = currentSource[DataSource].executeJavaList(SQL, values: _*)
     def executeHashMap(SQL: String, values: Any*): Map[String, Any] = currentSource[DataSource].executeHashMap(SQL, values: _*)
+    def executeDataMap[S, T](SQL: String, values: Any*): Map[S, T] = currentSource[DataSource].executeDataMap[S, T](SQL, values: _*)
     def executeMapList(SQL: String, values: Any*): List[Map[String, Any]] = currentSource[DataSource].executeMapList(SQL, values: _*)
     def executeSingleList[T](SQL: String, values: Any*): List[Any] = currentSource[DataSource].executeSingleList[T](SQL, values: _*)
     def executeSingleValue(SQL: String, values: Any*): DataCell = currentSource[DataSource].executeSingleValue(SQL, values: _*)

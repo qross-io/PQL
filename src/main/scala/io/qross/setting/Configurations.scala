@@ -47,7 +47,7 @@ object Configurations {
             if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_connections'")) {
                 ds.executeDataTable("SELECT * FROM qross_connections WHERE owner=0 AND enabled='yes'")
                     .foreach(row => {
-                        val databaseType = row.getString("database_type")
+                        val databaseType = row.getString("database_type").toLowerCase().replace(" ", "")
                         if (databaseType != DBType.Redis) JDBC.connections += row.getString("connection_name") -> new JDBC(
                             databaseType,
                             row.getString("connection_string"),
@@ -107,7 +107,7 @@ object Configurations {
             if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_connections'")) {
                 ds.executeDataTable("SELECT * FROM qross_connections WHERE owner=? AND enabled='yes'", userId)
                     .foreach(row => {
-                        val databaseType = row.getString("database_type")
+                        val databaseType = row.getString("database_type").toLowerCase().replace(" ", "")
                         if (databaseType != DBType.Redis) {
                             JDBC.connections += row.getString("connection_name") -> new JDBC(
                                 databaseType,

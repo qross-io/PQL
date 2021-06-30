@@ -424,6 +424,15 @@ class DataRow() {
         this
     }
 
+    def orElse(otherRow: DataRow): DataRow = {
+        if (this.isEmpty) {
+            otherRow
+        }
+        else {
+            this
+        }
+    }
+
     def mkString(delimiter: String = ","): String = {
         val values = new mutable.StringBuilder()
         for (field <- fields) {

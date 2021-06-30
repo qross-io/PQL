@@ -42,26 +42,68 @@ object DataSource {
             case e: Exception => e.getReferMessage
         }
     }
+
+    def testConnection(databaseType: String, driver: String, connectionString: String, username: String, password: String, databaseName: String): String = {
+        try {
+            var connected = "Connected"
+            val ds = new DataSource(databaseType: String, driver: String, connectionString: String, username: String, password: String)
+            databaseType.toLowerCase().replace(" ", "") match {
+                case DBType.MySQL => ds.executeNonQuery(s"USE $databaseName")
+                    //show databases;
+                    //select schema_name from information_schema.schemata;
+                case DBType.SQLServer => ds.executeNonQuery(s"USE $databaseName")
+                    //EXEC sp_databases
+                    //select name from sys.databases;
+                case DBType.Oracle =>
+                    if (!ds.executeExists(s"SELECT name FROM v$$database WHERE name='$databaseName'")) {
+                        connected = s"Unknown database $databaseName"
+                    }
+                case DBType.PostgreSQL =>
+                    if (!ds.executeExists(s"SELECT datname FROM pg_catalog.pg_database WHERE datname='$databaseName'")) {
+                        connected = s"Unknown database $databaseName"
+                    }
+                case DBType.Hive => ds.executeNonQuery(s"USE $databaseName")
+                    //show databases;
+                    //SELECT  NAME AS schema_name FROM hive.DBS
+                case DBType.Phoenix => ds.executeNonQuery(s"USE $databaseName")
+                    //SELECT TABLE_SCHEM FROM SYSTEM.CATALOG WHERE TABLE_SCHEM IS NOT null GROUP BY TABLE_SCHEM;
+                    //!schemas
+                case _ =>
+            }
+            ds.close()
+
+            connected
+        }
+        catch {
+            case e: Exception => e.getReferMessage
+        }
+    }
 }
 
-class DataSource (val connectionName: String, val databaseName: String) extends Output {
+class DataSource(val config: JDBC, val databaseName: String) extends Output {
 
     private[jdbc] val batchSQLs = new mutable.ArrayBuffer[String]()
     private[jdbc] val batchValues = new mutable.ArrayBuffer[Vector[Any]]()
-
-    private[jdbc] var config = JDBC.get(connectionName)
 
     private var connection: Option[Connection] = None //current connection
     private var tick: Long = -1L //not opened
 
     def this() {
-        this(connectionName = JDBC.DEFAULT, databaseName = "")
+        this(JDBC.get(JDBC.DEFAULT), "")
     }
 
     def this(connectionName: String) {
-        this(connectionName, databaseName = "")
+        this(JDBC.get(connectionName), databaseName = "")
     }
-    
+
+    def this(connectionName: String, databaseName: String) {
+        this(JDBC.get(connectionName), databaseName)
+    }
+
+    def this(databaseType: String, driver: String, connectionString: String, username: String, password: String) {
+        this(new JDBC(databaseType, connectionString, driver, username, password), "")
+    }
+
     def test(): Boolean = {
         var connected = false
         try {
@@ -112,18 +154,6 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
             this.connection = Some(DriverManager.getConnection(config.connectionString))
         }
 
-        //尝试连接
-//        try {
-//            if (config.username != "") {
-//                this.connection = Some(DriverManager.getConnection(config.connectionString, config.username, config.password))
-//            }
-//            else {
-//                this.connection = Some(DriverManager.getConnection(config.connectionString))
-//            }
-//        } catch {
-//            case e: SQLException => System.err.println("Open database SQLException: " + e.getMessage)
-//        }
-
         if (config.dbType == DBType.MySQL) {
             this.connection match {
                 case Some(conn) =>
@@ -157,7 +187,7 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
             case None =>
         }
     }
-    
+
     // ---------- basic command ----------
 
     def executeDataTable(SQL: String, values: Any*): DataTable = {
@@ -239,7 +269,7 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
         if (DEBUG) {
             writeTable(table, 10)
         }
-        
+
         table
     }
 
@@ -438,7 +468,7 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
 
         map.toMap
     }
-    
+
     def executeJavaList(SQL: String, values: Any*): util.List[Any] = {
 
         if (DEBUG) {
@@ -494,7 +524,7 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
 
         list.toList
     }
-    
+
     def executeSingleValue(SQL: String, values: Any*): DataCell = {
 
         if (DEBUG) {
@@ -522,7 +552,7 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
 
         data
     }
-    
+
     def executeExists(SQL: String, values: Any*): Boolean = {
 
         if (DEBUG) {
@@ -547,10 +577,10 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
         if (DEBUG) {
             println("Result: " + result)
         }
-        
+
         result
     }
-    
+
     def executeResultSet(SQL: String, values: Any*): Option[ResultSet] = {
         this.openIfNot()
 
@@ -979,39 +1009,33 @@ class DataSource (val connectionName: String, val databaseName: String) extends 
     }
 
     def openIfNot(): Unit = {
-        try {
-            var retry = 0
-            //idle 10s
-            if (config.overtime > 0 && this.getIdleTime >= config.overtime) {
-                this.close()
-            }
-            if (this.tick == -1 || this.connection.get.isClosed) {
-                while (this.connection.isEmpty && (config.retryLimit == 0 || retry < config.retryLimit)) {
-                    this.open()
-                    if (this.connection.isEmpty) {
-                        Timer.sleep(1000)
-                        retry += 1
-                    }
+        var retry = 0
+        //idle 10s
+        if (config.overtime > 0 && this.getIdleTime >= config.overtime) {
+            this.close()
+        }
+        if (this.tick == -1 || this.connection.get.isClosed) {
+            while (this.connection.isEmpty && (config.retryLimit == 0 || retry < config.retryLimit)) {
+                this.open()
+                if (this.connection.isEmpty) {
+                    Timer.sleep(1000)
+                    retry += 1
                 }
+            }
 
-                if (this.connection.isDefined) {
-                    this.tick = System.currentTimeMillis
-                }
+            if (this.connection.isDefined) {
+                this.tick = System.currentTimeMillis
             }
-        } catch {
-            case e: SQLException => e.printStackTrace()
         }
     }
     
     def close(): Unit = {
-        try {
-            if (this.connection.isDefined && !this.connection.get.isClosed) {
-                this.connection.get.close()
-                this.connection = None
-            }
-        } catch {
-            case e: SQLException => "close database Exception: " + e.printStackTrace()
+
+        if (this.connection.isDefined && !this.connection.get.isClosed) {
+            this.connection.get.close()
+            this.connection = None
         }
+
         this.tick = -1
     }
     

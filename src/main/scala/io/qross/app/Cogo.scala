@@ -12,14 +12,14 @@ object Cogo {
         "select" -> "root.select.js,select.css",
         "button" ->  "root.popup.js,root.button.js",
         "calendar" -> "root.calendar.js,calendar.css",
-        "input-calendar" -> "root.calendar.js,calendar.css,iconfont.css",
+        "input-calendar" -> "root.calendar.js,calendar.css", //iconfont.css
         "clock" -> "root.clock.js,clock.css",
-        "type-datetime" -> "root.datetimepicker.js,root.calendar.js,calendar.css,iconfont.css,root.clock.js,clock.css,root.popup.js",
+        "type-datetime" -> "root.datetimepicker.js,root.calendar.js,calendar.css,root.clock.js,clock.css,root.popup.js", //iconfont.css
         "treeview" -> "root.treeview.js,treeview.css",
         "editable" -> "root.editor.js",
         "table-data" -> "root.table.js,table.css",
         "coder" -> "root.coder.js,coder/codemirror.js,coder/codemirror.css,coder.css",
-        "a-help" -> "root.help.js,root.popup.js,iconfont.css",
+        "a-help" -> "root.help.js,root.popup.js", //iconfont.css
         "a-onclick" -> "root.anchor.js,root.popup.js",
     )
 
@@ -54,7 +54,7 @@ object Cogo {
             |       <script type="text/javascript" src="@/root.animation.js"></script>
             |       <script type="text/javascript" src="@/root.input.js"></script>
             |       <link href="@/css/root/main.css" rel="stylesheet" type="text/css" />
-            |       <link href="@/css/root/iconfont.css" rel="stylesheet" type="text/css" />
+            |       <link href="/root/iconfont.css" rel="stylesheet" type="text/css" />
             |       #{scripts}
             |   </head>
             |   <body>

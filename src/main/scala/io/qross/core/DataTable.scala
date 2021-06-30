@@ -785,6 +785,8 @@ class DataTable() {
         val relations = new mutable.HashMap[String, java.util.Map[String, Any]]()
         //[data]
         val result: java.util.List[util.Map[String, Any]] = new util.ArrayList[util.Map[String, Any]]()
+        //第一次未找到的项
+        val stash = new mutable.ArrayBuffer[java.util.Map[String, Any]]()
 
         rows.foreach(row => {
             val parent = row.getString(parentColumn)
@@ -792,13 +794,31 @@ class DataTable() {
             map.put(newColumn, new util.ArrayList[Any]())
 
             relations += row.getString(primaryColumn) -> map
-            if (parent == startPoint || !relations.contains(parent)) {
+            if (parent == startPoint) {
                 result.add(map)
             }
             else if (relations.contains(parent)) {
                 relations(parent).get(newColumn).asInstanceOf[java.util.ArrayList[Any]].add(map)
             }
+            else {
+                //如果找不到，有可能其父级还在后面，先暂存
+                stash += map
+            }
         })
+
+        //再次遍历
+        stash.foreach(map => {
+            val parent = map.get(parentColumn).toString
+            if (relations.contains(parent)) {
+                relations(parent).get(newColumn).asInstanceOf[java.util.ArrayList[Any]].add(map)
+            }
+            else {
+                //实在找不到，就变成顶级
+                result.add(map)
+            }
+        })
+
+        stash.clear()
         relations.clear()
         this.clear()
 
@@ -919,6 +939,15 @@ class DataTable() {
     def isEmpty: Boolean = rows.isEmpty
     def isEmptySchema: Boolean = fields.isEmpty
     def nonEmptySchema: Boolean = fields.nonEmpty
+
+    def orELse(otherTable: DataTable): DataTable = {
+        if (this.nonEmpty) {
+            this
+        }
+        else {
+            otherTable
+        }
+    }
 
     def getFieldNames: List[String] = fields.toList
     def getFieldNameList: java.util.List[String] = getFieldNames.asJava

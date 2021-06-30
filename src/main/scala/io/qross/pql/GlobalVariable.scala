@@ -7,6 +7,7 @@ import io.qross.jdbc.{DataSource, JDBC}
 import io.qross.net.{Cookies, Json, Session}
 import io.qross.setting.{Configurations, Environment, Global, Language}
 import io.qross.time.DateTime
+import io.qross.ext.TypeExt._
 
 object GlobalVariable {
 
@@ -171,12 +172,13 @@ object GlobalVariableDeclaration {
 
     def POINTER(PQL: PQL): DataCell = DataCell(PQL.dh.cursor, DataType.INTEGER)
 
-    //def SPOTLIGHT(PQL: PQL): DataCell = DataCell(io.qross.look.Spotlight.random, DataType.TEXT)
     def THEME(PQL: PQL): DataCell = DataCell(io.qross.look.Theme.random, DataType.ROW)
 
     def RUNNING_DIR(PQL: PQL): DataCell = DataCell(Environment.runningDirectory, DataType.TEXT)
     def LOCAL_IP(PQL: PQL): DataCell = DataCell(Environment.localHostAddress, DataType.TEXT)
 
     def KEEPER_IS_RUNNING(PQL: PQL): DataCell = DataCell(DataSource.QROSS.queryExists("SELECT id FROM qross_keeper_beats WHERE actor_name='Keeper' AND `status`='running' AND timestampdiff(second, last_beat_time, now())<120"), DataType.BOOLEAN)
-    def KEEPER_HTTP_SERVICE(PQL: PQL): DataCell = DataSource.QROSS.executeSingleValue("SELECT CONCAT(ip_address, ':', port) AS service FROM qross_keeper_nodes WHERE status='online' ORDER BY busy_score ASC LIMIT 1")
+    def KEEPER_HTTP_SERVICE(PQL: PQL): DataCell = DataSource.QROSS.executeSingleValue("""SELECT A.node_address AS service FROM (SELECT node_address, busy_score FROM  qross_keeper_nodes WHERE status='online' AND disconnection=0) A
+                            INNER JOIN (SELECT node_address FROM qross_keeper_beats WHERE actor_name='Keeper' AND `status`='running' AND timestampdiff(second, last_beat_time, now())<120) B
+                            ON A.node_address=B.node_address ORDER BY A.busy_score ASC LIMIT 1""").asText("").toDataCell(DataType.TEXT)
 }

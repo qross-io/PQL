@@ -782,11 +782,11 @@ object TypeExt {
         }
 
         def percent: String = {
-            s"${double * 100}%"
+            s"${(double * 100).round(2)}%"
         }
 
         def percent(precision: Int = 0): String = {
-            s"${Math.round(double * 100 * Math.pow(10, precision)) / Math.pow(10, precision)}%"
+            s"${(double * 100).round(precision)}%"
         }
 
         def pow(p: Double = 2): Double = Math.pow(double, p)
@@ -1085,6 +1085,11 @@ object TypeExt {
     }
 
     implicit class ExceptionExt(e: Exception) {
+
+        def printReferMessage(): Unit = {
+            Output.writeException(getReferMessage)
+        }
+
         def getReferMessage: String = {
             var message = e.getMessage
             if (message == null) {

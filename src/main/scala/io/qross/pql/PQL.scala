@@ -580,7 +580,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
                 })
             }
             else {
-                val map = queryOrJsonString.splitToMap().map(pair => (pair._1.trim(), pair._1.decodeURL()))
+                val map = queryOrJsonString.splitToMap().map(pair => (pair._1.trim(), pair._2.decodeURL()))
                 this.SQL = this.SQL.replaceArguments(map)
                 map.foreach(pair => {
                     if (!ARGUMENTS.contains(pair._1)) {
