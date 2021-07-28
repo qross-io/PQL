@@ -1984,6 +1984,20 @@ object Sharp {
         }
     }
 
+    def TO$GROUPS(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            if (arg.isText) {
+                data.asTable.turnToGroupedTables(arg.asText).toDataCell(DataType.forClassName("java.util.LinkedHashMap"))
+            }
+            else {
+                throw SharpLinkArgumentException.occur("GROUP TO TABLES", origin)
+            }
+        }
+        else {
+            throw SharpLinkArgumentException.occur("GROUP TO TABLES", origin)
+        }
+    }
+
     def TO$TREE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid && arg.isJavaList) {
             val args = arg.asJavaList

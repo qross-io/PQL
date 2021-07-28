@@ -127,7 +127,7 @@ public class  Voyager extends AbstractTemplateView {
                 }                               
                 
                 // @{ "name": "value" }
-                p = Pattern.compile("@(\\{[\\s\\S]+?})(?=\\s*\\n)");
+                p = Pattern.compile("@(\\{[\\s\\S]+?})(?=\\s*\\n|$)");
                 m = p.matcher(content);
                 while (m.find()) {
                     String match = m.group(1);

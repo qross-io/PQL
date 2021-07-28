@@ -31,10 +31,14 @@ object FQL {
 
         //new Marker(ResourceFile.open("/templates/markdown.md").content).transform().getContent.print
 
-        PQL.openFile("/test.sql").place("record_time=2021-06-29 11:30:04&job_id=4&task_id=4041").placeDefault("cursor=0").run().print
+        //PQL.openFile("/pql.sql").signIn(1, "admin", "1").place("module_name=数据质量&stars=1").placeDefault("rules=").run().print
+
+//        val x = System.currentTimeMillis()
+//        PQL.openFile("""c:/io.Qross/Home/metadata.sql""").place("connection_name", "cs_mysql").run()
+//        println(System.currentTimeMillis() - x)
 
         //val select = DataSource.QROSS.querySingleValue("SELECT info FROM td WHERE id=100").asText("")
-        //PQL.openFile("/sql/args.sql").place(select).run()
+        PQL.openFile("/test.sql").run()
 
         //DataSource.testConnection("MySQL", "com.mysql.cj.jdbc.Driver", "jdbc:mysql://39.99.240.254:3306", "root", "root", "eeeeee").print
 

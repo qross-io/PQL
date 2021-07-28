@@ -1,6 +1,7 @@
 package io.qross.pql
 
 import io.qross.core.{DataCell, DataTable, DataType}
+import io.qross.exception.SQLExecuteException
 import io.qross.ext.TypeExt._
 import io.qross.pql.Patterns.ARROW
 import io.qross.pql.Solver._
@@ -15,9 +16,15 @@ class SELECT(val sentence: String) {
 
     def evaluate(PQL: PQL, express: Int = Solver.FULL): DataCell = {
         sentence.$process(PQL, express, body => {
-            val table = PQL.dh.executeDataTable(body)
-            PQL.COUNT_OF_LAST_SELECT = table.size
-            DataCell(table, DataType.TABLE)
+            val args = body.findArguments
+            if (args.isEmpty) {
+                val table = PQL.dh.executeDataTable(body)
+                PQL.COUNT_OF_LAST_SELECT = table.size
+                DataCell(table, DataType.TABLE)
+            }
+            else {
+                throw new SQLExecuteException(s"Missed arguments: ${args.mkString(", ")}")
+            }
         })
     }
 

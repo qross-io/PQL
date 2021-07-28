@@ -7,7 +7,7 @@ apply plugin: "maven-publish"
 apply plugin: 'signing'
 
 group = 'io.qross'
-version = '1.6.0'
+version = '1.7.0'
 sourceCompatibility = 1.8
 archivesBaseName = "pql"
 
@@ -143,7 +143,7 @@ publishing {
         maven(MavenPublication) {
             groupId = 'io.qross'
             artifactId = 'pql'
-            version = '1.6.35-SNAPSHOT'
+            version = '1.7.12-SNAPSHOT'
             from components.java
             artifact sourcesJar
             artifact javadocJar
@@ -193,14 +193,5 @@ publishing {
                 password 'kwCz3C0wHx'
             }
         }
-
-//        maven {
-//            //url "http://39.99.240.254:8081/repository/maven-releases/"
-//            url "http://39.99.240.254:8081/repository/maven-snapshots/"
-//            credentials {
-//                username 'admin'
-//                password 'admin123'
-//            }
-//        }
     }
 }

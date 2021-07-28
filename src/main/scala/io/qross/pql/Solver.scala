@@ -455,6 +455,10 @@ object Solver {
             ARGUMENTS.flatMap(_.findAllMatchIn(sentence)).nonEmpty
         }
 
+        def findArguments: List[String] = {
+            ARGUMENTS.flatMap(_.findAllMatchIn(sentence).map(_.group(0)))
+        }
+
         def replaceArguments(args: String): String = {
             replaceArguments(args.splitToMap())
         }

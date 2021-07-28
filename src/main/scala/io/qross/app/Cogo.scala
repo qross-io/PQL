@@ -7,7 +7,7 @@ object Cogo {
     private val scripts = Map[String, String](
         "popup" -> "root.popup.js",
         "div-display" -> "root.layout.js",
-        "focusview" -> "root.focusview.js",
+        "tab" -> "root.tab.js",
         "backtop" -> "root.backtop.js",
         "select" -> "root.select.js,select.css",
         "button" ->  "root.popup.js,root.button.js",
@@ -21,6 +21,8 @@ object Cogo {
         "coder" -> "root.coder.js,coder/codemirror.js,coder/codemirror.css,coder.css",
         "a-help" -> "root.help.js,root.popup.js", //iconfont.css
         "a-onclick" -> "root.anchor.js,root.popup.js",
+        "chart" -> "charts/echarts.min.js,root.chart.js",
+        "log" -> "root.log.js,log.css"
     )
 
     private val codes = Map[String, String](
@@ -65,7 +67,7 @@ object Cogo {
             |</html>""".stripMargin
 
     def getScripts(content: String): String = {
-        """(?i)<div[^>]+display=|\bfocusView\b|<backtop\b|<select\b|\sselect=|<button\b|type="datetime"|<calendar\b|<clock\b|<input[^>]+type="calendar"|<treeview\b|\seditable\b|<table[^>]+data\b|coder=|<a\b[^>]+help=|<a\b[^>]+onclick\+=|\bpopup=""".r
+        """(?i)<div[^>]+display=|\stab\b|<backtop\b|<select\b|\sselect=|<button\b|type="datetime"|<calendar\b|<clock\b|<input[^>]+type="calendar"|<treeview\b|\seditable\b|<table[^>]+data\b|coder=|<a\b[^>]+help=|<a\b[^>]+onclick\+=|\bpopup=|<chart\b|<log\b""".r
             .findAllIn(content)
             .map(v => {
                 val ms = "(?i)[a-z]+".r.findAllIn(v).map(_.toLowerCase()).toList

@@ -216,7 +216,9 @@ class DateTime(private val dateTime: Any, private val formatStyle: String, priva
     def getMilli: Int = this.localDateTime.getNano / 1000000
     def getMicro: Int = this.localDateTime.getNano / 1000
     def getNano: Int = this.localDateTime.getNano
+
     def getTickValue: String = this.getString("yyyy-MM-dd HH:mm:00")
+    def getTockValue: String = this.getString("yyyy-MM-dd HH:00:00")
 
     def year: Int = this.localDateTime.getYear
     def month: Int = this.localDateTime.getMonthValue

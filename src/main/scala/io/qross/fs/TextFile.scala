@@ -457,7 +457,7 @@ class TextFile(val file: File, val format: Int) {
                 if (line != null) {
                     row += 1
                     if (row == 1 && skip > 0 && columns.isEmpty) {
-                        line.split(separator, -1)
+                        line.split(separator, columns.size)
                             .foreach(item => {
                                 columns += item -> DataType.TEXT
                             })
@@ -465,7 +465,7 @@ class TextFile(val file: File, val format: Int) {
                     if (row > skip) {
                         val data = convert(line)
                         //where
-                        if (SELECT.where(data)) {
+                        if (data.nonEmpty && SELECT.where(data)) {
                             meet += 1
                             //limit
                             if (meet > SELECT.start && (SELECT.limit == -1 || meet <= SELECT.most)) {
@@ -497,11 +497,18 @@ class TextFile(val file: File, val format: Int) {
 
     private def convert(line: String): DataRow = {
         if (format == TextFile.JSON) {
-            val data = Json(line).parseRow("/")
-            if (columns.isEmpty) {
-                columns ++= data.columns
+            try {
+                val data = Json(line).parseRow("/")
+                if (columns.isEmpty) {
+                    columns ++= data.columns
+                }
+                data
             }
-            data
+            catch {
+                case e: Exception =>
+                    e.printStackTrace()
+                    new DataRow()
+            }
         }
         else {
             val items = {
@@ -510,7 +517,7 @@ class TextFile(val file: File, val format: Int) {
                         line.$split(',').toArray
                     }
                     else {
-                        line.split(separator, -1)
+                        line.split(separator, columns.size) //按列数拆分
                     }
                 }
                 else {

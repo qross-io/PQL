@@ -18,7 +18,8 @@ object CACHE {
 
 class CACHE(val tableName: String, val selectSQL: String) {
     def execute(PQL: PQL): Unit = {
-        PQL.dh.get(this.selectSQL.$restore(PQL))
+        PQL.dh.buffer(selectSQL.$compute(PQL).asTable) //这种方式支持更多特性
+        //PQL.dh.get(selectSQL.$restore(PQL)) //这种方式只支持 SELECT SQL
                 .cache(this.tableName.$eval(PQL).asText)
     }
 }

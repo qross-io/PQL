@@ -1,9 +1,11 @@
 DEBUG ON;
 
-SET $NULL, $NULL2 := SELECT finish_time, CAST(finish_time AS CHAR) AS finish_time_2 FROM qross_tasks WHERE id=4041;
+REQUEST JSON API '''http://192.168.3.67:7700/keeper/logs?token=@KEEPER_HTTP_TOKEN&hour=20210725/11&cursor=0''';
+PARSE "/" AS OBJECT;
 
-PRINT ${ $NULL IF NULL 'ABC'};
-PRINT ${ $NULL2 IF NULL 'DEF' };
+
+
+--PUT # INSERT INTO td (status) VALUES ('#item');
 
 
 -- SELECT id AS project_id, parent_project_id FROM qross_projects WHERE top_project_id=77 AND id > 296 ORDER BY parent_project_id ASC, id ASC -> TO TREE (project_id, parent_project_id, 77, children);

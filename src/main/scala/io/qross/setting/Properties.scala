@@ -2,7 +2,7 @@ package io.qross.setting
 
 import java.io._
 
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import io.qross.ext.TypeExt._
 import io.qross.fs.{FileReader, ResourceFile}
 import io.qross.jdbc.{DataSource, JDBC}
@@ -57,6 +57,10 @@ object Properties {
 
     def getAllPropertyNames: java.util.Set[String] = {
         props.stringPropertyNames()
+    }
+
+    def getAllProperties: java.util.Properties = {
+        props
     }
 
     def get(key: String): String = {
@@ -332,6 +336,9 @@ object Properties {
         }
     }
 
+    override def toString: String = {
+        new ObjectMapper().writeValueAsString(props)
+    }
     def clear(): Unit = {
         props.clear()
     }

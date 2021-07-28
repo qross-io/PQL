@@ -8,6 +8,7 @@ import io.qross.net.Json;
 import io.qross.setting.Environment;
 import io.qross.setting.Properties;
 
+import java.util.Map;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,7 +42,10 @@ public class Test {
 
         Console.writeLine();
 
+        Map<String, String> json = new java.util.HashMap<String, String>();
+        json.put("a", "b");
 
+        System.out.println(Json.serialize(json));
 
         System.exit(0);
 

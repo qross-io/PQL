@@ -16,25 +16,29 @@ class RETURN(content: String) {
 
     def execute(PQL: PQL): Unit = {
         //因为 RETURN 可能在控制语句中，所以退出直到冒泡到 CALL 语句或 ROOT
-        while (PQL.EXECUTING.head.caption != "CALL" && PQL.EXECUTING.head.caption != "ROOT") {
+        while (PQL.EXECUTING.nonEmpty && PQL.EXECUTING.head.caption != "CALL" && PQL.EXECUTING.head.caption != "ROOT") {
             PQL.EXECUTING.pop()
         }
 
-        if (PQL.EXECUTING.head.caption == "CALL") {
-            if (content != "") {
-                PQL.FUNCTION$RETURNS += content.$eval(PQL)
+        if (PQL.EXECUTING.nonEmpty) {
+            if (PQL.EXECUTING.head.caption == "CALL") {
+                if (content != "") {
+                    PQL.FUNCTION$RETURNS += content.$eval(PQL)
+                }
+                else {
+                    PQL.FUNCTION$RETURNS += DataCell.NULL
+                }
+                PQL.EXECUTING.pop()
             }
-            else {
-                PQL.FUNCTION$RETURNS += DataCell.NULL
-            }
-            PQL.EXECUTING.pop()
-        }
-        else if (PQL.EXECUTING.head.caption == "ROOT") {
-            if (content != "") {
-                PQL.RESULT += content.$compute(PQL).value
-            }
-            else {
-                PQL.RESULT += null
+            else if (PQL.EXECUTING.head.caption == "ROOT") {
+                if (content != "") {
+                    PQL.RESULT += content.$compute(PQL).value
+                }
+                else {
+                    PQL.RESULT += null
+                }
+                //不再执行后面的所有语句
+                PQL.BREAK = true
             }
         }
     }

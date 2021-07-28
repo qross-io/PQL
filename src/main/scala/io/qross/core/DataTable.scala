@@ -766,7 +766,7 @@ class DataTable() {
             val column = row.getString(fieldName, fieldName)
             map.put(column, new java.util.LinkedHashMap[String, Any]())
             row.foreach((field, value) => {
-                if (field != column) {
+                if (field != fieldName) {
                     map.get(column).put(field, value)
                 }
             })
@@ -774,9 +774,29 @@ class DataTable() {
         map
     }
 
+    def turnToGroupedTables(fieldName: String): java.util.LinkedHashMap[String, java.util.ArrayList[java.util.LinkedHashMap[String, Any]]] = {
+        val map = new java.util.LinkedHashMap[String, java.util.ArrayList[java.util.LinkedHashMap[String, Any]]]()
+
+        this.rows.foreach(row => {
+            val column = row.getString(fieldName, fieldName)
+            if (!map.containsKey(column)) {
+                map.put(column, new util.ArrayList[util.LinkedHashMap[String, Any]]())
+            }
+            val line = new util.LinkedHashMap[String, Any]()
+            row.foreach((field, value) => {
+                if (field != fieldName) {
+                    line.put(field, value)
+                }
+            })
+            map.get(column).add(line)
+        })
+
+        map
+    }
+
     /**
      * 按照指定的列做为分层依据将表格转成一个树形结构
-     * @param   parentColumn    父级列的名称
+     * @param   parentColumn    父级列的列名
      * @param   startPoint      父组列起始层的值，支持整数和字符串
      * @param   newColumn       新列的 id
      */

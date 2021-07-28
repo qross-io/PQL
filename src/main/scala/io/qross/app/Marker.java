@@ -42,6 +42,7 @@ public class Marker {
         return renderer.render(document);
     }
 
+    // unfinished
     public static String MarkdownToHTML(String content) {
 
         Stack<String> closing = new Stack<>(); //to be closed
@@ -705,8 +706,8 @@ public class Marker {
             content = content.replace(m.group(0), box.get(Integer.parseInt(m.group(1))));
         }
 
-        //external links
-        content = content.replace(" href=\"http", " target=\"_blank\" href=\"http");
+        //external links & <table>
+        content = content.replace(" href=\"http", " target=\"_blank\" href=\"http").replace("<table>", "<table marker>");
 
         return this;
     }

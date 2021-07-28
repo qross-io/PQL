@@ -18,6 +18,8 @@ object TEMP {
 
 class TEMP(val tableName: String, val selectSQL: String) {
     def execute(PQL: PQL): Unit = {
-        PQL.dh.get(this.selectSQL.$restore(PQL)).temp(this.tableName.$eval(PQL).asText)
+        //PQL.dh.get(this.selectSQL.$restore(PQL))
+        PQL.dh.buffer(selectSQL.$compute(PQL).asTable)
+            .temp(this.tableName.$eval(PQL).asText)
     }
 }

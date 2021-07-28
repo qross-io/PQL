@@ -230,6 +230,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
     private[pql] val root: Statement = new Statement("ROOT", SQL)
 
     //结果集
+    private[pql] var BREAK: Boolean = false //RETURN 可触发全局中断
     private[pql] val RESULT: ArrayBuffer[Any] = new ArrayBuffer[Any]() //显式输出结果
     private[pql] val WORKING: ArrayBuffer[Any] = new ArrayBuffer[Any]() //隐式输出结果
     private[pql] var COUNT_OF_LAST_SELECT: Int = -1 //最后一个SELECT返回的结果数量
@@ -377,11 +378,15 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
                     Class.forName(s"io.qross.pql.${statement.caption}")
                             .getDeclaredMethod("execute", classOf[PQL], classOf[Statement])
                             .invoke(statement.instance, this, statement)
+
+                    if (BREAK) break
                 }
                 else {
                     Class.forName(s"io.qross.pql.${statement.caption}")
                             .getDeclaredMethod("execute", classOf[PQL])
                             .invoke(statement.instance, this)
+
+                    if (BREAK) break
                 }
             }
         }

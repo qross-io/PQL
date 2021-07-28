@@ -57,5 +57,7 @@ object Global {
     }
     def KEEPER_HTTP_PORT: Int = Configurations.getOrProperty("KEEPER_HTTP_PORT", "keeper.http.port", "7700").toInt
 
+    def KEEPER_HTTP_TOKEN: String = Configurations.getOrProperty("KEEPER_HTTP_TOKEN", "keeper.http.token")
+
     def EMAIL_NOTIFICATION: Boolean = Configurations.getOrProperty("EMAIL_NOTIFICATION", "email.notification").toBoolean(false)
 }
