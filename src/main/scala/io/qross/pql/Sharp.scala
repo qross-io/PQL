@@ -1,5 +1,6 @@
 package io.qross.pql
 
+import java.time.DayOfWeek
 import java.util
 
 import io.qross.core.{DataCell, DataRow, DataTable, DataType}
@@ -144,6 +145,10 @@ object Sharp {
         DataCell(data.asDateTime.getYear, DataType.INTEGER)
     }
 
+    def GET$QUARTER(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asDateTime.getQuarter, DataType.INTEGER)
+    }
+
     def GET$MONTH(data: DataCell, arg: DataCell, origin: String): DataCell = {
         DataCell(data.asDateTime.getMonth, DataType.INTEGER)
     }
@@ -180,8 +185,47 @@ object Sharp {
         DataCell(data.asDateTime.getDayOfWeek, DataType.INTEGER)
     }
 
+    def GET$WEEK$OF$YEAR(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            DataCell(data.asDateTime.getWeekOfYear(
+                arg.asText("1").take(2).toUpperCase() match {
+                case "1" | "MO" => DayOfWeek.MONDAY
+                case "2" | "TU" => DayOfWeek.TUESDAY
+                case "3" | "WE" => DayOfWeek.WEDNESDAY
+                case "4" | "TH" => DayOfWeek.THURSDAY
+                case "5" | "FR" => DayOfWeek.FRIDAY
+                case "6" | "SA" => DayOfWeek.SATURDAY
+                case "0" | "7" | "SU" => DayOfWeek.SUNDAY
+                case _ => DayOfWeek.MONDAY
+            }), DataType.INTEGER)
+        }
+        else {
+            DataCell(data.asDateTime.getWeekOfYear(DayOfWeek.MONDAY), DataType.INTEGER)
+        }
+    }
+
+    def GET$QUARTER$NAME(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asDateTime.getQuarterName, DataType.TEXT)
+    }
+
+    def GET$FULL$QUARTER$NAME(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asDateTime.getFullQuarterName, DataType.TEXT)
+    }
+
+    def GET$MONTH$NAME(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asDateTime.getMonthName, DataType.TEXT)
+    }
+
+    def GET$FULL$MONTH$NAME(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asDateTime.getFullMonthName, DataType.TEXT)
+    }
+
     def GET$WEEK$NAME(data: DataCell, arg: DataCell, origin: String): DataCell = {
         DataCell(data.asDateTime.getWeekName, DataType.TEXT)
+    }
+
+    def GET$FULL$WEEK$NAME(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(data.asDateTime.getFullWeekName, DataType.TEXT)
     }
 
     def PLUS(data: DataCell, arg: DataCell, origin: String): DataCell = {
@@ -736,7 +780,12 @@ object Sharp {
 
     def DROP(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            data.asText.drop(arg.asInteger.toInt).toDataCell(DataType.TEXT)
+            if (arg.isText) {
+                DataCell(data.asText.stripPrefix(arg.asText))
+            }
+            else {
+                data.asText.drop(arg.asInteger.toInt).toDataCell(DataType.TEXT)
+            }
         }
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at DROP. " + origin)
@@ -745,7 +794,7 @@ object Sharp {
 
     def DROP$LEFT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            data.asText.drop(arg.asInteger.toInt).toDataCell(DataType.TEXT)
+            DROP(data, arg, origin)
         }
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at DROP LEFT. " + origin)
@@ -754,7 +803,12 @@ object Sharp {
 
     def DROP$RIGHT(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            data.asText.dropRight(arg.asInteger.toInt).toDataCell(DataType.TEXT)
+            if (arg.isText) {
+                DataCell(data.asText.stripSuffix(arg.asText))
+            }
+            else {
+                data.asText.dropRight(arg.asInteger.toInt).toDataCell(DataType.TEXT)
+            }
         }
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at DROP RIGHT. " + origin)
@@ -992,6 +1046,38 @@ object Sharp {
         }
         else {
             throw new SharpLinkArgumentException(s"Empty or wrong argument at CONCAT. " + origin)
+        }
+    }
+
+    def PREFIX(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            val prefix = arg.asText
+            val str = data.asText
+            if (!str.startsWith((prefix))) {
+                DataCell(prefix + str, DataType.TEXT)
+            }
+            else {
+                data
+            }
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at PREFIX. " + origin)
+        }
+    }
+
+    def SUFFIX(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            val suffix = arg.asText
+            val str = data.asText
+            if (!str.endsWith((suffix))) {
+                DataCell(str + suffix, DataType.TEXT)
+            }
+            else {
+                data
+            }
+        }
+        else {
+            throw new SharpLinkArgumentException(s"Empty or wrong argument at SUFFIX. " + origin)
         }
     }
 
@@ -1291,7 +1377,7 @@ object Sharp {
     }
 
     def REPLACE$ALL$IN(data: DataCell, arg: DataCell, origin: String): DataCell = {
-        if (arg.valid&& arg.isJavaList) {
+        if (arg.valid && arg.isJavaList) {
             val list = arg.asList[String]
             DataCell(data.asRegex.replaceAllIn(list.head, list.last), DataType.TEXT)
         }
@@ -1322,7 +1408,7 @@ object Sharp {
         }
     }
 
-    def IF$GREATER$THAN$ZERO(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def IF$POSITIVE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             val then$else = SharpLink.then$else(data, arg)
             if (data.asDecimal > 0) then$else._1 else then$else._2
@@ -1332,7 +1418,7 @@ object Sharp {
         }
     }
 
-    def IF$LESS$THAN$ZERO(data: DataCell, arg: DataCell, origin: String): DataCell = {
+    def IF$NEGATIVE(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             val then$else = SharpLink.then$else(data, arg)
             if (data.asDecimal < 0) then$else._1 else then$else._2
@@ -2793,8 +2879,8 @@ object SharpLink {
             "TURN" -> Set[String]("AND"),
             "IF$ZERO" -> Set[String]("ELSE"),
             "IF$NOT$ZERO" -> Set[String]("ELSE"),
-            "IF$GREATER$THAN$ZERO" -> Set[String]("ELSE"),
-            "IF$LESS$THAN$ZERO" -> Set[String]("ELSE"),
+            "IF$POSITIVE" -> Set[String]("ELSE"),
+            "IF$NEGATIVE" -> Set[String]("ELSE"),
             "IF$TRUE" -> Set[String]("ELSE"),
             "IF$FALSE" -> Set[String]("ELSE"),
             "IF$NULL" -> Set[String]("ELSE"),

@@ -657,6 +657,14 @@ public class Marker {
 
         content = content.replace("&lt;", "~lt;").replace("&gt;", "~gt;").replace("&quot;", "~quot;");
 
+        //javascript 中的 `
+        //~#96;
+        p = Pattern.compile("<script[\\s\\S]+?`[\\s\\S]+?</script>", Pattern.CASE_INSENSITIVE);
+        m = p.matcher(content);
+        while (m.find()) {
+            content = content.replace(m.group(0), m.group(0).replace("`", "~#96;"));
+        }
+
         content = Marker.markdownToHtml(content);
         //restore html
         content = content.replace("&lt;", "<")
@@ -664,7 +672,8 @@ public class Marker {
                     .replace("&quot;", "\"")
                     .replace("~lt;", "&lt;")
                     .replace("~gt;", "&gt;")
-                    .replace("~quot;", "&quot;");
+                    .replace("~quot;", "&quot;")
+                    .replace("~#96;", "`");
 
         //处理 DIV 元素
         p = Pattern.compile("<p>.*?<block\\b", Pattern.CASE_INSENSITIVE);

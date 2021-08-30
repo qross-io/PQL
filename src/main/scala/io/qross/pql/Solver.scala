@@ -788,7 +788,7 @@ object Solver {
             val left = sentence.takeBefore(head)
             var right = sentence.takeAfter(head)
             val half = right.indexHalfOf('(', ')')
-            var args = right.take(half) //函数参数
+            var args = right.take(half).trim() //函数参数
             right = right.drop(half + 1)
 
             //检查嵌套

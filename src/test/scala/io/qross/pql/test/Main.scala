@@ -98,7 +98,7 @@ object Main {
         //PQL.run("LOAD JSON CONFIG FROM URL 'http://localhost:8848/nacos/v1/cs/configs?dataId=json&group=io.qross.config'")
         //http://localhost:8848/nacos/v1/cs/configs?dataId=test&group=io.qross.config
         //localhost:8848:io.qross.config:test
-        PQL.openFile("/sql/date.sql").place("job_id=274&task_id=12245&record_time=2021-05-27%2001%3A00%3A00&cursor=0&action_id=0&mode=all").run().print
+        PQL.openFile("/test.sql").place("job_id=274&task_id=12245&record_time=2021-05-27%2001%3A00%3A00&cursor=0&action_id=0&mode=all").run().print
 
         //PQL.openFile("""C:\io.Qross\Keeper\src\main\resources\pql/keeper_clean.sql""").place("date=2020-06-23&hour=15").run()
 

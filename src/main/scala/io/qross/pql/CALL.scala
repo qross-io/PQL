@@ -69,7 +69,12 @@ object CALL {
                     GlobalFunction.SYSTEM(funcName).call(args.$restore(PQL))
                 }
                 else {
-                    GlobalFunction.call(funcName, args.split(",").map(_.trim().$sharp(PQL)).toList)
+                    if (args == "") {
+                        GlobalFunction.call(funcName, List[DataCell]())
+                    }
+                    else {
+                        GlobalFunction.call(funcName, args.split(",").map(_.trim().$sharp(PQL)).toList)
+                    }
                 }
             }
             else {

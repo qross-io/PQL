@@ -10,7 +10,7 @@ SCI包括哪些期刊? /48,red,s:SCI是一个国际上知名权威的学术检�
 <div>SCI全称是/26:Science Citation Index/</div>
 
 <for in="1 to 10">
-    <div style="width: 100px">大家发表论文一般会向这里发表，国内已经形成了一个产业链，大家可以百度“SCI”一下。</div>
+    <div style="width: 100px">大家发表论文一般会向这里发表，`国内已经形成了一个产业链`，大家可以百度“SCI”一下。</div>
 </for>
 
 ```html
@@ -33,7 +33,7 @@ SCI包括哪些期刊? /48,red,s:SCI是一个国际上知名权威的学术检�
 
 <script type="text/javascript">
 $listen('DateTimePicker').on('confirm', function() {
-    $x('#DateTime').value($calendar('Calendar').date + ' ' + $clock('Clock').time);
+    $x(`#DateTime`).value($calendar(`Calendar`).date + ` ` + $clock('Clock').time);
 });
 </script>
 ```

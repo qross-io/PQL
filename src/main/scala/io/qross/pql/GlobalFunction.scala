@@ -1,9 +1,13 @@
 package io.qross.pql
 
+import java.time.DayOfWeek
+
 import io.qross.core.{DataCell, DataHub, DataRow, DataType}
 import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
-import io.qross.jdbc.{DataSource, JDBC}
+import io.qross.jdbc.DataSource
+import io.qross.time.DateTime
+import io.qross.time.TimeSpan._
 
 import scala.collection.mutable
 import scala.util.Random
@@ -343,6 +347,8 @@ object GlobalFunctionDeclaration {
         }
     }
 
+    //----------- 数字 -------------------------
+
     def FLOOR(args: List[DataCell]): DataCell = {
         if (args.size == 1) {
             DataCell(args.head.asDecimal.floor(0), DataType.INTEGER)
@@ -380,6 +386,442 @@ object GlobalFunctionDeclaration {
             throw new SQLParseException(s"Incorrect arguments at @ROUND, expect 1, actual 0")
         }
     }
+
+    //---------------- 日期时间 ----------------
+
+    def DAYOFWEEK(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getDayOfWeek, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @DAYOFWEEK, expect 1, actual 0")
+        }
+    }
+
+    def DAYOFMONTH(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getDayOfMonth, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @DAYOFMONTH, expect 1, actual 0")
+        }
+    }
+
+    def DAY(args: List[DataCell]): DataCell = {
+        DAYOFMONTH(args)
+    }
+
+    def DAYOFYEAR(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getDayOfYear, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @DAYOFYEAR, expect 1, actual 0")
+        }
+    }
+
+    def DAYNAME(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getWeekName, DataType.TEXT)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @DAYNAME, expect 1, actual 0")
+        }
+    }
+
+    def WEEKNAME(args: List[DataCell]): DataCell = {
+        DAYNAME(args)
+    }
+
+    def FULLDAYNAME(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getFullWeekName, DataType.TEXT)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @DAYNAME, expect 1, actual 0")
+        }
+    }
+
+    def FULLWEEKNAME(args: List[DataCell]): DataCell = {
+        FULLDAYNAME(args)
+    }
+
+    def YEAR(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getYear, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @YEAR, expect 1, actual 0")
+        }
+    }
+
+    def QUARTER(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getQuarter, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @QUARTER, expect 1, actual 0")
+        }
+    }
+
+    def QUARTERNAME(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getQuarterName, DataType.TEXT)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @QUARTERNAME, expect 1, actual 0")
+        }
+    }
+
+    def FULLQUARTERNAME(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getFullQuarterName, DataType.TEXT)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @QUARTERNAME, expect 1, actual 0")
+        }
+    }
+
+    def MONTH(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getMonth, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @MONTH, expect 1, actual 0")
+        }
+    }
+
+    def MONTHNAME(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getMonthName, DataType.TEXT)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @MONTHNAME, expect 1, actual 0")
+        }
+    }
+
+    def FULLMONTHNAME(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getFullMonthName, DataType.TEXT)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @FULLMONTHNAME, expect 1, actual 0")
+        }
+    }
+
+    def WEEK(args: List[DataCell]): DataCell = {
+        DAYOFWEEK(args)
+    }
+
+    def WEEKOFYEAR(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            val first = {
+                if (args.length > 1) {
+                    args(1).asText("1").take(2).toUpperCase() match {
+                        case "1" | "MO" => DayOfWeek.MONDAY
+                        case "2" | "TU" => DayOfWeek.TUESDAY
+                        case "3" | "WE" => DayOfWeek.WEDNESDAY
+                        case "4" | "TH" => DayOfWeek.THURSDAY
+                        case "5" | "FR" => DayOfWeek.FRIDAY
+                        case "6" | "SA" => DayOfWeek.SATURDAY
+                        case "0" | "7" | "SU" => DayOfWeek.SUNDAY
+                        case _ => DayOfWeek.MONDAY
+                    }
+                }
+                else {
+                    DayOfWeek.MONDAY
+                }
+            }
+
+            DataCell(args.head.asDateTime.getWeekOfYear(first), DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @WEEK, expect 1 or 2, actual 0")
+        }
+    }
+
+    def HOUR(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getHour, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @HOUR, expect 1, actual 0")
+        }
+    }
+
+    def MINUTE(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getMinute, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @MINUTE, expect 1, actual 0")
+        }
+    }
+
+    def SECOND(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getSecond, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @SECOND, expect 1, actual 0")
+        }
+    }
+
+    def MILLI(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getMilli, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @MILLI, expect 1, actual 0")
+        }
+    }
+
+    def MICRO(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getMicro, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @MICRO, expect 1, actual 0")
+        }
+    }
+
+    def NANO(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(args.head.asDateTime.getNano, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @MILLI, expect 1, actual 0")
+        }
+    }
+
+    /*
+    + SECOND 秒 SECONDS
+    + MINUTE 分钟 MINUTES
+    + HOUR 时间 HOURS
+    + DAY 天 DAYS
+    + MONTH 月 MONTHS
+    + YEAR 年 YEARS
+    + MINUTE_SECOND 分钟和秒 "MINUTES:SECONDS"
+    + HOUR_MINUTE 小时和分钟 "HOURS:MINUTES"
+    + DAY_HOUR 天和小时 "DAYS HOURS"
+    + YEAR_MONTH 年和月 "YEARS-MONTHS"
+    + HOUR_SECOND 小时, 分钟， "HOURS:MINUTES:SECONDS"
+    + DAY_MINUTE 天, 小时, 分钟 "DAYS HOURS:MINUTES"
+    + DAY_SECOND 天, 小时, 分钟, 秒 "DAYS HOURS:MINUTES:SECONDS"
+     */
+
+    def TIMESTAMPDIFF(args: List[DataCell]): DataCell = {
+        if (args.size == 3) {
+            args.head.asText("SECOND").toUpperCase() match {
+                case "MILLI" | "MILLIS" => DataCell(args(2).asDateTime.later(args(1).asDateTime), DataType.INTEGER)
+                case "SECOND" | "SECONDS" => DataCell(args(2).asDateTime.later(args(1).asDateTime).toSeconds, DataType.INTEGER)
+                case "MINUTE" | "MINUTES" => DataCell(args(2).asDateTime.later(args(1).asDateTime).toMinutes, DataType.INTEGER)
+                case "HOUR" | "HOURS" => DataCell(args(2).asDateTime.later(args(1).asDateTime).toHours, DataType.INTEGER)
+                case "DAY" | "DAYS" => DataCell(args(2).asDateTime.later(args(1).asDateTime).toDays, DataType.INTEGER)
+                case "MONTH" | "MONTHS" =>
+                        val time1 = args(1).asDateTime
+                        val time2 = args(2).asDateTime
+                        var months = (time2.year - time1.year) * 12 + (time2.month - time1.month)
+                        if (time1.before(time2)) {
+                            if (time1.plusMonths(months).after(time2)) {
+                                months -= 1
+                            }
+                        }
+                        else if (time1.after(time2)) {
+                            if (time1.plusYears(months).before(time2)) {
+                                months += 1
+                            }
+                        }
+                        DataCell(months, DataType.INTEGER)
+                case "YEAR" | "YEARS" =>
+                        val time1 = args(1).asDateTime
+                        val time2 = args(2).asDateTime
+                        var years = time2.year - time1.year
+                        if (time1.before(time2)) {
+                            if (time1.plusYears(years).after(time2)) {
+                                years -= 1
+                            }
+                        }
+                        else if (time1.after(time2)) {
+                            if (time1.plusYears(years).before(time2)) {
+                                years += 1
+                            }
+                        }
+                        DataCell(years, DataType.INTEGER)
+                case _ =>
+                    throw new SQLParseException("Incorrect argument at @TIMESTAMPDIFF, the first argument must be a string in 'MILLI|SECOND|MINUTE|HOUR|DAY|MONTH|YEAR'.")
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty or miss arguments at @TIMESTAMPDIFF, expect 3, actual " + args.size)
+        }
+    }
+
+    def DATE_ADD(args: List[DataCell]): DataCell = {
+        if (args.size >= 3) {
+            DataCell(
+                args(2).asText.toUpperCase() match {
+                    case "MILLI" | "MILLIS" => args.head.asDateTime.plusMillis(args(1).asInteger(0))
+                    case "SECOND" | "SECONDS" => args.head.asDateTime.plusSeconds(args(1).asInteger(0))
+                    case "MINUTE" | "MINUTES" => args.head.asDateTime.plusMinutes(args(1).asInteger(0))
+                    case "HOUR" | "HOURS" => args.head.asDateTime.plusHours(args(1).asInteger(0))
+                    case "DAY" | "DAYS" => args.head.asDateTime.plusDays(args(1).asInteger(0))
+                    case "MONTH" | "MONTHS" => args.head.asDateTime.plusMonths(args(1).asInteger(0))
+                    case "YEAR" | "YEARS" => args.head.asDateTime.plusYears(args(1).asInteger(0))
+                    case _ => throw new SQLParseException("Incorrect argument at @DATE_ADD, the third argument must be a string in 'MILLI|SECOND|MINUTE|HOUR|DAY|MONTH|YEAR'.")
+                }, DataType.DATETIME)
+        }
+        else {
+            throw new SQLParseException(s"Empty or miss arguments at @DATE_ADD, expect 3, actual " + args.size)
+        }
+    }
+
+    def DATE_SUB(args: List[DataCell]): DataCell = {
+        if (args.size >= 3) {
+            DataCell(
+                args(2).asText.toUpperCase() match {
+                    case "MILLI" | "MILLIS" => args.head.asDateTime.minusMillis(args(1).asInteger(0))
+                    case "SECOND" | "SECONDS" => args.head.asDateTime.minusSeconds(args(1).asInteger(0))
+                    case "MINUTE" | "MINUTES" => args.head.asDateTime.minusMinutes(args(1).asInteger(0))
+                    case "HOUR" | "HOURS" => args.head.asDateTime.minusHours(args(1).asInteger(0))
+                    case "DAY" | "DAYS" => args.head.asDateTime.minusDays(args(1).asInteger(0))
+                    case "MONTH" | "MONTHS" => args.head.asDateTime.minusMonths(args(1).asInteger(0))
+                    case "YEAR" | "YEARS" => args.head.asDateTime.minusYears(args(1).asInteger(0))
+                    case _ => throw new SQLParseException("Incorrect argument at @DATE_ADD, the third argument must be a string in 'SECOND|MINUTE|HOUR|DAY|MONTH|YEAR'.")
+                }, DataType.DATETIME)
+        }
+        else {
+            throw new SQLParseException(s"Empty or miss arguments at @DATE_SUB, expect 3, actual " + args.size)
+        }
+    }
+
+    def ADDDATE(args: List[DataCell]): DataCell = {
+        DATE_ADD(args)
+    }
+
+    def SUBDATE(args: List[DataCell]): DataCell = {
+        DATE_SUB(args)
+    }
+
+    def DATE_FORMAT(args: List[DataCell]): DataCell = {
+        if (args.size >= 2) {
+            DataCell(args.head.asDateTime.format(args(1).asText("yyyy-MM-dd HH:mm:ss")), DataType.TEXT)
+        }
+        else {
+            throw new SQLParseException(s"Empty or miss arguments at @DATE_FORMAT, expect 2, actual " + args.size)
+        }
+    }
+    def DATETIME_FORMAT(args: List[DataCell]): DataCell = {
+        DATE_FORMAT(args)
+    }
+
+    def CURDATE(args: List[DataCell]): DataCell = {
+        CURRENT_DATE(args)
+    }
+
+    def CURRENT_DATE(args: List[DataCell]): DataCell = {
+        DataCell(DateTime.now.getString("yyyy-MM-dd"), DataType.TEXT)
+    }
+
+    def CURTIME(args: List[DataCell]): DataCell = {
+        CURRENT_TIME(args)
+    }
+
+    def CURRENT_TIME(args: List[DataCell]): DataCell = {
+        DataCell(DateTime.now.getString("HH:mm:ss"), DataType.TEXT)
+    }
+
+    def NOW(args: List[DataCell]): DataCell = {
+        DataCell(DateTime.now, DataType.DATETIME)
+    }
+
+    def CURRENT_DATETIME(args: List[DataCell]): DataCell = {
+        DataCell(DateTime.now, DataType.DATETIME)
+    }
+
+    def CURRENT_TIMESTAMP(args: List[DataCell]): DataCell = {
+        DataCell(DateTime.now.toEpochSecond, DataType.INTEGER)
+    }
+
+    def UNIX_TIMESTAMP(args: List[DataCell]): DataCell = {
+        if (args.isEmpty) {
+            DataCell(DateTime.now.toEpochSecond, DataType.INTEGER)
+        }
+        else {
+            DataCell(args.head.asDateTime.toEpochSecond, DataType.INTEGER)
+        }
+    }
+
+    def FROM_UNIXTIME(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                DataCell(args.head.asDateTime("yyyy-MM-dd HH:mm:ss"), DataType.TEXT)
+            }
+            else {
+                DataCell(args.head.asDateTime(args(1).asText("yyyy-MM-dd HH:mm:ss")), DataType.TEXT)
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @TIMESTAMPDIFF, expect 1 or 2, actual 0")
+        }
+    }
+
+    def SEC_TO_TIME(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            var seconds = args.head.asInteger(-1) % (3600 * 24)
+            if (seconds > -1) {
+                val hour = seconds / 3600
+                seconds = seconds % 3600
+                val minute = seconds / 60
+                val second = seconds % 60
+                DataCell(f"$hour%02d:$minute%02d:$second%02d", DataType.TEXT)
+            }
+            else {
+                throw new SQLParseException(s"Incorrect argument at @SEC_TO_TIME, must be a integer.")
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @SEC_TO_TIME, expect 1, actual 0")
+        }
+    }
+
+    def TIME_TO_SEC(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            "^(\\d{2}):(\\d{2}):(\\d{2})$".r.findFirstMatchIn(args.head.asText) match {
+                case Some(m) => DataCell(m.group(1).toInt * 3600 + m.group(2).toInt * 60 + m.group(3).toInt, DataType.INTEGER)
+                case None => throw new SQLParseException(s"Incorrect argument at @TIME_TO_SEC, its format must be 'HH:mm:ss'.")
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @TIME_TO_SEC, expect 1, actual 0")
+        }
+    }
+
+    /*
+
+    18. `TO_DAYS(date)` 返回日期 date 是西元 0 年至今多少天，不计算 1582 年以前。
+    ```sql
+    select TO_DAYS(950501); --728779
+    select TO_DAYS('1997-10-07'); --729669
+    ```
+    19. `FROM_DAYS(N)` 给出西元 0 年至今多少天返回 DATE 值，不计算1582年以前。
+    ```sql
+    select FROM_DAYS(729669); -- '1997-10-07'
+    ```
+
+
+    21. `TIME_FORMAT(time,format)` 和 DATE_FORMAT() 类似，但 TIME_FORMAT 只处理小时、分钟和秒，其余符号产生一个`NULL`值或`0`。
+
+     14. `PERIOD_ADD(P,N)` 增加 N 个月到时期 P 并返回（P 的格式 YYMM 或 YYYYMM）
+    ```sql
+    select PERIOD_ADD(9801,2); -- 199803
+    ```
+    15. `PERIOD_DIFF(P1, P2)` 返回在时期 P1 和 P2 之间月数（P1 和 P2 的格式 YYMM 或 YYYYMM）
+    ```sql
+    select PERIOD_DIFF(9802,199703); -- 11
+    ```
+
+    */
 }
 
 class GlobalFunctionDeclaration {

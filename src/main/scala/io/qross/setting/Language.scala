@@ -18,7 +18,7 @@ object Language {
     private val labels: mutable.HashMap[String, String] = new mutable.HashMap[String, String]()
     private val props = new java.util.Properties()
 
-    //从languages/english/*.lang加载
+    //从 languages/english/*.lang 加载
     def loadAll(): Unit = {
         ResourceDir.listFiles("/languages")
             .foreach(path => {
@@ -89,6 +89,17 @@ object Language {
         }
 
         text
+    }
+
+    def getModuleContent(module: String): java.util.HashMap[String, String] = {
+        val languages = new java.util.HashMap[String, String]()
+        val language = Language.name
+        for ((key, value) <- labels) {
+            if (key.startsWith(language + "." + module + ".")) {
+                languages.put(key.takeAfterLast("."), value)
+            }
+        }
+        languages
     }
 }
 

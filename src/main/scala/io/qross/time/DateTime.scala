@@ -2,7 +2,7 @@ package io.qross.time
 
 import java.time._
 import java.time.format.DateTimeFormatter
-import java.time.temporal.{ChronoField, ChronoUnit}
+import java.time.temporal.{ChronoField, ChronoUnit, WeekFields}
 import java.util.regex.Pattern
 
 import io.qross.core.DataRow
@@ -206,10 +206,19 @@ class DateTime(private val dateTime: Any, private val formatStyle: String, priva
    
     def get(field: ChronoField): Int = this.localDateTime.get(field)
     def getYear: Int = this.localDateTime.getYear
+    def getQuarter: Int = this.getString("Q").toInt
+    def getQuarterName: String = this.getString("QQQ")
+    def getFullQuarterName: String = this.getString("QQQQ")
     def getMonth: Int = this.localDateTime.getMonthValue
-    def getWeekName: String = this.getString("EEE")
+    def getMonthName: String = this.getString("MMM")
+    def getFullMonthName: String = this.getString("MMMM")
+    def getWeekName: String = this.getString("EEE").replace("星期", "周")
+    def getFullWeekName: String = this.getString("EEEE")
+    def getWeekOfMonth(firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY): Int = this.localDateTime.get(WeekFields.of(firstDayOfWeek, 1).weekOfMonth())
+    def getWeekOfYear(firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY):Int = this.localDateTime.get(WeekFields.of(firstDayOfWeek, 1).weekOfYear())
     def getDayOfWeek: Int = this.localDateTime.getDayOfWeek.getValue
     def getDayOfMonth: Int = this.localDateTime.getDayOfMonth
+    def getDayOfYear: Int = this.localDateTime.getDayOfYear
     def getHour: Int = this.localDateTime.getHour
     def getMinute: Int = this.localDateTime.getMinute
     def getSecond: Int = this.localDateTime.getSecond
@@ -221,17 +230,26 @@ class DateTime(private val dateTime: Any, private val formatStyle: String, priva
     def getTockValue: String = this.getString("yyyy-MM-dd HH:00:00")
 
     def year: Int = this.localDateTime.getYear
+    def quarter: Int = this.getQuarter
+    def quarterName: String = this.getString("QQQ")
+    def fullQuarterName: String = this.getString("QQQQ")
     def month: Int = this.localDateTime.getMonthValue
-    def weekName: String = this.getString("EEE")
+    def monthName: String = this.getString("MMM")
+    def fullMonthName: String = this.getString("MMMM")
+    def weekName: String = this.getString("EEE").replace("星期", "周")
+    def fullWeekName: String = this.getString("EEEE")
+    def weekOfMonth: Int = this.localDateTime.get(WeekFields.of(DayOfWeek.MONDAY, 1).weekOfMonth())
+    def weekOfYear:Int = this.localDateTime.get(WeekFields.of(DayOfWeek.MONDAY, 1).weekOfYear())
     def dayOfWeek: Int = this.localDateTime.getDayOfWeek.getValue  //周一到周日分别为 1~7
     def dayOfMonth: Int = this.localDateTime.getDayOfMonth
+    def dayOfYear: Int = this.localDateTime.getDayOfYear
     def hour: Int = this.localDateTime.getHour
     def minute: Int = this.localDateTime.getMinute
     def second: Int = this.localDateTime.getSecond
     def milli: Int = this.localDateTime.getNano / 1000000
     def micro: Int = this.localDateTime.getNano / 1000
     def nano: Int = this.localDateTime.getNano
-    
+
     def set(field: ChronoField, value: Int): DateTime = {
         new DateTime(this.localDateTime.`with`(field, value))
     }

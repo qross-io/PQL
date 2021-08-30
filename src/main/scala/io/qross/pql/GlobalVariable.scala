@@ -145,6 +145,7 @@ object GlobalVariableDeclaration {
     def YESTERDAY(PQL: PQL): DataCell = DataCell(DateTime.now.minusDays(1).setZeroOfDay(), DataType.DATETIME)
     def TOMORROW(PQL: PQL): DataCell = DataCell(DateTime.now.plusDays(1).setZeroOfDay(), DataType.DATETIME)
     def NOW(PQL: PQL): DataCell = DataCell(DateTime.now, DataType.DATETIME)
+    def TIMESTAMP(PQL: PQL): DataCell = DataCell(DateTime.now.toEpochSecond, DataType.INTEGER)
 
     def ROWS(PQL: PQL): DataCell = DataCell(PQL.COUNT_OF_LAST_SELECT, DataType.INTEGER)
     def COUNT_OF_LAST_SELECT(PQL: PQL): DataCell = DataCell(PQL.COUNT_OF_LAST_SELECT, DataType.INTEGER)

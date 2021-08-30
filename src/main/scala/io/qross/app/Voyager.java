@@ -157,11 +157,6 @@ public class  Voyager extends AbstractTemplateView {
                     content = template.replace("#{content}", content);
                 }
 
-                //scripts
-                if (content.contains("#{scripts}")) {
-                    content = content.replace("#{scripts}", Cogo.getScripts(content));
-                }
-
                 //setup
                 if (!setup.isEmpty()) {
                     content = "<%" + setup + "%>" + content;
@@ -222,13 +217,6 @@ public class  Voyager extends AbstractTemplateView {
                 }
                 languageModules.clear();
 
-                //static site  @ or %
-                p = Pattern.compile("\\s(src|href)=\"([@|%])", Pattern.CASE_INSENSITIVE);
-                m = p.matcher(content);
-                while (m.find()) {
-                    content = content.replace(m.group(0), " " + m.group(1) + "=\"" + (m.group(2).equals("@") ? Setting.VoyagerStaticSite : Setting.VoyagerGallerySite));
-                }
-
                 try {
                     Object result =
                             new PQL(content, true, new DataHub(Properties.contains(Setting.VoyagerConnection) ? Setting.VoyagerConnection : ""))
@@ -246,7 +234,20 @@ public class  Voyager extends AbstractTemplateView {
                         if (content.contains("#{title}") && content.contains("<h1>")) {
                             content = content.replace("#{title}", content.substring(content.indexOf("<h1>") + 4, content.indexOf("</h1>")));
                         }
-                    } else {
+
+                        //scripts
+                        if (content.contains("#{scripts}")) {
+                            content = content.replace("#{scripts}", Cogo.getScripts(content));
+                        }
+
+                        //static site  @ or %
+                        p = Pattern.compile("\\s(src|href)=\"([@|%])", Pattern.CASE_INSENSITIVE);
+                        m = p.matcher(content);
+                        while (m.find()) {
+                            content = content.replace(m.group(0), " " + m.group(1) + "=\"" + (m.group(2).equals("@") ? Setting.VoyagerStaticSite : Setting.VoyagerGallerySite));
+                        }
+                    }
+                    else {
                         content = "";
                     }
                 }

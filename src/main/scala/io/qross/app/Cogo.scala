@@ -6,10 +6,12 @@ object Cogo {
 
     private val scripts = Map[String, String](
         "popup" -> "root.popup.js",
-        "div-display" -> "root.layout.js",
+        "message" -> "root.popup.js",
+        "div-display" -> "root.div.js",
         "tab" -> "root.tab.js",
         "backtop" -> "root.backtop.js",
         "select" -> "root.select.js,select.css",
+        "type-select" -> "root.select.js,select.css",
         "button" ->  "root.popup.js,root.button.js",
         "calendar" -> "root.calendar.js,calendar.css",
         "input-calendar" -> "root.calendar.js,calendar.css", //iconfont.css
@@ -52,11 +54,12 @@ object Cogo {
             |       <title>#{title}</title>
             |       <script type="text/javascript" src="@/root.js"></script>
             |       <script type="text/javascript" src="@/root.model.js"></script>
+            |       <script type="text/javascript" src="@/root.anchor.js"></script>
             |       <script type="text/javascript" src="@/root.datetime.js"></script>
             |       <script type="text/javascript" src="@/root.animation.js"></script>
             |       <script type="text/javascript" src="@/root.input.js"></script>
             |       <link href="@/css/root/main.css" rel="stylesheet" type="text/css" />
-            |       <link href="/root/iconfont.css" rel="stylesheet" type="text/css" />
+            |       <link href="/iconfont.css" rel="stylesheet" type="text/css" />
             |       #{scripts}
             |   </head>
             |   <body>
@@ -67,7 +70,7 @@ object Cogo {
             |</html>""".stripMargin
 
     def getScripts(content: String): String = {
-        """(?i)<div[^>]+display=|\stab\b|<backtop\b|<select\b|\sselect=|<button\b|type="datetime"|<calendar\b|<clock\b|<input[^>]+type="calendar"|<treeview\b|\seditable\b|<table[^>]+data\b|coder=|<a\b[^>]+help=|<a\b[^>]+onclick\+=|\bpopup=|<chart\b|<log\b""".r
+        """(?i)<div[^>]+display=|\stab\b|<backtop\b|<select\b|\sselect=|\btype="select"|<button\b|<calendar\b|<clock\b|<input[^>]+type="calendar"|<treeview\b|\seditable\b|<table[^>]+data\b|coder=|<a\b[^>]+help=|\spopup\b|\smessage\b|<chart\b|<log\b""".r
             .findAllIn(content)
             .map(v => {
                 val ms = "(?i)[a-z]+".r.findAllIn(v).map(_.toLowerCase()).toList
