@@ -28,7 +28,7 @@ object DataSource {
 
     def testConnection(driver: String, connectionString: String, username: String, password: String): String = {
         try {
-            Class.forName(driver).newInstance()
+            Class.forName(if (driver != "") driver else JDBC.recognizeDriver(connectionString)).newInstance()
             if (username != "") {
                 DriverManager.getConnection(connectionString, username, password)
             }

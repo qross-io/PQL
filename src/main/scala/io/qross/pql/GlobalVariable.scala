@@ -182,4 +182,6 @@ object GlobalVariableDeclaration {
     def KEEPER_HTTP_SERVICE(PQL: PQL): DataCell = DataSource.QROSS.executeSingleValue("""SELECT A.node_address AS service FROM (SELECT node_address, busy_score FROM  qross_keeper_nodes WHERE status='online' AND disconnection=0) A
                             INNER JOIN (SELECT node_address FROM qross_keeper_beats WHERE actor_name='Keeper' AND `status`='running' AND timestampdiff(second, last_beat_time, now())<120) B
                             ON A.node_address=B.node_address ORDER BY A.busy_score ASC LIMIT 1""").asText("").toDataCell(DataType.TEXT)
+
+    def PI(PQL: PQL): DataCell = DataCell(Math.PI, DataType.DECIMAL)
 }

@@ -3,7 +3,9 @@ DEBUG ON;
 -- REQUEST JSON API '''http://192.168.3.67:7700/keeper/logs?token=@KEEPER_HTTP_TOKEN&hour=20210725/11&cursor=0''';
 -- PARSE "/" AS OBJECT;
 
-PRINT ${ @NOW GET FULL WEEK NAME };
+PRINT @REGEXP_REPLACE('abc', 'b', 'z');
+PRINT @REGEXP_SUBSTR('abc', '[cd]');
+
 
 
 --PUT # INSERT INTO td (status) VALUES ('#item');

@@ -1437,6 +1437,15 @@ object Sharp {
         }
     }
 
+    def CEIL(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (arg.valid) {
+            data.asDecimal.ceil(arg.asInteger(0).toInt).toDataCell(DataType.DECIMAL)
+        }
+        else {
+            data.asDecimal.ceil(0).toDataCell(DataType.INTEGER)
+        }
+    }
+
     def ROUND(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
             data.asDecimal.round(arg.asInteger(0).toInt).toDataCell(DataType.DECIMAL)
@@ -1536,23 +1545,31 @@ object Sharp {
 
     def MIN(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.isInteger && arg.isInteger) {
-                DataCell(data.asInteger(0).min(arg.asInteger(0)), DataType.INTEGER)
+            if (data.isInteger || data.isDecimal) {
+                data.asDecimal.min(arg.asDecimal).dataCell
+            }
+            else if (data.isTable) {
+                val field = arg.asText
+                val table = data.asTable
+                if (table.contains(field)) {
+                    val list = table.getColumn(field)
+                    if (list.nonEmpty) {
+                        list.map(_.toDecimal(0)).min.dataCell
+                    }
+                    else {
+                        DataCell(0, DataType.INTEGER)
+                    }
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at MIN: incorrect field name $field. " + origin)
+                }
             }
             else {
-                DataCell(data.asDecimal(0).min(arg.asDecimal(0)), DataType.DECIMAL)
+                throw SharpInapplicableLinkNameException.occur("MIN", origin)
             }
         }
-        else if (data.isJavaList) {
-            val list = data.asJavaList.asScala
-            DataCell (
-                list.head match {
-                    case _: Int => list.map(_.asInstanceOf[Int]).min
-                    case _: Long => list.map(_.asInstanceOf[Long]).min
-                    case _: Float => list.map(_.asInstanceOf[Float]).min
-                    case _: Double => list.map(_.asInstanceOf[Double]).min
-                    case _ => list.map(_.toString()).min
-                })
+        else if (data.isJavaList || data.isHashSet) {
+            data.asJavaList.asScala.map(_.toDecimal(0)).min.dataCell
         }
         else {
             throw SharpLinkArgumentException.occur("MIN", origin)
@@ -1561,16 +1578,52 @@ object Sharp {
 
     def MAX(data: DataCell, arg: DataCell, origin: String): DataCell = {
         if (arg.valid) {
-            if (data.isInteger && arg.isInteger) {
-                DataCell(data.asInteger(0).max(arg.asInteger(0)), DataType.INTEGER)
+            if (data.isInteger || data.isDecimal) {
+                data.asDecimal.max(arg.asDecimal).dataCell
+            }
+            else if (data.isTable) {
+                val field = arg.asText
+                val table = data.asTable
+                if (table.contains(field)) {
+                    val list = table.getColumn(field)
+                    if (list.nonEmpty) {
+                        list.map(_.toDecimal(0)).max.dataCell
+                    }
+                    else {
+                        DataCell(0, DataType.INTEGER)
+                    }
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at MAX: incorrect field name $field. " + origin)
+                }
             }
             else {
-                DataCell(data.asDecimal(0).max(arg.asDecimal(0)), DataType.DECIMAL)
+                throw SharpInapplicableLinkNameException.occur("MAX", origin)
             }
+        }
+        else if (data.isJavaList || data.isHashSet) {
+            data.asJavaList.asScala.map(_.toDecimal(0)).max.dataCell
         }
         else {
             throw SharpLinkArgumentException.occur("MAX", origin)
         }
+    }
+
+    def SIGN(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        val m = data.asDecimal(0)
+        if (m > 0) {
+            DataCell(1, DataType.INTEGER)
+        }
+        else if (m < 0) {
+            DataCell(-1, DataType.INTEGER)
+        }
+        else {
+            DataCell(0, DataType.INTEGER)
+        }
+    }
+
+    def SQRT(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        DataCell(Math.sqrt(data.asDecimal(0)), DataType.DECIMAL)
     }
 
     /* ---------- 判断操作 ---------- */
@@ -2520,6 +2573,294 @@ object Sharp {
         }
         else {
             throw SharpLinkArgumentException.occur(s"NOT IN", origin)
+        }
+    }
+
+    def SUM(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isJavaList || data.isHashSet) {
+            val list = data.asList[Any]
+            if (list.nonEmpty) {
+                list.map(_.toDecimal(0)).sum.dataCell
+            }
+            else {
+                DataCell(0, DataType.INTEGER)
+            }
+        }
+        else if (data.isTable) {
+            if (arg.valid) {
+                val field = arg.asText
+                val table = data.asTable
+                if (table.contains(field)) {
+                    val list = table.getColumn(field)
+                    if (list.nonEmpty) {
+                        list.map(_.toDecimal(0)).sum.dataCell
+                    }
+                    else {
+                        DataCell(0, DataType.INTEGER)
+                    }
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at SUM: incorrect field name $field. " + origin)
+                }
+            }
+            else {
+                throw SharpLinkArgumentException.occur(s"SUM", origin)
+            }
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("SUM", origin)
+        }
+    }
+
+    def AVG(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isJavaList || data.isHashSet) {
+            val list = data.asList[Any]
+            if (list.nonEmpty) {
+                (list.map(_.toDecimal(0)).sum / list.size).dataCell
+            }
+            else {
+                DataCell(0, DataType.INTEGER)
+            }
+        }
+        else if (data.isTable) {
+            if (arg.valid) {
+                val field = arg.asText
+                val table = data.asTable
+                if (table.contains(field)) {
+                    val list = table.getColumn(field)
+                    if (list.nonEmpty) {
+                        (list.map(_.toDecimal(0)).sum / list.size).dataCell
+                    }
+                    else {
+                        DataCell(0, DataType.INTEGER)
+                    }
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at AVG: incorrect field name $field. " + origin)
+                }
+            }
+            else {
+                throw SharpLinkArgumentException.occur(s"AVG", origin)
+            }
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("AVG", origin)
+        }
+    }
+
+    def VAR(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isJavaList || data.isHashSet) {
+            val list = data.asList[Any]
+            if (list.nonEmpty) {
+               list.sampleVariance.dataCell
+            }
+            else {
+                DataCell(0, DataType.INTEGER)
+            }
+        }
+        else if (data.isTable) {
+            if (arg.valid) {
+                val field = arg.asText
+                val table = data.asTable
+                if (table.contains(field)) {
+                    val list = table.getColumn(field)
+                    if (list.nonEmpty) {
+                        list.sampleVariance.dataCell
+                    }
+                    else {
+                        DataCell(0, DataType.INTEGER)
+                    }
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at VAR: incorrect field name $field. " + origin)
+                }
+            }
+            else {
+                throw SharpLinkArgumentException.occur(s"VAR", origin)
+            }
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("VAR", origin)
+        }
+    }
+
+    def VARP(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isJavaList || data.isHashSet) {
+            val list = data.asList[Any]
+            if (list.nonEmpty) {
+                list.variance.dataCell
+            }
+            else {
+                DataCell(0, DataType.INTEGER)
+            }
+        }
+        else if (data.isTable) {
+            if (arg.valid) {
+                val field = arg.asText
+                val table = data.asTable
+                if (table.contains(field)) {
+                    val list = table.getColumn(field)
+                    if (list.nonEmpty) {
+                        list.variance.dataCell
+                    }
+                    else {
+                        DataCell(0, DataType.INTEGER)
+                    }
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at VARP: incorrect field name $field. " + origin)
+                }
+            }
+            else {
+                throw SharpLinkArgumentException.occur(s"VARP", origin)
+            }
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("VARP", origin)
+        }
+    }
+
+    def STDEV(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isJavaList || data.isHashSet) {
+            val list = data.asList[Any]
+            if (list.nonEmpty) {
+                list.sampleDeviation.dataCell
+            }
+            else {
+                DataCell(0, DataType.INTEGER)
+            }
+        }
+        else if (data.isTable) {
+            if (arg.valid) {
+                val field = arg.asText
+                val table = data.asTable
+                if (table.contains(field)) {
+                    val list = table.getColumn(field)
+                    if (list.nonEmpty) {
+                        list.sampleDeviation.dataCell
+                    }
+                    else {
+                        DataCell(0, DataType.INTEGER)
+                    }
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at STDEV: incorrect field name $field. " + origin)
+                }
+            }
+            else {
+                throw SharpLinkArgumentException.occur(s"STDEV", origin)
+            }
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("STDEV", origin)
+        }
+    }
+
+    def STDEVP(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isJavaList || data.isHashSet) {
+            val list = data.asList[Any]
+            if (list.nonEmpty) {
+                list.deviation.dataCell
+            }
+            else {
+                DataCell(0, DataType.INTEGER)
+            }
+        }
+        else if (data.isTable) {
+            if (arg.valid) {
+                val field = arg.asText
+                val table = data.asTable
+                if (table.contains(field)) {
+                    val list = table.getColumn(field)
+                    if (list.nonEmpty) {
+                        list.deviation.dataCell
+                    }
+                    else {
+                        DataCell(0, DataType.INTEGER)
+                    }
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at STDEVP: incorrect field name $field. " + origin)
+                }
+            }
+            else {
+                throw SharpLinkArgumentException.occur(s"STDEVP", origin)
+            }
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("STDEVP", origin)
+        }
+    }
+
+    def CSV(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isJavaList || data.isHashSet) {
+            val list = data.asList[Any]
+            if (list.nonEmpty) {
+                list.sampleVarianceCoefficient.dataCell
+            }
+            else {
+                DataCell(0, DataType.INTEGER)
+            }
+        }
+        else if (data.isTable) {
+            if (arg.valid) {
+                val field = arg.asText
+                val table = data.asTable
+                if (table.contains(field)) {
+                    val list = table.getColumn(field)
+                    if (list.nonEmpty) {
+                        list.sampleVarianceCoefficient.dataCell
+                    }
+                    else {
+                        DataCell(0, DataType.INTEGER)
+                    }
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at CV: incorrect field name $field. " + origin)
+                }
+            }
+            else {
+                throw SharpLinkArgumentException.occur(s"CV", origin)
+            }
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("CV", origin)
+        }
+    }
+
+    def CV(data: DataCell, arg: DataCell, origin: String): DataCell = {
+        if (data.isJavaList || data.isHashSet) {
+            val list = data.asList[Any]
+            if (list.nonEmpty) {
+                list.varianceCoefficient.dataCell
+            }
+            else {
+                DataCell(0, DataType.INTEGER)
+            }
+        }
+        else if (data.isTable) {
+            if (arg.valid) {
+                val field = arg.asText
+                val table = data.asTable
+                if (table.contains(field)) {
+                    val list = table.getColumn(field)
+                    if (list.nonEmpty) {
+                        list.varianceCoefficient.dataCell
+                    }
+                    else {
+                        DataCell(0, DataType.INTEGER)
+                    }
+                }
+                else {
+                    throw new SharpLinkArgumentException(s"No result at CVP: incorrect field name $field. " + origin)
+                }
+            }
+            else {
+                throw SharpLinkArgumentException.occur(s"CVP", origin)
+            }
+        }
+        else {
+            throw SharpInapplicableLinkNameException.occur("CVP", origin)
         }
     }
 

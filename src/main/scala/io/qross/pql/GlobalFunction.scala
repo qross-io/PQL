@@ -8,7 +8,7 @@ import io.qross.ext.TypeExt._
 import io.qross.jdbc.DataSource
 import io.qross.time.DateTime
 import io.qross.time.TimeSpan._
-
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.Random
 
@@ -349,6 +349,81 @@ object GlobalFunctionDeclaration {
 
     //----------- 数字 -------------------------
 
+    def ABS(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            args.head.asDecimal.abs.dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @ABS, expect 1, actual 0")
+        }
+    }
+
+    def ACOS(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            Math.acos(args.head.asDecimal(0)).dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @ACOS, expect 1, actual 0")
+        }
+    }
+
+    def ASIN(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            Math.asin(args.head.asDecimal(0)).dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @ASIN, expect 1, actual 0")
+        }
+    }
+
+    def ATAN(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            Math.atan(args.head.asDecimal(0)).dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @ATAN, expect 1, actual 0")
+        }
+    }
+
+    def CEIL(args: List[DataCell]): DataCell = {
+        if (args.size == 1) {
+            args.head.asDecimal.ceil(0).dataCell
+        }
+        else if (args.size > 1) {
+            args.head.asDecimal.ceil(args.last.asInteger(0).toInt).dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @CEIL, expect 1 or 2, actual 0")
+        }
+    }
+
+    def COS(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            Math.cos(args.head.asDecimal(0)).dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @COS, expect 1, actual 0")
+        }
+    }
+
+    def COT(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            (1 / Math.tan(args.head.asDecimal(1))).dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @COT, expect 1, actual 0")
+        }
+    }
+
+    def EXP(args: List[DataCell]): DataCell = {
+        if (args.size > 1) {
+            DataCell(Math.exp(args.head.asInteger(1).toInt), DataType.DECIMAL)
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @EXP, expect 2, actual " + args.size)
+        }
+    }
+
     def FLOOR(args: List[DataCell]): DataCell = {
         if (args.size == 1) {
             DataCell(args.head.asDecimal.floor(0), DataType.INTEGER)
@@ -357,8 +432,96 @@ object GlobalFunctionDeclaration {
             DataCell(args.head.asDecimal.floor(args.last.asInteger(0).toInt), DataType.DECIMAL)
         }
         else {
-            throw new SQLParseException(s"Incorrect arguments at @FLOOR, expect 1, actual 0")
+            throw new SQLParseException(s"Incorrect arguments at @FLOOR, expect 1 or 2, actual 0")
         }
+    }
+
+    def LOG(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            DataCell(Math.log(args.head.asDecimal(0)), DataType.DECIMAL)
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @LOG, expect 1, actual 0")
+        }
+    }
+
+    def LOG10(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            Math.log10(args.head.asDecimal(0)).dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @LOG, expect 1, actual 0")
+        }
+    }
+
+    def MIN(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                if (args.head.isJavaList) {
+                    args.head.asJavaList.asScala.map(_.toDecimal(0)).min.dataCell
+                }
+                else {
+                    args.head.asDecimal(0).dataCell
+                }
+            }
+            else {
+                args.map(_.asDecimal(0)).min.dataCell
+                //reduce((a, b) => if (a < b) a else b)
+            }
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @MIN, expect least 1, actual 0")
+        }
+    }
+
+    def MAX(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                if (args.head.isJavaList) {
+                    args.head.asJavaList.asScala.map(_.toDecimal(0)).max.dataCell
+                }
+                else {
+                    args.head.asDecimal(0).dataCell
+                }
+            }
+            else {
+                args.map(_.asDecimal(0)).max.dataCell
+                //reduce((a, b) => if (a > b) a else b)
+            }
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @MAX, expect least 1, actual 0")
+        }
+    }
+
+    def MOD(args: List[DataCell]): DataCell = {
+        if (args.size == 2) {
+            DataCell(args.head.asInteger(0) % args(1).asInteger(1), DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @MOD, expect 2, actual " + args.size)
+        }
+    }
+
+    def POW(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            val m = {
+                if (args.size > 1) {
+                    args(1).asDecimal(2)
+                }
+                else {
+                    2
+                }
+            }
+            Math.pow(args.head.asDecimal(0), m).dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @POW, expect 1 or 2, actual 0")
+        }
+    }
+
+    def POWER(args: List[DataCell]): DataCell = {
+        POW(args)
     }
 
     //取 m 到 n随机数
@@ -371,7 +534,7 @@ object GlobalFunctionDeclaration {
             DataCell(seed + Random.nextInt(args.last.asInteger(10).toInt - seed), DataType.INTEGER)
         }
         else {
-            DataCell(Random.nextInt(10), DataType.INTEGER)
+            DataCell(Math.random(), DataType.DECIMAL)
         }
     }
 
@@ -383,7 +546,209 @@ object GlobalFunctionDeclaration {
             DataCell(args.head.asDecimal.round(args.last.asInteger(0).toInt), DataType.DECIMAL)
         }
         else {
-            throw new SQLParseException(s"Incorrect arguments at @ROUND, expect 1, actual 0")
+            throw new SQLParseException(s"Incorrect arguments at @ROUND, expect 1 or 2, actual 0")
+        }
+    }
+
+    def SIGN(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            val m = args.head.asDecimal(0)
+            if (m > 0) {
+                DataCell(1, DataType.INTEGER)
+            }
+            else if (m < 0) {
+                DataCell(-1, DataType.INTEGER)
+            }
+            else {
+                DataCell(0, DataType.INTEGER)
+            }
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @SIGN, expect 1, actual 0")
+        }
+    }
+
+    def SIN(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            Math.sin(args.head.asDecimal(0)).dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @SIN, expect 1, actual 0")
+        }
+    }
+
+    def SQRT(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            Math.sqrt(args.head.asDecimal(0)).dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @SQRT, expect 1 or 2, actual 0")
+        }
+    }
+
+    def TAN(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            Math.tan(args.head.asDecimal(0)).dataCell
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @TAN, expect 1, actual 0")
+        }
+    }
+
+    def PI(args: List[DataCell]): DataCell = {
+        DataCell(Math.PI, DataType.DECIMAL)
+    }
+
+    def AVG(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                if (args.head.isJavaList) {
+                    val list = args.head.asJavaList.asScala
+                    (list.map(_.toDecimal(0)).sum / list.size).dataCell
+                }
+                else {
+                    args.head
+                }
+            }
+            else {
+                (args.map(_.value.toDecimal(0)).sum / args.size).dataCell
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @AVG, expect 1 or more, actual 0")
+        }
+    }
+
+    def SUM(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                if (args.head.isJavaList) {
+                    args.head.asJavaList.asScala.map(_.toDecimal(0)).sum.dataCell
+                }
+                else {
+                    args.head
+                }
+            }
+            else {
+                args.map(_.value.toDecimal(0)).sum.dataCell
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @SUM, expect 1 or more, actual 0")
+        }
+    }
+
+    def VAR(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                if (args.head.isJavaList) {
+                    args.head.asJavaList.asScala.toList.sampleVariance.dataCell
+                }
+                else {
+                    args.head
+                }
+            }
+            else {
+                args.map(_.value.toDecimal(0)).sampleVariance.dataCell
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @VAR, expect 1 or more, actual 0")
+        }
+    }
+
+    def VARP(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                if (args.head.isJavaList) {
+                    args.head.asJavaList.asScala.toList.variance.dataCell
+                }
+                else {
+                    args.head
+                }
+            }
+            else {
+                args.map(_.value.toDecimal(0)).variance.dataCell
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @VARP, expect 1 or more, actual 0")
+        }
+    }
+
+    def STDEVP(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                if (args.head.isJavaList) {
+                    args.head.asJavaList.asScala.toList.deviation.dataCell
+                }
+                else {
+                    args.head
+                }
+            }
+            else {
+                args.map(_.value.toDecimal(0)).deviation.dataCell
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @STDEV, expect 1 or more, actual 0")
+        }
+    }
+
+    def STDEV(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                if (args.head.isJavaList) {
+                    args.head.asJavaList.asScala.toList.sampleDeviation.dataCell
+                }
+                else {
+                    args.head
+                }
+            }
+            else {
+                args.map(_.value.toDecimal(0)).sampleDeviation.dataCell
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @STDEVP, expect 1 or more, actual 0")
+        }
+    }
+
+    def CV(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                if (args.head.isJavaList) {
+                    args.head.asJavaList.asScala.toList.varianceCoefficient.dataCell
+                }
+                else {
+                    args.head
+                }
+            }
+            else {
+                args.map(_.value.toDecimal(0)).varianceCoefficient.dataCell
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @CV, expect 1 or more, actual 0")
+        }
+    }
+
+    def CSV(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size == 1) {
+                if (args.head.isJavaList) {
+                    args.head.asJavaList.asScala.toList.sampleVarianceCoefficient.dataCell
+                }
+                else {
+                    args.head
+                }
+            }
+            else {
+                args.map(_.value.toDecimal(0)).sampleVarianceCoefficient.dataCell
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty arguments at @CVP, expect 1 or more, actual 0")
         }
     }
 
@@ -822,6 +1187,81 @@ object GlobalFunctionDeclaration {
     ```
 
     */
+
+    def REGEXP_LIKE(args: List[DataCell]): DataCell = {
+        if (args.size == 2) {
+            DataCell(if (args.last.asText.r.findFirstIn(args.head.asText).nonEmpty) 1 else 0, DataType.INTEGER)
+        }
+        else {
+            throw new SQLParseException(s"Empty or miss arguments at @REGEXP_LIKE, expect 2, actual " + args.size)
+        }
+    }
+
+    def REGEXP_INSTR(args: List[DataCell]): DataCell = {
+        if (args.size == 2) {
+            val text = args.head.asText
+            args.last.asText.r.findFirstIn(text) match {
+                case Some(v) => DataCell(text.indexOf(v) + 1, DataType.INTEGER)
+                case None => DataCell(0, DataType.INTEGER)
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty or miss arguments at @REGEXP_INSTR, expect 2, actual " + args.size)
+        }
+    }
+
+    def REGEXP_SUBSTR(args: List[DataCell]): DataCell = {
+        if (args.size == 2) {
+            args.last.asText.r.findFirstIn(args.head.asText) match {
+                case Some(v) => DataCell(v, DataType.TEXT)
+                case None => DataCell.NULL
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty or miss arguments at @REGEXP_SUBSTR, expect 2, actual " + args.size)
+        }
+    }
+
+    def REGEXP_REPLACE(args: List[DataCell]): DataCell = {
+        if (args.size == 3) {
+            val text = args.head.asText
+            args(1).asText.r.findFirstIn(args.head.asText) match {
+                case Some(v) => DataCell(text.replace(v, args.last.asText), DataType.TEXT)
+                case None => DataCell(text, DataType.TEXT)
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty or miss arguments at @REGEXP_REPLACE, expect 3, actual " + args.size)
+        }
+    }
+
+    def IFNULL(args: List[DataCell]): DataCell = {
+        if (args.size == 2) {
+            if (args.head.isNull) {
+                args.last
+            }
+            else {
+                args.head
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty or miss arguments at @IFNULL, expect 2, actual " + args.size)
+        }
+    }
+
+    def NVL(args: List[DataCell]): DataCell = {
+        if (args.size == 2) {
+            if (args.head.isNull) {
+                args.last
+            }
+            else {
+                args.head
+            }
+        }
+        else {
+            throw new SQLParseException(s"Empty or miss arguments at @NVL, expect 2, actual " + args.size)
+        }
+    }
 }
 
 class GlobalFunctionDeclaration {

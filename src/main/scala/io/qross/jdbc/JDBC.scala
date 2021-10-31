@@ -79,6 +79,24 @@ object JDBC {
         exists && connectable
     }
 
+    def recognizeDriver(connectionString: String): String = {
+        var driver = ""
+        breakable {
+            for (name <- JDBC.drivers.keySet) {
+                if (connectionString.contains(name)) {
+                    driver = JDBC.drivers(name)
+                    break
+                }
+            }
+        }
+
+        if (driver == "") {
+            throw new Exception("Can't match any driver in connection string.")
+        }
+
+        driver
+    }
+
     //从Properties新建
     def take(connectionName: String): JDBC = {
         var dbType = ""

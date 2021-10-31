@@ -7,6 +7,7 @@ import io.qross.net.HttpRequest;
 import io.qross.net.Json;
 import io.qross.pql.PQL;
 import io.qross.pql.Solver;
+import io.qross.setting.Global;
 import io.qross.setting.Language;
 import io.qross.setting.Properties;
 import org.springframework.web.servlet.view.AbstractTemplateView;
@@ -253,7 +254,9 @@ public class  Voyager extends AbstractTemplateView {
                 }
                 catch (Exception e) {
                     content = "<h1>500</h1><p>" + TypeExt.ExceptionExt(e).getReferMessage() + "</p>";
-                    //content += "<p style=\"color: #CC0000\">" + TypeExt.ExceptionExt(e).getFullMessage() + "</p>";
+                    if (Setting.VoyagerDebug) {
+                        content += "<p style=\"color: #CC0000\">" + String.join("<br/>", TypeExt.ExceptionExt(e).getFullMessage()) + "</p>";
+                    }
                 }
 
                 response.setCharacterEncoding(Setting.VoyagerCharset);

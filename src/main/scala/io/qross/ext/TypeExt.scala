@@ -777,6 +777,10 @@ object TypeExt {
             Math.floor(double * Math.pow(10, precision)) / Math.pow(10, precision)
         }
 
+        def ceil(precision: Int = 0): Double = {
+            Math.ceil(double * Math.pow(10, precision)) / Math.pow(10, precision)
+        }
+
         def round(precision: Int = 0): Double = {
             Math.round(double * Math.pow(10, precision)) / Math.pow(10, precision)
         }
@@ -790,6 +794,15 @@ object TypeExt {
         }
 
         def pow(p: Double = 2): Double = Math.pow(double, p)
+
+        def dataCell: DataCell = {
+            if (double == Math.round(double)) {
+                DataCell(double.toInt, DataType.INTEGER)
+            }
+            else {
+                DataCell(double, DataType.DECIMAL)
+            }
+        }
     }
 
     implicit class RegexExt(regex: Regex) {
@@ -1067,6 +1080,72 @@ object TypeExt {
                 (v.asInstanceOf[String].takeBefore(delimiter), v.asInstanceOf[String].takeAfter(delimiter))
             }).toMap
         }
+
+        def variance: Double = {
+            if (list.nonEmpty) {
+                val array = list.map(_.toDecimal(0))
+                val avg = array.sum / array.size
+                array.map(m => Math.pow(m - avg, 2)).sum / list.size
+            }
+            else {
+                0
+            }
+        }
+
+        def sampleVariance: Double = {
+            if (list.size > 1) {
+                val array = list.map(_.toDecimal(0))
+                val avg = array.sum / array.size
+                array.map(m => Math.pow(m - avg, 2)).sum / (list.size - 1)
+            }
+            else {
+                0
+            }
+        }
+
+        def deviation: Double = {
+            Math.sqrt(list.variance)
+        }
+
+        def sampleDeviation: Double = {
+            Math.sqrt(list.sampleVariance)
+        }
+
+        def varianceCoefficient: Double = {
+            if (list.nonEmpty) {
+                val array = list.map(_.toDecimal(0))
+                val avg = array.sum / array.size
+                Math.sqrt(array.map(m => Math.pow(m - avg, 2)).sum / list.size) / avg
+            }
+            else {
+                0
+            }
+        }
+
+        def sampleVarianceCoefficient: Double = {
+            if (list.size > 1) {
+                val array = list.map(_.toDecimal(0))
+                val avg = array.sum / array.size
+                Math.sqrt(array.map(m => Math.pow(m - avg, 2)).sum / (list.size - 1)) / avg
+            }
+            else {
+                0
+            }
+        }
+//        def avg1: Double = {
+//            if (list.nonEmpty) {
+//                list.reduce((a, b) => a.toDecimal(0) + b.toDecimal(0)) / list.size
+//            }
+//            else {
+//                0D
+//            }
+//        }
+//
+//        def sum: Double = {
+//            list.reduce((a, b) => a.toDecimal(0) + b.toDecimal(0))
+//        }
+
+
     }
 
     implicit class MapExt[A, B](map: Map[A, B]) {

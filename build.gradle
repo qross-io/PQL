@@ -7,7 +7,7 @@ apply plugin: "maven-publish"
 apply plugin: 'signing'
 
 group = 'io.qross'
-version = '1.8.0'
+version = '1.10.0'
 sourceCompatibility = 1.8
 archivesBaseName = "pql"
 
@@ -143,7 +143,7 @@ publishing {
         maven(MavenPublication) {
             groupId = 'io.qross'
             artifactId = 'pql'
-            version = '1.8.11-SNAPSHOT'
+            version = '1.10.5-SNAPSHOT'
             from components.java
             artifact sourcesJar
             artifact javadocJar

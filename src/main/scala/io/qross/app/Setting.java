@@ -23,6 +23,7 @@ public class Setting {
     public static String VoyagerStaticSite = Properties.get("voyager.static.site", "");
     public static String VoyagerGallerySite = Properties.get("voyager.gallery.site", "");
     public static boolean VoyagerCacheEnabled = TypeExt.StringExt(Properties.get("voyager.cache.enabled", "false")).toBoolean(false);
+    public static boolean VoyagerDebug = TypeExt.StringExt(Properties.get("voyager.debug", "false")).toBoolean(false);
 
     public static void handleArguments(String[] args) {
         for (int i = 0; i < args.length; i++) {

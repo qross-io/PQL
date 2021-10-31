@@ -282,8 +282,8 @@ object Solver {
                         }
                     //左大括号
                     case '{' =>
-                        //${ }  ${{ }}  ~{ } ~{{ }}
-                        if (i > 0 && sentence.charAt(i - 1) == '$' || sentence.charAt(i - 1) == '~' ) {
+                        //${ }  ${{ }}
+                        if (i > 0 && sentence.charAt(i - 1) == '$') {
                             //嵌入式变量
                             closing += new Closing('$', i)
                         }
