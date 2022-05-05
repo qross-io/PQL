@@ -2,6 +2,7 @@ package io.qross.pql
 
 import io.qross.core.{DataCell, DataRow, DataTable, DataType}
 import io.qross.exception.SQLParseException
+import io.qross.ext.Output
 import io.qross.ext.TypeExt._
 import io.qross.net.Json
 import io.qross.pql.Patterns._
@@ -45,6 +46,7 @@ class FOR(val variable: String, val method: String, val collection: String) {
                     PQL.executeStatements(statement.statements)
                 }
                 else {
+                    Output.writeLine(s"Exit FOR loop.")
                     break
                 }
             }

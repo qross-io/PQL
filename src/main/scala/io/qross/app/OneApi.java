@@ -118,7 +118,7 @@ public class OneApi {
             if (JDBC.hasQrossSystem()) {
                 DataAccess ds = DataAccess.QROSS();
 
-                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_services'")) {
+                if (ds.tableExists("qross_api_services")) {
                     DataRow service = ds.executeDataRow("SELECT id, security_control, traffic_grade FROM qross_api_services WHERE service_name=?", Setting.OneApiServiceName);
                     OneApi.SERVICE_ID = service.getInt("id");
                     OneApi.TRAFFIC_GRADE = service.getInt("traffic_grade");
@@ -131,14 +131,14 @@ public class OneApi {
                 }
 
                 //load requester and token
-                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_requesters'")) {
+                if (ds.tableExists("qross_api_requesters")) {
                     DataTable tokens = ds.executeDataTable("SELECT name, token FROM qross_api_requesters");
                     for (DataRow token : tokens.getRowList()) {
                         Token.TOKENS.put(token.getString("token"), token.getString("name"));
                     }
                     tokens.clear();
                     //load permit
-                    if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_requesters_allows'")) {
+                    if (ds.tableExists("qross_api_requesters_allows")) {
                         DataTable controls = ds.executeDataTable("SELECT A.control, A.requester_id, B.name FROM qross_api_requesters_allows A INNER JOIN qross_api_requesters B ON (A.service_id=?) AND A.requester_id=B.id", OneApi.SERVICE_ID);
                         for (DataRow control : controls.getRowList()) {
                             String allow = control.getString("control");
@@ -152,7 +152,7 @@ public class OneApi {
 
                 //load api
                 if (OneApi.SERVICE_ID > 0) {
-                    if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_in_one'")) {
+                    if (ds.tableExists("qross_api_in_one")) {
                         //synchronize to database
                         String updateTime = DateTime.now().getString("yyyy-MM-dd HH:mm:ss");
                         ds.setBatchCommand("INSERT INTO qross_api_in_one (service_id, method, path, pql, default_values, `source`, title, description, params, allowed, permit, return_value, creator, mender, update_time) VALUES (?, ?, ?, ?, ?, 'file', ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE pql=?, default_values=?, title=?, description=?, params=?, allowed=?, permit=?, return_value=?, creator=?, mender=?, update_time=?");
@@ -322,9 +322,7 @@ public class OneApi {
 
     public static void saveExample(int id, Object example) {
         if (JDBC.hasQrossSystem()) {
-            DataAccess ds = DataAccess.QROSS();
-            ds.executeNonQuery("UPDATE qross_api_in_one SET return_value_example=? WHERE id=?", example, id);
-            ds.close();
+            DataAccess.QROSS().queryUpdate("UPDATE qross_api_in_one SET return_value_example=? WHERE id=?", example, id);
         }
     }
 
@@ -633,7 +631,7 @@ public class OneApi {
     public static void resetReturnValueExample(int id) {
         if (JDBC.hasQrossSystem()) {
             DataAccess ds = DataAccess.QROSS();
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_api_in_one'")) {
+            if (ds.tableExists("qross_api_in_one")) {
                 ds.executeNonQuery("UPDATE qross_api_in_one SET return_value_example='' WHERE id=?", id);
                 DataRow row = ds.executeDataRow("SELECT path, method FROM qross_api_in_one WHERE id=?", id);
                 String path = row.getString("path");

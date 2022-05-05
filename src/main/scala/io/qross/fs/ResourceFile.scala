@@ -1,10 +1,10 @@
 package io.qross.fs
 
-import java.io.FileNotFoundException
+import java.io.InputStream
 
 import io.qross.core.DataRow
+import io.qross.ext.TypeExt._
 import io.qross.net.Email
-import io.qross.ext.Output
 import io.qross.setting.BaseClass
 
 import scala.io.{BufferedSource, Source}
@@ -17,20 +17,33 @@ object ResourceFile {
 
 class ResourceFile(path: String) {
 
-    private val source: BufferedSource = Source.fromInputStream(BaseClass.MAIN.getResourceAsStream(path), "UTF-8")
+    private var stream: InputStream = BaseClass.MAIN.getResourceAsStream(path)
+    if (stream == null && !path.startsWith("/templates/") && !path.startsWith("templates/")) {
+        stream = BaseClass.MAIN.getResourceAsStream("/templates" + path.prefix("/"))
+    }
 
-    val ( content: String, exists: Boolean) =
-                try {
-                    val string = source.mkString
-                    source.close()
+    val exists: Boolean = stream != null
 
-                    (string, true)
-                }
-                catch {
-                    case _: Exception =>
-                        //Output.writeWarning(s"Resource file $path doesn't exist.")
-                        ("", false)
-                }
+    val content: String = {
+        if (exists) {
+            try {
+                val source: BufferedSource = Source.fromInputStream(stream, "UTF-8")
+                val string = source.mkString
+                source.close()
+
+                string
+            }
+            catch {
+                case _: Exception =>
+                    //Output.writeWarning(s"Resource file $path doesn't exist.")
+                    ""
+            }
+        }
+        else {
+            ""
+        }
+    }
+
     var output: String = content
 
     def replace(oldStr: String, newStr: String): ResourceFile = {

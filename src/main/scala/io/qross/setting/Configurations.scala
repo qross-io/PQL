@@ -17,7 +17,7 @@ object Configurations {
             val ds = DataSource.QROSS
 
             //load configurations
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_conf'")) {
+            if (ds.tableExists("qross_conf")) {
                 ds.executeDataTable("SELECT conf_key, conf_value FROM qross_conf")
                     .foreach(row => {
                         CONFIG.set(row.getString("conf_key"), row.getString("conf_value"))
@@ -25,7 +25,7 @@ object Configurations {
             }
 
             //load properties
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_properties'")) {
+            if (ds.tableExists("qross_properties")) {
                 ds.executeDataTable("select * FROM qross_properties WHERE enabled='yes'")
                     .foreach(row => {
                         val path = row.getString("property_path")
@@ -44,7 +44,7 @@ object Configurations {
                     }).clear()
             }
 
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_connections'")) {
+            if (ds.tableExists("qross_connections")) {
                 ds.executeDataTable("SELECT * FROM qross_connections WHERE owner=0 AND enabled='yes'")
                     .foreach(row => {
                         val databaseType = row.getString("database_type").toLowerCase().replace(" ", "")
@@ -67,7 +67,7 @@ object Configurations {
                     }).clear()
             }
 
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_functions'")) {
+            if (ds.tableExists("qross_functions")) {
                 ds.executeDataTable("SELECT function_name, function_args, function_statement FROM qross_functions WHERE owner=0")
                     .foreach(row => {
                         val name = row.getString("function_name")
@@ -78,7 +78,7 @@ object Configurations {
                     }).clear()
             }
 
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_variables'")) {
+            if (ds.tableExists("qross_variables")) {
                 ds.executeDataTable("SELECT variable_group, variable_name, variable_type, variable_value FROM qross_variables WHERE owner=0")
                     .foreach(row => {
                         GlobalVariable.SYSTEM.set(row.getString("variable_name"), row.getString("variable_type") match {
@@ -104,7 +104,7 @@ object Configurations {
         //从数据库加载用户全局变量
         if (JDBC.hasQrossSystem && userId > 0) {
             val ds = DataSource.QROSS
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_connections'")) {
+            if (ds.tableExists("qross_connections")) {
                 ds.executeDataTable("SELECT * FROM qross_connections WHERE owner=? AND enabled='yes'", userId)
                     .foreach(row => {
                         val databaseType = row.getString("database_type").toLowerCase().replace(" ", "")
@@ -129,7 +129,7 @@ object Configurations {
                     }).clear()
             }
 
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_functions'")) {
+            if (ds.tableExists("qross_functions")) {
                 ds.executeDataTable("SELECT function_name, function_args, function_statement FROM qross_functions WHERE owner=?", userId)
                     .foreach(row => {
                         val name = row.getString("function_name")
@@ -142,7 +142,7 @@ object Configurations {
                     }).clear()
             }
 
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_variables'")) {
+            if (ds.tableExists("qross_variables")) {
                 ds.executeDataTable("SELECT variable_name, variable_type, variable_value FROM qross_variables WHERE owner=?", userId)
                     .foreach(row => {
                         GlobalVariable.USER.set(
@@ -183,7 +183,7 @@ object Configurations {
     def update(name: String, value: Any): Unit = {
         if (JDBC.hasQrossSystem) {
             val ds = DataSource.QROSS
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_conf'")) {
+            if (ds.tableExists("qross_conf")) {
                 ds.executeNonQuery("UPDATE qross_conf SET conf_value=? WHERE conf_key=?", value, name)
             }
             ds.close()

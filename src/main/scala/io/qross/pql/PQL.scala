@@ -434,7 +434,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
         else if (symbol == "%") {
             if (this.jobId > 0 && JDBC.hasQrossSystem) {
                 val ds = DataSource.QROSS
-                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_jobs_variables'")) {
+                if (ds.tableExists("qross_jobs_variables")) {
                     ds.executeNonQuery("INSERT INTO qross_jobs_variables (job_id, variable_name, variable_type, variable_value) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE variable_type=?, variable_value=?", jobId, name, value.dataType.typeName, value.value, value.dataType.typeName, value.value)
                 }
                 ds.close()
@@ -486,7 +486,7 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
         else if (symbol == "%") {
             if (this.jobId > 0 && JDBC.hasQrossSystem) {
                 val ds = DataSource.QROSS
-                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_jobs_variables'")) {
+                if (ds.tableExists("qross_jobs_variables")) {
                     val row = ds.executeDataRow("SELECT variable_type, variable_value FROM qross_jobs_variables WHERE job_id=? AND variable_name=?", jobId, name)
                     if (row.nonEmpty) {
                         cell = DataCell(row.getString("variable_type") match {
@@ -743,14 +743,20 @@ class PQL(val originalSQL: String, val embedded: Boolean, val dh: DataHub) {
 
     //运行但不关闭 DataHub
     def $run(): PQL = {
+        //val t1 = System.currentTimeMillis()
         this.parseAll()
+        //System.out.println(System.currentTimeMillis() - t1)
+        //val t2 = System.currentTimeMillis()
         recognizeParameters().forEach(name => {
             if (!root.containsVariable(name)) {
                 root.setVariable(name, DataCell.UNDEFINED)
             }
         })
+        //System.out.println(System.currentTimeMillis() - t2)
         EXECUTING.push(root)
+        //val t3 = System.currentTimeMillis()
         this.executeStatements(root.statements)
+        //System.out.println(System.currentTimeMillis() - t3)
         dh.clear()
 
         this

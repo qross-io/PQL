@@ -56,27 +56,26 @@ object JDBC {
     }
 
     def hasQrossSystem: Boolean = {
+        Properties.contains(QROSS) || Properties.contains(QROSS + ".url")
+    }
 
-        var exists = false
+    def QrossSystemExists: Boolean = {
         var connectable = false
 
-        if (!exists) {
-            if (Properties.contains(QROSS) || Properties.contains(QROSS + ".url")) {
-                exists = true
-            }
-        }
-
-        if (exists && !connectable) {
-            if (DataSource.QROSS.queryTest()) {
-                connectable = true
+        if (hasQrossSystem) {
+            val ds = DataSource.QROSS.open()
+            if (ds.isConnected) {
+                if (ds.tableExists("qross_conf")) {
+                    connectable = true
+                }
             }
             else {
-
-                Output.writeException(s"Can't open database, please check your connection string of $QROSS.")
+                Output.writeException(s"Can't connection to Qross database, please check your connection string of '$QROSS' or network.")
             }
+            ds.close()
         }
 
-        exists && connectable
+        connectable
     }
 
     def recognizeDriver(connectionString: String): String = {
@@ -223,7 +222,7 @@ object JDBC {
     def setup(id: Int): Unit = {
         if (hasQrossSystem) {
             val ds = DataSource.QROSS
-            if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_connections'")) {
+            if (ds.tableExists("qross_connections")) {
                 val connection = ds.executeDataRow("SELECT * FROM qross_connections WHERE id=?", id)
                 val databaseType = connection.getString("database_type").toLowerCase().replace(" ", "")
                 if (databaseType != DBType.Redis) {

@@ -256,6 +256,8 @@ class TextFile(val file: File, val format: Int) {
 
     private lazy val access = new RandomAccessFile(file, "r") //read
 
+    private var header = false //首行是否为表头
+    private var first = true //是否第一次读
     private var row = 0 //行号
     private var skip = 0 //如果是从头读, 略过多少行
     private var meet = 0 //满足条件的行数
@@ -291,6 +293,7 @@ class TextFile(val file: File, val format: Int) {
     }
 
     def withColumnsOfFirstRow(): TextFile = {
+        header = true
         skip = 1
         this
     }
@@ -442,8 +445,11 @@ class TextFile(val file: File, val format: Int) {
             }
         })
 
-        //只有从头读时才跳行
-        if (cursor > 0 && skip > 0) {
+        if (first) {
+            first = false
+        }
+        else if (skip > 0) {
+            //只有从头读时才跳行
             skip = 0
         }
 
@@ -456,7 +462,7 @@ class TextFile(val file: File, val format: Int) {
                 line = readLine()
                 if (line != null) {
                     row += 1
-                    if (row == 1 && skip > 0 && columns.isEmpty) {
+                    if (row == 1 && header && columns.isEmpty) {
                         line.split(separator, columns.size)
                             .foreach(item => {
                                 columns += item -> DataType.TEXT

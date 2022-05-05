@@ -123,7 +123,7 @@ class DataSource(val config: JDBC, val databaseName: String) extends Output {
         this
     }
 
-    def open(): Unit = {
+    def open(): DataSource = {
         //Class.forName(config.driver).newInstance()
         //检查driver
         try {
@@ -176,7 +176,11 @@ class DataSource(val config: JDBC, val databaseName: String) extends Output {
         if (this.databaseName != "") {
             this.use(this.databaseName)
         }
+
+        return this
     }
+
+    def isConnected: Boolean = connection.isDefined
 
     def use(databaseName: String): Unit = {
         this.connection match {
@@ -187,6 +191,7 @@ class DataSource(val config: JDBC, val databaseName: String) extends Output {
             case None =>
         }
     }
+
 
     // ---------- basic command ----------
 
@@ -581,6 +586,11 @@ class DataSource(val config: JDBC, val databaseName: String) extends Output {
         result
     }
 
+    //MySQL Only
+    def tableExists(tableName: String): Boolean = {
+        this.executeExists(s"SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='$tableName'")
+    }
+
     def executeResultSet(SQL: String, values: Any*): Option[ResultSet] = {
         this.openIfNot()
 
@@ -969,9 +979,16 @@ class DataSource(val config: JDBC, val databaseName: String) extends Output {
         exists
     }
 
+    //MySQL Only
+    def queryTableExists(tableName: String): Boolean = {
+        val exists = this.tableExists(tableName)
+        this.close()
+        exists
+    }
+
     def queryTest(): Boolean = {
         this.open()
-        val connected = this.connection != null
+        val connected = this.connection.nonEmpty
         this.close()
         connected
     }
@@ -1009,12 +1026,14 @@ class DataSource(val config: JDBC, val databaseName: String) extends Output {
     }
 
     def openIfNot(): Unit = {
-        var retry = 0
+
         //idle 10s
         if (config.overtime > 0 && this.getIdleTime >= config.overtime) {
             this.close()
         }
-        if (this.tick == -1 || this.connection.get.isClosed) {
+
+        if (this.tick == -1) {
+            var retry = 0
             while (this.connection.isEmpty && (config.retryLimit == 0 || retry < config.retryLimit)) {
                 this.open()
                 if (this.connection.isEmpty) {
@@ -1027,13 +1046,32 @@ class DataSource(val config: JDBC, val databaseName: String) extends Output {
                 this.tick = System.currentTimeMillis
             }
         }
+        else {
+            this.connection match {
+                case Some(conn) =>
+                    if (conn.isClosed) {
+                        this.tick = -1
+                        connection = None
+                        openIfNot()
+                    }
+                case None =>
+                        this.tick = -1
+                        openIfNot()
+            }
+        }
+
+        //|| this.connection.get.isClosed
     }
     
     def close(): Unit = {
 
-        if (this.connection.isDefined && !this.connection.get.isClosed) {
-            this.connection.get.close()
-            this.connection = None
+        this.connection match {
+            case Some(conn) =>
+                if (!conn.isClosed) {
+                    conn.close()
+                }
+                this.connection = None
+            case None =>
         }
 
         this.tick = -1

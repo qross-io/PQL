@@ -24,19 +24,6 @@ public class DataAccess extends DataSource {
         return new DataAccess(DBType.Memory());
     }
 
-//    try {
-//        Class.forName(driver).newInstance()
-//        Connection connection = DriverManager.getConnection(connectionString, username, password)
-//    }
-//        catch {
-//        case e: ClassNotFoundException => message = "Open database ClassNotFoundException: " + e.getMessage
-//        case e: InstantiationException => message = "Open database InstantiationException: " + e.getMessage
-//        case e: IllegalAccessException => message = "Open database IllegalAccessException: " + e.getMessage
-//              val prest: PreparedStatement = connection.prepareStatement(SQL)
-//              prest.executeQuery().close()
-//              prest.close()
-//    }
-
     public DataAccess() {
         super(JDBC.get(JDBC.DEFAULT()), "");
         //this.config_$eq(JDBC.get(this.connectionName()));
@@ -50,6 +37,11 @@ public class DataAccess extends DataSource {
     public DataAccess(String connectionName, String databaseName) {
         super(JDBC.get(connectionName), databaseName);
         //this.config_$eq(JDBC.get(this.connectionName()));
+    }
+
+    public DataAccess open() {
+        super.open();
+        return this;
     }
 
     public DataTable executeDataTable(String SQL, Object... values) {

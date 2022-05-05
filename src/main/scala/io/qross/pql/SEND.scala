@@ -24,7 +24,6 @@ class SEND(val sentence: String) {
     //USE DEFAULT TEMPLATE    @DEFAULT_EMAIL_TEMPLATE
     //WITH DEFAULT SIGNATURE    @DEFAULT_EMAIL_SIGNATURE
     //WITH SIGNATURE
-    //PLACE ... AT
     //ATTACH
     //TO
     //CC
@@ -48,9 +47,7 @@ class SEND(val sentence: String) {
                         case "DEFAULT TEMPLATE" | "USE DEFAULT TEMPLATE" => email.useDefaultTemplate()
                         case "SIGNATURE" | "WITH SIGNATURE" => email.withSignature(plan.oneArgs("SIGNATURE", "WITH SIGNATURE"))
                         case "DEFAULT SIGNATURE" | "WITH DEFAULT SIGNATURE" => email.withDefaultSignature()
-                        case "PLACE DATA" | "DATA" => email.placeData(plan.setArgs("PLACE DATA", "DATA"))
-                        case "PLACE" => email.place(plan.oneArgs("PLACE"))
-                        case "AT" => email.at(plan.oneArgs("AT"))
+                        case "PLACE DATA" | "DATA" => email.placeData(plan.mapArgs("PLACE DATA", "DATA"))
                         case "ATTACH" => email.attach(plan.listArgs("ATTACH"): _*)
                         case "TO" => email.to(plan.listArgs("TO").mkString(";"))
                         case "CC" => email.cc(plan.listArgs("CC").mkString(";"))

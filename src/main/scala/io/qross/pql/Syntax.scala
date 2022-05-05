@@ -79,8 +79,7 @@ object Syntax {
                 WITH? DEFAULT SIGNATURE
                 WITH? SIGNATURE [name,signature.html]
                 SET? CONTENT [content/<html>]
-                PLACE? DATA name=value,...
-                PLACE [data]  AT [placeholder]
+                PLACE? DATA { "holder1": "value1", "holder2": "value2", ...}
                 ATTACH file1.txt,file2.xlsx,*
                 TO personal,sender@domain.com,personal<sedner@domain.com>,*
                 CC *

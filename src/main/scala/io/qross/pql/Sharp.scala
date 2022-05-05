@@ -3418,7 +3418,7 @@ class Link$Argument(val originalLinkName: String, val originalArgument: String) 
                                     item.popStash(PQL)
                                 }
                                 else {
-                                    item.$sharp(PQL).value
+                                    item.$trim("`").$sharp(PQL).value
                                 }
                             ).toList.asJava, DataType.ARRAY)
                 }

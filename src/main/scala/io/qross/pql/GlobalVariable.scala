@@ -45,7 +45,7 @@ object GlobalVariable {
             SYSTEM.set(name, value)
             if (JDBC.hasQrossSystem) {
                 val ds = DataSource.QROSS
-                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_variables'")) {
+                if (ds.tableExists("qross_variables")) {
                     val field = value.toString
                     ds.executeNonQuery(s"""INSERT INTO qross_variables (variable_group, variable_type, owner, variable_name, variable_value) VALUES ('system', ?, 0, ?, ?) ON DUPLICATE KEY UPDATE variable_value=?""",
                         value.dataType.typeName, name, field, field)
@@ -57,7 +57,7 @@ object GlobalVariable {
             USER.set(name, value)
             if (JDBC.hasQrossSystem) {
                 val ds = DataSource.QROSS
-                if (ds.executeExists("SELECT table_name FROM information_schema.TABLES WHERE table_schema=DATABASE() AND table_name='qross_variables'")) {
+                if (ds.tableExists("qross_variables")) {
                     val field = value.toString
                     ds.executeNonQuery(s"""INSERT INTO qross_variables (variable_group, variable_type, owner, variable_name, variable_value) VALUES ('user', ?, ?, ?, ?) ON DUPLICATE KEY UPDATE variable_value=?""",
                         value.dataType.typeName, userid, name, field, field)

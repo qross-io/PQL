@@ -8,6 +8,7 @@ import io.qross.net.Json;
 import io.qross.setting.Environment;
 import io.qross.setting.Properties;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Stack;
 import java.util.regex.Matcher;
@@ -19,6 +20,12 @@ public class Test {
     public static String STRING = "HELLO";
 
     public static void hello(String content) {
+
+        Console.writeLine(Pattern.CASE_INSENSITIVE);
+        Console.writeLine(Pattern.MULTILINE);
+        Console.writeLine(Pattern.DOTALL);
+        Console.writeLine(Pattern.UNICODE_CASE);
+
 
         Pattern p = Pattern.compile("@(\\{[\\s\\S]+?})");//(?=\s*\n)
         Matcher m = p.matcher(content);
@@ -38,7 +45,23 @@ public class Test {
         }
     }
 
-    public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException {
+    public static void main(String[] args) {
+
+        Arrays.stream("1,2,,".split(",", -1)).forEach(System.out::println);
+
+
+
+        System.exit(0);
+
+        Pattern p = Pattern.compile("(?<month>\\d{2})/(?<day>\\d{2})/(?<year>\\d{4})");
+        Matcher m = p.matcher("Today is 04/24/2022.");
+        while(m.find()) {
+            Console.writeLine(m.group("year") + "-" + m.group("month") + "-" + m.group("day"));
+        }
+    }
+
+
+    public static void main1(String[] args) throws NoSuchFieldException, IllegalAccessException {
 
         Console.writeLine();
 

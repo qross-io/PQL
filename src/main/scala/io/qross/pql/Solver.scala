@@ -72,8 +72,7 @@ object Solver {
             val length = sentence.length
 
             for (i <- sentence.indices) {
-                val c = sentence.charAt(i)
-                c match {
+                sentence.charAt(i) match {
                     //单行注释开始
                     case '-' =>
                         if (closing.isEmpty
@@ -134,9 +133,22 @@ object Solver {
                                 blocks += new Block$Range("SINGLE-QUOTE-STRING", i)
                             }
                             else if (closing.head.char == '\'') {
-                                if (i > 0 && sentence.charAt(i - 1) != '\\') {
-                                    blocks.head.end = i + 1
-                                    closing.pop()
+                                if (i > 0) {
+                                    if (sentence.charAt(i - 1) != '\\') {
+                                        blocks.head.end = i + 1
+                                        closing.pop()
+                                    }
+                                    else {
+                                        //处理 '\\' 这种情况，偶数是反斜杠本身的转义，单数是对于单引号的转义
+                                        var n = 1
+                                        while (sentence.charAt(i - n - 1) == '\\') {
+                                            n += 1
+                                        }
+                                        if (n % 2 == 0) {
+                                            blocks.head.end = i + 1
+                                            closing.pop()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -172,9 +184,22 @@ object Solver {
                                 blocks += new Block$Range("DOUBLE-QUOTE-STRING", i)
                             }
                             else if (closing.head.char == '"') {
-                                if (i > 0 && sentence.charAt(i - 1) != '\\') {
-                                    blocks.head.end = i + 1
-                                    closing.pop()
+                                if (i > 0) {
+                                    if (sentence.charAt(i - 1) != '\\') {
+                                        blocks.head.end = i + 1
+                                        closing.pop()
+                                    }
+                                    else {
+                                        //处理 '\\' 这种情况，偶数是反斜杠本身的转义，单数是对于双引号的转义
+                                        var n = 1
+                                        while (sentence.charAt(i - n - 1) == '\\') {
+                                            n += 1
+                                        }
+                                        if (n % 2 == 0) {
+                                            blocks.head.end = i + 1
+                                            closing.pop()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -207,26 +232,29 @@ object Solver {
                 closing.pop()
             }
 
-            //处理字符串
-            blocks.foreach(closed => {
-                    val before = sentence.take(closed.start)
-                    val after = sentence.substring(closed.end)
-                    //val after = sentence.takeAfter(closed.end - 1)
-                    val replacement = {
-                        closed.name match {
-                            case "SINGLE-QUOTE-STRING" | "DOUBLE-QUOTE-STRING" =>
-                                PQL.chars += sentence.substring(closed.start, closed.end)
-                                "~char[" + (PQL.chars.size - 1) + "]"
-                            case "SINGLE-RICH-STRING-" => "%rich-string%'"
-                            case "-SINGLE-RICH-STRING" => "'%rich-string%"
-                            case "DOUBLE-RICH-STRING-" => "%rich-string%\""
-                            case "-DOUBLE-RICH-STRING" => "\"%rich-string%"
-                            case _ => ""
-                        }
+            //处理字符串和注释
+            val sb = new mutable.StringBuilder()
+            var cursor = 0
+            for (i <- blocks.indices.reverse) {
+                val closed = blocks(i)
+                sb.append(sentence.substring(cursor, closed.start))
+                sb.append(
+                    closed.name match {
+                        case "SINGLE-QUOTE-STRING" | "DOUBLE-QUOTE-STRING" =>
+                            PQL.chars += sentence.substring(closed.start, closed.end)
+                            "~char[" + (PQL.chars.size - 1) + "]"
+                        case "SINGLE-RICH-STRING-" => "%rich-string%'"
+                        case "-SINGLE-RICH-STRING" => "'%rich-string%"
+                        case "DOUBLE-RICH-STRING-" => "%rich-string%\""
+                        case "-DOUBLE-RICH-STRING" => "\"%rich-string%"
+                        case _ => ""
                     }
-
-                    sentence = before + replacement + after
-                })
+                )
+                cursor = closed.end
+            }
+            sb.append(sentence.substring(cursor))
+            sentence = sb.toString()
+            sb.clear()
 
             //处理富字符串
             //因为富字符串中可能嵌套子字符串，造成解析出错，只能单独解析
@@ -244,8 +272,7 @@ object Solver {
             val ranges = new mutable.ArrayBuffer[Block$Range]()
 
             for (i <- sentence.indices) {
-                val c = sentence.charAt(i)
-                c match {
+                sentence.charAt(i) match {
                     //左小括号, 只检查闭合
                     case '(' =>
                         closing += new Closing('(', i)
@@ -288,7 +315,7 @@ object Solver {
                             closing += new Closing('$', i)
                         }
                         else if (i > 0 && sentence.charAt(i - 1) == '{') {
-                            //${{ 或 ~{{ 第二个括号, 啥也不干, 忽略
+                            //${{ 第二个括号, 啥也不干, 忽略
                         }
                         else {
                             //JSON对象
@@ -348,7 +375,7 @@ object Solver {
             //处理char 160 - 网页端提交的代码很有可能包含这个字符 \u00A0 即 &nbsp;
             sentence = sentence.replace("\u00A0", " ");
 
-            //提取json常量, 量其中可能包含变量和表达式
+            //提取json常量, 其中可能包含变量和表达式
             val jsons = ranges.map(closed => sentence.substring(closed.start, closed.end)).reverse
             for (i <- jsons.indices) {
                 val replacement = "~json[" + PQL.jsons.size + "]"
@@ -359,7 +386,7 @@ object Solver {
                 }
             }
 
-           sentence.trim
+            sentence.trim
         }
 
         //恢复Json常量

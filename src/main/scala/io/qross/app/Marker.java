@@ -732,7 +732,7 @@ public class Marker {
 
     public String getSummary() {
         String summary = "";
-        if (content.contains("<p>")) {
+        if (content.contains("<p>") && content.contains("</p>")) {
             summary = content.substring(content.indexOf("<p>") + 3, content.indexOf("</p>"));
             summary = summary.replaceAll("<[^>]+?>|\\n", "");
         }

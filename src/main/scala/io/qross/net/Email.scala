@@ -208,7 +208,6 @@ class Email(private var title: String) {
     private var ccRecipients = new mutable.HashMap[String, String]()
     private var bccRecipients = new mutable.HashMap[String, String]()
     private var content: String = ""
-    private var placement: String = "NOTHING"
 
     def setSmtpServer(host: String, port: String): Email = {
         smtp.setProperty("mail.smtp.host", host)
@@ -373,15 +372,6 @@ class Email(private var title: String) {
     def setContent(content: String): Email = {
         this.content = if (this.content.contains("#{content}")) this.content.replace("#{content}", content) else content
         this
-    }
-
-    def place(replacement: String): Email = {
-        this.placement = replacement
-        this
-    }
-
-    def at(placeHolder: String): Email = {
-        this.placeData(placeHolder, this.placement)
     }
 
     def placeData(placeHolder: String, replacement: String): Email = {

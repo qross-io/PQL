@@ -460,6 +460,24 @@ object TypeExt {
             }
         }
 
+        def prefix(p: String): String = {
+            if (!string.startsWith(p)) {
+                p + string
+            }
+            else {
+                string
+            }
+        }
+
+        def suffix(s: String): String = {
+            if (!string.endsWith(s)) {
+                string + s
+            }
+            else {
+                string
+            }
+        }
+
         def bracketsWith(left: String, right: String): Boolean = {
             string.startsWith(left) && string.endsWith(right)
         }

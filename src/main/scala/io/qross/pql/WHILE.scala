@@ -1,6 +1,7 @@
 package io.qross.pql
 
 import io.qross.exception.SQLParseException
+import io.qross.ext.Output
 import io.qross.pql.Patterns.$WHILE
 
 import scala.util.control.Breaks.{break, breakable}
@@ -38,6 +39,7 @@ class WHILE(conditions: String) {
                     PQL.executeStatements(statement.statements)
                 }
                 else {
+                    Output.writeLine(s"Exit WHILE loop.")
                     break
                 }
             }
