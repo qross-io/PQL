@@ -72,7 +72,7 @@ class ResourceDir(path: String) {
                 val jarEntry: JarEntry = entries.nextElement
                 val name: String = jarEntry.getName
 
-                if (name.takeAfterX("^BOOT-INF/classes/".r).startsWith(if (path.startsWith("/")) path.drop(1) else path) || path == "/" || path == "") {
+                if (name.takeAfterX("(?i)^(BOOT-INF|WEB-INF)/classes/".r).startsWith(if (path.startsWith("/")) path.drop(1) else path) || path == "/" || path == "") {
                     if (filter.regex != "") {
                         if (filter.test(name)) {
                             files += "/" + name

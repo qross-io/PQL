@@ -4,7 +4,7 @@ import io.qross.ext.TypeExt._
 import io.qross.ext.Console
 import io.qross.fs.{FileReader, FileWriter, SourceFile, TextFile}
 import io.qross.jdbc.DataSource
-import io.qross.net.Email
+import io.qross.net.{Email, Json}
 import io.qross.pql.{PQL, Syntax}
 import io.qross.time.{ChronExp, DateTime}
 
@@ -29,14 +29,14 @@ object Enter {
 //                .map(a => "(" + a.group(1) + ",'" + a.group(2) + "','" + a.group(3) + "','" + a.group(4) + "'" + a.group(5) + ")")
 //                .foreach(println)
 
-        val sb1 = new mutable.StringBuilder()
 
-        sb1.append("1")
-        sb1.append("2")
-        sb1.append("3")
 
-        println(sb1.toString())
-        println(sb1.mkString)
+
+        System.exit(0)
+
+        Json("""{
+        "direction": "in","question": "Ignore  me.","iffy_regex": "\('([a-z]+)', '([a-z]+)'\)","origin_text":  "[('the', 'DT'), ('little', 'JJ'), ('yellow', 'JJ'), ('dog', 'NN'), ('died', 'VBD')]","email": "wu@qross.io"
+        }""").parseRow("/").print
 
 
         System.exit(0)

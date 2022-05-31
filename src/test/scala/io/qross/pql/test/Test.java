@@ -49,6 +49,7 @@ public class Test {
 
         Arrays.stream("1,2,,".split(",", -1)).forEach(System.out::println);
 
+        String _ = "1";
 
 
         System.exit(0);

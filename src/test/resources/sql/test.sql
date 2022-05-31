@@ -9,9 +9,24 @@ DEBUG ON;
 --OPEN DATABASE 'jdbc:postgresql://47.92.224.122:30432/postgres' USERNAME 'postgres' PASSWORD 'pgsql@123' AS 'pg.temp';
 --OPEN DATABASE 'jdbc:oracle:thin:@47.92.224.122:31521/EE.oracle.docker' DRIVER 'oracle.jdbc.driver.OracleDriver' USERNAME 'system' PASSWORD 'oracle' AS 'oracle.test';
 
-VAR $e, $d := 255;
 
-PRINT @RPAD('5', 4, '0');
+
+
+SET $origin_text := """[('the', 'DT'), ('little', 'JJ'), ('yellow', 'JJ'), ('dog', 'NN'), ('died', 'VBD')]""";
+SET $question := "Ignore me once.";
+SET $iffy_regex := """\('([a-z]+)', '([a-z]+)'\)""";
+SET $email := "wu@qross.io";
+
+    SEND MAIL '正则表达式问题求助'
+        USE TEMPLATE """C:\io.Qross\Officer\src\main\resources\templates\regex\email.htm"""
+        PLACE DATA {
+            "direction": "in",
+            "question": @BASE64_ENCODE($question),
+            "iffy_regex": @BASE64_ENCODE($iffy_regex),
+            "origin_text": @BASE64_ENCODE($origin_text),
+            "email": $email
+        }
+        TO "wu@qross.io";
 
 EXIT CODE 0;
 

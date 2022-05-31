@@ -209,6 +209,8 @@ class Email(private var title: String) {
     private var bccRecipients = new mutable.HashMap[String, String]()
     private var content: String = ""
 
+    private val args = new DataRow()
+
     def setSmtpServer(host: String, port: String): Email = {
         smtp.setProperty("mail.smtp.host", host)
         smtp.setProperty("mail.smtp.socketFactory.port", port)
@@ -385,11 +387,13 @@ class Email(private var title: String) {
 
     def placeData(row: DataRow): Email = {
         this.content = this.content.replaceArguments(row)
+        args.combine(row)
         this
     }
 
     def placeData(map: Map[String, String]): Email = {
         this.content = this.content.replaceArguments(map)
+        map.foreach(arg => args.set(arg._1, arg._2))
         this
     }
 
@@ -449,7 +453,7 @@ class Email(private var title: String) {
         if (Global.EMAIL_SENDER_ACCOUNT_AVAILABLE) {
             if (toRecipients.nonEmpty || ccRecipients.nonEmpty || bccRecipients.nonEmpty) {
                 if (this.content != "") {
-                    this.content = PQL.openEmbedded(this.content).run().toString
+                    this.content = PQL.openEmbedded(this.content).place(this.args).run().toString
                 }
                 transfer()
             }

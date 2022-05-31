@@ -80,10 +80,10 @@ case class Json(text: String = "") {
                 || text.bracketsWith("\"{", "}\"")
                 || text.bracketsWith("'[", "]'")
                 || text.bracketsWith("\"[", "]\"")) {
-                text.removeQuotes()
+                text.removeQuotes().replace("\\", "\\\\")
             }
             else {
-                text
+                text.replace("\\", "\\\\") //防止转义错误
             }
         })
     }

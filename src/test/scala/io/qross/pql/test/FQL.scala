@@ -38,8 +38,8 @@ object FQL {
 //        println(System.currentTimeMillis() - x)
 
         //val select = DataSource.QROSS.querySingleValue("SELECT info FROM td WHERE id=100").asText("")
-        //PQL.openFile("/test.sql").run()
-        PQL.openFile("c:/io.Qross/Home/data/calendar.sql").run()
+        PQL.openFile("/test.sql").run()
+        //PQL.openFile("c:/io.Qross/Home/data/calendar.sql").run()
 
         //DataSource.testConnection("MySQL", "com.mysql.cj.jdbc.Driver", "jdbc:mysql://39.99.240.254:3306", "root", "root", "eeeeee").print
 

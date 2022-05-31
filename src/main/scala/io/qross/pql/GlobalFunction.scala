@@ -6,8 +6,10 @@ import io.qross.core.{DataCell, DataHub, DataRow, DataType}
 import io.qross.exception.SQLParseException
 import io.qross.ext.TypeExt._
 import io.qross.jdbc.DataSource
+import io.qross.security.Base64
 import io.qross.time.DateTime
 import io.qross.time.TimeSpan._
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.Random
@@ -344,6 +346,34 @@ object GlobalFunctionDeclaration {
         }
         else {
             throw new SQLParseException(s"Incorrect arguments at @UPPER, expect 1, actual 0")
+        }
+    }
+
+    def BASE64_ENCODE(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size > 1) {
+                Base64.encode(args.head.asText, args(1).asText).toDataCell(DataType.TEXT)
+            }
+            else {
+                Base64.encode(args.head.asText).toDataCell(DataType.TEXT)
+            }
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @BASE64_ENCODE, expect 1 or 2, actual 0")
+        }
+    }
+
+    def BASE64_DECODE(args: List[DataCell]): DataCell = {
+        if (args.nonEmpty) {
+            if (args.size > 1) {
+                Base64.decode(args.head.asText, args(1).asText).toDataCell(DataType.TEXT)
+            }
+            else {
+                Base64.decode(args.head.asText).toDataCell(DataType.TEXT)
+            }
+        }
+        else {
+            throw new SQLParseException(s"Incorrect arguments at @BASE64_DECODE, expect 1 or 2, actual 0")
         }
     }
 
@@ -748,7 +778,7 @@ object GlobalFunctionDeclaration {
             }
         }
         else {
-            throw new SQLParseException(s"Empty arguments at @CVP, expect 1 or more, actual 0")
+            throw new SQLParseException(s"Empty arguments at @CSV, expect 1 or more, actual 0")
         }
     }
 
