@@ -218,8 +218,12 @@ object JDBC {
         connections(connectionName)
     }
 
+    def setAsDefault(connectionName: String): Unit = {
+        connections += JDBC.DEFAULT -> connections(connectionName)
+    }
+
     //refresh
-    def setup(id: Int): Unit = {
+    def refresh(id: Int): Unit = {
         if (hasQrossSystem) {
             val ds = DataSource.QROSS
             if (ds.tableExists("qross_connections")) {

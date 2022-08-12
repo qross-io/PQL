@@ -1,5 +1,7 @@
 package io.qross.pql.test
 
+import java.time.ZoneId
+
 import io.qross.ext.TypeExt._
 import io.qross.ext.Console
 import io.qross.fs.{FileReader, FileWriter, SourceFile, TextFile}
@@ -7,6 +9,7 @@ import io.qross.jdbc.DataSource
 import io.qross.net.{Email, Json}
 import io.qross.pql.{PQL, Syntax}
 import io.qross.time.{ChronExp, DateTime}
+import scala.collection.JavaConverters._
 
 import scala.collection.mutable
 import scala.io.Source
@@ -30,7 +33,7 @@ object Enter {
 //                .foreach(println)
 
 
-
+        ZoneId.getAvailableZoneIds.asScala.filter(x => x.contains("Etc/GMT")).foreach(println)
 
         System.exit(0)
 
