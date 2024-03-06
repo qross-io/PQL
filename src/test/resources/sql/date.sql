@@ -29,9 +29,9 @@ EXIT CODE 0;
 SET $command_type, $command_logic := SELECT command_type, command_logic FROM qross_commands_templates WHERE id=8;
     IF $command_logic IS NOT NULL AND $command_logic IS NOT EMPTY THEN
         IF $command_type == 'pql' THEN
-            GET # INVOKE io.qross.pql.PQL.recognizeParametersIn(String $command_logic);
+            GET # INVOKE cn.qross.pql.PQL.recognizeParametersIn(String $command_logic);
         ELSE
-            GET # INVOKE io.qross.pql.PQL.recognizeParametersInEmbedded(String $command_logic);
+            GET # INVOKE cn.qross.pql.PQL.recognizeParametersInEmbedded(String $command_logic);
         END IF;
     END IF;
 
@@ -54,7 +54,7 @@ EXIT CODE 0;
 IF $template_id != '0' AND NOT EXISTS (SELECT id FROM qross_commands_templates_parameters WHERE template_id=#{template_id}) THEN
     SET $command_logic := SELECT command_logic FROM qross_commands_templates WHERE id=#{template_id};
     IF $command_logic IS NOT NULL AND $command_logic IS NOT EMPTY THEN
-        GET # INVOKE io.qross.pql.PQL.recognizeParametersIn(String $command_logic);
+        GET # INVOKE cn.qross.pql.PQL.recognizeParametersIn(String $command_logic);
         PUT # INSERT INTO qross_commands_templates_parameters (template_id, parameter_name, creator) VALUES (#{template_id}, &item, @userid);
     END IF;
 END IF;
@@ -63,7 +63,7 @@ SELECT * FROM qross_commands_templates_parameters WHERE template_id=#{template_i
 EXIT CODE 0;
 
 SET $x := 'PRINT #{hello};\nSELECT * FROM $a!;\n';
-VAR $y := INVOKE io.qross.pql.PQL.recognizeParametersIn($x);
+VAR $y := INVOKE cn.qross.pql.PQL.recognizeParametersIn($x);
 PRINT $y;
 
 -- FILE DELETE 'c:/Space/test.log';
@@ -132,7 +132,7 @@ PARSE '/' AS VALUE;
 
 -- REQUEST JSON API  '''https://api-bigdata-staging.zichan360.com/phone/singleCallByTtsOfkeeper?calledShowNumber=01086483133&calledNumber=18631675795&ttsCode=TTS_169899687&deptNo=0007&token=7f0e43a86e15a20bdff07a160e0b9cc4&cId=9999&name=SingleCallByVoice&jobId=652&jobTitle=${ "aaa" URL ENCODE }''';
 
--- OUTPUT # DIR CAPACITY 'c:/io.Qross/Coding';
+-- OUTPUT # DIR CAPACITY 'c:/cn.qross/Coding';
 
 
     -- $depend.dependency_value -> GET 'jobId';

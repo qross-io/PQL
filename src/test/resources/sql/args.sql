@@ -1,8 +1,8 @@
 DEBUG ON;
 
-FILE VOYAGE '''c:/io.Qross/Home/pql/datax.json'''
+FILE VOYAGE '''c:/cn.qross/Home/pql/datax.json'''
 				WITH @ARGUMENTS
-				TO '''c:/io.Qross/Home/temp/test.json''';
+				TO '''c:/cn.qross/Home/temp/test.json''';
 
 
 EXIT CODE 0;

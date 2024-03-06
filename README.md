@@ -220,7 +220,7 @@ PQL 的最大的特点就是“简单”，可以在你的任何 Java 或 Scala 
 * 附录
     + [完整的嵌入规则表](http://www.qross.cn/pql/place)
     + [特殊字符表](http://www.qross.cn/pql/characters)
-    + [io.qross.pql.PQL 类](http://www.qross.cn/pql/class)
+    + [cn.qross.pql.PQL 类](http://www.qross.cn/pql/class)
     + [PQL 全局设置](http://www.qross.cn/pql/setup)
 
 ## PQL 技术支持

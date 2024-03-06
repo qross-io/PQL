@@ -5,7 +5,7 @@ DEBUG ON;
 
 --DEBUG ON;
 
--- INVOKE io.qross.pql.test.Test.HELLO(10);
+-- INVOKE cn.qross.pql.test.Test.HELLO(10);
 
 
 

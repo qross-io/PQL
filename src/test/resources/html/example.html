@@ -6,6 +6,14 @@
 </head>
 <body>
 <h1>Hello World &nbsp; <%=@NOW FORMAT "yyyy-MM-dd" %></h1>
+
+<%
+SET $amount := SELECT CAST(SUM(amount) AS SIGNED) FROM fish_catches WHERE other_id>0;
+%>
+
+<%=$amount%>
+
+<hr/>
 #{a}
 <hr/>
 # job.page.search.text #
